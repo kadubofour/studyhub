@@ -14,6 +14,7 @@
 
 - Node.js ≥ 20. Package manager: npm.
 - Project root is `C:\Users\Fii\Desktop\study` (the app lives at the repo root, beside `docs/`).
+- Git remote: `origin` = `https://github.com/kadubofour/studyhub` (public). Push after every task's commit (`git push`). Never commit `.env*.local`, keys, or tokens.
 - TypeScript strict mode; import alias `@/*` → project root.
 - Every table has row-level security; every policy restricts to `user_id = auth.uid()` (profiles: `id = auth.uid()`).
 - Sign-in: email/password with **no email confirmation**; signup asks for email twice. Google OAuth via Supabase.
@@ -111,12 +112,11 @@ e2e/*.spec.ts                     Playwright
 - Consumes: nothing
 - Produces: `npm test` (unit), `npm run test:db` (DB tests), `npm run e2e` (Playwright); alias `@/` → repo root; env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`.
 
-- [ ] **Step 1: Initialise git and scaffold Next.js into a temp folder, then move it to the root** (the root already contains `docs/`, which `create-next-app` would refuse)
+- [ ] **Step 1: Scaffold Next.js into a temp folder, then move it to the root** (the repo already exists with `docs/` and is connected to `origin` = `https://github.com/kadubofour/studyhub`; `create-next-app` would refuse a non-empty folder, and `--disable-git` stops it creating a nested repo)
 
 ```bash
 cd /c/Users/Fii/Desktop/study
-git init
-npx create-next-app@latest scaffold --ts --eslint --tailwind --app --no-src-dir --import-alias "@/*" --use-npm --turbopack --yes
+npx create-next-app@latest scaffold --disable-git --ts --eslint --tailwind --app --no-src-dir --import-alias "@/*" --use-npm --turbopack --yes
 cp -r scaffold/. . && rm -rf scaffold
 ```
 
