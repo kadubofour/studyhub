@@ -1,0 +1,1 @@
+export const COURSE_COLORS = ['#1D9E75', '#7F77DD', '#D85A30', '#BA7517', '#378ADD', '#D4537E', '#639922', '#888780']
