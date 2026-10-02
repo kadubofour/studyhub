@@ -34,11 +34,18 @@ export default function DeckPage() {
   async function add(e?: React.FormEvent) {
     e?.preventDefault()
     if (!front.trim() || !back.trim()) return
+    const card = { front: front.trim(), back: back.trim() }
+    // Clear right away so the next card can be typed while this one saves
+    setFront(''); setBack('')
+    document.getElementById('front')?.focus()
     try {
-      const [c] = await createCards(supabase(), deckId, [{ front: front.trim(), back: back.trim() }])
-      setCards(cs => [...cs, c]); setFront(''); setBack(''); setAsOf(Date.now())
-      document.getElementById('front')?.focus()
-    } catch { toast('Couldn\'t save.') }
+      const [c] = await createCards(supabase(), deckId, [card])
+      setCards(cs => [...cs, c]); setAsOf(Date.now())
+    } catch {
+      // Give the text back unless the student has already started the next card
+      setFront(f => f || card.front); setBack(b => b || card.back)
+      toast('Couldn\'t save.')
+    }
   }
 
   function saveEdit(card: Card, patch: { front: string; back: string }) {

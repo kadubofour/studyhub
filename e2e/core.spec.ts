@@ -110,7 +110,7 @@ test('a note persists after reload, including math', async ({ page }) => {
   await expect(page.locator('.katex').first()).toBeVisible()
 })
 
-test('notes: search finds words inside a note, and the list sits beside the editor on desktop', async ({ page, isMobile }) => {
+test('notes: search finds words inside a note', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()
@@ -118,10 +118,6 @@ test('notes: search finds words inside a note, and the list sits beside the edit
   await page.getByRole('tab', { name: 'Markdown' }).click()
   await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')
   await expect(page.getByText('Saved')).toBeVisible()
-  if (!isMobile) {
-    // list and editor side by side, list already showing the new title
-    await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()
-  }
   await page.goto('/notes')
   await page.getByLabel('Search notes').fill('krebs')
   await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()

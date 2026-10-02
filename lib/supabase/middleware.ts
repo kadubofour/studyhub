@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export const APP_PATHS = ['/home', '/planner', '/notes', '/flashcards', '/review', '/focus', '/progress', '/settings', '/onboarding']
+export const APP_PATHS = ['/home', '/planner', '/notes', '/flashcards', '/review', '/focus', '/progress', '/settings', '/onboarding', '/print']
 
 export async function updateSession(request: NextRequest) {
   // Lets the (app) layout know the requested page, e.g. to return there after onboarding

@@ -4,7 +4,7 @@ import { newUser } from './helpers'
 import { createCourse, deleteCourse, listCourses } from '@/lib/data/courses'
 import { createTask, listOpenTasks, setTaskDone, countTasksDoneSince } from '@/lib/data/tasks'
 import { createClass, listClasses } from '@/lib/data/classes'
-import { createNote, listNotes, getNote, updateNote, searchNotes } from '@/lib/data/notes'
+import { createNote, listNotes, getNote, updateNote, searchNotes, getNotesForExport } from '@/lib/data/notes'
 import { createDeck, listDecksWithDue, getDeck } from '@/lib/data/decks'
 import { createCards, listDueCards, rateCard, countDueCards, listCards } from '@/lib/data/cards'
 import { listReviewsSince } from '@/lib/data/reviews'
@@ -103,6 +103,16 @@ describe('large histories (PostgREST returns at most 1000 rows per request)', ()
     await createCards(heavy, d.id, Array.from({ length: 1050 }, (_, i) => ({ front: `q${i}`, back: `a${i}` })))
     const decks = await listDecksWithDue(heavy, new Date(Date.now() + 1000))
     expect(decks.find(x => x.id === d.id)).toMatchObject({ total: 1050, due: 1050 })
+  })
+})
+
+describe('notes for export', () => {
+  it('loads full notes by id in the order asked, or all notes when no ids are given', async () => {
+    const u = (await newUser()).sb
+    const a = await createNote(u, { title: 'A', content_md: 'alpha' })
+    const b = await createNote(u, { title: 'B', content_md: 'beta' })
+    expect((await getNotesForExport(u, [b.id, a.id])).map(n => n.title)).toEqual(['B', 'A'])
+    expect((await getNotesForExport(u)).map(n => n.content_md).sort()).toEqual(['alpha', 'beta'])
   })
 })
 
