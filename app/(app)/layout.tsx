@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { AppShell } from '@/components/shell/AppShell'
+import { FocusProvider } from '@/components/providers/FocusProvider'
 import type { Profile } from '@/lib/types'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <ProfileProvider initial={profile}>
       <ToastProvider>
-        <AppShell>{children}</AppShell>
+        <FocusProvider>
+          <AppShell>{children}</AppShell>
+        </FocusProvider>
       </ToastProvider>
     </ProfileProvider>
   )

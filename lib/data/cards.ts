@@ -1,12 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Card } from '../types'
 import { cardToState, schedule, stateToCardPatch, type Rating } from '../srs'
-import { check, must } from './util'
+import { check, fetchAll, must } from './util'
 
 const COLS = 'id,deck_id,front,back,due_at,interval_days,ease,reps,lapses'
 
 export async function listCards(sb: SupabaseClient, deckId: string): Promise<Card[]> {
-  return must(await sb.from('cards').select(COLS).eq('deck_id', deckId).order('created_at'))
+  return fetchAll<Card>((from, to) => sb.from('cards').select(COLS).eq('deck_id', deckId)
+    .order('created_at').order('id').range(from, to))
 }
 
 export async function createCards(sb: SupabaseClient, deckId: string, cards: { front: string; back: string }[]): Promise<Card[]> {

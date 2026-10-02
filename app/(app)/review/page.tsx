@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listDueCards, rateCard } from '@/lib/data/cards'
 import { cardToState, previewIntervals, type Rating } from '@/lib/srs'
 import { reviewKeyAction } from '@/lib/ui/reviewKeys'
+import { advanceQueue, RatingLedger } from '@/lib/ui/reviewQueue'
 import type { Card } from '@/lib/types'
 
 const LABELS: Record<Rating, string> = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' }
@@ -22,6 +23,7 @@ function Review() {
   const [stats, setStats] = useState({ reviewed: 0, again: 0 })
   // Synchronous guard (not state) so a second key press in the same tick sees it immediately
   const [busy] = useState(() => ({ current: false }))
+  const [ledger] = useState(() => new RatingLedger())
 
   useEffect(() => {
     listDueCards(supabase(), new Date(), deckId).then(cs => { setQueue(cs); setInitialCount(cs.length) })
@@ -30,14 +32,18 @@ function Review() {
   const card = queue?.[0]
 
   const rate = useCallback((rating: Rating) => {
+    if (!card) return Promise.resolve()
+    const ticket = ledger.ticket(card.id)
     const attempt = async (): Promise<void> => {
-      if (!card || busy.current) return
+      // A Retry from an earlier failure is stale once this card was rated by a later press
+      if (busy.current || !ledger.isCurrent(card.id, ticket)) return
       busy.current = true
       try {
         const updated = await rateCard(supabase(), card, rating, new Date())
+        ledger.recorded(card.id)
         setStats(s => ({ reviewed: s.reviewed + 1, again: s.again + (rating === 1 ? 1 : 0) }))
         // "Again" cards come back at the end of this session
-        setQueue(q => (q ? [...q.slice(1), ...(rating === 1 ? [updated] : [])] : q))
+        setQueue(q => (q ? advanceQueue(q, card, updated, rating) : q))
         setRevealed(false)
       } catch {
         toast('Couldn\'t save.', { label: 'Retry', onClick: () => void attempt() })
@@ -46,7 +52,7 @@ function Review() {
       }
     }
     return attempt()
-  }, [card, toast, busy])
+  }, [card, toast, busy, ledger])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

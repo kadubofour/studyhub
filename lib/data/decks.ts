@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Deck, DeckWithDue } from '../types'
-import { check, must } from './util'
+import { check, fetchAll, must } from './util'
 
 export async function listDecksWithDue(sb: SupabaseClient, now: Date): Promise<DeckWithDue[]> {
   const decks: Deck[] = must(await sb.from('decks').select('id,course_id,name').order('created_at'))
-  const cards: { deck_id: string; due_at: string }[] = must(await sb.from('cards').select('deck_id,due_at'))
+  const cards = await fetchAll<{ deck_id: string; due_at: string }>((from, to) =>
+    sb.from('cards').select('deck_id,due_at').order('id').range(from, to))
   const nowMs = now.getTime()
   return decks.map(d => {
     const mine = cards.filter(c => c.deck_id === d.id)

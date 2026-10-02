@@ -59,6 +59,20 @@ describe('createAutosaver', () => {
     expect(statuses.at(-1)).toBe('saved')
   })
 
+  it('retries a failed save by itself (backoff), with no further edits or navigation', async () => {
+    let failures = 2
+    const saved: string[] = []
+    const statuses: SaveStatus[] = []
+    const a = createAutosaver<string>(async v => { if (failures-- > 0) throw new Error('5xx'); saved.push(v) }, s => statuses.push(s), 1000)
+    a.update('important')
+    await vi.advanceTimersByTimeAsync(1000) // first attempt fails
+    expect(statuses.at(-1)).toBe('error')
+    await vi.advanceTimersByTimeAsync(30_000) // backoff retries run on their own
+    expect(saved).toEqual(['important'])
+    expect(statuses.at(-1)).toBe('saved')
+    expect(a.hasPending()).toBe(false)
+  })
+
   it('a newer edit made during a failing save is not overwritten by the old value', async () => {
     const saved: string[] = []
     const first = deferred()

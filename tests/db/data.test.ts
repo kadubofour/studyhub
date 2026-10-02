@@ -83,6 +83,29 @@ describe('cards', () => {
   })
 })
 
+describe('large histories (PostgREST returns at most 1000 rows per request)', () => {
+  it('lists every session, including the newest, beyond 1000 rows', async () => {
+    const heavy = (await newUser()).sb
+    const base = Date.UTC(2026, 0, 1)
+    const rows = Array.from({ length: 1100 }, (_, i) => {
+      const start = new Date(base + i * 3_600_000)
+      return { started_at: start.toISOString(), ended_at: new Date(start.getTime() + 25 * 60_000).toISOString(), minutes: 25, completed: true }
+    })
+    const { error } = await heavy.from('focus_sessions').insert(rows)
+    expect(error).toBeNull()
+    const list = await listSessionsSince(heavy, new Date(base - 1000))
+    expect(list).toHaveLength(1100)
+    expect(new Date(list.at(-1)!.started_at).getTime()).toBe(base + 1099 * 3_600_000)
+  })
+  it('counts due cards per deck beyond 1000 cards', async () => {
+    const heavy = (await newUser()).sb
+    const d = await createDeck(heavy, { name: 'Big' })
+    await createCards(heavy, d.id, Array.from({ length: 1050 }, (_, i) => ({ front: `q${i}`, back: `a${i}` })))
+    const decks = await listDecksWithDue(heavy, new Date(Date.now() + 1000))
+    expect(decks.find(x => x.id === d.id)).toMatchObject({ total: 1050, due: 1050 })
+  })
+})
+
 describe('focus', () => {
   it('logs and lists sessions', async () => {
     const start = new Date()
