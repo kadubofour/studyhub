@@ -47,8 +47,9 @@ export default function HomePage() {
 
   function toggle(t: Task) {
     const wasDone = doneIds.has(t.id)
-    const flip = (s: Set<string>) => { const n = new Set(s); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n }
-    save(() => setDoneIds(flip), () => setDoneIds(flip), () => setTaskDone(supabase(), t.id, !wasDone))
+    // Explicit values (not a flip) so a late rollback or Retry can't leave UI and DB disagreeing
+    const setDone = (done: boolean) => (s: Set<string>) => { const n = new Set(s); if (done) n.add(t.id); else n.delete(t.id); return n }
+    save(() => setDoneIds(setDone(!wasDone)), () => setDoneIds(setDone(wasDone)), () => setTaskDone(supabase(), t.id, !wasDone))
   }
 
   function add(input: NewTask) {
@@ -87,7 +88,7 @@ export default function HomePage() {
       {list.map(t => (
         <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done={doneIds.has(t.id)} onToggle={() => toggle(t)} showType={false} />
       ))}
-      <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact />
+      <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact implicitDue="Today" />
 
       <div className="mt-6 flex flex-wrap gap-2">
         {upcomingClass && nextCourse && (

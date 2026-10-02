@@ -25,3 +25,8 @@ export async function updateNote(
 export async function deleteNote(sb: SupabaseClient, id: string): Promise<void> {
   check(await sb.from('notes').delete().eq('id', id))
 }
+
+// Matches titles and note text (case-insensitive); see search_notes in the migrations
+export async function searchNotes(sb: SupabaseClient, q: string): Promise<NoteSummary[]> {
+  return must(await sb.rpc('search_notes', { p_q: q }))
+}

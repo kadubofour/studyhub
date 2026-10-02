@@ -5,7 +5,7 @@ import { CourseBar } from '@/components/planner/CourseBar'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { useProfile } from '@/components/providers/ProfileProvider'
-import { useSaver } from '@/components/providers/ToastProvider'
+import { useSaver, useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { createTask, deleteTask, listOpenTasks, setTaskDone, type NewTask } from '@/lib/data/tasks'
@@ -20,6 +20,7 @@ type Tab = 'tasks' | 'week' | 'timetable'
 export default function PlannerPage() {
   const { profile } = useProfile()
   const save = useSaver()
+  const toast = useToast()
   const tz = profile.timezone
   const [tab, setTab] = useState<Tab>('tasks')
   const [courses, setCourses] = useState<Course[]>([])
@@ -93,7 +94,18 @@ export default function PlannerPage() {
     save(
       () => setTasks(ts => ts.filter(t => t.id !== task.id)),
       () => setTasks(ts => [...ts, task]),
-      () => setTaskDone(supabase(), task.id, true),
+      async () => {
+        await setTaskDone(supabase(), task.id, true)
+        toast('Marked done', { label: 'Undo', onClick: () => undoDone(task) })
+      },
+    )
+  }
+
+  function undoDone(task: Task) {
+    save(
+      () => setTasks(ts => (ts.some(t => t.id === task.id) ? ts : [...ts, task])),
+      () => setTasks(ts => ts.filter(t => t.id !== task.id)),
+      () => setTaskDone(supabase(), task.id, false),
     )
   }
 

@@ -10,7 +10,9 @@ export function TaskRow({ task, course, tz, now, done, onToggle, onDelete, showT
 }) {
   return (
     <div className="group flex items-center gap-2.5 border-b border-line py-2">
-      <input type="checkbox" checked={!!done} onChange={onToggle} aria-label={`Mark ${task.title} done`} className="size-4 accent-[var(--accent)]" />
+      <input type="checkbox" checked={!!done} onChange={onToggle} aria-label={`Mark ${task.title} done`}
+        disabled={task.id.startsWith('temp-')} title={task.id.startsWith('temp-') ? 'Saving…' : undefined}
+        className="size-4 accent-[var(--accent)] disabled:opacity-50" />
       <CourseDot color={course?.color} />
       <span className={`min-w-0 flex-1 truncate ${done ? 'text-muted line-through' : ''}`}>{task.title}</span>
       {showType && task.type !== 'other' && <span className="pill">{task.type}</span>}

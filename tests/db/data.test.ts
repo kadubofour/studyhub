@@ -4,9 +4,9 @@ import { newUser } from './helpers'
 import { createCourse, deleteCourse, listCourses } from '@/lib/data/courses'
 import { createTask, listOpenTasks, setTaskDone } from '@/lib/data/tasks'
 import { createClass, listClasses } from '@/lib/data/classes'
-import { createNote, listNotes, getNote, updateNote } from '@/lib/data/notes'
-import { createDeck, listDecksWithDue } from '@/lib/data/decks'
-import { createCards, listDueCards, rateCard, countDueCards } from '@/lib/data/cards'
+import { createNote, listNotes, getNote, updateNote, searchNotes } from '@/lib/data/notes'
+import { createDeck, listDecksWithDue, getDeck } from '@/lib/data/decks'
+import { createCards, listDueCards, rateCard, countDueCards, listCards } from '@/lib/data/cards'
 import { listReviewsSince } from '@/lib/data/reviews'
 import { logFocusSession, listSessionsSince } from '@/lib/data/focus'
 
@@ -103,6 +103,51 @@ describe('large histories (PostgREST returns at most 1000 rows per request)', ()
     await createCards(heavy, d.id, Array.from({ length: 1050 }, (_, i) => ({ front: `q${i}`, back: `a${i}` })))
     const decks = await listDecksWithDue(heavy, new Date(Date.now() + 1000))
     expect(decks.find(x => x.id === d.id)).toMatchObject({ total: 1050, due: 1050 })
+  })
+})
+
+describe('review fixes', () => {
+  it('logging the same focus session twice (two tabs / retry) stores it once', async () => {
+    const u = (await newUser()).sb
+    const start = new Date('2026-10-02T09:00:00Z')
+    const s = { startedAt: start, endedAt: new Date(start.getTime() + 25 * 60_000), minutes: 25, completed: true }
+    await logFocusSession(u, s)
+    await logFocusSession(u, s)
+    expect(await listSessionsSince(u, new Date(start.getTime() - 1000))).toHaveLength(1)
+  })
+
+  it('rating is atomic: if the review cannot be recorded, the card is not rescheduled', async () => {
+    const d = await createDeck(sb, { name: 'Atomic' })
+    const [card] = await createCards(sb, d.id, [{ front: 'q', back: 'a' }])
+    await expect(rateCard(sb, card, 5 as never, new Date())).rejects.toBeTruthy()
+    const after = await listCards(sb, d.id)
+    expect(after[0]).toMatchObject({ reps: 0, interval_days: 0 })
+  })
+
+  it('rejects an invalid time zone', async () => {
+    const u = await newUser()
+    const { error } = await u.sb.from('profiles').update({ timezone: 'Mars/Olympus_Mons' }).eq('id', u.id)
+    expect(error).not.toBeNull()
+  })
+
+  it('falls back to UTC when signup sends an invalid time zone', async () => {
+    const { createClient } = await import('@supabase/supabase-js')
+    const c = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } })
+    const { data } = await c.auth.signUp({ email: `t-${crypto.randomUUID()}@example.test`, password: 'local-test-pass-123', options: { data: { timezone: 'Not/AZone' } } })
+    const { data: p } = await c.from('profiles').select('timezone').eq('id', data.user!.id).single()
+    expect(p?.timezone).toBe('UTC')
+  })
+
+  it('searches note content, not just titles, and treats commas safely', async () => {
+    const n = await createNote(sb, { title: 'Week 3', content_md: 'The Krebs cycle, aka citric acid cycle' })
+    expect((await searchNotes(sb, 'krebs')).map(x => x.id)).toContain(n.id)
+    expect((await searchNotes(sb, 'cycle, aka')).map(x => x.id)).toContain(n.id)
+    expect((await searchNotes(sb, 'zzz-nothing')).map(x => x.id)).not.toContain(n.id)
+  })
+
+  it('getDeck loads one deck without scanning every card', async () => {
+    const d = await createDeck(sb, { name: 'Solo' })
+    expect(await getDeck(sb, d.id)).toMatchObject({ id: d.id, name: 'Solo' })
   })
 })
 

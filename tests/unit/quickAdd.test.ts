@@ -41,6 +41,19 @@ describe('parseQuickAdd', () => {
   it('rejects impossible dates', () => {
     expect(parseQuickAdd('Thing feb 31', NY, now)).toEqual({ title: 'Thing feb 31', dueAt: null })
   })
+  it('drops filler words before the date ("due", "by", "on")', () => {
+    expect(parseQuickAdd('Essay due fri', NY, now).title).toBe('Essay')
+    expect(parseQuickAdd('Lab report by tomorrow', NY, now).title).toBe('Lab report')
+    expect(parseQuickAdd('Quiz on oct 9', NY, now)).toEqual({ title: 'Quiz', dueAt: eod('2026-10-09') })
+  })
+  it('"next <weekday>" means that weekday in the following week', () => {
+    // today is Thu Oct 1; this week is Mon Sep 28 – Sun Oct 4
+    expect(parseQuickAdd('Essay next fri', NY, now)).toEqual({ title: 'Essay', dueAt: eod('2026-10-09') })
+    expect(parseQuickAdd('Essay due next mon', NY, now)).toEqual({ title: 'Essay', dueAt: eod('2026-10-05') })
+  })
+  it('keeps "next" as part of the title when no weekday follows', () => {
+    expect(parseQuickAdd('Read the next chapter', NY, now)).toEqual({ title: 'Read the next chapter', dueAt: null })
+  })
   it('trims whitespace', () => {
     expect(parseQuickAdd('  Quiz   fri  ', NY, now).title).toBe('Quiz')
   })

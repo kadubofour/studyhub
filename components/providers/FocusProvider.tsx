@@ -33,7 +33,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
   const toast = useToast()
   const tz = profile.timezone
   const { timer, setTimer, completedFocus, setCompletedFocus } =
-    usePersistedTimer(() => createTimer('focus', durationFor('focus', profile)), tz)
+    usePersistedTimer(() => createTimer('focus', durationFor('focus', profile)), tz, profile.id)
   const [now, setNow] = useState(() => Date.now())
   const [todayMinutes, setTodayMinutes] = useState(0)
 
@@ -95,6 +95,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
   }, [timer, log, advance, completedFocus])
 
   const pickMode = useCallback((mode: Mode) => {
+    if (mode === timer.mode) return // re-clicking the current mode must not wipe the session
     const t = Date.now()
     if (shouldLogSession(timer, t)) void log(markLogged(timer), t, false)
     setTimer(createTimer(mode, durationFor(mode, profile)))

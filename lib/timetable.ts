@@ -15,3 +15,15 @@ export function nextClass<C extends { day_of_week: number; start_time: string }>
   }
   return null
 }
+
+// Visible hour range for the week grid: 07:00–21:00, widened to fit any class outside it.
+export function gridHours(classes: { start_time: string; end_time: string }[]): { start: number; end: number } {
+  let start = 7, end = 21
+  for (const c of classes) {
+    const [sh] = c.start_time.split(':').map(Number)
+    const [eh, em] = c.end_time.split(':').map(Number)
+    start = Math.min(start, sh)
+    end = Math.max(end, em > 0 ? eh + 1 : eh)
+  }
+  return { start, end: Math.min(24, end) }
+}

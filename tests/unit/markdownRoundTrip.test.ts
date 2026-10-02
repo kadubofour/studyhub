@@ -25,6 +25,19 @@ describe('typing in rich mode', () => {
     expect(editor.getMarkdown().trim()).toBe('Area $x^2$')
     editor.destroy()
   })
+  it('leaves a price range like $5-$10 alone', () => {
+    const editor = new Editor({ extensions: noteExtensions(), content: '' })
+    const v = editor.view
+    for (const ch of 'tickets $5-$10 each') {
+      const { from, to } = v.state.selection
+      const handled = v.someProp('handleTextInput', f => f(v, from, to, ch, () => v.state.tr.insertText(ch, from, to)))
+      if (!handled) v.dispatch(v.state.tr.insertText(ch, from, to))
+    }
+    const types: string[] = []
+    editor.state.doc.descendants(n => { types.push(n.type.name) })
+    expect(types).not.toContain('inlineMath')
+    editor.destroy()
+  })
   it('leaves a lone dollar amount alone', () => {
     const editor = new Editor({ extensions: noteExtensions(), content: '' })
     const v = editor.view

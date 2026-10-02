@@ -7,6 +7,7 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
+import { clearTimer } from '@/lib/ui/timerStore'
 import type { EditorMode, Profile, ThemePref } from '@/lib/types'
 
 export default function SettingsPage() {
@@ -42,6 +43,8 @@ export default function SettingsPage() {
   }
 
   async function signOut() {
+    // A shared device must not hand this student's running focus session to the next person
+    clearTimer(window.localStorage, profile.id)
     await supabase().auth.signOut()
     router.replace('/login')
     router.refresh()

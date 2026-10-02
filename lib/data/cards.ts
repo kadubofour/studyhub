@@ -37,10 +37,11 @@ export async function countDueCards(sb: SupabaseClient, now: Date): Promise<numb
 
 export async function rateCard(sb: SupabaseClient, card: Card, rating: Rating, now: Date): Promise<Card> {
   const next = schedule(cardToState(card), rating, now)
-  const updated: Card = must(await sb.from('cards').update(stateToCardPatch(next)).eq('id', card.id).select(COLS).single())
-  check(await sb.from('reviews').insert({
-    card_id: card.id, rating, reviewed_at: now.toISOString(),
-    prev_interval_days: card.interval_days, new_interval_days: next.intervalDays,
-  }))
+  const p = stateToCardPatch(next)
+  // One transaction: the review row and the new schedule land together or not at all
+  const updated: Card = must(await sb.rpc('rate_card', {
+    p_card_id: card.id, p_due_at: p.due_at, p_interval_days: p.interval_days, p_ease: p.ease, p_reps: p.reps,
+    p_lapses: p.lapses, p_rating: rating, p_reviewed_at: now.toISOString(), p_prev_interval_days: card.interval_days,
+  }).select(COLS).single())
   return updated
 }

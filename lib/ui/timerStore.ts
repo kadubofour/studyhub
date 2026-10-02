@@ -1,11 +1,12 @@
 import type { TimerState } from '../timer'
 
 export interface PersistedTimer { state: TimerState; completedFocus: number; dayKey: string }
-const KEY = 'studyhub.timer'
+// Per-user key so a shared device never hands one student's running session to another
+const keyFor = (userId?: string) => (userId ? `studyhub.timer.${userId}` : 'studyhub.timer')
 
-export function loadTimer(storage: Pick<Storage, 'getItem'>): PersistedTimer | null {
+export function loadTimer(storage: Pick<Storage, 'getItem'>, userId?: string): PersistedTimer | null {
   try {
-    const raw = storage.getItem(KEY)
+    const raw = storage.getItem(keyFor(userId))
     if (!raw) return null
     const v = JSON.parse(raw) as PersistedTimer
     const s = v?.state
@@ -17,6 +18,10 @@ export function loadTimer(storage: Pick<Storage, 'getItem'>): PersistedTimer | n
   }
 }
 
-export function saveTimer(storage: Pick<Storage, 'setItem'>, t: PersistedTimer): void {
-  try { storage.setItem(KEY, JSON.stringify(t)) } catch { /* storage unavailable: timer still works for this page view */ }
+export function saveTimer(storage: Pick<Storage, 'setItem'>, t: PersistedTimer, userId?: string): void {
+  try { storage.setItem(keyFor(userId), JSON.stringify(t)) } catch { /* storage unavailable: timer still works for this page view */ }
+}
+
+export function clearTimer(storage: Pick<Storage, 'removeItem'>, userId?: string): void {
+  try { storage.removeItem(keyFor(userId)) } catch { /* ignore */ }
 }

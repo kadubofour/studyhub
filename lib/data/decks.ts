@@ -24,3 +24,7 @@ export async function updateDeck(sb: SupabaseClient, id: string, patch: Partial<
 export async function deleteDeck(sb: SupabaseClient, id: string): Promise<void> {
   check(await sb.from('decks').delete().eq('id', id))
 }
+
+export async function getDeck(sb: SupabaseClient, id: string): Promise<Deck> {
+  return must(await sb.from('decks').select('id,course_id,name').eq('id', id).single())
+}

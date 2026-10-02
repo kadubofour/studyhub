@@ -59,3 +59,7 @@ export function weekKeysFor(key: DayKey): DayKey[] {
   const monday = addDaysToKey(key, -((weekdayOfKey(key) + 6) % 7))
   return Array.from({ length: 7 }, (_, i) => addDaysToKey(monday, i))
 }
+
+export function formatDueLong(dueAt: string, tz: string): string {
+  return formatInTimeZone(new Date(dueAt), tz, 'EEE, MMM d')
+}

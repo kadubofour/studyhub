@@ -36,6 +36,29 @@ beforeEach(() => {
 })
 afterEach(() => { vi.useRealTimers() })
 
+let api: ReturnType<typeof useFocus> | null = null
+function Grab({ onApi }: { onApi: (v: ReturnType<typeof useFocus>) => void }) {
+  const v = useFocus()
+  useEffect(() => { onApi(v) })
+  return null
+}
+
+describe('FocusProvider mode tabs', () => {
+  it('clicking the mode that is already running does not reset the session', async () => {
+    render(
+      <ProfileProvider initial={profile}>
+        <ToastProvider><FocusProvider><Grab onApi={v => { api = v }} /></FocusProvider></ToastProvider>
+      </ProfileProvider>,
+    )
+    await act(async () => { api!.toggle() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    const startedAt = api!.timer.startedAt
+    expect(startedAt).not.toBeNull()
+    await act(async () => { api!.pickMode('focus') })
+    expect(api!.timer.startedAt).toBe(startedAt)
+  })
+})
+
 describe('FocusProvider', () => {
   it('finishes and logs a session exactly once while the user is on another page', async () => {
     render(

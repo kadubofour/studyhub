@@ -15,14 +15,18 @@ export default function FocusPage() {
   const [soundError, setSoundError] = useState(false)
   const audio = useRef<HTMLAudioElement>(null)
 
+  // Picking a sound (re)loads the loop; the volume effect below only adjusts the level
   useEffect(() => {
     const a = audio.current
     if (!a) return
-    a.volume = volume
     if (sound === 'off') { a.pause(); return }
     a.src = `/sounds/${sound}.mp3`
     a.play().catch(() => setSoundError(true))
-  }, [sound, volume])
+  }, [sound])
+
+  useEffect(() => {
+    if (audio.current) audio.current.volume = volume
+  }, [volume])
 
   const remaining = remainingMs(timer, now)
   const pct = 1 - remaining / timer.durationMs

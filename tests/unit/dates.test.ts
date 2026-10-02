@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   localDayKey, endOfLocalDay, startOfLocalDay, addDaysToKey, weekdayOfKey,
-  bucketTasks, formatDue, weekKeysFor, localTimeHHMM,
+  bucketTasks, formatDue, formatDueLong, weekKeysFor, localTimeHHMM,
 } from '@/lib/dates'
 
 const NY = 'America/New_York'
@@ -71,6 +71,12 @@ describe('formatDue', () => {
     expect(formatDue('2026-10-05T15:00:00Z', NY, now)).toBe('Mon')
     expect(formatDue('2026-10-09T15:00:00Z', NY, now)).toBe('Oct 9')
     expect(formatDue('2026-09-29T15:00:00Z', NY, now)).toBe('Sep 29')
+  })
+})
+
+describe('formatDueLong', () => {
+  it('shows weekday and date so the user can tell which Friday', () => {
+    expect(formatDueLong('2026-10-10T03:59:59Z', NY)).toBe('Fri, Oct 9')
   })
 })
 

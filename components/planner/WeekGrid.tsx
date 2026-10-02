@@ -1,9 +1,10 @@
 'use client'
 import { Flag } from 'lucide-react'
 import { weekdayOfKey } from '@/lib/dates'
+import { gridHours } from '@/lib/timetable'
 import type { ClassSlot, Course } from '@/lib/types'
 
-const START_H = 7, END_H = 21, PX_PER_H = 40
+const PX_PER_H = 40
 const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -12,6 +13,7 @@ export function WeekGrid({ weekKeys, todayKey, classes, courses, deadlines, onCl
   deadlines: { id: string; title: string; dayKey: string; color?: string }[]
   onClassClick?: (c: ClassSlot) => void; onEmptyClick?: (dayOfWeek: number, hour: number) => void
 }) {
+  const { start: START_H, end: END_H } = gridHours(classes)
   const height = (END_H - START_H) * PX_PER_H
   const courseOf = (id: string) => courses.find(c => c.id === id)
   return (

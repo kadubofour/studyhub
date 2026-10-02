@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CardFace } from '@/components/flashcards/CardFace'
@@ -30,10 +30,13 @@ function Review() {
   }, [deckId])
 
   const card = queue?.[0]
+  // Taken when the card is shown (not when a key is pressed): a press that lands after this
+  // card was rated but before the next card renders holds a stale ticket and is ignored.
+  const shownTicket = useMemo(() => (card ? ledger.ticket(card.id) : 0), [card, ledger])
 
   const rate = useCallback((rating: Rating) => {
     if (!card) return Promise.resolve()
-    const ticket = ledger.ticket(card.id)
+    const ticket = shownTicket
     const attempt = async (): Promise<void> => {
       // A Retry from an earlier failure is stale once this card was rated by a later press
       if (busy.current || !ledger.isCurrent(card.id, ticket)) return
@@ -52,7 +55,7 @@ function Review() {
       }
     }
     return attempt()
-  }, [card, toast, busy, ledger])
+  }, [card, shownTicket, toast, busy, ledger])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
