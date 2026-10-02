@@ -20,6 +20,7 @@ export function createAutosaver<T>(
   let failures = 0
 
   async function drain(): Promise<void> {
+    if (!pending) return // nothing to save: don't claim "Saved"
     while (pending) {
       const item = pending
       pending = null

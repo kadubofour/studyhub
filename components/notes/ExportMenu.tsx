@@ -61,12 +61,12 @@ export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
         <Download size={14} aria-hidden />{busy ? 'Preparing…' : label}
       </button>
       {open && (
-        <div role="menu" onKeyDown={onMenuKey} className="absolute right-0 z-40 mt-1 w-56 rounded-xl border border-line bg-raised p-1 shadow-lg">
-          <button role="menuitem" tabIndex={-1} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface" onClick={toWord}>
-            <FileText size={15} className="text-[#2B579A]" aria-hidden />Word document (.docx)
+        <div role="menu" onKeyDown={onMenuKey} className="menu-panel right-0 origin-top-right">
+          <button role="menuitem" tabIndex={-1} className="menu-item" onClick={toWord}>
+            <span className="menu-icon"><FileText size={15} aria-hidden /></span>Word document (.docx)
           </button>
-          <button role="menuitem" tabIndex={-1} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface" onClick={toPdf}>
-            <FileType2 size={15} className="text-danger" aria-hidden />PDF
+          <button role="menuitem" tabIndex={-1} className="menu-item" onClick={toPdf}>
+            <span className="menu-icon"><FileType2 size={15} aria-hidden /></span>PDF
           </button>
         </div>
       )}

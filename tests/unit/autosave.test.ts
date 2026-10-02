@@ -35,6 +35,15 @@ describe('createAutosaver', () => {
     expect(saved).toEqual(['one', 'two'])
   })
 
+  it('flushing with nothing to save does not claim "Saved"', async () => {
+    const statuses: SaveStatus[] = []
+    const save = vi.fn(async () => {})
+    const a = createAutosaver<string>(save, s => { statuses.push(s) }, 1000)
+    await a.flush()
+    expect(save).not.toHaveBeenCalled()
+    expect(statuses).toEqual([])
+  })
+
   it('flush saves immediately (used when leaving the page)', async () => {
     const saved: string[] = []
     const a = createAutosaver<string>(async v => { saved.push(v) }, () => {}, 1000)

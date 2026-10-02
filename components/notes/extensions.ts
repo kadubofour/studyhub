@@ -4,6 +4,7 @@ import { TaskList, TaskItem } from '@tiptap/extension-list'
 import { TableKit } from '@tiptap/extension-table'
 import { Markdown } from '@tiptap/markdown'
 import Mathematics from '@tiptap/extension-mathematics'
+import { mathToken } from './autoMath'
 
 // The Mathematics extension's typing shortcut is $$x$$, but notes store inline math as $x$.
 // This lets $x$ typed in Rich mode render immediately, matching the Markdown syntax.
@@ -42,7 +43,29 @@ const DoubleDollarBlockMath = Extension.create({
   },
 })
 
-export type EditMath = (kind: 'inline' | 'block', latex: string, pos: number) => void
+// Maths typed without dollars (x^2, a_n, \frac{a}{b}) becomes an equation when the word ends with a
+// space. Tiptap skips input rules in code, and Backspace straight after puts the plain text back.
+const AutoMath = Extension.create({
+  name: 'autoMath',
+  addInputRules() {
+    return [new InputRule({
+      find: /(?:^|\s)(\S+)\s$/,
+      handler: ({ state, range, match }) => {
+        const token = mathToken(match[1])
+        const type = state.schema.nodes.inlineMath
+        if (!token || !type) return null
+        // The typed space is already in the document; the word sits just before it
+        const start = range.from + match[0].length - match[1].length - 1
+        const end = start + match[1].length
+        if (state.doc.textBetween(start, end, undefined, '￼') !== match[1]) return null // plain text only
+        const math = type.create({ latex: token.latex })
+        state.tr.replaceWith(start, end, token.trailing ? [math, state.schema.text(token.trailing)] : math)
+      },
+    })]
+  },
+})
+
+export type EditMath =(kind: 'inline' | 'block', latex: string, pos: number) => void
 
 export function noteExtensions(opts: { onEditMath?: EditMath } = {}) {
   return [
@@ -58,6 +81,7 @@ export function noteExtensions(opts: { onEditMath?: EditMath } = {}) {
       blockOptions: { onClick: (node, pos) => opts.onEditMath?.('block', node.attrs.latex, pos) },
     }),
     SingleDollarMath,
+    AutoMath,
     Markdown,
   ]
 }

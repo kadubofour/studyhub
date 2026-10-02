@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
-import { RichEditor, insertDefaultTable } from '@/components/notes/RichEditor'
+import { RichEditor, insertTable } from '@/components/notes/RichEditor'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
 import { FindBar } from '@/components/notes/FindBar'
@@ -13,6 +13,7 @@ import { EquationDialog, type EquationInit } from '@/components/notes/EquationDi
 import { ImportDialog } from '@/components/notes/ImportDialog'
 import { findMatches, findKey, wrap, highlightInElement, clearElementHighlights } from '@/components/notes/findInNote'
 import type { EditMath } from '@/components/notes/extensions'
+import { autoWrapMath } from '@/components/notes/autoMath'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -32,7 +33,13 @@ const STATUS_TEXT = {
   failed: 'Couldn\'t save this change. Check the course still exists, then edit again.',
 } as const
 
-const MD_TABLE = '| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n'
+// A Markdown table with `rows` rows (the first is the header) and `cols` columns
+function markdownTable(rows: number, cols: number) {
+  const line = (cells: string[]) => `| ${cells.join(' | ')} |\n`
+  const blank = Array<string>(cols).fill('  ')
+  return line(Array.from({ length: cols }, (_, i) => `Column ${i + 1}`)) + line(Array<string>(cols).fill('---'))
+    + Array.from({ length: Math.max(1, rows - 1) }, () => line(blank)).join('')
+}
 
 // An equation being written (pos undefined) or edited (pos of its node in the rich editor)
 type EquationEdit = { initial: EquationInit; pos?: number; seq: number }
@@ -189,8 +196,8 @@ function NoteEditor({ id }: { id: string }) {
       else { markdownRef.current?.focus(); markdownRef.current?.select() }
     },
     find: () => setFindOpen(true),
-    insertTable: () => {
-      if (mode === 'rich') { if (editor) insertDefaultTable(editor) } else insertMarkdown(`\n\n${MD_TABLE}\n`)
+    insertTable: (rows, cols) => {
+      if (mode === 'rich') { if (editor) insertTable(editor, rows, cols) } else insertMarkdown(`\n\n${markdownTable(rows, cols)}\n`)
     },
     insertEquation: () => setEquation(e => ({ initial: null, seq: (e?.seq ?? 0) + 1 })),
     setMode: m => changeView(() => { setMode(m); setReading(false) }),
@@ -231,7 +238,13 @@ function NoteEditor({ id }: { id: string }) {
             ) : (
               <div className="mt-4 grid gap-6 md:grid-cols-2">
                 <textarea ref={markdownRef} className="input min-h-[70vh] font-mono text-[13px]" value={draft.content_md} aria-label="Markdown"
-                  onChange={e => change({ content_md: e.target.value })} />
+                  onChange={e => {
+                    // Typing a space after maths like x^2 wraps it in $…$
+                    const typedSpace = (e.nativeEvent as InputEvent).inputType === 'insertText' && (e.nativeEvent as InputEvent).data === ' '
+                    const wrapped = typedSpace ? autoWrapMath(e.target.value, e.target.selectionStart) : null
+                    change({ content_md: wrapped?.value ?? e.target.value })
+                    if (wrapped) { const ta = e.target; requestAnimationFrame(() => ta.setSelectionRange(wrapped.cursor, wrapped.cursor)) }
+                  }} />
                 <div ref={renderedRef} className="min-h-[70vh] border-t border-line pt-3 md:border-l md:border-t-0 md:pl-6 md:pt-0">
                   <MarkdownView source={draft.content_md} />
                 </div>

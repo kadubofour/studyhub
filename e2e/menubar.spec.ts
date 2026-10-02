@@ -26,19 +26,50 @@ test('the password field can be shown and hidden', async ({ page }) => {
   await expect(field).toHaveAttribute('type', 'password')
 })
 
-test('Edit > Insert table adds a table that is saved with the note', async ({ page }) => {
+test('Edit > Insert table: pick the size on a grid, and it is saved with the note', async ({ page }) => {
   await signUp(page)
   await newNote(page, 'Table note')
   await page.getByLabel('Note', { exact: true }).click()
   await menu(page, 'Edit', 'Insert table')
+  await page.getByRole('button', { name: '2 by 4 table' }).hover()
+  await expect(page.getByText('2 × 4 table')).toBeVisible()
+  await page.getByRole('button', { name: '2 by 4 table' }).click()
   const table = page.locator('.ProseMirror table')
-  await expect(table).toBeVisible()
+  await expect(table.locator('tr')).toHaveCount(2)
+  await expect(table.locator('th')).toHaveCount(4)
   await page.keyboard.type('Organelle')
   await page.getByRole('toolbar', { name: 'Table' }).getByRole('button', { name: 'Add row below' }).click()
-  await expect(table.locator('tr')).toHaveCount(4)
+  await expect(table.locator('tr')).toHaveCount(3)
   await expect(page.getByText('Saved')).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror table th').first()).toHaveText('Organelle')
+})
+
+test('the toolbar Table button opens the same size grid', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Grid')
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.getByRole('button', { name: 'Table', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Insert table' }).getByRole('button', { name: '3 by 2 table' }).click()
+  await expect(page.locator('.ProseMirror table tr')).toHaveCount(3)
+  await expect(page.locator('.ProseMirror table th')).toHaveCount(2)
+})
+
+test('maths typed without dollars turns into an equation', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Auto maths')
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.type('Then x^2 grows and my_variable stays ')
+  await expect(page.locator('.ProseMirror [data-type="inline-math"] .katex')).toHaveCount(1)
+  await expect(page.locator('.ProseMirror')).toContainText('my_variable')
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.getByRole('menuitem', { name: 'View', exact: true }).click()
+  await page.getByRole('menuitemradio', { name: 'Markdown editor' }).click()
+  const md = page.getByLabel('Markdown')
+  await expect(md).toHaveValue(/Then \$x\^2\$ grows/)
+  await md.press('End')
+  await md.pressSequentially(' and a_n ')
+  await expect(md).toHaveValue(/and \$a_n\$ $/)
 })
 
 test('typed $…$ becomes an equation, and clicking it opens it for editing', async ({ page }) => {

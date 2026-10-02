@@ -41,6 +41,31 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .field input, .field select, .field textarea, input.input, select.input, textarea.input {
     @apply rounded-xl border border-line bg-raised px-3 py-1.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft;
   }
+  /* Our own chevron instead of the browser's: same in every browser and theme */
+  .field select, select.input {
+    @apply cursor-pointer appearance-none bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f8e88' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+    background-position: right .7rem center; background-size: 15px;
+  }
+  /* Dropdown menus (note File/Edit/View, Export…) */
+  .menu-panel {
+    @apply absolute z-50 mt-1.5 min-w-60 rounded-2xl border border-line bg-raised p-1.5;
+    box-shadow: 0 2px 6px rgb(20 20 19 / 0.06), 0 14px 36px rgb(20 20 19 / 0.12);
+    animation: menu-in .12s ease-out; transform-origin: top left;
+  }
+  .dark .menu-panel { box-shadow: 0 2px 6px rgb(0 0 0 / 0.35), 0 14px 36px rgb(0 0 0 / 0.45); }
+  .menu-item {
+    @apply flex w-full items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-left text-sm outline-none transition-colors;
+  }
+  .menu-item:not([aria-disabled="true"]):hover, .menu-item:not([aria-disabled="true"]):focus-visible { @apply bg-accent-soft text-accent; }
+  .menu-item[aria-disabled="true"] { @apply cursor-default opacity-40; }
+  .menu-icon { @apply flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface text-muted transition-colors; }
+  .menu-item:not([aria-disabled="true"]):hover .menu-icon, .menu-item:not([aria-disabled="true"]):focus-visible .menu-icon { @apply bg-raised text-accent; }
+  .menu-item.danger { @apply text-danger; }
+  .menu-item.danger:hover, .menu-item.danger:focus-visible { @apply bg-danger-soft text-danger; }
+  .menu-item.danger .menu-icon, .menu-item.danger:hover .menu-icon { @apply text-danger; }
+  .menu-kbd { @apply ml-auto rounded-md border border-line px-1.5 py-px font-mono text-[10.5px] text-muted; }
+  .menu-sep { @apply mx-2 my-1 h-px bg-line; }
   .card { @apply rounded-2xl border border-line bg-raised p-4; box-shadow: var(--shadow); }
   .tile { @apply rounded-2xl border border-line bg-raised px-4 py-3; box-shadow: var(--shadow); }
   .tile-label { @apply flex items-center gap-1.5 text-xs text-muted; }
@@ -84,3 +109,7 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .print-note { break-after: page; }
   .print-note:last-child { break-after: auto; }
 }
+
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } }
+@media (pointer: coarse) { .menu-kbd { display: none; } }

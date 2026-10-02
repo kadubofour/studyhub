@@ -1,13 +1,40 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { Bold, Italic, Heading2, List, ListChecks, Code, Sigma, Table } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
 import { TableTools } from './TableTools'
+import { TableGridPicker } from './TableGridPicker'
 
-export const insertDefaultTable = (editor: Editor) =>
-  editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+export const insertTable = (editor: Editor, rows: number, cols: number) =>
+  editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+
+// Toolbar Table button: opens the size grid in a small popover
+function TableButton({ editor, on }: { editor: Editor; on: boolean }) {
+  const [open, setOpen] = useState(false)
+  const wrap = useRef<HTMLDivElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  return (
+    <div ref={wrap} className="relative">
+      <button ref={button} type="button" aria-label="Table" title="Table" aria-haspopup="dialog" aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+        className={`rounded p-1.5 ${on || open ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}><Table size={16} aria-hidden /></button>
+      {open && (
+        <div role="dialog" aria-label="Insert table" className="menu-panel right-0 origin-top-right sm:left-0 sm:right-auto sm:origin-top-left">
+          <TableGridPicker autoFocus onPick={(r, c) => { setOpen(false); insertTable(editor, r, c) }}
+            onCancel={() => { setOpen(false); button.current?.focus() }} />
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation }: {
   markdown: string
@@ -54,7 +81,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         {tool('Bulleted list', List, () => editor.chain().focus().toggleBulletList().run(), active('bulletList'))}
         {tool('Checklist', ListChecks, () => editor.chain().focus().toggleTaskList().run(), active('taskList'))}
         {tool('Code', Code, () => editor.chain().focus().toggleCodeBlock().run(), active('codeBlock'))}
-        {tool('Table', Table, () => insertDefaultTable(editor), active('table'))}
+        <TableButton editor={editor} on={active('table')} />
         {tool('Equation', Sigma, () => onInsertEquation?.())}
         {active('table') && <div className="w-full pt-1"><TableTools editor={editor} /></div>}
       </div>

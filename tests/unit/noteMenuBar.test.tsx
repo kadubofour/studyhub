@@ -36,11 +36,24 @@ describe('NoteMenuBar', () => {
 
   it('Edit menu runs undo, redo, find and inserts', async () => {
     const a = setup()
-    for (const [label, fn] of [['Undo', a.undo], ['Redo', a.redo], ['Find…', a.find], ['Insert table', a.insertTable], ['Insert equation', a.insertEquation]] as const) {
+    for (const [label, fn] of [['Undo', a.undo], ['Redo', a.redo], ['Find…', a.find], ['Insert equation', a.insertEquation]] as const) {
       await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' })) })
       await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(`^${label.replace('…', '…')}`) })) })
       expect(fn).toHaveBeenCalled()
     }
+  })
+
+  it('Edit > Insert table opens a size grid and inserts the size picked', async () => {
+    const a = setup()
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' })) })
+    const item = screen.getByRole('menuitem', { name: /^Insert table/ })
+    expect(item.getAttribute('aria-expanded')).toBe('false')
+    await act(async () => { fireEvent.click(item) })
+    expect(item.getAttribute('aria-expanded')).toBe('true')
+    expect(a.insertTable).not.toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '3 by 4 table' })) })
+    expect(a.insertTable).toHaveBeenCalledWith(3, 4)
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 
   it('View menu shows the current editor and toggles reading mode and full width', async () => {
