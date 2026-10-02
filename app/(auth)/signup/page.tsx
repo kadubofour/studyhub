@@ -1,11 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { safeNext } from '@/lib/safeNext'
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter()
+  const next = safeNext(useSearchParams().get('next'))
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [email2, setEmail2] = useState('')
@@ -24,14 +26,14 @@ export default function SignupPage() {
     })
     setBusy(false)
     if (error) { setError(error.message.includes('registered') ? 'That email already has an account. Log in instead.' : 'Couldn\'t create your account. Try again.'); return }
-    router.replace('/onboarding')
+    router.replace(`/onboarding?next=${encodeURIComponent(next)}`)
     router.refresh()
   }
 
   async function google() {
     await supabase().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/home` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     })
   }
 
@@ -56,7 +58,11 @@ export default function SignupPage() {
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         <button disabled={busy} className="btn-primary w-full">{busy ? 'Creating…' : 'Create account'}</button>
       </form>
-      <p className="text-sm text-muted">Already have an account? <Link href="/login" className="text-accent">Log in</Link></p>
+      <p className="text-sm text-muted">Already have an account? <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-accent">Log in</Link></p>
     </div>
   )
+}
+
+export default function SignupPage() {
+  return <Suspense><SignupForm /></Suspense>
 }

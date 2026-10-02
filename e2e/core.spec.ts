@@ -6,6 +6,22 @@ test('logged-out users are sent to login with a return path', async ({ page }) =
   await expect(page).toHaveURL(/\/login\?next=%2Fplanner/)
 })
 
+test('a new user who started from a deep link lands there after signup and onboarding', async ({ page }) => {
+  await page.goto('/planner')
+  await expect(page).toHaveURL(/\/login\?next=%2Fplanner/)
+  await page.getByRole('link', { name: 'Create account' }).click()
+  await expect(page).toHaveURL(/\/signup\?next=%2Fplanner/)
+  await page.waitForLoadState('networkidle') // let the page hydrate before typing
+  const email = `e2e-next-${Date.now()}@example.test`
+  await page.getByLabel('Email', { exact: true }).fill(email)
+  await page.getByLabel('Confirm email').fill(email)
+  await page.getByLabel('Password').fill('local-e2e-pass-123')
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page).toHaveURL(/\/onboarding/)
+  await page.getByRole('button', { name: 'Skip' }).click()
+  await expect(page).toHaveURL(/\/planner$/)
+})
+
 test('signup rejects mismatched emails', async ({ page }) => {
   await page.goto('/signup')
   await page.getByLabel('Email', { exact: true }).fill('a@example.test')
@@ -20,7 +36,7 @@ test('add a task in the planner and complete it', async ({ page }) => {
   await signUp(page)
   await page.goto('/planner')
   await page.getByLabel('Add a task').fill('Calc problem set tomorrow')
-  await expect(page.getByText('Due Tomorrow')).toBeVisible()
+  await expect(page.getByText(/^Due \w{3}, \w{3} \d{1,2}$/)).toBeVisible() // e.g. "Due Sat, Oct 3"
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   const row = page.getByText('Calc problem set', { exact: true })
   await expect(row).toBeVisible()
@@ -29,6 +45,21 @@ test('add a task in the planner and complete it', async ({ page }) => {
   await expect(row).toHaveCount(0)
   await page.reload()
   await expect(page.getByText('Calc problem set', { exact: true })).toHaveCount(0)
+})
+
+test('a task ticked by mistake can be undone', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/planner')
+  await page.getByLabel('Add a task').fill('Lab report')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  const box = page.getByLabel('Mark Lab report done')
+  await expect(box).toBeEnabled() // enabled once the task has saved
+  await box.click()
+  await expect(page.getByText('Lab report', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.getByText('Lab report', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Lab report', { exact: true })).toBeVisible()
 })
 
 test('task added on home shows under Today', async ({ page }) => {
@@ -77,6 +108,25 @@ test('a note persists after reload, including math', async ({ page }) => {
   await expect(page.getByLabel('Markdown')).toHaveValue('## Formula\n\n$x^2$')
   await expect(page.getByLabel('Title')).toHaveValue('Quadratics')
   await expect(page.locator('.katex').first()).toBeVisible()
+})
+
+test('notes: search finds words inside a note, and the list sits beside the editor on desktop', async ({ page, isMobile }) => {
+  await signUp(page)
+  await page.goto('/notes')
+  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByLabel('Title').fill('Week 3')
+  await page.getByRole('tab', { name: 'Markdown' }).click()
+  await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')
+  await expect(page.getByText('Saved')).toBeVisible()
+  if (!isMobile) {
+    // list and editor side by side, list already showing the new title
+    await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()
+  }
+  await page.goto('/notes')
+  await page.getByLabel('Search notes').fill('krebs')
+  await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()
+  await page.getByLabel('Search notes').fill('photosynthesis')
+  await expect(page.getByRole('link', { name: /Week 3/ })).toHaveCount(0)
 })
 
 test('focus timer runs and pauses', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -11,8 +12,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: { user } } = await sb.auth.getUser()
   if (!user) redirect('/login')
   const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single<Profile>()
-  if (!profile) redirect('/login')
-  if (!profile.onboarded) redirect('/onboarding')
+  if (!profile) redirect('/auth/signout?reason=profile')
+  if (!profile.onboarded) {
+    const here = (await headers()).get('x-pathname') ?? '/home'
+    redirect(`/onboarding?next=${encodeURIComponent(here)}`)
+  }
   return (
     <ProfileProvider initial={profile}>
       <ToastProvider>

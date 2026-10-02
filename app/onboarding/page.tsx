@@ -1,11 +1,13 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { COURSE_COLORS } from '@/lib/colors'
+import { safeNext } from '@/lib/safeNext'
 
-export default function OnboardingPage() {
+function Onboarding() {
   const router = useRouter()
+  const next = safeNext(useSearchParams().get('next'))
   const [name, setName] = useState('')
   const [goalHours, setGoalHours] = useState('2')
   const [course, setCourse] = useState('')
@@ -23,13 +25,18 @@ export default function OnboardingPage() {
       const h = Number(goalHours)
       if (Number.isFinite(h) && h > 0 && h <= 24) patch.daily_goal_minutes = Math.round(h * 60)
     }
-    const { error } = await sb.from('profiles').update(patch).eq('id', user.id)
+    let { error } = await sb.from('profiles').update(patch).eq('id', user.id)
+    if (error) {
+      // The database rejects zone names it doesn't know; keep the signup zone rather than block onboarding
+      delete patch.timezone
+      ;({ error } = await sb.from('profiles').update(patch).eq('id', user.id))
+    }
     if (!error && !skip && course.trim()) {
       await sb.from('courses').insert({ name: course.trim(), color: COURSE_COLORS[0] })
     }
     setBusy(false)
     if (error) { setError('Couldn\'t save. Try again.'); return }
-    router.replace('/home')
+    router.replace(next)
     router.refresh()
   }
 
@@ -54,4 +61,8 @@ export default function OnboardingPage() {
       </div>
     </main>
   )
+}
+
+export default function OnboardingPage() {
+  return <Suspense><Onboarding /></Suspense>
 }

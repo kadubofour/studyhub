@@ -11,6 +11,9 @@ import { supabase } from '@/lib/supabase/client'
 import { deleteNote, getNote, updateNote } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
 import { useAutosave } from '@/lib/ui/useAutosave'
+import { NOTES_CHANGED } from '@/components/notes/NotesSidebar'
+
+const notifyList = () => { window.dispatchEvent(new Event(NOTES_CHANGED)) }
 import type { Course, EditorMode, Note } from '@/lib/types'
 
 type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id'>>
@@ -33,7 +36,7 @@ function NoteEditor({ id }: { id: string }) {
   // Ref holds the latest draft: the Tiptap onUpdate callback is created once, so reading
   // `draft` state from it would merge onto a stale copy and drop title/course edits.
   const draftRef = useRef<Note | null>(null)
-  const { update, status } = useAutosave<Patch>(patch => updateNote(supabase(), id, patch))
+  const { update, status } = useAutosave<Patch>(patch => updateNote(supabase(), id, patch).then(notifyList))
 
   useEffect(() => {
     const sb = supabase()
@@ -53,7 +56,7 @@ function NoteEditor({ id }: { id: string }) {
 
   async function remove() {
     if (!confirm('Delete this note?')) return
-    try { await deleteNote(supabase(), id); router.replace('/notes') } catch { toast('Couldn\'t delete the note.') }
+    try { await deleteNote(supabase(), id); notifyList(); router.replace('/notes') } catch { toast('Couldn\'t delete the note.') }
   }
 
   if (!note || !draft) return null
@@ -61,7 +64,7 @@ function NoteEditor({ id }: { id: string }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Link href="/notes" className="btn-ghost" aria-label="Back to notes"><ArrowLeft size={16} aria-hidden /></Link>
+        <Link href="/notes" className="btn-ghost md:hidden" aria-label="Back to notes"><ArrowLeft size={16} aria-hidden /></Link>
         <select className="input" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })} aria-label="Course">
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}

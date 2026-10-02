@@ -11,7 +11,12 @@ function LoginForm() {
   const next = safeNext(params.get('next'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() => {
+    const e = params.get('error')
+    if (e === 'profile') return 'We couldn\'t load your account. Log in again.'
+    if (e === 'callback') return 'That sign-in link didn\'t work. Try again.'
+    return null
+  })
   const [busy, setBusy] = useState(false)
 
   async function onSubmit(e: React.FormEvent) {

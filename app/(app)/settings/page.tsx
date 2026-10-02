@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -8,7 +8,11 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { clearTimer } from '@/lib/ui/timerStore'
+import { changedFields } from '@/lib/ui/changedFields'
+
 import type { EditorMode, Profile, ThemePref } from '@/lib/types'
+
+const noopSubscribe = () => () => {}
 
 export default function SettingsPage() {
   const { profile, setProfile } = useProfile()
@@ -16,11 +20,18 @@ export default function SettingsPage() {
   const router = useRouter()
   const { setTheme } = useTheme()
   const [form, setForm] = useState(profile)
+  // What the form started from: only fields that differ from this are saved
+  const [initial, setInitial] = useState(profile)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => { setForm(f => ({ ...f, [k]: v })); setError(null) }
 
-  const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [profile.timezone]
+  // The full zone list comes from the browser, so render it only after hydration (server lists can differ),
+  // and always include the saved zone and UTC so the select never shows the wrong value.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
+  const zones = mounted && typeof Intl.supportedValuesOf === 'function'
+    ? [...new Set([form.timezone, 'UTC', ...Intl.supportedValuesOf('timeZone')])].sort()
+    : [form.timezone]
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -34,9 +45,12 @@ export default function SettingsPage() {
     }
     setBusy(true)
     try {
-      const { id, ...patch } = form
-      const saved = await updateProfile(supabase(), id, patch)
+      const patch = changedFields(initial, form) // id never changes, so it is never sent
+      if (Object.keys(patch).length === 0) { toast('Settings saved'); return }
+      const saved = await updateProfile(supabase(), profile.id, patch)
       setProfile(saved)
+      setForm(saved)
+      setInitial(saved)
       setTheme(saved.theme)
       toast('Settings saved')
     } catch { toast('Couldn\'t save.') } finally { setBusy(false) }

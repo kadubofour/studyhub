@@ -8,15 +8,15 @@ import { CardFace } from '@/components/flashcards/CardFace'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createCards, deleteCard, listCards, updateCard } from '@/lib/data/cards'
-import { deleteDeck, listDecksWithDue } from '@/lib/data/decks'
-import type { Card, DeckWithDue } from '@/lib/types'
+import { deleteDeck, getDeck } from '@/lib/data/decks'
+import type { Card, Deck } from '@/lib/types'
 
 export default function DeckPage() {
   const { deck: deckId } = useParams<{ deck: string }>()
   const router = useRouter()
   const save = useSaver()
   const toast = useToast()
-  const [deck, setDeck] = useState<DeckWithDue | null>(null)
+  const [deck, setDeck] = useState<Deck | null>(null)
   const [cards, setCards] = useState<Card[]>([])
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
@@ -26,10 +26,10 @@ export default function DeckPage() {
 
   useEffect(() => {
     const sb = supabase()
-    Promise.all([listDecksWithDue(sb, new Date()), listCards(sb, deckId)]).then(([ds, cs]) => {
-      setDeck(ds.find(d => d.id === deckId) ?? null); setCards(cs); setAsOf(Date.now())
-    })
-  }, [deckId])
+    Promise.all([getDeck(sb, deckId), listCards(sb, deckId)]).then(([d, cs]) => {
+      setDeck(d); setCards(cs); setAsOf(Date.now())
+    }).catch(() => router.replace('/flashcards')) // deleted or someone else's deck
+  }, [deckId, router])
 
   async function add(e?: React.FormEvent) {
     e?.preventDefault()

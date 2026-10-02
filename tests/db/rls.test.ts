@@ -25,6 +25,12 @@ describe('profiles', () => {
     expect(data?.timezone).toBe('America/New_York')
     expect(data?.onboarded).toBe(false)
   })
+  it('cannot be deleted by their owner (the app needs the row to work)', async () => {
+    const u = await newUser()
+    await u.sb.from('profiles').delete().eq('id', u.id)
+    const { data } = await u.sb.from('profiles').select('id').eq('id', u.id)
+    expect(data).toHaveLength(1)
+  })
   it('are not readable by other users', async () => {
     const { data } = await B.sb.from('profiles').select('id').eq('id', A.id)
     expect(data).toEqual([])

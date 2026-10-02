@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 export const APP_PATHS = ['/home', '/planner', '/notes', '/flashcards', '/review', '/focus', '/progress', '/settings', '/onboarding']
 
 export async function updateSession(request: NextRequest) {
+  // Lets the (app) layout know the requested page, e.g. to return there after onboarding
+  request.headers.set('x-pathname', request.nextUrl.pathname + request.nextUrl.search)
   let response = NextResponse.next({ request })
   const sb = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
