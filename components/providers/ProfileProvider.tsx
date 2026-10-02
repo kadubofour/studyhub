@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import type { Profile } from '@/lib/types'
 
@@ -8,7 +8,14 @@ const Ctx = createContext<{ profile: Profile; setProfile: (p: Profile) => void }
 export function ProfileProvider({ initial, children }: { initial: Profile; children: React.ReactNode }) {
   const [profile, setProfile] = useState(initial)
   const { setTheme } = useTheme()
-  useEffect(() => { setTheme(initial.theme) }, [initial.theme, setTheme])
+  // Apply the saved theme once on load. next-themes gives a new setTheme after each change,
+  // so depending on it would re-apply the old saved theme and undo the user's switch.
+  const applied = useRef(false)
+  useEffect(() => {
+    if (applied.current) return
+    applied.current = true
+    setTheme(initial.theme)
+  }, [initial.theme, setTheme])
   return <Ctx.Provider value={{ profile, setProfile }}>{children}</Ctx.Provider>
 }
 
