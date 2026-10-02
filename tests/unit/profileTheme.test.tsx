@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeAll } from 'vitest'
-import { createElement } from 'react'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import { ThemeProvider, useTheme } from 'next-themes'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
@@ -19,13 +18,16 @@ const profile: Profile = {
 
 function Switcher() {
   const { setTheme } = useTheme()
-  return createElement('button', { onClick: () => setTheme('dark') }, 'go dark')
+  return <button onClick={() => setTheme('dark')}>go dark</button>
 }
 
 describe('ProfileProvider theme', () => {
   it('applies the saved theme on load but does not undo a later change', async () => {
-    render(createElement(ThemeProvider, { attribute: 'class', enableSystem: true },
-      createElement(ProfileProvider, { initial: profile }, createElement(Switcher))))
+    render(
+      <ThemeProvider attribute="class" enableSystem>
+        <ProfileProvider initial={profile}><Switcher /></ProfileProvider>
+      </ThemeProvider>,
+    )
     await waitFor(() => expect(document.documentElement.className).toBe('light'))
     act(() => { screen.getByText('go dark').click() })
     await new Promise(r => setTimeout(r, 50))
