@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   BookOpen, Check, ChevronRight, FilePlus2, FileText, FileType2, FileUp, MoveHorizontal, PenLine, Redo2,
-  Search, Sigma, SquareCode, Table, TextSelect, Trash2, Undo2, type LucideIcon,
+  Search, Sigma, SquareCode, Superscript, Table, TextSelect, Trash2, Undo2, type LucideIcon,
 } from 'lucide-react'
 import type { EditorMode } from '@/lib/types'
 import { TableGridPicker } from './TableGridPicker'
@@ -11,7 +11,7 @@ export interface NoteMenuActions {
   newNote: () => void; importNote: () => void; exportWord: () => void; exportPdf: () => void; deleteNote: () => void
   undo: () => void; redo: () => void; selectAll: () => void; find: () => void
   insertTable: (rows: number, cols: number) => void; insertEquation: () => void
-  setMode: (m: EditorMode) => void; toggleReading: () => void; toggleFullWidth: () => void
+  setMode: (m: EditorMode) => void; toggleReading: () => void; toggleFullWidth: () => void; toggleAutoMath: () => void
 }
 
 type Entry =
@@ -23,8 +23,8 @@ const mod = (k: string) => (isMac ? `⌘${k}` : `Ctrl+${k}`)
 
 // Word-style File / Edit / View menu bar for a note, following the ARIA menubar pattern:
 // one menu title in the Tab order, arrows move between titles and items, Esc closes.
-export function NoteMenuBar({ actions: a, mode, reading, fullWidth }: {
-  actions: NoteMenuActions; mode: EditorMode; reading: boolean; fullWidth: boolean
+export function NoteMenuBar({ actions: a, mode, reading, fullWidth, autoMath }: {
+  actions: NoteMenuActions; mode: EditorMode; reading: boolean; fullWidth: boolean; autoMath: boolean
 }) {
   const [open, setOpen] = useState<number | null>(null)
   const [gridOpen, setGridOpen] = useState(false) // Edit > Insert table's size grid
@@ -60,6 +60,8 @@ export function NoteMenuBar({ actions: a, mode, reading, fullWidth }: {
       { kind: 'sep' },
       { kind: 'check', label: 'Reading mode', icon: BookOpen, checked: reading, run: a.toggleReading },
       { kind: 'check', label: 'Full width', icon: MoveHorizontal, checked: fullWidth, run: a.toggleFullWidth },
+      { kind: 'sep' },
+      { kind: 'check', label: 'Automatic maths', icon: Superscript, checked: autoMath, run: a.toggleAutoMath },
     ] },
   ]
 

@@ -35,6 +35,8 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 @layer components {
   .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-raised px-3 py-1.5 text-sm transition hover:bg-surface disabled:opacity-60; }
   .btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent-solid px-3.5 py-1.5 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-60; }
+  .btn-danger { @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-danger px-3.5 py-1.5 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-60; }
+  .dark .btn-danger { @apply text-black; }
   .btn-ghost { @apply inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm text-muted transition hover:bg-surface hover:text-fg; }
   .field { @apply flex flex-col gap-1 text-sm; }
   .field > span { @apply text-muted; }

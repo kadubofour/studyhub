@@ -9,9 +9,9 @@ function setup(over: Partial<React.ComponentProps<typeof NoteMenuBar>> = {}) {
   const actions: NoteMenuActions = {
     newNote: vi.fn(), importNote: vi.fn(), exportWord: vi.fn(), exportPdf: vi.fn(), deleteNote: vi.fn(),
     undo: vi.fn(), redo: vi.fn(), selectAll: vi.fn(), find: vi.fn(), insertTable: vi.fn(), insertEquation: vi.fn(),
-    setMode: vi.fn(), toggleReading: vi.fn(), toggleFullWidth: vi.fn(),
+    setMode: vi.fn(), toggleReading: vi.fn(), toggleFullWidth: vi.fn(), toggleAutoMath: vi.fn(),
   }
-  render(<NoteMenuBar actions={actions} mode="rich" reading={false} fullWidth={false} {...over} />)
+  render(<NoteMenuBar actions={actions} mode="rich" reading={false} fullWidth={false} autoMath {...over} />)
   return actions
 }
 
@@ -67,6 +67,11 @@ describe('NoteMenuBar', () => {
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'View' })) })
     await act(async () => { fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Full width' })) })
     expect(a.toggleFullWidth).toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'View' })) })
+    const auto = screen.getByRole('menuitemcheckbox', { name: 'Automatic maths' })
+    expect(auto.getAttribute('aria-checked')).toBe('true')
+    await act(async () => { fireEvent.click(auto) })
+    expect(a.toggleAutoMath).toHaveBeenCalled()
   })
 
   it('works from the keyboard: arrows move between menus and items, Esc closes and returns focus', async () => {

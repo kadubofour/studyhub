@@ -61,6 +61,16 @@ describe('rich editor turns typed maths into equations', () => {
     expect(types(editor)).not.toContain('inlineMath')
     editor.destroy()
   })
+  it('can be switched off (Settings > automatic maths)', () => {
+    let on = false
+    const editor = new Editor({ extensions: noteExtensions({ autoMath: () => on }) })
+    typeInto(editor, 'x^2 ')
+    expect(types(editor)).not.toContain('inlineMath')
+    on = true
+    typeInto(editor, 'y^2 ')
+    expect(types(editor)).toContain('inlineMath')
+    editor.destroy()
+  })
   it('Backspace right after turns it back into text', () => {
     const editor = new Editor({ extensions: noteExtensions() })
     typeInto(editor, 'x^2 ')

@@ -19,7 +19,7 @@ import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { NotesSidebar } from '@/components/notes/NotesSidebar'
 import type { Profile } from '@/lib/types'
 
-const profile = { id: 'u', display_name: null, timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', onboarded: true } as Profile
+const profile = { id: 'u', display_name: null, timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 const note = (id: string, title: string) => ({ id, title, course_id: null, updated_at: new Date().toISOString() })
 
 beforeAll(() => { HTMLDialogElement.prototype.showModal = function () {}; HTMLDialogElement.prototype.close = function () {} })

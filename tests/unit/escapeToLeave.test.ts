@@ -16,6 +16,11 @@ describe('shouldLeaveOnEscape', () => {
     expect(shouldLeaveOnEscape(ev({ defaultPrevented: true }), false)).toBe(false)
     expect(shouldLeaveOnEscape(ev(), true)).toBe(false)
   })
+  it('leaves from inside the note editor, which marks every Esc handled without using it', () => {
+    expect(shouldLeaveOnEscape(ev({ defaultPrevented: true }), false, true)).toBe(true)
+    expect(shouldLeaveOnEscape(ev({ defaultPrevented: true, isComposing: true }), false, true)).toBe(false)
+    expect(shouldLeaveOnEscape(ev({ defaultPrevented: true }), true, true)).toBe(false)
+  })
   it('ignores other keys', () => {
     expect(shouldLeaveOnEscape(ev({ key: 'Enter' }), false)).toBe(false)
   })

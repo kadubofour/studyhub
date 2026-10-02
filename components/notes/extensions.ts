@@ -45,12 +45,27 @@ const DoubleDollarBlockMath = Extension.create({
 
 // Maths typed without dollars (x^2, a_n, \frac{a}{b}) becomes an equation when the word ends with a
 // space. Tiptap skips input rules in code, and Backspace straight after puts the plain text back.
-const AutoMath = Extension.create({
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    autoMath: { setAutoMath: (on: boolean) => ReturnType }
+  }
+}
+
+const AutoMath = Extension.create<{ enabled: (() => boolean) | null }, { enabled: boolean }>({
   name: 'autoMath',
+  addOptions() { return { enabled: null } },
+  // The live switch, flipped with editor.commands.setAutoMath() when the setting changes
+  addStorage() { return { enabled: true } },
+  addCommands() {
+    return { setAutoMath: (on: boolean) => () => { this.storage.enabled = on; return true } }
+  },
   addInputRules() {
+    const storage = this.storage
+    const enabled = this.options.enabled ?? (() => storage.enabled)
     return [new InputRule({
       find: /(?:^|\s)(\S+)\s$/,
       handler: ({ state, range, match }) => {
+        if (!enabled()) return null // switched off in Settings
         const token = mathToken(match[1])
         const type = state.schema.nodes.inlineMath
         if (!token || !type) return null
@@ -65,9 +80,13 @@ const AutoMath = Extension.create({
   },
 })
 
-export type EditMath =(kind: 'inline' | 'block', latex: string, pos: number) => void
+export type EditMath = (kind: 'inline' | 'block', latex: string, pos: number) => void
 
-export function noteExtensions(opts: { onEditMath?: EditMath } = {}) {
+export function noteExtensions(opts: {
+  onEditMath?: EditMath
+  /** Read on every keystroke; without it, editor.commands.setAutoMath() decides */
+  autoMath?: () => boolean
+} = {}) {
   return [
     StarterKit.configure({ link: false }),
     TaskList,
@@ -81,7 +100,7 @@ export function noteExtensions(opts: { onEditMath?: EditMath } = {}) {
       blockOptions: { onClick: (node, pos) => opts.onEditMath?.('block', node.attrs.latex, pos) },
     }),
     SingleDollarMath,
-    AutoMath,
+    AutoMath.configure({ enabled: opts.autoMath ?? null }),
     Markdown,
   ]
 }

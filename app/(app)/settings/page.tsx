@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
+import { Switch } from '@/components/ui/Switch'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -107,6 +108,16 @@ export default function SettingsPage() {
           </select>
         </label>
       </section>
+      <div className="flex items-start justify-between gap-4 rounded-xl bg-surface px-3.5 py-3">
+        <div>
+          <p id="auto-math-label" className="text-sm font-medium">Turn typed maths into equations</p>
+          <p id="auto-math-hint" className="mt-0.5 text-xs text-muted">
+            In notes, typing <code>x^2</code>, <code>a_n</code> or <code>\frac{'{a}{b}'}</code> then a space makes an equation.
+            Backspace straight after undoes it. <code>$…$</code> always works.
+          </p>
+        </div>
+        <Switch checked={form.auto_math} onChange={v => set('auto_math', v)} labelledBy="auto-math-label" describedBy="auto-math-hint" />
+      </div>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       <div className="flex justify-between">
         <button type="button" className="btn" onClick={signOut}>Sign out</button>

@@ -4,6 +4,7 @@ import { SIDEBAR_COOKIE } from '@/lib/ui/sidebarCookie'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
+import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { AppShell } from '@/components/shell/AppShell'
 import { FocusProvider } from '@/components/providers/FocusProvider'
 import type { Profile } from '@/lib/types'
@@ -21,9 +22,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <ProfileProvider initial={profile}>
       <ToastProvider>
-        <FocusProvider>
-          <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
-        </FocusProvider>
+        <ConfirmProvider>
+          <FocusProvider>
+            <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
+          </FocusProvider>
+        </ConfirmProvider>
       </ToastProvider>
     </ProfileProvider>
   )

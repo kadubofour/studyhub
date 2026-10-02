@@ -1,15 +1,18 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Upload, CheckSquare, X, NotebookPen, Search } from 'lucide-react'
+import { Plus, Upload, CheckSquare, X, NotebookPen, Search, MoreHorizontal, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ExportMenu } from '@/components/notes/ExportMenu'
 import { ImportDialog } from '@/components/notes/ImportDialog'
 import { useToast } from '@/components/providers/ToastProvider'
+import { useConfirm } from '@/components/providers/ConfirmProvider'
+import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
+import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 import { supabase } from '@/lib/supabase/client'
-import { createNote, listNotes, searchNotes } from '@/lib/data/notes'
+import { createNote, deleteNote, listNotes, searchNotes } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
 import type { Course, NoteSummary } from '@/lib/types'
 
@@ -28,6 +31,9 @@ export function NotesSidebar() {
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
+  const confirm = useConfirm()
+  const [menu, setMenu] = useState<{ x: number; y: number; note: NoteSummary } | null>(null)
+  const closeMenu = useCallback(() => setMenu(null), [])
 
   useEffect(() => { listCourses(supabase()).then(setCourses).catch(() => {}) }, [])
 
@@ -54,6 +60,40 @@ export function NotesSidebar() {
       router.push(`/notes/${n.id}`)
     } catch { toast('Couldn\'t create a note.') }
   }
+
+  // Quick actions for one note: right-click / long-press a tile, the menu key, or its ⋯ button
+  function openMenu(e: React.MouseEvent, n: NoteSummary) {
+    e.preventDefault()
+    // From the keyboard (menu key, Shift+F10) or the ⋯ button there's no pointer spot: use the element's corner
+    const fromPointer = e.type === 'contextmenu' && (e.clientX || e.clientY)
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setMenu({ x: fromPointer ? e.clientX : r.left, y: fromPointer ? e.clientY : r.bottom, note: n })
+  }
+
+  async function remove(n: NoteSummary) {
+    const ok = await confirm({
+      title: 'Delete this note?', body: `“${n.title || 'Untitled'}” will be deleted. This can't be undone.`,
+      confirmLabel: 'Delete note', danger: true,
+    })
+    if (!ok) return
+    try {
+      await deleteNote(supabase(), n.id)
+      setNotes(ns => ns?.filter(x => x.id !== n.id) ?? ns)
+      setSelected(s => s.filter(x => x !== n.id))
+      setVersion(v => v + 1)
+    } catch { toast('Couldn\'t delete the note.') }
+  }
+
+  const menuItems = (n: NoteSummary): MenuEntry[] => [
+    { label: 'Open', icon: ExternalLink, onSelect: () => router.push(`/notes/${n.id}`) },
+    { label: 'Open in new tab', icon: SquareArrowOutUpRight, onSelect: () => window.open(`/notes/${n.id}`, '_blank', 'noopener') },
+    'sep',
+    { label: 'Export as Word', icon: FileText, onSelect: () => { exportNotesToWord([n.id]).catch(() => toast('Couldn\'t create the Word document.')) } },
+    { label: 'Export as PDF', icon: FileType2, onSelect: () => openPdfExport([n.id]) },
+    'sep',
+    { label: 'Select', icon: CheckSquare, onSelect: () => { setSelecting(true); setSelected(s => (s.includes(n.id) ? s : [...s, n.id])) } },
+    { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { void remove(n) } },
+  ]
 
   const shown = (notes ?? []).filter(n => !course || n.course_id === course)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
@@ -127,11 +167,17 @@ export function NotesSidebar() {
             <button key={n.id} type="button" role="checkbox" aria-checked={on} aria-label={`Select ${n.title || 'Untitled'}`}
               className={cls} style={style} onClick={() => toggle(n.id)}>{body}</button>
           ) : (
-            <Link key={n.id} href={`/notes/${n.id}`} className={cls} style={style}>{body}</Link>
+            <div key={n.id} className="group relative">
+              <Link href={`/notes/${n.id}`} className={`${cls} h-full pr-10`} style={style} onContextMenu={e => openMenu(e, n)}>{body}</Link>
+              <button type="button" aria-label={`More actions for ${n.title || 'Untitled'}`} aria-haspopup="menu"
+                className="absolute right-2 top-3 rounded-lg p-1 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                onClick={e => openMenu(e, n)}><MoreHorizontal size={16} aria-hidden /></button>
+            </div>
           )
         })}
       </div>
 
+      {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
       <ImportDialog open={importing} onClose={() => setImporting(false)} courses={courses} onImported={() => setVersion(v => v + 1)} />
     </div>
   )

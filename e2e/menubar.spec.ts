@@ -128,7 +128,74 @@ test('File > New note and Delete note', async ({ page }) => {
   await menu(page, 'File', 'New note')
   await expect(page).not.toHaveURL(first)
   await expect(page.getByLabel('Title')).toHaveValue('Untitled')
-  page.once('dialog', d => d.accept())
+  // No browser pop-up: some browsers block confirm(), which used to make Delete do nothing
+  page.on('dialog', d => { throw new Error(`unexpected native ${d.type()} dialog`) })
   await menu(page, 'File', 'Delete note')
+  const ask = page.getByRole('dialog', { name: 'Delete this note?' })
+  await ask.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/) // kept
+  await menu(page, 'File', 'Delete note')
+  await ask.getByRole('button', { name: 'Delete note' }).click()
   await expect(page).toHaveURL(/\/notes$/)
+  await expect(page.getByRole('link', { name: /First/ })).toBeVisible() // the other note is untouched
+  await expect(page.getByRole('link', { name: /Untitled/ })).toHaveCount(0)
+})
+
+test('right-click in a note opens quick actions', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Quick')
+  const ed = page.getByLabel('Note', { exact: true })
+  await ed.click()
+  await page.keyboard.type('Rate is x^2 today ')
+  await ed.click({ button: 'right', position: { x: 300, y: 60 } })
+  const quick = page.getByRole('menu', { name: 'Quick actions' })
+  await expect(quick).toBeVisible()
+  await quick.getByRole('menuitem', { name: /Insert table/ }).click()
+  await quick.getByRole('button', { name: '2 by 2 table' }).click()
+  const table = page.locator('.ProseMirror table')
+  await expect(table.locator('th')).toHaveCount(2)
+
+  // In a table the menu offers row/column actions
+  await table.locator('td').first().click({ button: 'right' })
+  await expect(quick.getByRole('menuitem', { name: 'Delete table' })).toBeVisible()
+  await quick.getByRole('menuitem', { name: 'Add column right' }).click()
+  await expect(table.locator('th')).toHaveCount(3)
+
+  // On an equation: Edit equation
+  const math = page.locator('.ProseMirror [data-type="inline-math"]')
+  const b = (await math.boundingBox())!
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2, { button: 'right' })
+  await quick.getByRole('menuitem', { name: 'Edit equation' }).click()
+  await expect(page.getByLabel('LaTeX')).toHaveValue('x^2')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  await page.keyboard.press('Escape') // Esc with no menu open leaves the note
+  await expect(page).toHaveURL(/\/notes$/)
+})
+
+test('automatic maths can be switched off from the View menu', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Code notes')
+  await menu(page, 'View', 'Automatic maths')
+  await expect(page.getByText(/Automatic maths is off/)).toBeVisible()
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.type('my x^2 stays ')
+  await expect(page.locator('.ProseMirror .katex')).toHaveCount(0)
+  // and it is remembered: Settings shows it off
+  await page.goto('/settings')
+  await expect(page.getByRole('switch', { name: /Turn typed maths into equations/ })).toHaveAttribute('aria-checked', 'false')
+})
+
+test('notes list: right-click a note to delete it', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Throwaway')
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.goto('/notes')
+  await page.getByRole('link', { name: /Throwaway/ }).click({ button: 'right' })
+  await page.getByRole('menu', { name: 'Throwaway' }).getByRole('menuitem', { name: 'Delete' }).click()
+  await page.getByRole('dialog', { name: 'Delete this note?' }).getByRole('button', { name: 'Delete note' }).click()
+  await expect(page.getByRole('link', { name: /Throwaway/ })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Write your first note' })).toBeVisible()
 })

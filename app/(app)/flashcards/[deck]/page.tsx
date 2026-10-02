@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardFace } from '@/components/flashcards/CardFace'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
+import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createCards, deleteCard, listCards, updateCard } from '@/lib/data/cards'
 import { deleteDeck, getDeck } from '@/lib/data/decks'
@@ -16,6 +17,7 @@ export default function DeckPage() {
   const router = useRouter()
   const save = useSaver()
   const toast = useToast()
+  const confirm = useConfirm()
   const [deck, setDeck] = useState<Deck | null>(null)
   const [cards, setCards] = useState<Card[]>([])
   const [front, setFront] = useState('')
@@ -66,7 +68,11 @@ export default function DeckPage() {
   }
 
   async function removeDeck() {
-    if (!confirm(`Delete “${deck?.name}” and its ${cards.length} cards?`)) return
+    const ok = await confirm({
+      title: `Delete “${deck?.name}”?`, body: `Its ${cards.length} cards will be deleted too. This can't be undone.`,
+      confirmLabel: 'Delete deck', danger: true,
+    })
+    if (!ok) return
     try { await deleteDeck(supabase(), deckId); router.replace('/flashcards') } catch { toast('Couldn\'t delete the deck.') }
   }
 

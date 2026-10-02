@@ -15,6 +15,8 @@ import { findMatches, findKey, wrap, highlightInElement, clearElementHighlights 
 import type { EditMath } from '@/components/notes/extensions'
 import { autoWrapMath } from '@/components/notes/autoMath'
 import { useProfile } from '@/components/providers/ProfileProvider'
+import { useConfirm } from '@/components/providers/ConfirmProvider'
+import { updateProfile } from '@/lib/data/profile'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createNote, deleteNote, getNote, updateNote } from '@/lib/data/notes'
@@ -53,7 +55,8 @@ export default function NoteEditorPage() {
 function NoteEditor({ id }: { id: string }) {
   const router = useRouter()
   const toast = useToast()
-  const { profile } = useProfile()
+  const { profile, setProfile } = useProfile()
+  const confirm = useConfirm()
   const [note, setNote] = useState<Note | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [mode, setMode] = useState<EditorMode>(profile.default_editor_mode)
@@ -88,14 +91,19 @@ function NoteEditor({ id }: { id: string }) {
   }
 
   async function remove() {
-    if (!confirm('Delete this note?')) return
+    const ok = await confirm({
+      title: 'Delete this note?', body: `“${draftRef.current?.title || 'Untitled'}” will be deleted. This can't be undone.`,
+      confirmLabel: 'Delete note', danger: true,
+    })
+    if (!ok) return
     try { await deleteNote(supabase(), id); notifyList(); router.replace('/notes') } catch { toast('Couldn\'t delete the note.') }
   }
 
   // Esc leaves the full-screen editor (menus, find and dialogs handle their own Esc first)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!shouldLeaveOnEscape(e, !!document.querySelector('dialog[open]'))) return
+      const fromEditor = !!(e.target as HTMLElement | null)?.closest?.('.ProseMirror')
+      if (!shouldLeaveOnEscape(e, !!document.querySelector('dialog[open]'), fromEditor)) return
       router.replace('/notes') // replace: Back shouldn't reopen the note we just left
     }
     window.addEventListener('keydown', onKey)
@@ -203,6 +211,18 @@ function NoteEditor({ id }: { id: string }) {
     setMode: m => changeView(() => { setMode(m); setReading(false) }),
     toggleReading: () => changeView(() => setReading(r => !r)),
     toggleFullWidth: () => setFullWidth(w => !w),
+    // Same switch as Settings > Turn typed maths into equations
+    toggleAutoMath: async () => {
+      const on = !profile.auto_math
+      setProfile(p => ({ ...p, auto_math: on }))
+      try {
+        await updateProfile(supabase(), profile.id, { auto_math: on })
+        toast(on ? 'Automatic maths is on' : 'Automatic maths is off — use $…$ for equations')
+      } catch {
+        setProfile(p => ({ ...p, auto_math: !on }))
+        toast('Couldn\'t change that setting.')
+      }
+    },
   }
 
   if (!note || !draft) return null
@@ -213,7 +233,7 @@ function NoteEditor({ id }: { id: string }) {
     <div className="min-h-dvh">
       <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur md:px-6">
         <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
-        <NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} />
+        <NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} />
         <select className="input max-w-44" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })} aria-label="Course">
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -234,14 +254,14 @@ function NoteEditor({ id }: { id: string }) {
               onChange={e => change({ title: e.target.value })} aria-label="Title" />
             {mode === 'rich' ? (
               <RichEditor key={`rich-${note.id}`} markdown={draft.content_md} onChange={md => change({ content_md: md })}
-                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} />
+                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} autoMath={profile.auto_math} />
             ) : (
               <div className="mt-4 grid gap-6 md:grid-cols-2">
                 <textarea ref={markdownRef} className="input min-h-[70vh] font-mono text-[13px]" value={draft.content_md} aria-label="Markdown"
                   onChange={e => {
                     // Typing a space after maths like x^2 wraps it in $…$
                     const typedSpace = (e.nativeEvent as InputEvent).inputType === 'insertText' && (e.nativeEvent as InputEvent).data === ' '
-                    const wrapped = typedSpace ? autoWrapMath(e.target.value, e.target.selectionStart) : null
+                    const wrapped = typedSpace && profile.auto_math ? autoWrapMath(e.target.value, e.target.selectionStart) : null
                     change({ content_md: wrapped?.value ?? e.target.value })
                     if (wrapped) { const ta = e.target; requestAnimationFrame(() => ta.setSelectionRange(wrapped.cursor, wrapped.cursor)) }
                   }} />

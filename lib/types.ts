@@ -19,6 +19,8 @@ export interface Profile {
   theme: ThemePref
   accent: AccentName
   font: FontName
+  /** Turn maths typed without dollars (x^2) into equations as you type */
+  auto_math: boolean
   onboarded: boolean
 }
 export interface Course { id: string; name: string; color: string }
