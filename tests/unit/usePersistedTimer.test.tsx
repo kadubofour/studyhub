@@ -49,6 +49,12 @@ describe('usePersistedTimer', () => {
     expect(result.current.completedFocus).toBe(0)
   })
 
+  it('clears the old shared timer key from before timers were stored per student', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify({ state: createTimer('focus', 60_000), completedFocus: 0, dayKey: '2026-10-01' }))
+    renderHook(() => usePersistedTimer(() => createTimer('focus', 25 * 60_000), 'UTC', 'user-a'), { wrapper: strict })
+    await waitFor(() => expect(window.localStorage.getItem(KEY)).toBeNull())
+  })
+
   it('starts fresh with nothing saved, and saves changes', async () => {
     const { result } = renderHook(() => usePersistedTimer(() => createTimer('short', 5 * 60_000), 'UTC'), { wrapper: strict })
     await waitFor(() => expect(window.localStorage.getItem(KEY)).not.toBeNull())

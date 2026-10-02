@@ -73,6 +73,26 @@ describe('createAutosaver', () => {
     expect(a.hasPending()).toBe(false)
   })
 
+  it('stops retrying an error that can never succeed (e.g. a database rule), and says so', async () => {
+    let calls = 0
+    const statuses: SaveStatus[] = []
+    const permanent = Object.assign(new Error('violates row-level security'), { code: '42501' })
+    const a = createAutosaver<string>(async () => { calls++; throw permanent }, s => statuses.push(s), 1000)
+    a.update('x')
+    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(5 * 60_000)
+    expect(calls).toBe(1)
+    expect(statuses.at(-1)).toBe('failed')
+  })
+
+  it('keeps retrying network failures', async () => {
+    let calls = 0
+    const a = createAutosaver<string>(async () => { calls++; throw new TypeError('Failed to fetch') }, () => {}, 1000)
+    a.update('x')
+    await vi.advanceTimersByTimeAsync(1000 + 60_000)
+    expect(calls).toBeGreaterThan(2)
+  })
+
   it('a newer edit made during a failing save is not overwritten by the old value', async () => {
     const saved: string[] = []
     const first = deferred()

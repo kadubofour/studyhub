@@ -39,6 +39,38 @@ describe('latexToOmml (Word equations)', () => {
     for (const tag of ['<m:f>', '<m:rad>', '<m:sSup>']) expect(s).toContain(tag)
     expect(s).toContain('±')
   })
+  it('keeps math spacing as visible space characters (empty text would be dropped)', () => {
+    const s = omml('f(x)\\,dx')
+    expect(s).not.toMatch(/<m:t[^>]*><\/m:t>/) // no empty text runs
+    expect(s).toMatch(/[\u2009\u2005\u2002\u2003]/)
+  })
+  it('keeps bold symbols bold', () => {
+    expect(omml('\\mathbf{v}')).toContain('<m:sty m:val="b"/>')
+  })
+  it('makes \\left( \\right) brackets stretch', () => {
+    const s = omml('\\left( \\frac{a}{b} \\right)')
+    expect(s).toContain('<m:d>')
+    expect(s).toContain('m:begChr m:val="("')
+    expect(s).toContain('m:endChr m:val=")"')
+  })
+  it('writes cases with a stretching brace', () => {
+    const s = omml('f(x)=\\begin{cases}1 & x>0\\\\0 & x\\le 0\\end{cases}', true)
+    expect(s).toContain('<m:d>')
+    expect(s).toContain('m:begChr m:val="{"')
+  })
+  it('writes aligned equations as an equation array', () => {
+    expect(omml('\\begin{aligned}a&=b\\\\c&=d\\end{aligned}', true)).toContain('<m:eqArr>')
+  })
+  it('keeps boxed and cancelled expressions', () => {
+    expect(omml('\\boxed{x}')).toContain('<m:borderBox>')
+    expect(omml('\\cancel{x}')).toMatch(/<m:borderBox>[\s\S]*m:strikeBLTR/)
+  })
+  it('puts limits beside every integral sign, not just ∫', () => {
+    expect(omml('\\iint_D f', true)).toContain('m:limLoc m:val="subSup"')
+  })
+  it('strips control characters that make Word reject the file', () => {
+    expect(omml('\\text{a\u000Bb}')).not.toMatch(/[\x00-\x08\x0B\x0C\x0E-\x1F]/)
+  })
   it('escapes XML special characters', () => {
     expect(omml('a < b')).toContain('&lt;')
   })

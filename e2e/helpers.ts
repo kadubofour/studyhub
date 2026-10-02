@@ -12,5 +12,6 @@ export async function signUp(page: Page) {
   await page.getByLabel('Your first course').fill('Biology')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page).toHaveURL(/\/home/)
+  await page.waitForLoadState('networkidle') // let Home hydrate before a test types into it
   return email
 }

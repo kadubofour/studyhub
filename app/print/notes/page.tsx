@@ -14,11 +14,13 @@ function PrintNotes() {
   const ids = useSearchParams().get('ids')
   const [notes, setNotes] = useState<Note[] | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     const sb = supabase()
     Promise.all([getNotesForExport(sb, ids ? ids.split(',').filter(Boolean) : undefined), listCourses(sb)])
       .then(([n, c]) => { setNotes(n); setCourses(c) })
+      .catch(() => setFailed(true))
   }, [ids])
 
   useEffect(() => {
@@ -29,6 +31,7 @@ function PrintNotes() {
     return () => clearTimeout(t)
   }, [notes])
 
+  if (failed) return <p className="p-8 text-sm text-muted">Couldn&apos;t load these notes. Go back to Notes and try exporting again.</p>
   if (!notes) return <p className="p-8 text-sm text-muted">Preparing…</p>
   if (!notes.length) return <p className="p-8 text-sm text-muted">There are no notes to export.</p>
 

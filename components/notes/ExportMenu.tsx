@@ -19,15 +19,31 @@ export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
+    // Focus the first item when the menu opens (ARIA menu pattern)
+    ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
     const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) } }
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      // preventDefault marks it handled, so the full-screen editor doesn't also close
+      e.preventDefault(); e.stopPropagation(); setOpen(false); buttonRef.current?.focus()
+    }
     document.addEventListener('mousedown', close)
     document.addEventListener('keydown', esc, true)
     return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc, true) }
   }, [open])
+
+  function onMenuKey(e: React.KeyboardEvent) {
+    const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    const to = e.key === 'ArrowDown' ? (i + 1) % items.length : e.key === 'ArrowUp' ? (i - 1 + items.length) % items.length
+      : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : null
+    if (to === null) return
+    e.preventDefault(); items[to]?.focus()
+  }
 
   async function toWord() {
     setOpen(false); setBusy(true)
@@ -56,15 +72,15 @@ export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" className="btn" onClick={() => setOpen(o => !o)} disabled={disabled || busy} aria-haspopup="menu" aria-expanded={open}>
+      <button ref={buttonRef} type="button" className="btn" onClick={() => setOpen(o => !o)} disabled={disabled || busy} aria-haspopup="menu" aria-expanded={open}>
         <Download size={14} aria-hidden />{busy ? 'Preparing…' : label}
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-40 mt-1 w-56 rounded-xl border border-line bg-raised p-1 shadow-lg">
-          <button role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface" onClick={toWord}>
+        <div role="menu" onKeyDown={onMenuKey} className="absolute right-0 z-40 mt-1 w-56 rounded-xl border border-line bg-raised p-1 shadow-lg">
+          <button role="menuitem" tabIndex={-1} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface" onClick={toWord}>
             <FileText size={15} className="text-[#2B579A]" aria-hidden />Word document (.docx)
           </button>
-          <button role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface" onClick={toPdf}>
+          <button role="menuitem" tabIndex={-1} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface" onClick={toPdf}>
             <FileType2 size={15} className="text-danger" aria-hidden />PDF
           </button>
         </div>

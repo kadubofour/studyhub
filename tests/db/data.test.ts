@@ -157,6 +157,19 @@ describe('review fixes', () => {
     expect(after[0]).toMatchObject({ reps: 0, interval_days: 0 })
   })
 
+  it('rating is atomic: if rescheduling fails after the review was written, the review is rolled back', async () => {
+    const d = await createDeck(sb, { name: 'Atomic 2' })
+    const [card] = await createCards(sb, d.id, [{ front: 'q', back: 'a' }])
+    const since = new Date(Date.now() - 1000)
+    // The review insert (first statement) succeeds; the card update (second) violates reps >= 0
+    const { error } = await sb.rpc('rate_card', {
+      p_card_id: card.id, p_due_at: new Date().toISOString(), p_interval_days: 1, p_ease: 2.5, p_reps: -1,
+      p_lapses: 0, p_rating: 3, p_reviewed_at: new Date().toISOString(), p_prev_interval_days: 0,
+    })
+    expect(error).not.toBeNull()
+    expect((await listReviewsSince(sb, since)).filter(r => r.card_id === card.id)).toEqual([])
+  })
+
   it('rejects an invalid time zone', async () => {
     const u = await newUser()
     const { error } = await u.sb.from('profiles').update({ timezone: 'Mars/Olympus_Mons' }).eq('id', u.id)
@@ -176,6 +189,18 @@ describe('review fixes', () => {
     expect((await searchNotes(sb, 'krebs')).map(x => x.id)).toContain(n.id)
     expect((await searchNotes(sb, 'cycle, aka')).map(x => x.id)).toContain(n.id)
     expect((await searchNotes(sb, 'zzz-nothing')).map(x => x.id)).not.toContain(n.id)
+  })
+
+  it('search treats % and _ literally', async () => {
+    const u = (await newUser()).sb
+    const hit = await createNote(u, { title: 'Scores', content_md: 'got 50% on snake_case quiz' })
+    const miss = await createNote(u, { title: 'Other', content_md: 'got 500 on snakeXcase' })
+    const pct = (await searchNotes(u, '50%')).map(n => n.id)
+    expect(pct).toContain(hit.id)
+    expect(pct).not.toContain(miss.id)
+    const us = (await searchNotes(u, 'snake_case')).map(n => n.id)
+    expect(us).toContain(hit.id)
+    expect(us).not.toContain(miss.id)
   })
 
   it('getDeck loads one deck without scanning every card', async () => {

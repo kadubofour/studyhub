@@ -40,11 +40,12 @@ export function NotesSidebar() {
   // Search titles and note text on the server; debounce typing
   useEffect(() => {
     const term = q.trim()
+    let current = true // a newer search supersedes this one, even if this one answers later
     const t = setTimeout(() => {
       const load = term ? searchNotes(supabase(), term) : listNotes(supabase())
-      load.then(setNotes).catch(() => toast('Couldn\'t load notes.'))
+      load.then(n => { if (current) setNotes(n) }).catch(() => { if (current) toast('Couldn\'t load notes.') })
     }, term ? 250 : 0)
-    return () => clearTimeout(t)
+    return () => { current = false; clearTimeout(t) }
   }, [q, version, toast])
 
   async function create() {

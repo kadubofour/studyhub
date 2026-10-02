@@ -7,7 +7,7 @@ import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import type { Root, RootContent, PhrasingContent, List } from 'mdast'
-import { latexToOmml } from './mathToOmml'
+import { latexToOmml, stripControl } from './mathToOmml'
 
 export interface ExportNote { title: string; course: string | null; content_md: string }
 
@@ -38,6 +38,9 @@ function inline(nodes: PhrasingContent[], marks: Marks = {}): ParagraphChild[] {
       case 'link':
         out.push(new ExternalHyperlink({ link: n.url, children: [new TextRun({ text: textOf(n.children), style: 'Hyperlink', ...marks })] }))
         break
+      case 'image':
+        out.push(new TextRun({ text: `[Image: ${n.alt || n.url}]`, italics: true, color: '6B6A65' }))
+        break
       case 'inlineMath': out.push(mathXml(n.value, false) ?? new TextRun({ text: `$${n.value}$`, ...marks })); break
       default:
         if ('children' in n) out.push(...inline(n.children as PhrasingContent[], marks))
@@ -51,7 +54,9 @@ function textOf(nodes: PhrasingContent[]): string {
   return nodes.map(n => ('value' in n ? String(n.value) : 'children' in n ? textOf(n.children as PhrasingContent[]) : '')).join('')
 }
 
-let listInstance = 0
+// Each ordered list gets its own numbering definition, so separate lists never continue each
+// other's numbers and a list starting at 5 starts at 5. Collected while building, used by Document.
+let orderedLists: { reference: string; start: number }[] = []
 
 function block(node: RootContent, ctx: { level: number }): (Paragraph | Table)[] {
   switch (node.type) {
@@ -101,38 +106,53 @@ function block(node: RootContent, ctx: { level: number }): (Paragraph | Table)[]
 }
 
 function list(node: List, level: number): (Paragraph | Table)[] {
-  const instance = ++listInstance // restart numbering for each separate list
+  const lvl = Math.min(level, 8)
+  let marker: { numbering: { reference: string; level: number } } | { bullet: { level: number } }
+  if (node.ordered) {
+    const reference = `ol-${orderedLists.length + 1}`
+    orderedLists.push({ reference, start: node.start ?? 1 })
+    marker = { numbering: { reference, level: lvl } }
+  } else {
+    marker = { bullet: { level: lvl } }
+  }
   const out: (Paragraph | Table)[] = []
   for (const item of node.children) {
     const box = item.checked === true ? '☑ ' : item.checked === false ? '☐ ' : ''
-    item.children.forEach((child, i) => {
-      if (child.type === 'paragraph' && i === 0) {
-        const runs = [...(box ? [new TextRun({ text: box })] : []), ...inline(child.children)]
-        out.push(new Paragraph({
-          children: runs,
-          ...(node.ordered
-            ? { numbering: { reference: 'ordered', level: Math.min(level, 8), instance } }
-            : { bullet: { level: Math.min(level, 8) } }),
-        }))
+    const [first, ...rest] = item.children
+    if (first?.type === 'paragraph') {
+      out.push(new Paragraph({ children: [...(box ? [new TextRun({ text: box })] : []), ...inline(first.children)], ...marker }))
+    } else {
+      // An item that opens with a code block or table still gets its bullet/number
+      out.push(new Paragraph({ children: box ? [new TextRun({ text: box })] : [], ...marker }))
+      if (first) out.push(...block(first, { level: level + 1 }))
+    }
+    for (const child of rest) {
+      if (child.type === 'paragraph') {
+        // Further paragraphs of the same item line up with the item's text
+        out.push(new Paragraph({ children: inline(child.children), indent: { left: 720 * (lvl + 1) } }))
       } else {
         out.push(...block(child, { level: level + 1 }))
       }
-    })
+    }
   }
   return out
 }
 
 export function noteParagraphs(note: ExportNote): (Paragraph | Table)[] {
-  const tree = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(note.content_md) as Root
+  // Text pasted from Word/PDFs can carry control characters that XML (and Word) reject
+  const content = stripControl(note.content_md)
+  const title = stripControl(note.title)
+  const course = note.course ? stripControl(note.course) : null
+  const tree = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(content) as Root
   const head = [
-    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: note.title || 'Untitled' })] }),
-    ...(note.course ? [new Paragraph({ children: [new TextRun({ text: note.course, italics: true, color: '6B6A65' })], spacing: { after: 240 } })] : []),
+    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: title || 'Untitled' })] }),
+    ...(course ? [new Paragraph({ children: [new TextRun({ text: course, italics: true, color: '6B6A65' })], spacing: { after: 240 } })] : []),
   ]
   return [...head, ...tree.children.flatMap(n => block(n, { level: 0 }))]
 }
 
 export async function notesToDocx(notes: ExportNote[]): Promise<Blob> {
-  listInstance = 0
+  orderedLists = []
   const children = notes.flatMap((n, i) => [
     ...(i > 0 ? [new Paragraph({ children: [new PageBreak()] })] : []),
     ...noteParagraphs(n),
@@ -141,13 +161,13 @@ export async function notesToDocx(notes: ExportNote[]): Promise<Blob> {
     creator: 'Studyhub',
     title: notes.length === 1 ? notes[0].title : 'Studyhub notes',
     numbering: {
-      config: [{
-        reference: 'ordered',
+      config: orderedLists.map(({ reference, start }) => ({
+        reference,
         levels: Array.from({ length: 9 }, (_, level) => ({
-          level, format: LevelFormat.DECIMAL, text: `%${level + 1}.`, alignment: AlignmentType.START,
+          level, format: LevelFormat.DECIMAL, text: `%${level + 1}.`, alignment: AlignmentType.START, start,
           style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
         })),
-      }],
+      })),
     },
     sections: [{ children }],
   })

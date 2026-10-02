@@ -12,6 +12,12 @@ describe('safeNext', () => {
     expect(safeNext('/\\evil.example')).toBe('/home')
     expect(safeNext('javascript:alert(1)')).toBe('/home')
   })
+  it('rejects paths hiding control characters that browsers strip (tab, newline)', () => {
+    expect(safeNext('/\t/evil.com')).toBe('/home')
+    expect(safeNext('/\n/evil.com')).toBe('/home')
+    expect(safeNext('/\r\n/evil.com')).toBe('/home')
+    expect(safeNext('/%09/evil.com')).toBe('/%09/evil.com') // still encoded: a harmless in-app path
+  })
   it('falls back when missing', () => {
     expect(safeNext(null)).toBe('/home')
     expect(safeNext('')).toBe('/home')

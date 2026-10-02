@@ -3,7 +3,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import type { Profile } from '@/lib/types'
 
-const Ctx = createContext<{ profile: Profile; setProfile: (p: Profile) => void } | null>(null)
+// setProfile accepts an updater so concurrent saves (e.g. accent + form) can merge instead of overwrite
+const Ctx = createContext<{ profile: Profile; setProfile: React.Dispatch<React.SetStateAction<Profile>> } | null>(null)
 
 export function ProfileProvider({ initial, children }: { initial: Profile; children: React.ReactNode }) {
   const [profile, setProfile] = useState(initial)

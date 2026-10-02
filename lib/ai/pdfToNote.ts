@@ -4,6 +4,8 @@ import type { BetaMessage, BetaMessageStreamParams } from '@anthropic-ai/sdk/res
 // Server-only: called from app/api/import/pdf/route.ts with the server's API key.
 
 export const PDF_IMPORT_MODEL = 'claude-opus-5-5'
+// Keeps a conversion within the route's time limit and bounds its cost
+export const MAX_PDF_PAGES = 100
 
 export class PdfRefusedError extends Error {
   constructor() { super('The PDF could not be converted.') }
@@ -23,7 +25,7 @@ Do not summarise, shorten, reorder, add commentary or invent content. Leave out 
 
 Reply with the Markdown note only.`
 
-type StreamingClient = { beta: { messages: { stream: (params: BetaMessageStreamParams) => { finalMessage(): Promise<BetaMessage> } } } }
+type StreamingClient = { beta: { messages: { stream: (params: BetaMessageStreamParams, options?: { signal?: AbortSignal }) => { finalMessage(): Promise<BetaMessage> } } } }
 
 export function parseNoteMarkdown(text: string, fileName: string): { title: string; content_md: string } {
   let md = text.trim().replace(/^```(?:markdown|md)?\n([\s\S]*?)\n```$/, '$1').trim()
@@ -35,11 +37,11 @@ export function parseNoteMarkdown(text: string, fileName: string): { title: stri
 }
 
 export async function pdfToNote(
-  client: StreamingClient, pdfBase64: string, fileName: string,
+  client: StreamingClient, pdfBase64: string, fileName: string, options: { signal?: AbortSignal } = {},
 ): Promise<{ title: string; content_md: string; truncated: boolean }> {
   const message = await client.beta.messages.stream({
     model: PDF_IMPORT_MODEL,
-    max_tokens: 64000,
+    max_tokens: 32000, // ample for a 100-page note; bounds cost and time
     output_config: { effort: 'medium' },
     // If a safety classifier declines, the API re-runs the request on a fallback model
     betas: ['server-side-fallback-2026-07-01'],
@@ -52,7 +54,7 @@ export async function pdfToNote(
         { type: 'text', text: `Convert this PDF ("${fileName}") into a note.` },
       ],
     }],
-  }).finalMessage()
+  }, { signal: options.signal }).finalMessage()
 
   if (message.stop_reason === 'refusal') throw new PdfRefusedError()
   const text = message.content.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('')

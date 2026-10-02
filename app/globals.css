@@ -64,6 +64,12 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 
 /* Print view for PDF export: just the notes, black on white */
 @media print {
+  /* Paper is white whatever the screen theme: reset every colour token to its light value */
+  :root, .dark, .app-root, .dark .app-root {
+    --bg: #fff; --raised: #fff; --surface: #f3f3f0; --line: #ccc; --fg: #000; --muted: #444;
+    --accent: #2b3fa8; --accent-soft: #eef1fd; --danger: #a32d2d;
+    color-scheme: light;
+  }
   .no-print { display: none !important; }
   body { background: #fff; color: #000; }
   .print-note { break-after: page; }

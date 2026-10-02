@@ -58,12 +58,49 @@ async function swapEquations(buf: ArrayBuffer): Promise<{ buf: ArrayBuffer; math
   return { buf: await zip.generateAsync({ type: 'arraybuffer' }), math }
 }
 
+// Escape Word text so it reads the same in Markdown: "$5" mustn't become math, "2*3*4" italics,
+// "[x](y)" a link or "<b>" HTML. Underscores inside words (snake_case) are left alone.
+export function escapeMarkdownText(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/([$`*[\]<>~|])/g, '\\$1')
+    .replace(/(^|[^\p{L}\p{N}])_|_(?=[^\p{L}\p{N}]|$)/gu, m => m.replace('_', '\\_'))
+    .replace(/^(#{1,6} |[-+] |\d+\. )/gm, '\\$1')
+}
+
 function turndown(): TurndownService {
   const td = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', emDelimiter: '*' })
   td.use(gfm)
-  // Only escape what would change meaning at the start of a line; keep snake_case and a*b intact
-  td.escape = (s: string) => s.replace(/^(#{1,6} |[-+*] |\d+\. |> )/gm, '\\$1')
+  td.escape = escapeMarkdownText
+  // Images aren't imported (they would bloat the note); leave a readable marker
+  td.addRule('image', {
+    filter: 'img',
+    replacement: (_content, node) => `*[Image${(node as HTMLImageElement).alt ? `: ${(node as HTMLImageElement).alt}` : ''}]*`,
+  })
   return td
+}
+
+// Tables are converted here rather than by turndown's table plugin, which keeps mammoth's
+// per-cell <p> line breaks and doesn't escape "|". Each table becomes a GFM table on one line
+// per row (first row = header), swapped in after turndown via a placeholder token.
+function extractTables(root: HTMLElement, td: TurndownService): string[] {
+  const tables: string[] = []
+  for (const table of Array.from(root.querySelectorAll('table'))) {
+    const rows = Array.from(table.querySelectorAll('tr')).map((tr, r) => Array.from(tr.querySelectorAll('td, th')).map(cell => {
+      const html = Array.from(cell.querySelectorAll('p')).map(p => p.innerHTML.trim()).filter(Boolean).join(' ') || cell.innerHTML
+      let text = td.turndown(html).replace(/\s*\n+\s*/g, ' ').trim()
+      if (r === 0) text = text.replace(/^\*\*(.+)\*\*$/, '$1') // header cells are bold anyway
+      return text
+    }))
+    if (!rows.length) { table.remove(); continue }
+    const width = Math.max(...rows.map(r => r.length))
+    const line = (cells: string[]) => `| ${Array.from({ length: width }, (_, i) => cells[i] ?? '').join(' | ')} |`
+    tables.push([line(rows[0]), line(Array(width).fill('---')), ...rows.slice(1).map(line)].join('\n'))
+    const marker = root.ownerDocument.createElement('p')
+    marker.textContent = `ZZTABLE${tables.length - 1}ZZ`
+    table.replaceWith(marker)
+  }
+  return tables
 }
 
 export async function docxToNote(buf: ArrayBuffer, fileName: string): Promise<ImportedNote> {
@@ -74,18 +111,26 @@ export async function docxToNote(buf: ArrayBuffer, fileName: string): Promise<Im
     : { buffer: Buffer.from(swapped) }
   const { value: html } = await mammoth.convertToHtml(
     input as Parameters<typeof mammoth.convertToHtml>[0],
-    { styleMap: ["p[style-name='Title'] => h1.doc-title:fresh"] },
+    {
+      styleMap: ["p[style-name='Title'] => h1.doc-title:fresh"],
+      // Don't embed images as huge base64 data URIs in the note
+      convertImage: mammoth.images.imgElement(async () => ({ src: '' })),
+    },
   )
 
-  // The document title (Title style, else the first top-level heading) becomes the note title
+  // Only a Title-style paragraph becomes the note title; otherwise the file name is used, so
+  // documents that use Heading 1 for every section keep all their headings
   const container = document.createElement('div')
   container.innerHTML = html
-  const titleEl = container.querySelector('h1.doc-title') ?? container.querySelector('h1')
+  const titleEl = container.querySelector('h1.doc-title')
   let title = titleEl?.textContent?.trim() ?? ''
   titleEl?.remove()
   if (!title || title === 'Untitled') title = fileName.replace(/\.docx$/i, '').trim() || 'Imported note'
+  const td = turndown()
+  const tables = extractTables(container, td)
 
-  let md = turndown().turndown(container.innerHTML)
+  let md = td.turndown(container.innerHTML)
+  md = md.replace(/ZZTABLE(\d+)ZZ/g, (_, i: string) => tables[Number(i)] ?? '')
   md = md.replace(/ZZ([DI])MATH(\d+)ZZ/g, (_, kind: string, i: string) => {
     const m = math[Number(i)]
     if (!m) return ''

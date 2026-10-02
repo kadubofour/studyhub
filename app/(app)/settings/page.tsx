@@ -48,13 +48,16 @@ export default function SettingsPage() {
     try {
       const patch = changedFields(initial, form) // id never changes, so it is never sent
       if (Object.keys(patch).length === 0) { toast('Settings saved'); return }
-      const saved = await updateProfile(supabase(), profile.id, patch)
-      setProfile(saved)
-      setForm(saved)
-      setInitial(saved)
-      setTheme(saved.theme)
+      await updateProfile(supabase(), profile.id, patch)
+      // Merge only what this form changed, so an accent/font picked meanwhile isn't reverted
+      setProfile(p => ({ ...p, ...patch }))
+      setInitial(form)
+      if (patch.theme) setTheme(patch.theme)
       toast('Settings saved')
-    } catch { toast('Couldn\'t save.') } finally { setBusy(false) }
+    } catch (err) {
+      if ((err as { code?: string })?.code === '22023') setError('That time zone isn\'t supported. Pick a nearby city in the same zone.')
+      else toast('Couldn\'t save.')
+    } finally { setBusy(false) }
   }
 
   async function signOut() {

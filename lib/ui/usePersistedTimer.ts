@@ -16,6 +16,8 @@ export function usePersistedTimer(initial: () => TimerState, tz: string, userId?
   useEffect(() => {
     if (restored.current) return // StrictMode re-runs effects; restore once
     restored.current = true
+    // Timers used to share one key across students on a device; drop that old entry
+    if (userId) { try { window.localStorage.removeItem('studyhub.timer') } catch { /* storage unavailable */ } }
     const saved = loadTimer(window.localStorage, userId)
     const today = localDayKey(new Date(), tz)
     // Syncing from localStorage must happen after hydration (the server has no storage),

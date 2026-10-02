@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase/client'
 import { deleteNote, getNote, updateNote } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
 import { useAutosave } from '@/lib/ui/useAutosave'
+import { shouldLeaveOnEscape } from '@/lib/ui/escapeToLeave'
 import { NOTES_CHANGED } from '@/components/notes/NotesSidebar'
 import { ExportMenu } from '@/components/notes/ExportMenu'
 
@@ -18,7 +19,10 @@ const notifyList = () => { window.dispatchEvent(new Event(NOTES_CHANGED)) }
 import type { Course, EditorMode, Note } from '@/lib/types'
 
 type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id'>>
-const STATUS_TEXT = { idle: '', pending: '', saving: 'Saving…', saved: 'Saved', error: 'Not saved — will retry' } as const
+const STATUS_TEXT = {
+  idle: '', pending: '', saving: 'Saving…', saved: 'Saved', error: 'Not saved — will retry',
+  failed: 'Couldn\'t save this change. Check the course still exists, then edit again.',
+} as const
 
 export default function NoteEditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -63,8 +67,8 @@ function NoteEditor({ id }: { id: string }) {
   // Esc leaves the full-screen editor (menus and dialogs handle their own Esc first)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return
-      router.push('/notes')
+      if (!shouldLeaveOnEscape(e, !!document.querySelector('dialog[open]'))) return
+      router.replace('/notes') // replace: Back shouldn't reopen the note we just left
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -80,7 +84,7 @@ function NoteEditor({ id }: { id: string }) {
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <span className="text-xs text-muted" aria-live="polite">{STATUS_TEXT[status]}</span>
+        <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <div role="tablist" className="flex rounded-xl bg-surface p-0.5">
             {(['rich', 'markdown'] as EditorMode[]).map(m => (

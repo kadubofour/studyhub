@@ -12,7 +12,7 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { ACCENTS, FONTS } from '@/lib/appearance'
-import { useLocalFlag } from '@/lib/ui/useLocalFlag'
+import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 
 const NAV = [
   { href: '/home', label: 'Home', icon: Home },
@@ -25,11 +25,11 @@ const NAV = [
 const MOBILE = NAV.slice(0, 5)
 const noopSubscribe = () => () => {}
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, initialCollapsed = false }: { children: React.ReactNode; initialCollapsed?: boolean }) {
   const path = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
   const { profile, setProfile } = useProfile()
-  const [collapsed, setCollapsed] = useLocalFlag('studyhub.sidebar-collapsed')
+  const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const dark = mounted && resolvedTheme === 'dark'
@@ -41,7 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const next = dark ? 'light' : 'dark'
     setTheme(next)
     // Persist so the choice survives reloads (ProfileProvider applies profile.theme on load)
-    updateProfile(supabase(), profile.id, { theme: next }).then(setProfile).catch(() => {})
+    setProfile(p => ({ ...p, theme: next }))
+    updateProfile(supabase(), profile.id, { theme: next }).catch(() => {})
   }
   const active = (href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review'))
 

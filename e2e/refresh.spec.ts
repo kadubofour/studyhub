@@ -71,6 +71,31 @@ test('a PDF falls back to plain text when AI import is not configured', async ({
   await expect(page.getByLabel('Title')).toHaveValue('cells')
 })
 
+test('printing from dark mode gives dark text on white paper', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/notes')
+  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByLabel('Title').fill('Printable')
+  await page.getByRole('tab', { name: 'Markdown' }).click()
+  await page.getByLabel('Markdown').fill('> a quoted line')
+  await expect(page.getByText('Saved')).toBeVisible()
+  const id = page.url().split('/').pop()
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.goto(`/print/notes?ids=${id}`)
+  await expect(page.locator('blockquote')).toBeVisible() // note loaded
+  await page.evaluate(() => { document.documentElement.classList.add('dark'); window.print = () => {} })
+  await page.emulateMedia({ media: 'print', colorScheme: 'dark' })
+  const colours = await page.evaluate(() => {
+    const lum = (c: string) => { const [r, g, b] = c.match(/\d+/g)!.map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 }
+    return {
+      body: lum(getComputedStyle(document.body).backgroundColor),
+      quote: lum(getComputedStyle(document.querySelector('blockquote')!).color),
+    }
+  })
+  expect(colours.body).toBeGreaterThan(0.9) // white paper
+  expect(colours.quote).toBeLessThan(0.5) // quoted text dark enough to read on paper
+})
+
 test('select notes and export just those as a PDF', async ({ page, context }) => {
   await signUp(page)
   for (const title of ['Alpha note', 'Beta note']) {
