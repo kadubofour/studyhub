@@ -6,7 +6,7 @@ export async function signUp(page: Page) {
   await page.getByLabel('Name').fill('Ama')
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Confirm email').fill(email)
-  await page.getByLabel('Password').fill('local-e2e-pass-123')
+  await page.getByLabel('Password', { exact: true }).fill('local-e2e-pass-123')
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page).toHaveURL(/\/onboarding/)
   await page.getByLabel('Your first course').fill('Biology')
@@ -14,4 +14,9 @@ export async function signUp(page: Page) {
   await expect(page).toHaveURL(/\/home/)
   await page.waitForLoadState('networkidle') // let Home hydrate before a test types into it
   return email
+}
+
+export async function switchToMarkdown(page: Page) {
+  await page.getByRole('menuitem', { name: 'View' }).click()
+  await page.getByRole('menuitemradio', { name: 'Markdown editor' }).click()
 }

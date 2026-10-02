@@ -3,6 +3,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { PasswordField } from '@/components/ui/PasswordField'
 import { safeNext } from '@/lib/safeNext'
 
 function SignupForm() {
@@ -52,9 +53,7 @@ function SignupForm() {
         <label className="field"><span>Confirm email</span>
           <input type="email" required autoComplete="off" value={email2} onChange={e => { setEmail2(e.target.value); setError(null) }} onPaste={e => e.preventDefault()} />
         </label>
-        <label className="field"><span>Password</span>
-          <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} />
-        </label>
+        <PasswordField label="Password" required minLength={8} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} />
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         <button disabled={busy} className="btn-primary w-full">{busy ? 'Creating…' : 'Create account'}</button>
       </form>

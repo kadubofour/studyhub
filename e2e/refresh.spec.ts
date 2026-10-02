@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import path from 'node:path'
-import { signUp } from './helpers'
+import { signUp, switchToMarkdown } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -53,9 +53,9 @@ test('import a Word document with equations, then export it back to Word', async
   await page.getByRole('button', { name: 'Save note' }).click()
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
 
-  await page.getByRole('button', { name: 'Export' }).click()
+  await page.getByRole('menuitem', { name: 'File' }).click()
   const download = page.waitForEvent('download')
-  await page.getByRole('menuitem', { name: /Word document/ }).click()
+  await page.getByRole('menuitem', { name: 'Export as Word' }).click()
   expect((await download).suggestedFilename()).toBe('Quadratics.docx')
 })
 
@@ -76,7 +76,7 @@ test('printing from dark mode gives dark text on white paper', async ({ page }) 
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()
   await page.getByLabel('Title').fill('Printable')
-  await page.getByRole('tab', { name: 'Markdown' }).click()
+  await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('> a quoted line')
   await expect(page.getByText('Saved')).toBeVisible()
   const id = page.url().split('/').pop()

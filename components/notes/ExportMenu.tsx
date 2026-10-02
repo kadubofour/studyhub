@@ -2,11 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, FileType2 } from 'lucide-react'
 import { useToast } from '@/components/providers/ToastProvider'
-import { supabase } from '@/lib/supabase/client'
-import { getNotesForExport } from '@/lib/data/notes'
-import { listCourses } from '@/lib/data/courses'
-
-const fileSafe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 80) || 'Notes'
+import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 
 /**
  * Export one note, a selection, or everything (ids omitted) as a Word document or PDF.
@@ -48,18 +44,7 @@ export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
   async function toWord() {
     setOpen(false); setBusy(true)
     try {
-      const sb = supabase()
-      const [notes, courses] = await Promise.all([getNotesForExport(sb, ids), listCourses(sb)])
-      if (!notes.length) { toast('There are no notes to export.'); return }
-      const { notesToDocx } = await import('@/lib/export/notesToDocx')
-      const blob = await notesToDocx(notes.map(n => ({
-        title: n.title, content_md: n.content_md, course: courses.find(c => c.id === n.course_id)?.name ?? null,
-      })))
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = `${fileSafe(fileName ?? (notes.length === 1 ? notes[0].title : 'Studyhub notes'))}.docx`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
+      if (!await exportNotesToWord(ids, fileName)) toast('There are no notes to export.')
     } catch {
       toast('Couldn\'t create the Word document.')
     } finally { setBusy(false) }
@@ -67,7 +52,7 @@ export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
 
   function toPdf() {
     setOpen(false)
-    window.open(`/print/notes${ids ? `?ids=${ids.join(',')}` : ''}`, '_blank', 'noopener')
+    openPdfExport(ids)
   }
 
   return (

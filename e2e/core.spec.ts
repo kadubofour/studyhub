@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { signUp } from './helpers'
+import { signUp, switchToMarkdown } from './helpers'
 
 test('logged-out users are sent to login with a return path', async ({ page }) => {
   await page.goto('/planner')
@@ -15,7 +15,7 @@ test('a new user who started from a deep link lands there after signup and onboa
   const email = `e2e-next-${Date.now()}@example.test`
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Confirm email').fill(email)
-  await page.getByLabel('Password').fill('local-e2e-pass-123')
+  await page.getByLabel('Password', { exact: true }).fill('local-e2e-pass-123')
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page).toHaveURL(/\/onboarding/)
   await page.getByRole('button', { name: 'Skip' }).click()
@@ -26,7 +26,7 @@ test('signup rejects mismatched emails', async ({ page }) => {
   await page.goto('/signup')
   await page.getByLabel('Email', { exact: true }).fill('a@example.test')
   await page.getByLabel('Confirm email').fill('b@example.test')
-  await page.getByLabel('Password').fill('local-e2e-pass-123')
+  await page.getByLabel('Password', { exact: true }).fill('local-e2e-pass-123')
   await page.getByRole('button', { name: 'Create account' }).click()
   // Next.js renders its own (empty) role="alert" route announcer, so match on the message
   await expect(page.getByRole('alert').filter({ hasText: 'Those emails don\'t match.' })).toBeVisible()
@@ -100,11 +100,11 @@ test('a note persists after reload, including math', async ({ page }) => {
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()
   await page.getByLabel('Title').fill('Quadratics')
-  await page.getByRole('tab', { name: 'Markdown' }).click()
+  await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('## Formula\n\n$x^2$')
   await expect(page.getByText('Saved')).toBeVisible()
   await page.reload()
-  await page.getByRole('tab', { name: 'Markdown' }).click()
+  await switchToMarkdown(page)
   await expect(page.getByLabel('Markdown')).toHaveValue('## Formula\n\n$x^2$')
   await expect(page.getByLabel('Title')).toHaveValue('Quadratics')
   await expect(page.locator('.katex').first()).toBeVisible()
@@ -115,7 +115,7 @@ test('notes: search finds words inside a note', async ({ page }) => {
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()
   await page.getByLabel('Title').fill('Week 3')
-  await page.getByRole('tab', { name: 'Markdown' }).click()
+  await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')
   await expect(page.getByText('Saved')).toBeVisible()
   await page.goto('/notes')

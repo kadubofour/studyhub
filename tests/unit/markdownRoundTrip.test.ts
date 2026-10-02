@@ -25,6 +25,27 @@ describe('typing in rich mode', () => {
     expect(editor.getMarkdown().trim()).toBe('Area $x^2$')
     editor.destroy()
   })
+  it('turns $$...$$ into a displayed equation on its own line', () => {
+    const editor = new Editor({ extensions: noteExtensions(), content: '' })
+    const v = editor.view
+    for (const ch of '$$\\frac{a}{b}$$') {
+      const { from, to } = v.state.selection
+      const handled = v.someProp('handleTextInput', f => f(v, from, to, ch, () => v.state.tr.insertText(ch, from, to)))
+      if (!handled) v.dispatch(v.state.tr.insertText(ch, from, to))
+    }
+    const types: string[] = []
+    editor.state.doc.descendants(n => { types.push(n.type.name) })
+    expect(types).toContain('blockMath')
+    expect(editor.getMarkdown().trim()).toBe('$$\n\\frac{a}{b}\n$$')
+    editor.destroy()
+  })
+  it('lets the note open an equation for editing when it is clicked', () => {
+    const onEditMath = () => {}
+    const exts = noteExtensions({ onEditMath })
+    const math = exts.find(e => e.name === 'Mathematics') as { options: { inlineOptions?: { onClick?: unknown }; blockOptions?: { onClick?: unknown } } }
+    expect(typeof math.options.inlineOptions?.onClick).toBe('function')
+    expect(typeof math.options.blockOptions?.onClick).toBe('function')
+  })
   it('leaves a price range like $5-$10 alone', () => {
     const editor = new Editor({ extensions: noteExtensions(), content: '' })
     const v = editor.view
@@ -61,6 +82,8 @@ describe('notes markdown round-trip', () => {
     '- [ ] todo\n- [x] done',
     '```\ncode block\n```',
     'Inline math $x^2 + 1$ here.',
+    // tables: the serializer pads columns to line up; that padded form must round-trip unchanged
+    '| Term | Meaning |\n| ---- | ------- |\n| ATP  | energy  |\n| DNA  | genes   |',
     '$$\n\\frac{a}{b}\n$$',
   ])('preserves %j', md => {
     expect(roundTrip(md)).toBe(md)

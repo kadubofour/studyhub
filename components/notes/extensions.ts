@@ -1,6 +1,7 @@
 import { Extension, InputRule } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskList, TaskItem } from '@tiptap/extension-list'
+import { TableKit } from '@tiptap/extension-table'
 import { Markdown } from '@tiptap/markdown'
 import Mathematics from '@tiptap/extension-mathematics'
 
@@ -23,12 +24,39 @@ const SingleDollarMath = Extension.create({
   },
 })
 
-export function noteExtensions() {
+// "$$…$$" typed as a paragraph of its own becomes a displayed (block) equation, matching how
+// notes store display math. Runs before Mathematics' own $$…$$ rule, which would make it inline.
+const DoubleDollarBlockMath = Extension.create({
+  name: 'doubleDollarBlockMath',
+  priority: 200,
+  addInputRules() {
+    return [new InputRule({
+      find: /^\$\$([^$]+)\$\$$/,
+      handler: ({ state, range, match }) => {
+        const node = state.schema.nodes.blockMath?.create({ latex: match[1].trim() })
+        const $from = state.doc.resolve(range.from)
+        if (!node || $from.parent.textContent !== match[0]) return null // only a whole paragraph
+        state.tr.replaceWith($from.before(), $from.after(), node)
+      },
+    })]
+  },
+})
+
+export type EditMath = (kind: 'inline' | 'block', latex: string, pos: number) => void
+
+export function noteExtensions(opts: { onEditMath?: EditMath } = {}) {
   return [
     StarterKit.configure({ link: false }),
     TaskList,
     TaskItem.configure({ nested: true }),
-    Mathematics.configure({ katexOptions: { throwOnError: false } }),
+    TableKit.configure({ table: { resizable: false } }),
+    DoubleDollarBlockMath,
+    Mathematics.configure({
+      katexOptions: { throwOnError: false },
+      // Clicking a rendered equation opens it for editing
+      inlineOptions: { onClick: (node, pos) => opts.onEditMath?.('inline', node.attrs.latex, pos) },
+      blockOptions: { onClick: (node, pos) => opts.onEditMath?.('block', node.attrs.latex, pos) },
+    }),
     SingleDollarMath,
     Markdown,
   ]

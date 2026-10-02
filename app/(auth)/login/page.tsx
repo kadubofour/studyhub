@@ -3,6 +3,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { PasswordField } from '@/components/ui/PasswordField'
 import { safeNext } from '@/lib/safeNext'
 
 function LoginForm() {
@@ -45,9 +46,7 @@ function LoginForm() {
         <label className="field"><span>Email</span>
           <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
         </label>
-        <label className="field"><span>Password</span>
-          <input type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} />
-        </label>
+        <PasswordField label="Password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} />
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         <button disabled={busy} className="btn-primary w-full">{busy ? 'Logging in…' : 'Log in'}</button>
       </form>

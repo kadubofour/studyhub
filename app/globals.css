@@ -61,7 +61,16 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .prose-note blockquote { border-left: 3px solid var(--accent); padding-left: .8em; color: var(--muted); }
 .prose-note table { border-collapse: collapse; margin: .6em 0; }
 .prose-note th, .prose-note td { border: 1px solid var(--line); padding: .3em .6em; }
-
+.prose-note th { background: var(--surface); font-weight: 600; text-align: left; }
+.prose-note .tableWrapper { overflow-x: auto; }
+.prose-note td p, .prose-note th p { margin: 0; }
+.prose-note .selectedCell { background: var(--accent-soft); }
+.ProseMirror td, .ProseMirror th { min-width: 4em; vertical-align: top; }
+/* Equations in the editor are clickable to edit */
+.ProseMirror [data-type="inline-math"], .ProseMirror [data-type="block-math"] { cursor: pointer; border-radius: 6px; }
+.ProseMirror [data-type="inline-math"]:hover, .ProseMirror [data-type="block-math"]:hover { background: var(--accent-soft); }
+.prose-note .find-hit { background: color-mix(in oklab, #facc15 45%, transparent); border-radius: 2px; }
+.prose-note .find-current { background: #facc15; color: #000; }
 /* Print view for PDF export: just the notes, black on white */
 @media print {
   /* Paper is white whatever the screen theme: reset every colour token to its light value */
