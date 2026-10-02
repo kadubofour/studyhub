@@ -43,14 +43,17 @@ export default function FocusPage() {
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
 
-  const log = useCallback(async (t: TimerState, at: number, completed: boolean) => {
+  const log = useCallback((t: TimerState, at: number, completed: boolean) => {
     const minutes = Math.round(elapsedMs(t, at) / 60_000)
-    try {
-      await logFocusSession(supabase(), { startedAt: new Date(t.firstStartedAt ?? at), endedAt: new Date(at), minutes, completed })
-      setTodayMinutes(m => m + minutes)
-    } catch {
-      toast('Couldn\'t save this session.', { label: 'Retry', onClick: () => void log(t, at, completed) })
+    const attempt = async (): Promise<void> => {
+      try {
+        await logFocusSession(supabase(), { startedAt: new Date(t.firstStartedAt ?? at), endedAt: new Date(at), minutes, completed })
+        setTodayMinutes(m => m + minutes)
+      } catch {
+        toast('Couldn\'t save this session.', { label: 'Retry', onClick: () => void attempt() })
+      }
     }
+    return attempt()
   }, [toast])
 
   const advance = useCallback((from: TimerState, count: number) => {
@@ -69,7 +72,7 @@ export default function FocusPage() {
       if (shouldLogSession(timer, now)) void log(markLogged(timer), finishedAt, true)
     }
     advance(timer, count)
-  }, [now, timer, completedFocus, log, advance])
+  }, [now, timer, completedFocus, log, advance, setCompletedFocus])
 
   function toggle() {
     const t = Date.now()
@@ -82,18 +85,17 @@ export default function FocusPage() {
     advance(timer, completedFocus) // a skipped focus session doesn't count toward the long break
   }
 
-  function pickMode(mode: Mode) {
+  const pickMode = useCallback((mode: Mode) => {
     const t = Date.now()
     if (shouldLogSession(timer, t)) void log(markLogged(timer), t, false)
     setTimer(createTimer(mode, durationFor(mode, profile)))
-  }
+  }, [timer, log, setTimer, profile])
 
   useEffect(() => {
     const a = audio.current
     if (!a) return
     a.volume = volume
     if (sound === 'off') { a.pause(); return }
-    setSoundError(false)
     a.src = `/sounds/${sound}.mp3`
     a.play().catch(() => setSoundError(true))
   }, [sound, volume])
@@ -136,7 +138,7 @@ export default function FocusPage() {
       <div className="card mx-auto mt-6 flex flex-wrap items-center gap-2 text-sm">
         <Headphones size={16} aria-hidden className="text-muted" />
         {SOUNDS.map(s => (
-          <button key={s.id} onClick={() => setSound(s.id)} aria-pressed={sound === s.id}
+          <button key={s.id} onClick={() => { setSoundError(false); setSound(s.id) }} aria-pressed={sound === s.id}
             className={`rounded-lg px-2.5 py-1 ${sound === s.id ? 'bg-surface font-medium' : 'text-muted'}`}>{s.label}</button>
         ))}
         <input aria-label="Volume" type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(Number(e.target.value))} className="min-w-20 flex-1" />

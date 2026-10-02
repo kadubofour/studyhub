@@ -18,6 +18,11 @@ const STATUS_TEXT = { idle: '', pending: '', saving: 'Saving…', saved: 'Saved'
 
 export default function NoteEditorPage() {
   const { id } = useParams<{ id: string }>()
+  // Keyed: switching notes remounts the editor, so its autosaver always targets this note
+  return <NoteEditor key={id} id={id} />
+}
+
+function NoteEditor({ id }: { id: string }) {
   const router = useRouter()
   const toast = useToast()
   const { profile } = useProfile()

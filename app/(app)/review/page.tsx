@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CardFace } from '@/components/flashcards/CardFace'
@@ -20,7 +20,8 @@ function Review() {
   const [initialCount, setInitialCount] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [stats, setStats] = useState({ reviewed: 0, again: 0 })
-  const busy = useRef(false)
+  // Synchronous guard (not state) so a second key press in the same tick sees it immediately
+  const [busy] = useState(() => ({ current: false }))
 
   useEffect(() => {
     listDueCards(supabase(), new Date(), deckId).then(cs => { setQueue(cs); setInitialCount(cs.length) })
@@ -28,21 +29,24 @@ function Review() {
 
   const card = queue?.[0]
 
-  const rate = useCallback(async (rating: Rating) => {
-    if (!card || busy.current) return
-    busy.current = true
-    try {
-      const updated = await rateCard(supabase(), card, rating, new Date())
-      setStats(s => ({ reviewed: s.reviewed + 1, again: s.again + (rating === 1 ? 1 : 0) }))
-      // "Again" cards come back at the end of this session
-      setQueue(q => (q ? [...q.slice(1), ...(rating === 1 ? [updated] : [])] : q))
-      setRevealed(false)
-    } catch {
-      toast('Couldn\'t save.', { label: 'Retry', onClick: () => void rate(rating) })
-    } finally {
-      busy.current = false
+  const rate = useCallback((rating: Rating) => {
+    const attempt = async (): Promise<void> => {
+      if (!card || busy.current) return
+      busy.current = true
+      try {
+        const updated = await rateCard(supabase(), card, rating, new Date())
+        setStats(s => ({ reviewed: s.reviewed + 1, again: s.again + (rating === 1 ? 1 : 0) }))
+        // "Again" cards come back at the end of this session
+        setQueue(q => (q ? [...q.slice(1), ...(rating === 1 ? [updated] : [])] : q))
+        setRevealed(false)
+      } catch {
+        toast('Couldn\'t save.', { label: 'Retry', onClick: () => void attempt() })
+      } finally {
+        busy.current = false
+      }
     }
-  }, [card, toast])
+    return attempt()
+  }, [card, toast, busy])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -55,7 +59,7 @@ function Review() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [revealed, rate])
+  }, [revealed, rate, busy])
 
   if (!queue) return null
 

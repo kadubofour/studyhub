@@ -21,11 +21,13 @@ export default function DeckPage() {
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
+  // "Due" is judged as of the last load/add (render must stay pure, so the clock is read in handlers)
+  const [asOf, setAsOf] = useState(() => Date.now())
 
   useEffect(() => {
     const sb = supabase()
     Promise.all([listDecksWithDue(sb, new Date()), listCards(sb, deckId)]).then(([ds, cs]) => {
-      setDeck(ds.find(d => d.id === deckId) ?? null); setCards(cs)
+      setDeck(ds.find(d => d.id === deckId) ?? null); setCards(cs); setAsOf(Date.now())
     })
   }, [deckId])
 
@@ -34,7 +36,7 @@ export default function DeckPage() {
     if (!front.trim() || !back.trim()) return
     try {
       const [c] = await createCards(supabase(), deckId, [{ front: front.trim(), back: back.trim() }])
-      setCards(cs => [...cs, c]); setFront(''); setBack('')
+      setCards(cs => [...cs, c]); setFront(''); setBack(''); setAsOf(Date.now())
       document.getElementById('front')?.focus()
     } catch { toast('Couldn\'t save.') }
   }
@@ -61,8 +63,7 @@ export default function DeckPage() {
     try { await deleteDeck(supabase(), deckId); router.replace('/flashcards') } catch { toast('Couldn\'t delete the deck.') }
   }
 
-  const nowMs = Date.now()
-  const due = cards.filter(c => new Date(c.due_at).getTime() <= nowMs).length
+  const due = cards.filter(c => new Date(c.due_at).getTime() <= asOf).length
 
   return (
     <div>

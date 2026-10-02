@@ -18,8 +18,12 @@ export function usePersistedTimer(initial: () => TimerState, tz: string) {
     restored.current = true
     const saved = loadTimer(window.localStorage)
     const today = localDayKey(new Date(), tz)
+    // Syncing from localStorage must happen after hydration (the server has no storage),
+    // so setting state here is intentional and runs once.
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (saved) { setTimer(saved.state); setCompletedFocus(saved.dayKey === today ? saved.completedFocus : 0) }
     setReady(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [tz])
 
   useEffect(() => {
