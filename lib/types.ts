@@ -3,6 +3,8 @@ export type Priority = 'low' | 'normal' | 'high'
 export type ClassKind = 'lecture' | 'lab' | 'tutorial' | 'seminar' | 'other'
 export type EditorMode = 'rich' | 'markdown'
 export type ThemePref = 'light' | 'dark' | 'system'
+export type { AccentName, FontName } from './appearance'
+import type { AccentName, FontName } from './appearance'
 
 export interface Profile {
   id: string
@@ -15,6 +17,8 @@ export interface Profile {
   long_break_every: number
   default_editor_mode: EditorMode
   theme: ThemePref
+  accent: AccentName
+  font: FontName
   onboarded: boolean
 }
 export interface Course { id: string; name: string; color: string }

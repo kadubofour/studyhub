@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { newUser } from './helpers'
 import { createCourse, deleteCourse, listCourses } from '@/lib/data/courses'
-import { createTask, listOpenTasks, setTaskDone } from '@/lib/data/tasks'
+import { createTask, listOpenTasks, setTaskDone, countTasksDoneSince } from '@/lib/data/tasks'
 import { createClass, listClasses } from '@/lib/data/classes'
 import { createNote, listNotes, getNote, updateNote, searchNotes } from '@/lib/data/notes'
 import { createDeck, listDecksWithDue, getDeck } from '@/lib/data/decks'
@@ -103,6 +103,29 @@ describe('large histories (PostgREST returns at most 1000 rows per request)', ()
     await createCards(heavy, d.id, Array.from({ length: 1050 }, (_, i) => ({ front: `q${i}`, back: `a${i}` })))
     const decks = await listDecksWithDue(heavy, new Date(Date.now() + 1000))
     expect(decks.find(x => x.id === d.id)).toMatchObject({ total: 1050, due: 1050 })
+  })
+})
+
+describe('home stats', () => {
+  it('counts tasks completed since a time', async () => {
+    const u = (await newUser()).sb
+    const since = new Date(Date.now() - 1000)
+    const a = await createTask(u, { title: 'a' })
+    await createTask(u, { title: 'b' })
+    await setTaskDone(u, a.id, true)
+    expect(await countTasksDoneSince(u, since)).toBe(1)
+  })
+})
+
+describe('appearance settings', () => {
+  it('defaults to blue + sans, saves a chosen accent and font, and rejects unknown ones', async () => {
+    const u = await newUser()
+    const { data: p } = await u.sb.from('profiles').select('accent,font').eq('id', u.id).single()
+    expect(p).toEqual({ accent: 'blue', font: 'sans' })
+    const ok = await u.sb.from('profiles').update({ accent: 'teal', font: 'serif' }).eq('id', u.id)
+    expect(ok.error).toBeNull()
+    const bad = await u.sb.from('profiles').update({ accent: 'neon' }).eq('id', u.id)
+    expect(bad.error).not.toBeNull()
   })
 })
 

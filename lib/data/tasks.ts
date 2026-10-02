@@ -24,3 +24,9 @@ export async function updateTask(sb: SupabaseClient, id: string, patch: Partial<
 export async function deleteTask(sb: SupabaseClient, id: string): Promise<void> {
   check(await sb.from('tasks').delete().eq('id', id))
 }
+
+export async function countTasksDoneSince(sb: SupabaseClient, since: Date): Promise<number> {
+  const { count, error } = await sb.from('tasks').select('id', { count: 'exact', head: true }).gte('done_at', since.toISOString())
+  if (error) throw error
+  return count ?? 0
+}

@@ -2,41 +2,70 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #ffffff; --surface: #f6f6f4; --line: #e6e5e0; --fg: #1f1f1d; --muted: #6b6a65;
-  --accent: #2f6fde; --accent-soft: #e6f0fb; --danger: #c43c3c; --danger-soft: #fcebeb;
+  --bg: #fbfbfa; --raised: #ffffff; --surface: #f3f3f0; --line: #e6e5e0; --fg: #1f1f1d; --muted: #6b6a65;
+  --danger: #c43c3c; --danger-soft: #fcebeb; --success: #1d7a52;
+  --shadow: 0 1px 2px rgb(20 20 19 / 0.05), 0 4px 14px rgb(20 20 19 / 0.05);
+  /* Accent defaults (blue preset) for pages outside the signed-in app */
+  --accent: #3B5BDB; --accent-soft: #EEF1FD; --accent-solid: #3B5BDB; --accent-glow: #7C5CFF;
+  --app-font: var(--font-inter);
 }
 .dark {
-  --bg: #141413; --surface: #1d1d1b; --line: #2e2e2b; --fg: #ededea; --muted: #9a9993;
-  --accent: #6aa3f0; --accent-soft: #16304f; --danger: #f07b7b; --danger-soft: #3d1b1b;
+  --bg: #121211; --raised: #1a1a19; --surface: #222220; --line: #30302d; --fg: #ededea; --muted: #9a9993;
+  --danger: #f07b7b; --danger-soft: #3d1b1b; --success: #4fd1a5;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
+  --accent: #8DA2FB; --accent-soft: #1B2550;
 }
+
+/* The signed-in app sets --a-* and --app-font from the student's Settings (see AppShell) */
+.app-root {
+  --accent: var(--a-text); --accent-soft: var(--a-soft); --accent-solid: var(--a-solid); --accent-glow: var(--a-glow);
+}
+.dark .app-root { --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); }
 
 @theme inline {
-  --color-bg: var(--bg); --color-surface: var(--surface); --color-line: var(--line);
-  --color-fg: var(--fg); --color-muted: var(--muted); --color-accent: var(--accent);
+  --color-bg: var(--bg); --color-raised: var(--raised); --color-surface: var(--surface); --color-line: var(--line);
+  --color-fg: var(--fg); --color-muted: var(--muted); --color-accent: var(--accent); --color-accent-solid: var(--accent-solid);
   --color-accent-soft: var(--accent-soft); --color-danger: var(--danger); --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
 }
 
-body { background: var(--bg); color: var(--fg); font-size: 14px; }
+body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
+.app-root { font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface disabled:opacity-60; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:opacity-60; }
-  .btn-ghost { @apply inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted hover:bg-surface hover:text-fg; }
+  .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-raised px-3 py-1.5 text-sm transition hover:bg-surface disabled:opacity-60; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent-solid px-3.5 py-1.5 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-60; }
+  .btn-ghost { @apply inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm text-muted transition hover:bg-surface hover:text-fg; }
   .field { @apply flex flex-col gap-1 text-sm; }
   .field > span { @apply text-muted; }
   .field input, .field select, .field textarea, input.input, select.input, textarea.input {
-    @apply rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-accent;
+    @apply rounded-xl border border-line bg-raised px-3 py-1.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft;
   }
-  .card { @apply rounded-xl border border-line p-4; }
-  .pill { @apply rounded-md bg-surface px-2 py-0.5 text-xs text-muted; }
+  .card { @apply rounded-2xl border border-line bg-raised p-4; box-shadow: var(--shadow); }
+  .tile { @apply rounded-2xl border border-line bg-raised px-4 py-3; box-shadow: var(--shadow); }
+  .tile-label { @apply flex items-center gap-1.5 text-xs text-muted; }
+  .tile-value { @apply mt-0.5 text-xl font-medium; }
+  .hero { @apply rounded-2xl px-5 py-4 text-white; background: linear-gradient(135deg, var(--accent-solid), var(--accent-glow)); box-shadow: var(--shadow); }
+  .section-label { @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-muted; }
 }
 
-.prose-note h1 { font-size: 1.25rem; font-weight: 500; margin: .6em 0 .3em; }
-.prose-note h2 { font-size: 1.1rem; font-weight: 500; margin: .6em 0 .3em; }
-.prose-note h3 { font-weight: 500; margin: .5em 0 .2em; }
-.prose-note p { margin: .4em 0; line-height: 1.65; }
+.prose-note h1 { font-size: 1.4rem; font-weight: 600; margin: .7em 0 .3em; }
+.prose-note h2 { font-size: 1.15rem; font-weight: 600; margin: .7em 0 .3em; }
+.prose-note h3 { font-weight: 600; margin: .5em 0 .2em; }
+.prose-note p { margin: .45em 0; line-height: 1.7; }
 .prose-note ul { list-style: disc; padding-left: 1.4em; }
 .prose-note ol { list-style: decimal; padding-left: 1.4em; }
-.prose-note code { font-family: ui-monospace, monospace; background: var(--surface); padding: 0 .25em; border-radius: 4px; }
-.prose-note pre { background: var(--surface); padding: .75em; border-radius: 8px; overflow-x: auto; }
-.prose-note input[type=checkbox] { margin-right: .4em; }
+.prose-note code { font-family: var(--font-jetbrains), ui-monospace, monospace; background: var(--surface); padding: 0 .25em; border-radius: 4px; }
+.prose-note pre { background: var(--surface); padding: .75em; border-radius: 10px; overflow-x: auto; }
+.prose-note input[type=checkbox] { margin-right: .4em; accent-color: var(--accent-solid); }
+.prose-note blockquote { border-left: 3px solid var(--accent); padding-left: .8em; color: var(--muted); }
+.prose-note table { border-collapse: collapse; margin: .6em 0; }
+.prose-note th, .prose-note td { border: 1px solid var(--line); padding: .3em .6em; }
+
+/* Print view for PDF export: just the notes, black on white */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+  .print-note { break-after: page; }
+  .print-note:last-child { break-after: auto; }
+}

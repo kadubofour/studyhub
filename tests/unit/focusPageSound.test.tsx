@@ -14,7 +14,7 @@ import FocusPage from '@/app/(app)/focus/page'
 const profile: Profile = {
   id: 'u', display_name: 'Ama', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25,
   short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich',
-  theme: 'system', onboarded: true,
+  theme: 'system', accent: 'blue', font: 'sans', onboarded: true,
 }
 
 const srcSets: string[] = []

@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { AppearanceCard } from '@/components/settings/AppearanceCard'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -71,8 +72,11 @@ export default function SettingsPage() {
   )
 
   return (
-    <form onSubmit={save} className="max-w-md space-y-5">
+    <div className="max-w-xl space-y-5">
       <PageHeader title="Settings" />
+      <AppearanceCard />
+      <form onSubmit={save} className="card space-y-5">
+      <h2 className="text-base font-semibold">Profile and focus</h2>
       <section className="space-y-3">
         <label className="field"><span>Name</span><input value={form.display_name ?? ''} onChange={e => set('display_name', e.target.value || null)} /></label>
         <label className="field"><span>Time zone</span>
@@ -105,6 +109,7 @@ export default function SettingsPage() {
         <button type="button" className="btn" onClick={signOut}>Sign out</button>
         <button className="btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button>
       </div>
-    </form>
+      </form>
+    </div>
   )
 }

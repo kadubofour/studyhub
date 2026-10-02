@@ -1,5 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
+import { CalendarDays } from 'lucide-react'
 import { parseQuickAdd } from '@/lib/quickAdd'
 import { formatDueLong } from '@/lib/dates'
 import type { NewTask } from '@/lib/data/tasks'
@@ -30,7 +31,7 @@ export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false,
       <input aria-label="Add a task" className="input min-w-0 flex-1" value={text} onChange={e => setText(e.target.value)}
         placeholder="Add a task: Calc problem set fri" />
       {dueLabel && text.trim() && (
-        <span className="pill" aria-live="polite">Due {dueLabel}</span>
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-accent" aria-live="polite"><CalendarDays size={13} aria-hidden />Due {dueLabel}</span>
       )}
       {!compact && (
         <>
