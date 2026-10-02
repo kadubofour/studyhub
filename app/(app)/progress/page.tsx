@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Flame, Trophy, Timer, Brain } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -10,11 +11,17 @@ import { countByDay, retention } from '@/lib/stats'
 import { addDaysToKey, localDayKey, startOfLocalDay, weekKeysFor } from '@/lib/dates'
 import type { FocusSession, Review } from '@/lib/types'
 
-const LEVELS = ['var(--surface)', '#B5D4F4', '#378ADD', '#185FA5']
+// Heatmap shades in the student's accent colour
+const LEVELS = ['var(--surface)', 'color-mix(in srgb, var(--accent-solid) 30%, transparent)', 'color-mix(in srgb, var(--accent-solid) 62%, transparent)', 'var(--accent-solid)']
 const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg bg-surface p-3"><div className="text-xs text-muted">{label}</div><div className="text-xl font-medium">{value}</div></div>
+function Stat({ label, value, icon: Icon, color }: { label: string; value: string; icon: typeof Flame; color: string }) {
+  return (
+    <div className="tile">
+      <div className="tile-label"><Icon size={14} style={{ color }} aria-hidden />{label}</div>
+      <div className="tile-value">{value}</div>
+    </div>
+  )
 }
 
 export default function ProgressPage() {
@@ -52,11 +59,11 @@ export default function ProgressPage() {
   return (
     <div>
       <PageHeader title="Progress" />
-      <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Stat label="Current streak" value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`} />
-        <Stat label="Best streak" value={`${streak.best} ${streak.best === 1 ? 'day' : 'days'}`} />
-        <Stat label="Focus this week" value={fmtMin(thisWeek)} />
-        <Stat label="Retention (30 days)" value={ret === null ? '—' : `${Math.round(ret * 100)}%`} />
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat icon={Flame} color="#D85A30" label="Current streak" value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`} />
+        <Stat icon={Trophy} color="#BA7517" label="Best streak" value={`${streak.best} ${streak.best === 1 ? 'day' : 'days'}`} />
+        <Stat icon={Timer} color="var(--accent)" label="Focus this week" value={fmtMin(thisWeek)} />
+        <Stat icon={Brain} color="#1D9E75" label="Retention (30 days)" value={ret === null ? '—' : `${Math.round(ret * 100)}%`} />
       </div>
       <section className="card mb-4">
         <h2 className="mb-2 text-sm font-medium">Focus, last 12 weeks</h2>
@@ -64,7 +71,7 @@ export default function ProgressPage() {
           {weeks.map((days, i) => (
             <div key={i} className="grid gap-[3px]">
               {days.map(k => (
-                <div key={k} title={`${k}: ${fmtMin(minutes.get(k) ?? 0)}`} className="size-3.5 rounded-[3px]"
+                <div key={k} title={`${k}: ${fmtMin(minutes.get(k) ?? 0)}`} className="size-3.5 rounded-[4px]"
                   style={{ background: k > today ? 'transparent' : LEVELS[level(minutes.get(k) ?? 0)] }} />
               ))}
             </div>
@@ -79,7 +86,7 @@ export default function ProgressPage() {
             const n = reviewsByDay.get(k) ?? 0
             return (
               <div key={k} className="flex flex-1 flex-col items-center gap-1" title={`${k}: ${n}`}>
-                <div className="w-full rounded-sm bg-accent" style={{ height: `${(n / maxReviews) * 80}px`, minHeight: n ? 2 : 0 }} />
+                <div className="w-full rounded-md bg-accent-solid" style={{ height: `${(n / maxReviews) * 80}px`, minHeight: n ? 2 : 0 }} />
                 <span className="text-[10px] text-muted">{Number(k.slice(8))}</span>
               </div>
             )

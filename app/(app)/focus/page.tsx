@@ -43,14 +43,15 @@ export default function FocusPage() {
             className={`rounded-lg px-3 py-1 text-sm ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
       </div>
-      <div className="relative mx-auto my-6 size-56">
+      <div className="relative mx-auto my-8 size-64">
         <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>
-          <circle cx="100" cy="100" r={R} fill="none" stroke="var(--surface)" strokeWidth="8" />
-          <circle cx="100" cy="100" r={R} fill="none" stroke="var(--accent)" strokeWidth="8" strokeLinecap="round"
+          <circle cx="100" cy="100" r={R} fill="none" stroke="var(--surface)" strokeWidth="10" />
+          <defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--accent-solid)" /><stop offset="100%" stopColor="var(--accent-glow)" /></linearGradient></defs>
+          <circle cx="100" cy="100" r={R} fill="none" stroke="url(#ring)" strokeWidth="10" strokeLinecap="round"
             strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="font-mono text-4xl font-medium" aria-live="off">{fmtClock(remaining)}</div>
+          <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
           {timer.mode === 'focus' && <div className="text-sm text-muted">Session {(completedFocus % profile.long_break_every) + 1} of {profile.long_break_every}</div>}
         </div>
       </div>

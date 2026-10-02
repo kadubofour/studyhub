@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Layers } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Dialog } from '@/components/ui/Dialog'
-import { CourseDot } from '@/components/ui/CourseDot'
+import { CourseTag } from '@/components/ui/CourseTag'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createDeck, listDecksWithDue } from '@/lib/data/decks'
@@ -44,18 +44,35 @@ export default function FlashcardsPage() {
         <button className="btn" onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
       </>} />
       {decks?.length === 0 && (
-        <div className="card text-center">
-          <p className="mb-3 text-sm text-muted">Group cards into decks, one per topic.</p>
+        <div className="card flex flex-col items-center gap-3 py-10 text-center">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"><Layers size={22} aria-hidden /></span>
+          <p className="max-w-xs text-sm text-muted">Group cards into decks, one per topic. Reviews are scheduled so you remember for longer.</p>
           <button className="btn-primary" onClick={() => setOpen(true)}>Create a deck</button>
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {decks?.map(d => (
-          <Link key={d.id} href={`/flashcards/${d.id}`} className="card hover:border-accent">
-            <div className="flex items-center gap-2 font-medium"><CourseDot color={courseOf(d.course_id)?.color} />{d.name}</div>
-            <div className="mt-1 text-sm text-muted">{d.due > 0 ? `${d.due} due` : 'All caught up'} · {d.total} cards</div>
-          </Link>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {decks?.map(d => {
+          const c = courseOf(d.course_id)
+          const color = c?.color ?? 'var(--accent-solid)'
+          return (
+            <Link key={d.id} href={`/flashcards/${d.id}`} className="tile group relative overflow-hidden transition hover:-translate-y-0.5">
+              {/* stacked-cards motif in the course colour */}
+              <span aria-hidden className="absolute -right-3 -top-3 size-16 rotate-12 rounded-xl opacity-15" style={{ background: color }} />
+              <span aria-hidden className="absolute -right-1 top-1 size-12 rotate-6 rounded-xl opacity-25" style={{ background: color }} />
+              <div className="relative">
+                <div className="font-semibold">{d.name}</div>
+                <CourseTag course={c} className="mt-0.5" />
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <div className="text-2xl font-semibold" style={{ color: d.due > 0 ? color : undefined }}>{d.due}</div>
+                    <div className="text-xs text-muted">{d.due > 0 ? 'due now' : 'all caught up'}</div>
+                  </div>
+                  <div className="text-xs text-muted">{d.total} cards</div>
+                </div>
+              </div>
+            </Link>
+          )
+        })}
       </div>
       <Dialog open={open} onClose={() => setOpen(false)} title="New deck">
         <form onSubmit={create} className="space-y-3">

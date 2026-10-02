@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Dialog } from '@/components/ui/Dialog'
-import { CourseDot } from '@/components/ui/CourseDot'
 import { COURSE_COLORS } from '@/lib/colors'
 import { createCourse, deleteCourse, updateCourse } from '@/lib/data/courses'
 import { supabase } from '@/lib/supabase/client'
@@ -46,16 +45,18 @@ export function CourseBar({ courses, selected, onSelect, onChange }: {
     } catch { toast('Couldn\'t delete the course.') }
   }
 
-  const chip = (active: boolean) => `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm ${active ? 'border-accent text-accent' : 'border-line'}`
+  // Course filters: a coloured square + name; the active one gets a tinted background in its colour
+  const chip = (active: boolean) => `inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition ${active ? 'border-transparent font-medium' : 'border-line bg-raised hover:bg-surface'}`
+  const tint = (color: string, active: boolean) => (active ? { background: `color-mix(in srgb, ${color} 16%, transparent)`, color } : undefined)
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-1.5">
-      <button className={chip(selected === null)} onClick={() => onSelect(null)}>All</button>
+      <button className={chip(selected === null)} style={tint('var(--accent)', selected === null)} onClick={() => onSelect(null)}>All</button>
       {courses.map(c => (
-        <button key={c.id} className={chip(selected === c.id)} onClick={() => onSelect(c.id)}
+        <button key={c.id} className={chip(selected === c.id)} style={tint(c.color, selected === c.id)} onClick={() => onSelect(c.id)}
           onDoubleClick={() => openEdit(c)} onContextMenu={e => { e.preventDefault(); openEdit(c) }}
           title="Double-click to edit">
-          <CourseDot color={c.color} />{c.name}
+          <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: c.color }} />{c.name}
         </button>
       ))}
       <button className="btn-ghost" onClick={openNew}><Plus size={14} aria-hidden />Course</button>
