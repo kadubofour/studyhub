@@ -30,3 +30,13 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; }
   .card { @apply rounded-xl border border-line p-4; }
   .pill { @apply rounded-md bg-surface px-2 py-0.5 text-xs text-muted; }
 }
+
+.prose-note h1 { font-size: 1.25rem; font-weight: 500; margin: .6em 0 .3em; }
+.prose-note h2 { font-size: 1.1rem; font-weight: 500; margin: .6em 0 .3em; }
+.prose-note h3 { font-weight: 500; margin: .5em 0 .2em; }
+.prose-note p { margin: .4em 0; line-height: 1.65; }
+.prose-note ul { list-style: disc; padding-left: 1.4em; }
+.prose-note ol { list-style: decimal; padding-left: 1.4em; }
+.prose-note code { font-family: ui-monospace, monospace; background: var(--surface); padding: 0 .25em; border-radius: 4px; }
+.prose-note pre { background: var(--surface); padding: .75em; border-radius: 8px; overflow-x: auto; }
+.prose-note input[type=checkbox] { margin-right: .4em; }
