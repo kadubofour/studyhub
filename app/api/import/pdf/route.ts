@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { MAX_PDF_PAGES, pdfToNote, PdfRefusedError } from '@/lib/ai/pdfToNote'
 
-// A long PDF can take several minutes to convert. 800 s is the most Vercel allows (Pro, fluid
-// compute); on smaller plans the platform's own cap applies and long PDFs may time out.
-export const maxDuration = 800
+// A long PDF can take several minutes to convert. 300 s is the most Vercel's Hobby plan allows
+// (a higher value fails the deploy); very long PDFs may time out. On Pro this can go up to 800.
+export const maxDuration = 300
 
 // Base64 grows the PDF by a third and the API caps a request at 32 MB, so files over ~24 MB can't be sent
 const MAX_BYTES = 24 * 1024 * 1024
