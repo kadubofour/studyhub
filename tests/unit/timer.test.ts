@@ -22,6 +22,11 @@ describe('timer', () => {
     expect(elapsedMs(s, T0 + 52 * MIN)).toBe(7 * MIN)
     expect(s.firstStartedAt).toBe(T0)
   })
+  it('never reports negative elapsed time when "now" is slightly before the start click', () => {
+    const s = startTimer(createTimer('focus', MIN), T0)
+    expect(elapsedMs(s, T0 - 200)).toBe(0)
+    expect(remainingMs(s, T0 - 200)).toBe(MIN)
+  })
   it('start and pause are idempotent', () => {
     const s = startTimer(createTimer('focus', MIN), T0)
     expect(startTimer(s, T0 + 999)).toBe(s)

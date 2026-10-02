@@ -25,7 +25,8 @@ export function pauseTimer(s: TimerState, now: number): TimerState {
 }
 
 export function elapsedMs(s: TimerState, now: number): number {
-  return Math.min(s.durationMs, s.accumulatedMs + (s.startedAt === null ? 0 : now - s.startedAt))
+  const running = s.startedAt === null ? 0 : Math.max(0, now - s.startedAt)
+  return Math.min(s.durationMs, s.accumulatedMs + running)
 }
 
 export function remainingMs(s: TimerState, now: number): number {
