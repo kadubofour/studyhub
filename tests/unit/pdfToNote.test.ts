@@ -1,28 +1,30 @@
 import { describe, it, expect, vi } from 'vitest'
-import { pdfToNote, parseNoteMarkdown, PDF_IMPORT_MODEL, PdfRefusedError } from '@/lib/ai/pdfToNote'
+import { pdfToNote, parseNoteMarkdown, PDF_IMPORT_MODEL } from '@/lib/ai/pdfToNote'
+import { AiRefusedError } from '@/lib/ai/openai'
 
-function fakeClient(reply: { text: string; stop_reason?: string }) {
-  const stream = vi.fn((...args: [Record<string, unknown>]) => ({
-    args,
-    finalMessage: async () => ({ content: [{ type: 'text', text: reply.text }], stop_reason: reply.stop_reason ?? 'end_turn' }),
-  }))
-  return { client: { beta: { messages: { stream } } }, stream }
+function fakeClient(reply: { text: string; status?: string; reason?: string; refusal?: boolean }) {
+  const create = vi.fn(async (...args: unknown[]) => {
+    void args
+    return {
+      status: reply.status ?? 'completed',
+      incomplete_details: reply.reason ? { reason: reply.reason } : null,
+      output_text: reply.text,
+      output: reply.refusal ? [{ type: 'message', content: [{ type: 'refusal', refusal: 'no' }] }] : [],
+    }
+  })
+  return { client: { responses: { create } }, create }
 }
 
 describe('pdfToNote', () => {
-  it('sends the PDF as a document block to Claude Opus 5.5 with refusal fallbacks on', async () => {
-    const { client, stream } = fakeClient({ text: '# Cell biology\n\n## Mitochondria\n\nMake ATP.' })
+  it('sends the PDF as a file input to the strong OpenAI model with the conversion instructions', async () => {
+    const { client, create } = fakeClient({ text: '# Cell biology\n\n## Mitochondria\n\nMake ATP.' })
     await pdfToNote(client as never, 'JVBERi0x', 'cells.pdf')
-    const params = stream.mock.calls[0][0] as {
-      model: string; betas: string[]; fallbacks: unknown; system: string; messages: { content: unknown[] }[]
-    }
-    expect(PDF_IMPORT_MODEL).toBe('claude-opus-5-5')
-    expect(params.model).toBe('claude-opus-5-5')
-    expect(params.betas).toContain('server-side-fallback-2026-07-01')
-    expect(params.fallbacks).toBe('default')
-    const doc = params.messages[0].content[0]
-    expect(doc).toEqual({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0x' } })
-    expect(params.system).toMatch(/LaTeX/)
+    const params = create.mock.calls[0][0] as { model: string; instructions: string; max_output_tokens: number; input: { content: unknown[] }[] }
+    expect(PDF_IMPORT_MODEL).toBe('gpt-6.1-sol')
+    expect(params.model).toBe('gpt-6.1-sol')
+    expect(params.instructions).toMatch(/LaTeX/)
+    expect(params.max_output_tokens).toBe(32000)
+    expect(params.input[0].content[0]).toEqual({ type: 'input_file', filename: 'cells.pdf', file_data: 'data:application/pdf;base64,JVBERi0x' })
   })
 
   it('returns the title and the Markdown body', async () => {
@@ -31,14 +33,14 @@ describe('pdfToNote', () => {
     expect(note).toEqual({ title: 'Cell biology', content_md: '## Mitochondria\n\nMake $ATP$.', truncated: false })
   })
 
-  it('flags a note cut off by the length limit instead of dropping it', async () => {
-    const { client } = fakeClient({ text: '# Long\n\nlots', stop_reason: 'max_tokens' })
-    expect((await pdfToNote(client as never, 'x', 'long.pdf')).truncated).toBe(true)
+  it('marks the note truncated when the output limit was hit', async () => {
+    const { client } = fakeClient({ text: '# T\n\nbody', status: 'incomplete', reason: 'max_output_tokens' })
+    expect((await pdfToNote(client as never, 'x', 'a.pdf')).truncated).toBe(true)
   })
 
-  it('throws a clear error when the request is refused', async () => {
-    const { client } = fakeClient({ text: '', stop_reason: 'refusal' })
-    await expect(pdfToNote(client as never, 'x', 'a.pdf')).rejects.toBeInstanceOf(PdfRefusedError)
+  it('throws AiRefusedError on a refusal', async () => {
+    const { client } = fakeClient({ text: '', refusal: true })
+    await expect(pdfToNote(client as never, 'x', 'a.pdf')).rejects.toBeInstanceOf(AiRefusedError)
   })
 })
 

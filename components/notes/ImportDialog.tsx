@@ -12,7 +12,7 @@ import type { Course } from '@/lib/types'
 
 type Draft = { title: string; content_md: string; notice?: string; via?: 'ai' | 'text' }
 
-// Import a Word document or a PDF (structured by Claude) and review it before it becomes a note
+// Import a Word document or a PDF (structured by AI) and review it before it becomes a note
 export function ImportDialog({ open, onClose, courses, onImported }: {
   open: boolean; onClose: () => void; courses: Course[]; onImported?: () => void
 }) {
@@ -92,7 +92,7 @@ export function ImportDialog({ open, onClose, courses, onImported }: {
             className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-line px-4 py-8 text-center transition hover:border-accent hover:bg-accent-soft">
             <FileUp size={26} className="text-accent" aria-hidden />
             <span className="font-medium">Choose a Word document or PDF</span>
-            <span className="text-xs text-muted">PDFs are structured by Claude (Anthropic) — headings, lists, tables and equations. Up to 24 MB and 100 pages.</span>
+            <span className="text-xs text-muted">PDFs are structured by AI (OpenAI): headings, lists, tables and equations. Up to 24 MB and 100 pages.</span>
           </button>
           <input ref={input} type="file" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="sr-only" aria-label="File to import" onChange={e => { const f = e.target.files?.[0]; if (f) void pick(f) }} />

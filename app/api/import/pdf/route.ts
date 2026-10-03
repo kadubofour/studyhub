@@ -1,7 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { MAX_PDF_PAGES, pdfToNote, PdfRefusedError } from '@/lib/ai/pdfToNote'
+import { MAX_PDF_PAGES, pdfToNote } from '@/lib/ai/pdfToNote'
+import { isAiConfigured } from '@/lib/ai/openai'
+import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 
 // A long PDF can take several minutes to convert. 300 s is the most Vercel's Hobby plan allows
 // (a higher value fails the deploy); very long PDFs may time out. On Pro this can go up to 800.
@@ -19,8 +20,8 @@ function countPages(bytes: Buffer): number {
 
 // POST { path } — a PDF the signed-in student uploaded to the private "imports" bucket as
 // "<user id>/<file>.pdf". Returns { title, content_md, truncated }, or { error }:
-// 503 ai_unavailable (no API key; the browser falls back to plain text), 429 quota / busy,
-// 413 too_large / too_long, 422 refused, 502 ai_failed.
+// 503 ai_unavailable (no API key or credit; the browser falls back to plain text),
+// 429 rate_limited / busy, 413 too_large / too_long, 422 refused / empty, 502 ai_failed.
 export async function POST(request: Request) {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
@@ -43,9 +44,7 @@ export async function POST(request: Request) {
       .map(f => `${prefix}${f.name}`)
     if (stale.length) await bucket.remove(stale)
 
-    if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
-      return NextResponse.json({ error: 'ai_unavailable' }, { status: 503 })
-    }
+    if (!isAiConfigured()) return aiErrorResponse('ai_unavailable')
     // Downloaded with the student's own session, so storage policies still apply
     const { data: file, error } = await bucket.download(path)
     if (error || !file) return NextResponse.json({ error: 'not_found' }, { status: 404 })
@@ -53,21 +52,11 @@ export async function POST(request: Request) {
     const bytes = Buffer.from(await file.arrayBuffer())
     if (countPages(bytes) > MAX_PDF_PAGES) return NextResponse.json({ error: 'too_long' }, { status: 413 })
 
-    // Each AI import uses one of the student's 20 a day (checked last, so rejections above are free)
-    const { data: allowed } = await sb.rpc('consume_ai_import')
-    if (allowed !== true) return NextResponse.json({ error: 'quota' }, { status: 429 })
-
     const displayName = fileName.replace(/^[0-9a-f-]{36}-/i, '')
-    // request.signal: if the student cancels or closes the tab, the model call stops too
-    const note = await pdfToNote(new Anthropic(), bytes.toString('base64'), displayName, { signal: request.signal })
-    return NextResponse.json(note)
-  } catch (e) {
-    if (request.signal.aborted) return new NextResponse(null, { status: 499 })
-    if (e instanceof PdfRefusedError) return NextResponse.json({ error: 'refused' }, { status: 422 })
-    if (e instanceof Anthropic.RateLimitError) return NextResponse.json({ error: 'busy' }, { status: 429 })
-    if (e instanceof Anthropic.BadRequestError) return NextResponse.json({ error: 'too_long' }, { status: 413 })
-    if (e instanceof Anthropic.APIError) return NextResponse.json({ error: 'ai_failed' }, { status: 502 })
-    throw e
+    // runAiAction checks the speed limit and maps AI errors (checked last, so rejections above are free).
+    // request.signal: if the student cancels or closes the tab, the model call stops too.
+    const result = await runAiAction(sb, client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { signal: request.signal })
+    return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
   } finally {
     // The PDF is only needed for this one conversion
     await bucket.remove([path]).catch(() => {})

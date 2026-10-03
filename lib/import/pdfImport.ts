@@ -14,11 +14,12 @@ export type PdfImportResult = ImportedNote & {
 }
 
 const MESSAGES: Record<string, string> = {
-  ai_unavailable: 'AI import isn\'t set up yet, so only the plain text was kept.',
+  ai_unavailable: 'AI import isn\'t available right now, so only the plain text was kept.',
   ai_failed: 'The AI service didn\'t respond, so only the plain text was kept.',
   busy: 'The AI service is busy right now, so only the plain text was kept.',
   refused: 'This PDF couldn\'t be converted by AI, so only the plain text was kept.',
-  quota: 'You\'ve used today\'s 20 AI imports, so only the plain text was kept. More tomorrow.',
+  empty: 'The AI couldn\'t find text in this PDF, so only the plain text was kept.',
+  rate_limited: 'You\'re going a bit fast, so only the plain text was kept. Try AI import again in a minute.',
   too_long: 'This PDF is too long for AI import, so only the plain text was kept.',
   too_large: 'This PDF is too large for AI import, so only the plain text was kept.',
 }
@@ -31,7 +32,7 @@ async function loadPdf(file: File) {
 
 const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError'
 
-// Upload to the student's private folder, convert on the server with Claude, then clean up.
+// Upload to the student's private folder, convert on the server with OpenAI, then clean up.
 // AI problems fall back to extracting the PDF's text in the browser; cancelling stops everything.
 export async function importPdf(file: File, userId: string, signal?: AbortSignal): Promise<PdfImportResult> {
   if (file.size > MAX_PDF_BYTES) throw new Error('This PDF is larger than 24 MB.')

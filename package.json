@@ -15,7 +15,6 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.131.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@tiptap/extension-list": "^3.31.4",

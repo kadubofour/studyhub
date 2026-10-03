@@ -44,11 +44,11 @@ describe('importPdf (browser side)', () => {
     expect(uploads).toEqual([])
   })
 
-  it('falls back to plain text with a clear note when today\'s AI imports are used up', async () => {
-    respond(429, { error: 'quota' })
+  it('falls back to plain text with a clear note when the student is going too fast', async () => {
+    respond(429, { error: 'rate_limited' })
     const r = await importPdf(pdf(), 'u1')
     expect(r.via).toBe('text')
-    expect(r.notice).toMatch(/20 AI imports/)
+    expect(r.notice).toMatch(/going a bit fast.*in a minute/)
     expect(r.content_md).toContain('Plain text')
   })
 

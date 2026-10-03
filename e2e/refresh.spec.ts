@@ -60,7 +60,7 @@ test('import a Word document with equations, then export it back to Word', async
 })
 
 test('a PDF falls back to plain text when AI import is not configured', async ({ page }) => {
-  test.skip(!!process.env.ANTHROPIC_API_KEY, 'AI is configured; this checks the fallback path')
+  test.skip(!!process.env.OPENAI_API_KEY, 'AI is configured; this checks the fallback path')
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Import' }).first().click()
