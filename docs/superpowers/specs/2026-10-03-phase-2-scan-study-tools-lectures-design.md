@@ -3,6 +3,7 @@
 Date: 2026-10-03
 Status: Draft — awaiting review
 Builds on: `2026-10-01-study-hub-core-design.md` (Phase 1) and the AI PDF import added after it.
+AI provider: **OpenAI for everything** (text, images, PDFs, transcription), replacing Claude and AssemblyAI so there is one account, key and bill.
 
 ## 1. Goal
 
@@ -30,13 +31,13 @@ Three parts, designed together and built in the order in §11:
 | Summary | A quote block at the very top of the note, first line `**Summary**`, saved as part of the note's Markdown. Regenerate replaces it; Remove deletes it. |
 | Flashcards destination | A deck the student picks; default is a new deck named after the note. |
 | Scan pages | Up to 10 per scan, reorderable, removable, retakeable. |
-| Lecture transcription | Default: free live transcript (browser speech recognition). Opt-in: accurate transcript from AssemblyAI. Or record only. |
+| Lecture transcription | Default: free live transcript (browser speech recognition). Opt-in: accurate transcript from OpenAI. Or record only. |
 | Lecture audio | Kept, with playback and tap-a-line-to-seek. |
 | Plans/billing | None. Everyone gets everything; limits live in one place so plans can be added later. |
-| Models | Claude Haiku 4.5 (`claude-haiku-4-5`) for flashcards, summaries, quizzes, quiz marking. Claude Sonnet 5.5 (`claude-sonnet-5-5`) for scans, PDF import (moved from Opus 5.5) and lecture notes. |
-| Limits | 20 AI actions per student per UTC day (every Claude call except quiz marking). 3 hours of accurate transcription per rolling 7 days, max 2 hours per lecture. Recording and live transcripts are unlimited. |
+| Models (OpenAI) | GPT-6 Luna (`gpt-6-luna`, $0.10/$0.50 per M tokens) for flashcards, summaries, quizzes, quiz marking. GPT-6.1 Sol (`gpt-6.1-sol`, $2/$10) for scans, PDF import (moved from Claude Opus 5.5) and lecture notes. Model names are constants in one file. |
+| Limits | 20 AI actions per student per UTC day (every AI call except quiz marking). 3 hours of accurate transcription per rolling 7 days, max 2 hours per lecture. Recording and live transcripts are unlimited. |
 | Charging | Check before, count only after success. Failed or cancelled work is free. |
-| Transcription provider | AssemblyAI, model Universal-2 ($0.15/hr; mono audio). Universal-3.5 Pro ($0.21/hr) is a one-constant switch if accuracy needs it. New accounts get $50 free credit. Deepgram Nova-3 (~$0.26/hr) was the alternative. |
+| Transcription | OpenAI `whisper-1` ($0.006/min, about $0.36/hr): the OpenAI model that returns segment timestamps, which tap-to-seek needs. OpenAI accepts at most 25 MB per file and has no async mode, so recordings are saved in parts of up to 20 minutes and transcribed part by part. (Considered: AssemblyAI at $0.15/hr with async jobs; cheaper, but a second account.) |
 
 ## 3. Pages and entry points
 
@@ -91,17 +92,19 @@ Three parts, designed together and built in the order in §11:
 2. **During:** timer, mic level, live transcript text (if chosen), Pause, Stop & save. Warning at
    1h55m, automatic stop at 2h.
 3. **Lecture page:** audio player; transcript beside it, timestamped, tap a line to seek, search;
-   "✦ Make a note" (1 action; links the note to the lecture); "↻ Get accurate transcript";
+   "✦ Make a note" (1 action; links the note to the lecture); "↻ Get accurate transcript"
+   (progress "part 2 of 3");
    "Delete lecture" (confirm; deletes audio).
 
 ## 5. Data model (new migration)
 
 ```
 lectures         id, user_id, course_id (null; on delete set null), title (1–200),
-                 recorded_at, duration_seconds (≥0, ≤7200), audio_path, audio_bytes,
-                 transcript jsonb (array of {start, end, text}; seconds),
+                 recorded_at, duration_seconds (≥0, ≤7200), audio_bytes,
+                 parts jsonb (array of {path, start, duration, transcribed}; ≤20 min each),
+                 transcript jsonb (array of {start, end, text}; seconds from lecture start),
                  transcript_status ('none'|'live'|'processing'|'done'|'failed'),
-                 transcript_source ('browser'|'assemblyai'|null), transcript_job_id,
+                 transcript_source ('browser'|'openai'|null),
                  note_id (null; references notes on delete set null), created_at
 quizzes          id, user_id, note_id (references notes on delete cascade), title,
                  questions jsonb, created_at
@@ -132,11 +135,13 @@ transcription_usage  id, user_id, lecture_id, seconds int, at timestamptz
 `runAiAction({ supabase, kind, call })`: verifies the session; returns `limit` if
 `ai_actions_left() < 1`; runs `call(client)`; on success calls `consume_ai_action()` and returns
 the result; maps failures to `{ error: 'busy' | 'refused' | 'too_long' | 'limit' | 'failed' }`.
-Every call uses **structured outputs** (`output_config.format` with a JSON schema) so results
-always parse, and every result is re-validated (Zod, added as a direct dependency; MIT) before it
+Every call uses OpenAI's Responses API with **structured outputs** (a strict JSON schema; exact
+parameter names taken from OpenAI's docs at implementation time) so results always parse, and every result is re-validated (Zod, added as a direct dependency; MIT) before it
 reaches the client. Student text
 (notes, transcripts, OCR) is passed as quoted material in the user turn, never as instructions.
-`request.signal` is passed through so a cancelled request stops the model.
+`request.signal` is passed through so a cancelled request stops the model. A structured-output
+refusal maps to `refused`. Uses the official `openai` npm package (Apache-2.0); the Anthropic SDK
+is removed once PDF import has moved.
 
 Known gap (accepted): many simultaneous requests at the last remaining action can each pass the
 check; the overshoot is bounded by a student's concurrency. Closing it needs the Supabase service
@@ -146,16 +151,17 @@ role key on the server, which we avoid.
 
 | Route | Input | Output | Model |
 |---|---|---|---|
-| `POST /api/ai/scan` | storage paths (≤10), target `note`/`cards`/`planner` | note `{title, content_md}` · cards `[{front, back}]` · planner `{tasks[], classes[]}` with `unsure` flags | Sonnet 5.5 |
-| `POST /api/ai/flashcards` | note id | `[{front, back}]` (≤40) | Haiku 4.5 |
-| `POST /api/ai/summary` | note id | `{summary_md}` (≤150 words) | Haiku 4.5 |
-| `POST /api/ai/quiz` | note id, count, types | questions (as §5) | Haiku 4.5 |
-| `POST /api/ai/quiz/mark` | attempt id, question id, answer | `{correct, feedback}` | Haiku 4.5 (not charged; gated by `mark_short_answer_allowed`) |
-| `POST /api/ai/lecture-note` | lecture id | note `{title, content_md}` | Sonnet 5.5 |
-| `POST /api/import/pdf` | (unchanged) | (unchanged) | Sonnet 5.5, now via `runAiAction` |
+| `POST /api/ai/scan` | storage paths (≤10), target `note`/`cards`/`planner` | note `{title, content_md}` · cards `[{front, back}]` · planner `{tasks[], classes[]}` with `unsure` flags | Sol |
+| `POST /api/ai/flashcards` | note id | `[{front, back}]` (≤40) | Luna |
+| `POST /api/ai/summary` | note id | `{summary_md}` (≤150 words) | Luna |
+| `POST /api/ai/quiz` | note id, count, types | questions (as §5) | Luna |
+| `POST /api/ai/quiz/mark` | attempt id, question id, answer | `{correct, feedback}` | Luna (not charged; gated by `mark_short_answer_allowed`) |
+| `POST /api/ai/lecture-note` | lecture id | note `{title, content_md}` | Sol |
+| `POST /api/import/pdf` | (unchanged) | (unchanged) | Sol (was Claude Opus), now via `runAiAction` |
 
 Notes are read server-side with the student's own session (RLS applies), so a student can only
-send their own notes. Scan uploads are deleted after the call, success or not. `maxDuration` is
+send their own notes. Scan uploads are deleted after the call, success or not. PDFs go to OpenAI as file input (up to 50 MB per
+request; the app's own 24 MB / 100-page limits stay). `maxDuration` is
 300 s (Hobby) on scan, PDF import and lecture-note; 60 s elsewhere.
 
 ### 6.3 Summary block (`lib/notes/summaryBlock.ts`)
@@ -165,25 +171,32 @@ through the normal save path, so autosave, conflict handling and undo work as us
 
 ### 6.4 Quiz marking
 Short answers are compared exactly first (case/space-insensitive) — a match is correct with no AI
-call. Otherwise `/api/ai/quiz/mark` checks `mark_short_answer_allowed`, asks Haiku to mark against
+call. Otherwise `/api/ai/quiz/mark` checks `mark_short_answer_allowed`, asks Luna to mark against
 the stored answer and explanation, and stores the result in the attempt. Each question can be
 marked once per attempt, so the free marking can't be reused as a general AI endpoint.
 
 ### 6.5 Lectures
 - **Recording:** `MediaRecorder`, mono, 32 kbps Opus (`audio/webm`) or AAC (`audio/mp4`, Safari).
-  Chunks every 5 s are appended to IndexedDB under a session id; on Stop they're joined and
-  uploaded with Supabase's resumable (TUS) upload, then the lecture row is saved and the local
-  copy deleted. On load, a leftover local session offers "Recover unsaved recording".
+  Every 20 minutes the recorder is restarted so each **part** is a complete file (~5 MB, well under
+  OpenAI's 25 MB). Chunks every 5 s are appended to IndexedDB under a session id; each finished
+  part is uploaded (Supabase resumable/TUS upload) while recording continues, and the last on
+  Stop; then the lecture row is saved and the local copy deleted. On load, a leftover local
+  session offers "Recover unsaved recording".
+- **Playback across parts:** one player for the whole lecture. It maps a lecture time to (part,
+  offset), switches files at part boundaries, and preloads the next part so playback doesn't gap.
 - **Live transcript:** `SpeechRecognition` (continuous, interim results), restarted on `end` while
   recording; final results become `{start, end, text}` lines timed from the recording start.
   Pause stops both recorder and recognition.
-- **Accurate transcript:** `POST /api/lectures/[id]/transcribe` checks
-  `transcription_seconds_left() ≥ duration`, creates a 2-hour signed URL for the audio, submits it
-  to AssemblyAI (`speech_model` Universal-2, no extra add-ons), stores the job id and sets
-  `processing`. `GET` on the same route asks AssemblyAI for status; when `completed` it converts
-  word/sentence timings into lines, saves them, calls `record_transcription`, and sets `done`;
-  `error` → `failed` (nothing recorded). The lecture page polls every 10 s while `processing`, and
-  resumes polling on any later visit. No webhook needed.
+- **Accurate transcript:** the lecture page checks `transcription_seconds_left() ≥ duration`,
+  sets `processing`, then calls `POST /api/lectures/[id]/transcribe?part=N` once per
+  untranscribed part, in order. Each call downloads that part from storage (server-side, with the
+  student's own session), sends it to OpenAI `whisper-1` with `response_format=verbose_json` and
+  segment timestamps, shifts the segment times by the part's start, merges them into the
+  transcript, marks the part `transcribed`, and calls `record_transcription(lecture_id,
+  part.duration)`. One part (up to 20 min) fits comfortably in the 300 s limit. When every part is
+  done → `done`; a failed part → `failed` with Retry, which resumes from that part (finished
+  parts are kept and not charged again). Leaving the page pauses; the next visit offers to
+  resume. No background jobs or webhooks.
 - **Storage use:** each student has an audio quota of **300 MB** (~20 hours at 32 kbps), the sum
   of their `audio_bytes`. Warning at 80%, recording blocked at 100% with "delete old lectures to
   record more". The quota is one constant. Note: Supabase's free tier gives **1 GB for the whole
@@ -191,9 +204,10 @@ marked once per attempt, so the free marking can't be reused as a general AI end
   students. Real use needs Supabase Pro (100 GB included) or a smaller quota.
 
 ### 6.6 Secrets
-Server-only env vars: `ANTHROPIC_API_KEY` (existing) and `ASSEMBLYAI_API_KEY` (new). Without
-`ASSEMBLYAI_API_KEY`, "Accurate" is hidden and the rest works. Without `ANTHROPIC_API_KEY`, AI
-buttons explain that AI isn't set up (PDF import keeps its plain-text fallback).
+One server-only env var: `OPENAI_API_KEY` (new). `ANTHROPIC_API_KEY` is no longer used and can
+be removed from Vercel once PDF import has moved. Without `OPENAI_API_KEY`, AI buttons and
+"Accurate" transcripts explain that AI isn't set up; recording, live transcripts and PDF import's
+plain-text fallback keep working.
 
 ## 7. Errors (student-facing)
 
@@ -208,21 +222,21 @@ buttons explain that AI isn't set up (PDF import keeps its plain-text fallback).
 | Too many / too large / wrong files | Caught before upload with the specific limit | — |
 | Microphone denied | Tip on allowing the microphone for this site | — |
 | Upload failed | Audio kept locally; "Retry upload" | — |
-| AssemblyAI job failed | Lecture shows "Transcript failed" + Retry; live transcript kept | No |
+| A transcription part failed | "Transcript failed" + Retry (resumes from that part); live transcript kept until the accurate one completes | Only finished parts |
 | Storage nearly full / full | Warning / recording blocked with how to free space | — |
 
 ## 8. Testing (TDD throughout)
 
-- **Unit (Vitest):** `runAiAction` with a fake client (limit, charge-on-success, error mapping,
+- **Unit (Vitest):** `runAiAction` with a fake OpenAI client (limit, charge-on-success, error mapping,
   abort); each result schema and validator (drops an MCQ whose answer isn't an option; rejects
-  <3 questions); summary block functions; course matching for scanned classes; transcript line
-  conversion from AssemblyAI timings; live-transcript timing; storage-use thresholds; review
+  <3 questions); summary block functions; course matching for scanned classes; merging per-part
+  `whisper-1` segments with part offsets; player time to (part, offset) mapping; live-transcript timing; storage-use thresholds; review
   screens, Study panel, quiz player (resume, scoring, wrong → cards), recorder controls with a
   fake `MediaRecorder`/`SpeechRecognition`.
 - **DB (Vitest, local Supabase):** RLS on new tables; `consume_ai_action` stops at 20;
   transcription limit over a rolling week; `mark_short_answer_allowed` once per question, only
   for own unfinished attempts; deleting a note deletes its quizzes; bucket policies.
-- **E2E (Playwright, desktop + Pixel 7):** with the AI and AssemblyAI replaced by local stand-in
+- **E2E (Playwright, desktop + Pixel 7):** with OpenAI replaced by local stand-in
   routes (env flag, test-only): scan → review → save for each target; flashcards and quiz from a
   note, retake, wrong → cards; summary add/replace/remove; record with Chromium's fake
   microphone, stop, play back, seek from transcript; limit reached.
@@ -235,24 +249,26 @@ buttons explain that AI isn't set up (PDF import keeps its plain-text fallback).
 - Every route reads data with the student's own session, so RLS limits it to their rows; storage
   paths are checked to start with the caller's user id.
 - Scan uploads are deleted after processing; lecture audio is deleted with the lecture.
-- AssemblyAI receives a short-lived signed URL, not a permanent link.
+- Audio parts are sent to OpenAI by the server only for an accurate transcript the student
+  asked for. OpenAI's API data-use terms apply; the recording screen links to them.
 - Recording shows a consent reminder; the app never records without the student pressing Start.
 
 ## 10. Costs (for the app owner)
 
-Approximate, at current list prices: Haiku actions ~1–3¢, Sonnet actions ~3–8¢, accurate
-transcription $0.15 per audio hour. Worst case per student (20 actions/day, 3 h/week) ≈ 15–40¢
-a day; typical use a few cents a day. Storage: free up to 1 GB per project; beyond that Supabase
+Approximate, at OpenAI's current list prices: Luna actions well under 1¢, Sol actions ~2–6¢,
+accurate transcription about $0.36 per audio hour. Worst case per student (20 actions/day,
+3 h/week) ≈ 20–45¢ a day; typical use a few cents a day. Storage: free up to 1 GB per project; beyond that Supabase
 Pro (100 GB included) is the next step.
 
 ## 11. Build order
 
-1. Shared AI helper, `ai_usage.actions`, allowance display; move PDF import onto it (Sonnet).
+1. OpenAI SDK and shared AI helper, `ai_usage.actions`, allowance display; move PDF import
+   onto it (Sol) and remove the Anthropic SDK.
 2. Summary + flashcards from a note (Study panel, Summary and Cards tabs).
 3. Quizzes: tables, generation, player, marking, results, wrong → cards, Progress chart.
 4. Scan: uploads, route, three review screens (note, cards, planner with course matching).
 5. Lectures: recorder + recovery, live transcript, upload, lecture page with playback.
-6. Accurate transcripts (AssemblyAI) and lecture → note.
+6. Accurate transcripts (OpenAI `whisper-1`, part by part) and lecture → note.
 
 Each step ends with unit, DB and E2E tests green, lint and build clean, and a commit.
 
