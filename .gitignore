@@ -47,3 +47,4 @@ next-env.d.ts
 /supabase/.temp
 /.superpowers
 !.env.example
+.superpowers/
