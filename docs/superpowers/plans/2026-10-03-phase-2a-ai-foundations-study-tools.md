@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move Studyhub's AI to OpenAI behind one shared, allowance-checked helper, and add the note Study panel: summary, flashcards and retakeable quizzes with score history.
+**Goal:** Move Studyhub's AI to OpenAI behind one shared, speed-limited helper with no usage caps, require email confirmation for new accounts, and add the note Study panel: summary, flashcards and retakeable quizzes with score history.
 
-**Architecture:** Every AI route calls `runAiAction` (check allowance → call OpenAI with a strict JSON schema → count the action only on success). Routes read the student's note with their own Supabase session (RLS). The Study panel in the note editor calls those routes and saves results through the existing data functions. Quizzes and attempts live in two new tables; short-answer AI marking is gated by an insert-only `quiz_marks` table.
+**Architecture:** Every AI route calls `runAiAction` (speed-limit check → call OpenAI with a strict JSON schema). There are no per-student caps; the owner's prepaid OpenAI credit is the spending ceiling. Routes read the student's note with their own Supabase session (RLS). The Study panel in the note editor calls those routes and saves results through the existing data functions. Quizzes and attempts live in two new tables.
 
 **Tech Stack:** Next.js 16 (App Router), React 19, Supabase (Postgres + RLS), `openai` npm SDK (Responses API, structured outputs via `zodTextFormat`), `zod`, Vitest + Testing Library, Playwright.
 
@@ -14,7 +14,7 @@
 
 - AI provider is OpenAI only; the Anthropic SDK is removed in Task 3. One server-only env var: `OPENAI_API_KEY`. Never `NEXT_PUBLIC_` for keys.
 - Models live in `lib/ai/openai.ts`: `MODELS.light = 'gpt-6-luna'` (summary, flashcards, quiz, marking), `MODELS.strong = 'gpt-6.1-sol'` (PDF import; later scan and lecture notes).
-- Allowance: **20 AI actions per student per UTC day**; checked before a call, counted only after success. Big jobs cost by size: **PDF import = 1 action per 10 pages (rounded up)**; summary, flashcards and quiz = 1. Quiz marking is not counted (gated separately). (Scans and lecture notes come in Plans 2B/2C: scan = 1 per 10 pages, lecture note = 2.)
+- **No caps on AI use.** Safety nets only: a speed limit of **10 AI requests per minute per student** (every AI route, including quiz marking, counted when the request starts); size limits (PDF ≤100 pages / 24 MB); email confirmation for new email accounts; the owner's prepaid OpenAI credit. OpenAI's "insufficient quota" error (credit used up) shows "AI isn't available right now".
 - Every AI result is validated with Zod before it reaches the client; student text is passed as quoted material, never as instructions.
 - `maxDuration`: 300 on `/api/import/pdf`; 60 on the new `/api/ai/*` routes.
 - TDD for every change: write the test, run it and see it fail, implement, see it pass. Commit after each task with the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -25,18 +25,18 @@
 ## Review Focus
 
 1. **Unsaved edits when an AI button is pressed** — the server reads the saved note, so the panel must flush autosave first; otherwise the summary/cards/quiz ignore the last second of typing. (Test in Task 8.)
-2. **A note that's too short or empty** — summary/quiz on a 5-word note must say "Too short" instead of charging an action for junk. (Tests in Tasks 6 and 10.)
+2. **A note that's too short or empty** — summary/quiz on a 5-word note must say "Too short" instead of spending an AI call on junk. (Tests in Tasks 6 and 10.)
 3. **Applying a summary while in the rich editor** — the editor only reads its content at mount; replacing note text from outside must go through the editor so the change shows, autosaves and can be undone. (Test in Task 8.)
 4. **Refreshing or leaving mid-quiz** — the attempt must resume at the first unanswered question, not restart or double-count. (Test in Task 12.)
-5. **Repeated free marking** — a student must not be able to get unlimited free AI calls by retrying a short answer or creating attempts in a loop. (DB tests in Task 9, route test in Task 11.)
+5. **Scripted rapid requests** — with no caps, a script hammering an AI route must be slowed to 10 a minute, including parallel requests fired at once. (DB tests in Task 1, route tests in Tasks 2 and 11.)
 
 ---
 
 ## File structure
 
 ```
-supabase/migrations/20261006000000_ai_actions.sql      allowance: ai_usage.actions, ai_actions_left(), consume_ai_action()
-supabase/migrations/20261006000100_quizzes.sql         quizzes, quiz_attempts, quiz_marks, claim_short_answer_mark()
+supabase/migrations/20261006000000_ai_speed_limit.sql  ai_requests, ai_request_allowed(); drops ai_usage
+supabase/migrations/20261006000100_quizzes.sql         quizzes, quiz_attempts
 lib/ai/openai.ts            MODELS, client factory, isAiConfigured, AI error classes
 lib/ai/structured.ts        generateObject (Responses API + zodTextFormat), hasRefusal
 lib/ai/run.ts               runAiAction, classifyAiError, aiErrorResponse
@@ -47,11 +47,9 @@ lib/ai/summary.ts           summary prompt/schema/call
 lib/ai/flashcards.ts        flashcard prompt/schema/clean/call
 lib/ai/quiz.ts              quiz prompt/schema/validate/call
 lib/ai/markAnswer.ts        short-answer marking prompt/schema/call
-lib/ai/allowance.ts         AI_DAILY_ACTIONS, formatResetIn (client-safe)
 lib/notes/summaryBlock.ts   getSummary / setSummary / removeSummary
 lib/quiz/types.ts           Question, AnswerRecord, Quiz, QuizAttempt
 lib/quiz/marking.ts         normalizeAnswer, markInstant, scoreOf
-lib/data/ai.ts              aiActionsLeft, announceAiUsed, AI_USED
 lib/data/quizzes.ts         quiz + attempt reads/writes, finished attempts for Progress
 app/api/import/pdf/route.ts (moved onto runAiAction)
 app/api/ai/summary/route.ts
@@ -59,10 +57,11 @@ app/api/ai/flashcards/route.ts
 app/api/ai/quiz/route.ts
 app/api/ai/quiz/mark/route.ts
 app/api/test-openai/v1/responses/route.ts   E2E-only fake OpenAI
-app/api/test-openai/burn/route.ts           E2E-only: use up today's allowance
+app/api/test-openai/flood/route.ts          E2E-only: use up this minute's AI requests
 app/(app)/quiz/[id]/page.tsx                full-screen quiz player page
+app/(auth)/signup/page.tsx                  "Check your email" step when confirmation is on
+app/(auth)/login/page.tsx                   explains an unconfirmed email, with Resend
 components/ai/aiFetch.ts        postAi + student-facing messages
-components/ai/AiAllowance.tsx   useAiActionsLeft + "N of 20 AI actions left today"
 components/ai/CardReviewList.tsx  editable, tickable front/back list
 components/ai/DeckPicker.tsx      existing deck or "New deck: <name>"
 components/notes/study/StudyPanel.tsx   panel shell + tabs
@@ -76,16 +75,16 @@ components/progress/QuizScores.tsx
 
 ---
 
-### Task 1: Shared AI allowance in the database
+### Task 1: AI speed limit in the database (no caps)
 
 **Files:**
-- Create: `supabase/migrations/20261006000000_ai_actions.sql`
-- Create: `tests/db/aiUsage.test.ts`
+- Create: `supabase/migrations/20261006000000_ai_speed_limit.sql`
+- Create: `tests/db/aiSpeedLimit.test.ts`
 - Modify: `tests/db/storage.test.ts` (delete the `describe('AI import daily limit', …)` block, lines 11–31)
 - Modify: `package.json` (add `openai`, `zod`)
 
 **Interfaces:**
-- Produces: RPC `ai_actions_left()` → `int` (0–20); RPC `consume_ai_action(p_cost int default 1)` → `boolean` (cost must be 1–10; false and nothing counted if it would pass 20). Table `ai_usage(user_id, day, actions)`. RPC `consume_ai_import` no longer exists.
+- Produces: RPC `ai_request_allowed()` → `boolean` (true and records the request if the caller made fewer than 10 AI requests in the last 60 s). Table `ai_requests(id, user_id, at)`, readable but not writable by students. `ai_usage` and `consume_ai_import` no longer exist.
 
 - [ ] **Step 1: Install the SDK and Zod**
 
@@ -94,114 +93,100 @@ npm install openai zod
 ```
 Then confirm the helper resolves: `node -e "require.resolve('openai/helpers/zod')"` prints a path. If `zodTextFormat` later complains about the Zod version, install the version the `openai` package's peer dependency asks for (`npm view openai peerDependencies`).
 
-- [ ] **Step 2: Write the failing DB test** — `tests/db/aiUsage.test.ts`
+- [ ] **Step 2: Write the failing DB test** — `tests/db/aiSpeedLimit.test.ts`
 
 ```ts
 import { describe, it, expect } from 'vitest'
 import { newUser } from './helpers'
 
-describe('shared daily AI allowance', () => {
-  it('starts at 20, counts down, and refuses the 21st action', async () => {
+describe('AI speed limit (no caps, just a pace limit)', () => {
+  it('allows 10 AI requests a minute, then refuses', async () => {
     const u = await newUser()
-    expect((await u.sb.rpc('ai_actions_left')).data).toBe(20)
     const results: boolean[] = []
-    for (let i = 0; i < 21; i++) results.push((await u.sb.rpc('consume_ai_action')).data as boolean)
-    expect(results.slice(0, 20).every(Boolean)).toBe(true)
-    expect(results[20]).toBe(false)
-    expect((await u.sb.rpc('ai_actions_left')).data).toBe(0)
+    for (let i = 0; i < 11; i++) results.push((await u.sb.rpc('ai_request_allowed')).data as boolean)
+    expect(results.slice(0, 10).every(Boolean)).toBe(true)
+    expect(results[10]).toBe(false)
   })
-  it('counts the cost of big jobs, and refuses (counting nothing) when there is not enough left', async () => {
+  it('counts requests fired at the same moment', async () => {
     const u = await newUser()
-    expect((await u.sb.rpc('consume_ai_action', { p_cost: 10 })).data).toBe(true)
-    expect((await u.sb.rpc('ai_actions_left')).data).toBe(10)
-    expect((await u.sb.rpc('consume_ai_action', { p_cost: 8 })).data).toBe(true)
-    expect((await u.sb.rpc('consume_ai_action', { p_cost: 3 })).data).toBe(false)
-    expect((await u.sb.rpc('ai_actions_left')).data).toBe(2)
-  })
-  it('rejects costs outside 1–10, so a student cannot give themselves actions back', async () => {
-    const u = await newUser()
-    expect((await u.sb.rpc('consume_ai_action', { p_cost: 0 })).error).not.toBeNull()
-    expect((await u.sb.rpc('consume_ai_action', { p_cost: -5 })).error).not.toBeNull()
-    expect((await u.sb.rpc('consume_ai_action', { p_cost: 11 })).error).not.toBeNull()
-    expect((await u.sb.rpc('ai_actions_left')).data).toBe(20)
+    const results = await Promise.all(Array.from({ length: 15 }, () => u.sb.rpc('ai_request_allowed')))
+    expect(results.filter(r => r.data === true)).toHaveLength(10)
   })
   it('is per student', async () => {
     const a = await newUser(), b = await newUser()
-    await a.sb.rpc('consume_ai_action')
-    expect((await b.sb.rpc('ai_actions_left')).data).toBe(20)
+    for (let i = 0; i < 10; i++) await a.sb.rpc('ai_request_allowed')
+    expect((await b.sb.rpc('ai_request_allowed')).data).toBe(true)
   })
-  it('cannot be reset, raised or bypassed by the student', async () => {
+  it('cannot be bypassed by editing the request log', async () => {
     const u = await newUser()
-    await u.sb.rpc('consume_ai_action')
-    await u.sb.from('ai_usage').update({ actions: 0 }).eq('user_id', u.id)
-    await u.sb.from('ai_usage').delete().eq('user_id', u.id)
-    expect((await u.sb.rpc('ai_actions_left')).data).toBe(19)
-    expect((await u.sb.rpc('consume_ai_action', { p_limit: 1000 })).error).not.toBeNull()
+    for (let i = 0; i < 10; i++) await u.sb.rpc('ai_request_allowed')
+    await u.sb.from('ai_requests').delete().eq('user_id', u.id)
+    await u.sb.from('ai_requests').update({ at: '2000-01-01T00:00:00Z' }).eq('user_id', u.id)
+    expect((await u.sb.from('ai_requests').insert({ user_id: u.id })).error).not.toBeNull()
+    expect((await u.sb.rpc('ai_request_allowed')).data).toBe(false)
   })
-  it('the old import-only counter is gone', async () => {
+  it('the old daily allowance is gone', async () => {
     const u = await newUser()
     expect((await u.sb.rpc('consume_ai_import')).error).not.toBeNull()
+    expect((await u.sb.from('ai_usage').select('*')).error).not.toBeNull()
   })
 })
 ```
 
 - [ ] **Step 3: Run it to see it fail**
 
-Run: `npm run test:db -- aiUsage` (local Supabase running; `PATH` must include Docker: `C:\Users\Fii\AppData\Local\Programs\DockerDesktop\resources\bin`)
-Expected: FAIL — `ai_actions_left` does not exist.
+Run: `npm run test:db -- aiSpeedLimit` (local Supabase running; `PATH` must include Docker: `C:\Users\Fii\AppData\Local\Programs\DockerDesktop\resources\bin`)
+Expected: FAIL — `ai_request_allowed` does not exist.
 
-- [ ] **Step 4: Write the migration** — `supabase/migrations/20261006000000_ai_actions.sql`
+- [ ] **Step 4: Write the migration** — `supabase/migrations/20261006000000_ai_speed_limit.sql`
 
 ```sql
--- Phase 2: one shared daily allowance of AI actions (it was 20 AI PDF imports a day).
--- Every AI feature uses it; a route counts an action only after the AI call succeeded.
-alter table public.ai_usage rename column imports to actions;
+-- Phase 2: no caps on AI use. A speed limit (10 AI requests a minute per student) stops scripted
+-- abuse; the app owner's prepaid OpenAI credit is the spending ceiling.
 drop function public.consume_ai_import();
+drop table public.ai_usage;
 
--- AI actions the caller has left today (UTC day)
-create function public.ai_actions_left() returns int
-language sql stable security definer set search_path = '' as $$
-  select greatest(0, 20 - coalesce((
-    select u.actions from public.ai_usage u
-     where u.user_id = auth.uid() and u.day = (now() at time zone 'utc')::date), 0))
-$$;
+create table public.ai_requests (
+  id bigint generated always as identity primary key,
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  at timestamptz not null default now()
+);
+create index ai_requests_user_at on public.ai_requests (user_id, at);
+alter table public.ai_requests enable row level security;
+-- Students can see their own requests; only ai_request_allowed (below) writes here
+create policy "read own requests" on public.ai_requests for select using (user_id = (select auth.uid()));
 
--- Counts p_cost actions (big jobs cost more: a PDF uses 1 per 10 pages). False, counting nothing,
--- if that would take today past 20. The limit is fixed here; the cost must be 1–10.
-create function public.consume_ai_action(p_cost int default 1) returns boolean
+-- Records one AI request and returns true, unless the caller already made 10 in the last minute.
+create function public.ai_request_allowed() returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare
   uid uuid := auth.uid();
-  used int;
 begin
-  if p_cost is null or p_cost < 1 or p_cost > 10 then
-    raise exception 'AI action cost must be between 1 and 10' using errcode = '22023';
+  if uid is null then return false; end if;
+  -- One student's parallel requests queue here, so ten at once can't all slip through
+  perform pg_advisory_xact_lock(hashtextextended(uid::text, 0));
+  if (select count(*) from public.ai_requests r
+       where r.user_id = uid and r.at > now() - interval '60 seconds') >= 10 then
+    return false;
   end if;
-  if uid is null or p_cost > 20 then return false; end if;
-  insert into public.ai_usage (user_id, day, actions)
-  values (uid, (now() at time zone 'utc')::date, p_cost)
-  on conflict (user_id, day) do update set actions = public.ai_usage.actions + p_cost
-    where public.ai_usage.actions + p_cost <= 20
-  returning actions into used;
-  return used is not null;
+  insert into public.ai_requests (user_id) values (uid);
+  delete from public.ai_requests r where r.user_id = uid and r.at < now() - interval '1 day';
+  return true;
 end $$;
-
-revoke execute on function public.ai_actions_left() from public, anon;
-revoke execute on function public.consume_ai_action(int) from public, anon;
-grant execute on function public.ai_actions_left() to authenticated;
-grant execute on function public.consume_ai_action(int) to authenticated;
+revoke execute on function public.ai_request_allowed() from public, anon;
+grant execute on function public.ai_request_allowed() to authenticated;
 ```
 
 - [ ] **Step 5: Apply and re-run**
 
-Run: `npx supabase migration up` then `npm run test:db -- aiUsage`
-Expected: PASS (6 tests). Then delete the old `describe('AI import daily limit', …)` block from `tests/db/storage.test.ts` and run `npm run test:db` — all pass.
+Run: `npx supabase migration up` then `npm run test:db -- aiSpeedLimit`
+Expected: PASS (5 tests). Then delete the old `describe('AI import daily limit', …)` block from `tests/db/storage.test.ts` and run `npm run test:db` — all pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261006000000_ai_actions.sql tests/db/aiUsage.test.ts tests/db/storage.test.ts package.json package-lock.json
-git commit -m "feat: shared daily AI allowance (20 actions) replaces the import-only limit"
+git add supabase/migrations/20261006000000_ai_speed_limit.sql tests/db/aiSpeedLimit.test.ts tests/db/storage.test.ts package.json package-lock.json
+git commit -m "feat: replace the daily AI limit with a 10-a-minute speed limit"
 ```
 
 ---
@@ -213,15 +198,15 @@ git commit -m "feat: shared daily AI allowance (20 actions) replaces the import-
 - Test: `tests/unit/aiRun.test.ts`
 
 **Interfaces:**
-- Consumes: RPCs from Task 1.
+- Consumes: RPC `ai_request_allowed` from Task 1.
 - Produces:
   - `MODELS: { light: 'gpt-6-luna'; strong: 'gpt-6.1-sol' }`, `isAiConfigured(): boolean`, `openai(): OpenAI`
   - `class AiRefusedError`, `class AiIncompleteError`, `class AiEmptyError`
   - `type AiClient = Pick<OpenAI, 'responses'>`
   - `generateObject<T extends z.ZodType>(client: AiClient, o: { model: string; instructions: string; input: string; schema: T; name: string; maxOutputTokens?: number; signal?: AbortSignal }): Promise<z.infer<T>>`
   - `hasRefusal(res: { output?: unknown[] }): boolean`
-  - `type AiErrorCode = 'ai_unavailable' | 'quota' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'`
-  - `runAiAction<T>(sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts?: { signal?: AbortSignal; client?: AiClient; cost?: number }): Promise<{ ok: true; value: T } | { ok: false; error: AiErrorCode }>` — `cost` defaults to 1
+  - `type AiErrorCode = 'ai_unavailable' | 'rate_limited' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'`
+  - `runAiAction<T>(sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts?: { signal?: AbortSignal; client?: AiClient }): Promise<{ ok: true; value: T } | { ok: false; error: AiErrorCode }>`
   - `classifyAiError(e: unknown, signal?: AbortSignal): AiErrorCode`, `aiErrorResponse(code: AiErrorCode): Response`
   - `noteInput(title: string, md: string): string`, `wordCount(md: string): number`
 
@@ -236,9 +221,9 @@ import { generateObject } from '@/lib/ai/structured'
 import { AiEmptyError, AiIncompleteError, AiRefusedError } from '@/lib/ai/openai'
 import { noteInput, wordCount } from '@/lib/ai/input'
 
-const fakeSb = (left: number) => {
+const fakeSb = (allowed: boolean) => {
   const calls: string[] = []
-  const rpc = vi.fn(async (fn: string, _args?: object) => { calls.push(fn); return { data: fn === 'ai_actions_left' ? left : true, error: null } })
+  const rpc = vi.fn(async (fn: string) => { calls.push(fn); return { data: fn === 'ai_request_allowed' ? allowed : null, error: null } })
   return { calls, rpc, sb: { rpc } }
 }
 const client = {} as never
@@ -248,38 +233,28 @@ beforeEach(() => { process.env.OPENAI_API_KEY = 'test' })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
 describe('runAiAction', () => {
-  it('runs the call and counts one action only after it succeeds', async () => {
-    const { sb, calls } = fakeSb(5)
-    const r = await runAiAction(sb as never, async () => { expect(calls).toEqual(['ai_actions_left']); return 42 }, { client })
+  it('checks the speed limit, then runs the call (no usage is counted afterwards)', async () => {
+    const { sb, calls } = fakeSb(true)
+    const r = await runAiAction(sb as never, async () => { expect(calls).toEqual(['ai_request_allowed']); return 42 }, { client })
     expect(r).toEqual({ ok: true, value: 42 })
-    expect(calls).toEqual(['ai_actions_left', 'consume_ai_action'])
+    expect(calls).toEqual(['ai_request_allowed'])
   })
-  it('charges big jobs their cost, and refuses them when not enough is left', async () => {
-    const enough = fakeSb(5)
-    await runAiAction(enough.sb as never, async () => 1, { client, cost: 3 })
-    expect(enough.rpc).toHaveBeenLastCalledWith('consume_ai_action', { p_cost: 3 })
-    const short = fakeSb(2)
+  it('refuses without calling the AI when the student is going too fast', async () => {
+    const { sb } = fakeSb(false)
     const call = vi.fn()
-    expect(await runAiAction(short.sb as never, call, { client, cost: 3 })).toEqual({ ok: false, error: 'quota' })
+    expect(await runAiAction(sb as never, call, { client })).toEqual({ ok: false, error: 'rate_limited' })
     expect(call).not.toHaveBeenCalled()
   })
-  it('refuses without calling the AI when no actions are left', async () => {
-    const { sb, calls } = fakeSb(0)
-    const call = vi.fn()
-    expect(await runAiAction(sb as never, call, { client })).toEqual({ ok: false, error: 'quota' })
-    expect(call).not.toHaveBeenCalled()
-    expect(calls).toEqual(['ai_actions_left'])
-  })
-  it('does not count failed calls', async () => {
-    const { sb, calls } = fakeSb(5)
+  it('maps AI failures to codes', async () => {
+    const { sb } = fakeSb(true)
     const r = await runAiAction(sb as never, async () => { throw asError(OpenAI.RateLimitError) }, { client })
     expect(r).toEqual({ ok: false, error: 'busy' })
-    expect(calls).not.toContain('consume_ai_action')
   })
-  it('says AI is unavailable when no key is set', async () => {
+  it('says AI is unavailable when no key is set, without touching the speed limit', async () => {
     delete process.env.OPENAI_API_KEY
-    const { sb } = fakeSb(5)
+    const { sb, calls } = fakeSb(true)
     expect(await runAiAction(sb as never, vi.fn())).toEqual({ ok: false, error: 'ai_unavailable' })
+    expect(calls).toEqual([])
   })
 })
 
@@ -289,6 +264,8 @@ describe('classifyAiError', () => {
     expect(classifyAiError(new AiIncompleteError())).toBe('too_long')
     expect(classifyAiError(new AiEmptyError())).toBe('empty')
     expect(classifyAiError(asError(OpenAI.RateLimitError))).toBe('busy')
+    // the owner's OpenAI credit ran out: not a "try again" situation
+    expect(classifyAiError(Object.assign(asError(OpenAI.RateLimitError), { code: 'insufficient_quota' }))).toBe('ai_unavailable')
     expect(classifyAiError(asError(OpenAI.InternalServerError))).toBe('busy')
     expect(classifyAiError(asError(OpenAI.APIConnectionError))).toBe('busy')
     expect(classifyAiError(asError(OpenAI.BadRequestError))).toBe('too_long')
@@ -297,9 +274,9 @@ describe('classifyAiError', () => {
     expect(classifyAiError(new Error('x'), ac.signal)).toBe('aborted')
   })
   it('turns codes into HTTP responses', async () => {
-    const res = aiErrorResponse('quota')
+    const res = aiErrorResponse('rate_limited')
     expect(res.status).toBe(429)
-    expect(await res.json()).toEqual({ error: 'quota' })
+    expect(await res.json()).toEqual({ error: 'rate_limited' })
     expect(aiErrorResponse('aborted').status).toBe(499)
   })
 })
@@ -405,26 +382,23 @@ import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AiEmptyError, AiIncompleteError, AiRefusedError, isAiConfigured, openai, type AiClient } from './openai'
 
-export type AiErrorCode = 'ai_unavailable' | 'quota' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'
+export type AiErrorCode = 'ai_unavailable' | 'rate_limited' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'
 export type AiResult<T> = { ok: true; value: T } | { ok: false; error: AiErrorCode }
 
 const STATUS: Record<AiErrorCode, number> = {
-  ai_unavailable: 503, quota: 429, busy: 429, refused: 422, too_long: 413, empty: 422, ai_failed: 502, aborted: 499,
+  ai_unavailable: 503, rate_limited: 429, busy: 429, refused: 422, too_long: 413, empty: 422, ai_failed: 502, aborted: 499,
 }
 
-// Every AI feature goes through here: check the student has enough actions left, run the call, and
-// count them only if it succeeded (failed or cancelled work is free).
+// Every AI feature goes through here. There are no usage caps: the only check is a speed limit
+// (10 AI requests a minute per student) that stops scripted abuse.
 export async function runAiAction<T>(
-  sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts: { signal?: AbortSignal; client?: AiClient; cost?: number } = {},
+  sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts: { signal?: AbortSignal; client?: AiClient } = {},
 ): Promise<AiResult<T>> {
-  const cost = opts.cost ?? 1 // big jobs cost more, e.g. a PDF is 1 per 10 pages
   if (!opts.client && !isAiConfigured()) return { ok: false, error: 'ai_unavailable' }
-  const { data: left } = await sb.rpc('ai_actions_left')
-  if (typeof left !== 'number' || left < cost) return { ok: false, error: 'quota' }
+  const { data: allowed } = await sb.rpc('ai_request_allowed')
+  if (allowed !== true) return { ok: false, error: 'rate_limited' }
   try {
-    const value = await call(opts.client ?? openai())
-    await sb.rpc('consume_ai_action', { p_cost: cost })
-    return { ok: true, value }
+    return { ok: true, value: await call(opts.client ?? openai()) }
   } catch (e) {
     return { ok: false, error: classifyAiError(e, opts.signal) }
   }
@@ -435,6 +409,8 @@ export function classifyAiError(e: unknown, signal?: AbortSignal): AiErrorCode {
   if (e instanceof AiRefusedError) return 'refused'
   if (e instanceof AiIncompleteError) return 'too_long'
   if (e instanceof AiEmptyError) return 'empty'
+  // OpenAI says "insufficient_quota" when the app owner's credit has run out
+  if (e instanceof OpenAI.APIError && (e as { code?: unknown }).code === 'insufficient_quota') return 'ai_unavailable'
   if (e instanceof OpenAI.RateLimitError || e instanceof OpenAI.InternalServerError || e instanceof OpenAI.APIConnectionError) return 'busy'
   if (e instanceof OpenAI.BadRequestError) return 'too_long' // in practice: the input was too big
   return 'ai_failed'
@@ -474,31 +450,31 @@ Expected: PASS. If `Object.create(OpenAI.RateLimitError.prototype)` fails becaus
 
 ```bash
 git add lib/ai/openai.ts lib/ai/structured.ts lib/ai/run.ts lib/ai/input.ts tests/unit/aiRun.test.ts
-git commit -m "feat: OpenAI client, structured output helper and allowance-checked runAiAction"
+git commit -m "feat: OpenAI client, structured output helper and speed-limited runAiAction"
 ```
 
 ---
 
-### Task 3: Move AI PDF import to OpenAI and the shared allowance
+### Task 3: Move AI PDF import to OpenAI
 
 **Files:**
 - Modify: `lib/ai/pdfToNote.ts` (whole file)
 - Modify: `app/api/import/pdf/route.ts` (whole file)
 - Modify: `lib/import/pdfImport.ts:16-24` (messages), `:33` (comment)
-- Modify: `components/notes/ImportDialog.tsx` (announce AI use; copy says "OpenAI" not "Claude (Anthropic)")
+- Modify: `components/notes/ImportDialog.tsx` (copy says "OpenAI" not "Claude (Anthropic)")
 - Modify: `.env.example`
 - Test: `tests/unit/pdfToNote.test.ts`, `tests/unit/importPdfRoute.test.ts` (rewrite mocks)
 - Remove dependency: `@anthropic-ai/sdk`
 
 **Interfaces:**
 - Consumes: `runAiAction`, `aiErrorResponse`, `isAiConfigured`, `MODELS`, `AiRefusedError`, `hasRefusal`, `type AiClient`.
-- Produces: `pdfToNote(client: AiClient, pdfBase64: string, fileName: string, options?: { signal?: AbortSignal }): Promise<{ title: string; content_md: string; truncated: boolean }>`, `PDF_IMPORT_MODEL = MODELS.strong`, `MAX_PDF_PAGES = 100`, `pdfActionCost(pages: number): number` (1 per 10 pages, rounded up, 1–10), `parseNoteMarkdown` (unchanged).
+- Produces: `pdfToNote(client: AiClient, pdfBase64: string, fileName: string, options?: { signal?: AbortSignal }): Promise<{ title: string; content_md: string; truncated: boolean }>`, `PDF_IMPORT_MODEL = MODELS.strong`, `MAX_PDF_PAGES = 100`, `parseNoteMarkdown` (unchanged).
 
 - [ ] **Step 1: Rewrite the unit test** — replace `fakeClient` and the first test in `tests/unit/pdfToNote.test.ts`:
 
 ```ts
 import { describe, it, expect, vi } from 'vitest'
-import { pdfToNote, parseNoteMarkdown, PDF_IMPORT_MODEL, pdfActionCost } from '@/lib/ai/pdfToNote'
+import { pdfToNote, parseNoteMarkdown, PDF_IMPORT_MODEL } from '@/lib/ai/pdfToNote'
 import { AiRefusedError } from '@/lib/ai/openai'
 
 function fakeClient(reply: { text: string; status?: string; reason?: string; refusal?: boolean }) {
@@ -530,42 +506,36 @@ describe('pdfToNote', () => {
     const { client } = fakeClient({ text: '', refusal: true })
     await expect(pdfToNote(client as never, 'x', 'a.pdf')).rejects.toBeInstanceOf(AiRefusedError)
   })
-  it('costs 1 AI action per 10 pages, rounded up', () => {
-    expect([0, 1, 10, 11, 25, 100].map(pdfActionCost)).toEqual([1, 1, 1, 2, 3, 10])
-  })
 ```
 
 Keep the existing `parseNoteMarkdown` tests and the "returns the title and the Markdown body" test (adapt it to `fakeClient({ text })`). Delete any test that references `betas`, `fallbacks` or `stop_reason`.
 
 In `tests/unit/importPdfRoute.test.ts`, replace the Anthropic mocks:
-- remove `vi.mock('@anthropic-ai/sdk', …)` and the `PdfRefusedError` export from the `pdfToNote` mock, and add `pdfActionCost: (p: number) => Math.min(10, Math.max(1, Math.ceil(p / 10)))` to that mock;
-- change `rpc` to: `rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_actions_left' ? (quotaLeft ? 5 : 0) : true, error: null }))`;
+- remove `vi.mock('@anthropic-ai/sdk', …)` and the `PdfRefusedError` export from the `pdfToNote` mock;
+- rename `quotaLeft` to `allowed` and change `rpc` to: `rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? allowed : null, error: null }))`;
 - `process.env.OPENAI_API_KEY = 'test-key'` in `beforeEach`, delete it in `afterEach` (replace the ANTHROPIC lines);
 - add `vi.mock('@/lib/ai/openai', async (orig) => ({ ...(await orig<typeof import('@/lib/ai/openai')>()), openai: () => ({}) }))`.
 Then add these tests:
 
 ```ts
-  it('counts AI actions only after a successful conversion: 1 per 10 pages', async () => {
-    pdfBytes = Buffer.from('%PDF-1.4\n' + '1 0 obj << /Type /Page >> endobj\n'.repeat(25) + '%%EOF')
-    await call({ path: 'u1/a.pdf' })
-    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_actions_left', 'consume_ai_action'])
-    expect(sb.rpc).toHaveBeenLastCalledWith('consume_ai_action', { p_cost: 3 })
-  })
-  it('does not count a failed conversion', async () => {
-    pdfToNote.mockRejectedValueOnce(new Error('boom'))
+  it('checks the speed limit once, then converts (no daily cap)', async () => {
     const res = await call({ path: 'u1/a.pdf' })
-    expect(res.status).toBe(502)
-    expect(sb.rpc.mock.calls.map(c => c[0])).not.toContain('consume_ai_action')
+    expect(res.status).toBe(200)
+    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_request_allowed'])
   })
-  it('returns quota when today\'s actions are used, without converting', async () => {
-    quotaLeft = false
+  it('reports a failed conversion as ai_failed', async () => {
+    pdfToNote.mockRejectedValueOnce(new Error('boom'))
+    expect((await call({ path: 'u1/a.pdf' })).status).toBe(502)
+  })
+  it('returns rate_limited when the student is going too fast, without converting', async () => {
+    allowed = false
     const res = await call({ path: 'u1/a.pdf' })
     expect(res.status).toBe(429)
-    expect(await res.json()).toEqual({ error: 'quota' })
+    expect(await res.json()).toEqual({ error: 'rate_limited' })
     expect(pdfToNote).not.toHaveBeenCalled()
   })
 ```
-(Also `sb.rpc.mockClear()` in `beforeEach`.) Any existing test asserting `consume_ai_import` is replaced by the three above.
+(Also `sb.rpc.mockClear()` and `allowed = true` in `beforeEach`.) Any existing test asserting `consume_ai_import` or `quota` is replaced by the three above.
 
 - [ ] **Step 2: Run to see them fail**
 
@@ -584,9 +554,6 @@ import { hasRefusal } from './structured'
 export const PDF_IMPORT_MODEL = MODELS.strong
 // Keeps a conversion within the route's time limit and bounds its cost
 export const MAX_PDF_PAGES = 100
-
-// AI actions a PDF costs: 1 per 10 pages, rounded up (a page count we couldn't read counts as 1)
-export const pdfActionCost = (pages: number) => Math.min(10, Math.max(1, Math.ceil(pages / 10)))
 
 const INSTRUCTIONS = `You turn a PDF a student uploaded into a study note written in Markdown.
 
@@ -638,7 +605,7 @@ export async function pdfToNote(
 ```ts
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { MAX_PDF_PAGES, pdfActionCost, pdfToNote } from '@/lib/ai/pdfToNote'
+import { MAX_PDF_PAGES, pdfToNote } from '@/lib/ai/pdfToNote'
 import { isAiConfigured } from '@/lib/ai/openai'
 import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 ```
@@ -646,32 +613,30 @@ Keep `maxDuration = 300`, `MAX_BYTES`, `STALE_UPLOAD_MS`, `countPages`, the path
 
 ```ts
     const displayName = fileName.replace(/^[0-9a-f-]{36}-/i, '')
-    // Costs 1 of the student's 20 daily AI actions per 10 pages (rounded up), only if it succeeds.
-    // request.signal: if the student cancels or closes the tab, the model call stops too.
-    const cost = pdfActionCost(countPages(bytes))
-    const result = await runAiAction(sb, client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { signal: request.signal, cost })
+    // request.signal: if the student cancels or closes the tab, the model call stops too
+    const result = await runAiAction(sb, client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { signal: request.signal })
     return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
   } finally {
 ```
-(The `try { … } finally { … }` stays; the `catch` block is removed because `runAiAction` handles AI errors. Update the route's top comment: `ai_unavailable` 503, `quota`/`busy` 429, `too_large`/`too_long` 413, `refused`/`empty` 422, `ai_failed` 502.)
+(The `try { … } finally { … }` stays; the `catch` block is removed because `runAiAction` handles AI errors. Update the route's top comment: `ai_unavailable` 503, `rate_limited`/`busy` 429, `too_large`/`too_long` 413, `refused`/`empty` 422, `ai_failed` 502.)
 
 `lib/import/pdfImport.ts` — messages:
 
 ```ts
 const MESSAGES: Record<string, string> = {
-  ai_unavailable: 'AI import isn\'t set up yet, so only the plain text was kept.',
+  ai_unavailable: 'AI import isn\'t available right now, so only the plain text was kept.',
   ai_failed: 'The AI service didn\'t respond, so only the plain text was kept.',
   busy: 'The AI service is busy right now, so only the plain text was kept.',
   refused: 'This PDF couldn\'t be converted by AI, so only the plain text was kept.',
   empty: 'The AI couldn\'t find text in this PDF, so only the plain text was kept.',
-  quota: 'Not enough AI actions left today for this PDF (it uses 1 per 10 pages), so only the plain text was kept. They reset at midnight UTC.',
+  rate_limited: 'You\'re going a bit fast, so only the plain text was kept. Try AI import again in a minute.',
   too_long: 'This PDF is too long for AI import, so only the plain text was kept.',
   too_large: 'This PDF is too large for AI import, so only the plain text was kept.',
 }
 ```
 and change the comment `convert on the server with Claude` → `convert on the server with OpenAI`.
 
-`components/notes/ImportDialog.tsx`: in the PDF branch, after `result = await importPdf(...)`, add `if (result.via === 'ai') announceAiUsed()` (import from `@/lib/data/ai` — created in Task 4; if executing strictly in order, add this line in Task 4 Step 3 instead). Change the button hint text `PDFs are structured by Claude (Anthropic) — headings, lists, tables and equations. Up to 24 MB and 100 pages.` → `PDFs are structured by AI (OpenAI): headings, lists, tables and equations. Up to 24 MB and 100 pages; uses 1 AI action per 10 pages.`
+`components/notes/ImportDialog.tsx`: change the button hint text `PDFs are structured by Claude (Anthropic) — headings, lists, tables and equations. Up to 24 MB and 100 pages.` → `PDFs are structured by AI (OpenAI): headings, lists, tables and equations. Up to 24 MB and 100 pages.`
 
 `.env.example`: replace the AI lines with
 
@@ -691,142 +656,156 @@ Expected: PASS, no type errors. If `res.output_text` or `incomplete_details` typ
 
 ```bash
 git add -A lib/ai/pdfToNote.ts app/api/import/pdf/route.ts lib/import/pdfImport.ts components/notes/ImportDialog.tsx .env.example tests/unit package.json package-lock.json
-git commit -m "feat: AI PDF import runs on OpenAI and the shared allowance; remove Anthropic SDK"
+git commit -m "feat: AI PDF import runs on OpenAI; remove Anthropic SDK"
 ```
 
 ---
 
-### Task 4: Allowance display ("N of 20 AI actions left today")
+### Task 4: Email confirmation for new accounts
+
+With no AI caps, mass-created fake accounts are the main abuse route, so new email sign-ups must confirm their address. The hosted Supabase project turns confirmation on (see "After this plan"); local development keeps it off so tests can sign up instantly. The app must handle both.
 
 **Files:**
-- Create: `lib/ai/allowance.ts`, `lib/data/ai.ts`, `components/ai/AiAllowance.tsx`
-- Modify: `app/(app)/home/page.tsx` (render `<AiAllowance />` after the hero section)
-- Test: `tests/unit/aiAllowance.test.tsx`
+- Modify: `app/(auth)/signup/page.tsx`, `app/(auth)/login/page.tsx`
+- Test: `tests/unit/emailConfirm.test.tsx`
 
 **Interfaces:**
-- Produces: `AI_DAILY_ACTIONS = 20`, `formatResetIn(now: Date): string` (e.g. `"3h 12m"`), `aiActionsLeft(sb: SupabaseClient): Promise<number>`, `AI_USED = 'studyhub:ai-used'`, `announceAiUsed(): void`, `useAiActionsLeft(): number | null`, `<AiAllowance className? />`.
+- Consumes: `supabase().auth.signUp`, `.resend`, `.signInWithPassword`; existing `/auth/callback?next=…` (exchanges the code, then redirects to `next` via `safeNext`).
+- Produces: sign-up shows a "Check your email" step when `signUp` returns no session; login explains `email_not_confirmed` and offers Resend.
 
-- [ ] **Step 1: Write the failing test** — `tests/unit/aiAllowance.test.tsx`
+- [ ] **Step 1: Write the failing test** — `tests/unit/emailConfirm.test.tsx`
 
 ```tsx
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, act, cleanup } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 
-let left = 14
-vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ rpc: async () => ({ data: left, error: null }) }) }))
+const signUp = vi.fn()
+const resend = vi.fn(async () => ({ error: null }))
+const signInWithPassword = vi.fn()
+vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ auth: { signUp, resend, signInWithPassword } }) }))
+const router = { replace: vi.fn(), refresh: vi.fn() }
+vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams() }))
 
-import { AiAllowance } from '@/components/ai/AiAllowance'
-import { announceAiUsed } from '@/lib/data/ai'
-import { formatResetIn } from '@/lib/ai/allowance'
+import SignupPage from '@/app/(auth)/signup/page'
+import LoginPage from '@/app/(auth)/login/page'
 
-afterEach(() => { cleanup(); left = 14 })
+beforeEach(() => { signUp.mockReset(); resend.mockClear(); signInWithPassword.mockReset(); router.replace.mockClear() })
+afterEach(cleanup)
 
-describe('formatResetIn', () => {
-  it('counts down to the next UTC midnight', () => {
-    expect(formatResetIn(new Date('2026-10-03T20:48:00Z'))).toBe('3h 12m')
-    expect(formatResetIn(new Date('2026-10-03T23:59:30Z'))).toBe('1m')
+async function fillSignup() {
+  render(<SignupPage />)
+  fireEvent.change(screen.getByLabelText('Email', { exact: true }), { target: { value: 'ama@example.com' } })
+  fireEvent.change(screen.getByLabelText('Confirm email'), { target: { value: 'ama@example.com' } })
+  fireEvent.change(screen.getByLabelText('Password', { exact: true }), { target: { value: 'long-enough-1' } })
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create account' })) })
+}
+
+describe('sign-up with email confirmation on', () => {
+  it('asks the student to check their email, with a link back through the callback to onboarding', async () => {
+    signUp.mockResolvedValue({ data: { user: { id: 'u' }, session: null }, error: null })
+    await fillSignup()
+    expect(screen.getByRole('heading', { name: 'Check your email' })).toBeTruthy()
+    expect(screen.getByText(/ama@example\.com/)).toBeTruthy()
+    const opts = signUp.mock.calls[0][0].options as { emailRedirectTo: string }
+    expect(opts.emailRedirectTo).toMatch(/\/auth\/callback\?next=%2Fonboarding/)
+    expect(router.replace).not.toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Resend email' })) })
+    expect(resend).toHaveBeenCalledWith(expect.objectContaining({ type: 'signup', email: 'ama@example.com' }))
+    expect(screen.getByText('Sent again.')).toBeTruthy()
+  })
+  it('goes straight to onboarding when no confirmation is needed (local development)', async () => {
+    signUp.mockResolvedValue({ data: { user: { id: 'u' }, session: { access_token: 't' } }, error: null })
+    await fillSignup()
+    expect(router.replace).toHaveBeenCalledWith('/onboarding?next=%2Fhome')
   })
 })
 
-describe('AiAllowance', () => {
-  it('shows how many actions are left and refreshes after one is used', async () => {
-    render(<AiAllowance />)
-    expect(await screen.findByText('14 of 20 AI actions left today')).toBeTruthy()
-    left = 13
-    await act(async () => { announceAiUsed() })
-    expect(await screen.findByText('13 of 20 AI actions left today')).toBeTruthy()
-  })
-  it('explains when today\'s actions are used up', async () => {
-    left = 0
-    render(<AiAllowance />)
-    expect(await screen.findByText(/You've used today's 20 AI actions\. They reset in/)).toBeTruthy()
+describe('logging in before confirming', () => {
+  it('explains and offers to resend the confirmation email', async () => {
+    signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'email_not_confirmed', message: 'Email not confirmed' } })
+    render(<LoginPage />)
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ama@example.com' } })
+    fireEvent.change(screen.getByLabelText('Password', { exact: true }), { target: { value: 'long-enough-1' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Log in' })) })
+    expect(screen.getByRole('alert').textContent).toMatch(/Confirm your email first/)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Resend confirmation email' })) })
+    expect(resend).toHaveBeenCalledWith(expect.objectContaining({ type: 'signup', email: 'ama@example.com' }))
   })
 })
 ```
+(If `safeNext(null)` returns something other than `/home` in this codebase, use that value in the second test's expected URL.)
 
 - [ ] **Step 2: Run to see it fail**
 
-Run: `npx vitest run tests/unit/aiAllowance.test.tsx`
-Expected: FAIL — module not found.
+Run: `npx vitest run tests/unit/emailConfirm.test.tsx`
+Expected: FAIL — no "Check your email" heading; login shows the generic error.
 
-- [ ] **Step 3: Implement** — `lib/ai/allowance.ts`
+- [ ] **Step 3: Implement** — `app/(auth)/signup/page.tsx`
 
-```ts
-export const AI_DAILY_ACTIONS = 20
-
-// Time until the allowance resets (midnight UTC), e.g. "3h 12m"
-export function formatResetIn(now: Date): string {
-  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
-  const mins = Math.max(1, Math.ceil((next - now.getTime()) / 60_000))
-  const h = Math.floor(mins / 60), m = mins % 60
-  return h ? `${h}h ${m}m` : `${m}m`
-}
-```
-
-`lib/data/ai.ts`
+Add state `const [sentTo, setSentTo] = useState<string | null>(null)` and `const [resent, setResent] = useState(false)`. Add a helper inside the component:
 
 ```ts
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-// Fired after any AI action succeeds, so allowance counters refresh
-export const AI_USED = 'studyhub:ai-used'
-export const announceAiUsed = () => { window.dispatchEvent(new Event(AI_USED)) }
-
-export async function aiActionsLeft(sb: SupabaseClient): Promise<number> {
-  const { data, error } = await sb.rpc('ai_actions_left')
-  if (error) throw error
-  return data as number
-}
+  // Where the confirmation link lands: the callback signs them in, then onboarding (keeping `next`)
+  const confirmUrl = () =>
+    `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/onboarding?next=${encodeURIComponent(next)}`)}`
 ```
+In `onSubmit`, call `signUp` with `options: { emailRedirectTo: confirmUrl(), data: { … as before … } }`, keep `data` from the result (`const { data, error } = await …`), and after the error check:
 
-`components/ai/AiAllowance.tsx`
+```ts
+    // With email confirmation on (the hosted app), there's no session until they click the link
+    if (!data.session) { setSentTo(email.trim()); return }
+    router.replace(`/onboarding?next=${encodeURIComponent(next)}`)
+    router.refresh()
+```
+At the top of the returned JSX:
 
 ```tsx
-'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
-import { AI_USED, aiActionsLeft } from '@/lib/data/ai'
-import { AI_DAILY_ACTIONS, formatResetIn } from '@/lib/ai/allowance'
-
-/** Today's remaining AI actions; null while loading. Refreshes when any AI action succeeds. */
-export function useAiActionsLeft(): number | null {
-  const [left, setLeft] = useState<number | null>(null)
-  useEffect(() => {
-    let live = true
-    const load = () => { aiActionsLeft(supabase()).then(n => { if (live) setLeft(n) }).catch(() => {}) }
-    load()
-    window.addEventListener(AI_USED, load)
-    return () => { live = false; window.removeEventListener(AI_USED, load) }
-  }, [])
-  return left
-}
-
-export function allowanceText(left: number, now = new Date()): string {
-  return left > 0
-    ? `${left} of ${AI_DAILY_ACTIONS} AI actions left today`
-    : `You've used today's ${AI_DAILY_ACTIONS} AI actions. They reset in ${formatResetIn(now)}.`
-}
-
-export function AiAllowance({ className = '' }: { className?: string }) {
-  const left = useAiActionsLeft()
-  if (left === null) return null
-  return <p className={`text-xs text-muted ${className}`} aria-live="polite">{allowanceText(left)}</p>
-}
+  if (sentTo) return (
+    <div className="space-y-4 text-center">
+      <h1 className="text-xl font-medium">Check your email</h1>
+      <p className="text-sm text-muted">We sent a link to <b>{sentTo}</b>. Open it to finish creating your account.</p>
+      <button type="button" className="btn" onClick={async () => {
+        await supabase().auth.resend({ type: 'signup', email: sentTo, options: { emailRedirectTo: confirmUrl() } })
+        setResent(true)
+      }}>Resend email</button>
+      {resent && <p className="text-sm text-muted" aria-live="polite">Sent again.</p>}
+      <p className="text-sm"><button type="button" className="text-accent" onClick={() => setSentTo(null)}>Use a different email</button></p>
+    </div>
+  )
 ```
 
-`app/(app)/home/page.tsx`: import `AiAllowance` and render `<AiAllowance className="-mt-2 text-right" />` directly after the closing `</section>` of the `hero` section. In `components/notes/ImportDialog.tsx` add the `announceAiUsed()` call described in Task 3 if not yet done.
+`app/(auth)/login/page.tsx`: add `const [unconfirmed, setUnconfirmed] = useState(false)`. In `onSubmit`, replace the error branch with:
+
+```ts
+    if (error) {
+      const notConfirmed = (error as { code?: string }).code === 'email_not_confirmed'
+      setUnconfirmed(notConfirmed)
+      setError(notConfirmed ? 'Confirm your email first. We sent you a link when you signed up.' : 'That email and password don\'t match. Try again.')
+      return
+    }
+```
+Under the error paragraph:
+
+```tsx
+        {unconfirmed && (
+          <button type="button" className="text-sm text-accent" onClick={async () => {
+            await supabase().auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } })
+            setError('We sent a new confirmation link. Check your email.')
+          }}>Resend confirmation email</button>
+        )}
+```
 
 - [ ] **Step 4: Run to see it pass**
 
-Run: `npx vitest run tests/unit/aiAllowance.test.tsx tests/unit/importDialog.test.tsx`
-Expected: PASS.
+Run: `npx vitest run tests/unit/emailConfirm.test.tsx tests/unit/passwordInput.test.tsx`
+Expected: PASS. Existing E2E sign-up keeps working because local `supabase/config.toml` has `enable_confirmations = false` (leave it).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add lib/ai/allowance.ts lib/data/ai.ts components/ai/AiAllowance.tsx "app/(app)/home/page.tsx" components/notes/ImportDialog.tsx tests/unit/aiAllowance.test.tsx
-git commit -m "feat: show today's remaining AI actions"
+git add "app/(auth)/signup/page.tsx" "app/(auth)/login/page.tsx" tests/unit/emailConfirm.test.tsx
+git commit -m "feat: sign-up and login handle email confirmation"
 ```
 
 ---
@@ -955,10 +934,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const NOTE_ID = '11111111-1111-4111-8111-111111111111'
 let user: { id: string } | null = { id: 'u1' }
 let note: { id: string; title: string; content_md: string } | null
-let left = 5
+let allowed = true
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_actions_left' ? left : true, error: null })),
+  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? allowed : null, error: null })),
   from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: note, error: null }) }) }) }),
 }
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: async () => sb }))
@@ -973,7 +952,7 @@ const long = 'The Krebs cycle '.repeat(20)
 const call = (body: unknown) => POST(new Request('http://x/api/ai/summary', { method: 'POST', body: JSON.stringify(body) }))
 
 beforeEach(() => {
-  user = { id: 'u1' }; left = 5; note = { id: NOTE_ID, title: 'Krebs', content_md: long }
+  user = { id: 'u1' }; allowed = true; note = { id: NOTE_ID, title: 'Krebs', content_md: long }
   sb.rpc.mockClear(); parse.mockReset()
   parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { summary_md: '  Makes NADH.  ' } })
   process.env.OPENAI_API_KEY = 'k'
@@ -993,13 +972,20 @@ describe('summariseNote', () => {
 })
 
 describe('POST /api/ai/summary', () => {
-  it('returns the summary and counts one action', async () => {
+  it('returns the summary after one speed-limit check', async () => {
     const res = await call({ noteId: NOTE_ID })
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ summary_md: 'Makes NADH.' })
-    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_actions_left', 'consume_ai_action'])
+    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_request_allowed'])
   })
-  it('refuses notes too short to summarise, without charging', async () => {
+  it('says to slow down when the speed limit is hit', async () => {
+    allowed = false
+    const res = await call({ noteId: NOTE_ID })
+    expect(res.status).toBe(429)
+    expect(await res.json()).toEqual({ error: 'rate_limited' })
+    expect(parse).not.toHaveBeenCalled()
+  })
+  it('refuses notes too short to summarise, without calling the AI', async () => {
     note = { id: NOTE_ID, title: 'x', content_md: 'Just a few words here.' }
     const res = await call({ noteId: NOTE_ID })
     expect(res.status).toBe(422)
@@ -1088,7 +1074,7 @@ import { removeSummary } from '@/lib/notes/summaryBlock'
 
 export const maxDuration = 60
 
-// POST { noteId } → { summary_md } (1 AI action), or 422 too_short / AI error codes
+// POST { noteId } → { summary_md }, or 422 too_short / AI error codes
 export async function POST(request: Request) {
   const r = await readOwnNote(request)
   if ('response' in r) return r.response
@@ -1157,7 +1143,7 @@ describe('noteToFlashcards', () => {
     expect(out).toEqual({ cards: [{ front: 'Q', back: 'A' }] })
     expect((parse.mock.calls[0][0] as { model: string }).model).toBe('gpt-6-luna')
   })
-  it('throws AiEmptyError when nothing usable comes back (so the action is not charged)', async () => {
+  it('throws AiEmptyError when nothing usable comes back', async () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { cards: [{ front: '', back: '' }] } })
     await expect(noteToFlashcards(client as never, { title: 'T', content_md: 'b' })).rejects.toBeInstanceOf(AiEmptyError)
   })
@@ -1173,7 +1159,7 @@ const NOTE_ID = '11111111-1111-4111-8111-111111111111'
 let note: { id: string; title: string; content_md: string } | null
 const sb = {
   auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_actions_left' ? 5 : true, error: null })),
+  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? true : null, error: null })),
   from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: note, error: null }) }) }) }),
 }
 const parse = vi.fn()
@@ -1190,11 +1176,11 @@ beforeEach(() => {
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
 describe('POST /api/ai/flashcards', () => {
-  it('returns cleaned cards and counts one action', async () => {
+  it('returns cleaned cards', async () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { cards: [{ front: ' Where? ', back: 'Matrix' }] } })
     const res = await call()
     expect(await res.json()).toEqual({ cards: [{ front: 'Where?', back: 'Matrix' }] })
-    expect(fns()).toEqual(['ai_actions_left', 'consume_ai_action'])
+    expect(fns()).toEqual(['ai_request_allowed'])
   })
   it('refuses very short notes without calling the AI', async () => {
     note = { id: NOTE_ID, title: 'x', content_md: 'Too short.' }
@@ -1203,12 +1189,11 @@ describe('POST /api/ai/flashcards', () => {
     expect(await res.json()).toEqual({ error: 'too_short' })
     expect(parse).not.toHaveBeenCalled()
   })
-  it('does not charge when nothing usable comes back', async () => {
+  it('says so when nothing usable comes back', async () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { cards: [{ front: '', back: '' }] } })
     const res = await call()
     expect(res.status).toBe(422)
     expect(await res.json()).toEqual({ error: 'empty' })
-    expect(fns()).not.toContain('consume_ai_action')
   })
 })
 ```
@@ -1278,7 +1263,7 @@ import { removeSummary } from '@/lib/notes/summaryBlock'
 
 export const maxDuration = 60
 
-// POST { noteId } → { cards: [{front, back}] } (1 AI action), or 422 too_short / AI error codes
+// POST { noteId } → { cards: [{front, back}] }, or 422 too_short / AI error codes
 export async function POST(request: Request) {
   const r = await readOwnNote(request)
   if ('response' in r) return r.response
@@ -1310,7 +1295,7 @@ git commit -m "feat: AI flashcards-from-note route"
 - Test: `tests/unit/studyPanel.test.tsx`
 
 **Interfaces:**
-- Consumes: `/api/ai/summary`, `/api/ai/flashcards`, `getSummary/setSummary/removeSummary`, `listDecksWithDue`, `createDeck`, `createCards`, `announceAiUsed`, `useAiActionsLeft`, `allowanceText`, `useAutosave().flush` (already returned by `useAutosave`).
+- Consumes: `/api/ai/summary`, `/api/ai/flashcards`, `getSummary/setSummary/removeSummary`, `listDecksWithDue`, `createDeck`, `createCards`, `useAutosave().flush` (already returned by `useAutosave`).
 - Produces:
   - `postAi<T>(url: string, body: object, signal?: AbortSignal): Promise<{ ok: true; value: T } | { ok: false; error: string; message: string }>` and `AI_MESSAGES: Record<string, string>`
   - `<CardReviewList cards={ReviewCard[]} onChange={(cards) => void} />` with `type ReviewCard = { front: string; back: string; keep: boolean }`
@@ -1326,7 +1311,7 @@ import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 
 const createDeck = vi.fn(async (_sb: unknown, input: { name: string }) => ({ id: 'd-new', course_id: null, name: input.name }))
 const createCards = vi.fn(async () => [])
-vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ rpc: async () => ({ data: 12, error: null }) }) }))
+vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/decks', () => ({ listDecksWithDue: async () => [{ id: 'd1', name: 'Biology', course_id: null, due: 0, total: 3 }], createDeck: (...a: [unknown, { name: string }]) => createDeck(...a) }))
 vi.mock('@/lib/data/cards', () => ({ createCards: (...a: unknown[]) => createCards(...(a as [])) }))
 
@@ -1398,13 +1383,12 @@ Expected: FAIL — module not found.
 
 ```ts
 'use client'
-import { announceAiUsed } from '@/lib/data/ai'
 
 export const AI_MESSAGES: Record<string, string> = {
-  quota: 'You\'ve used today\'s 20 AI actions. They reset at midnight UTC.',
+  rate_limited: 'You\'re going a bit fast. Try again in a minute.',
   busy: 'Couldn\'t reach the AI. Try again.',
   ai_failed: 'Couldn\'t reach the AI. Try again.',
-  ai_unavailable: 'AI isn\'t set up for this app yet.',
+  ai_unavailable: 'AI isn\'t available right now. Try again later.',
   refused: 'The AI couldn\'t work with this note.',
   too_long: 'This is too long for the AI. Try a shorter note.',
   too_short: 'This note is too short. Add a bit more first.',
@@ -1413,13 +1397,13 @@ export const AI_MESSAGES: Record<string, string> = {
   unauthorized: 'You\'ve been signed out. Log in again.',
 }
 
-// POST to an AI route. On success the allowance counters refresh; errors come back as plain words.
+// POST to an AI route; errors come back as plain words.
 export async function postAi<T>(url: string, body: object, signal?: AbortSignal): Promise<
   { ok: true; value: T } | { ok: false; error: string; message: string }
 > {
   try {
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal })
-    if (res.ok) { announceAiUsed(); return { ok: true, value: await res.json() as T } }
+    if (res.ok) return { ok: true, value: await res.json() as T }
     const error = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'ai_failed'
     return { ok: false, error, message: AI_MESSAGES[error] ?? AI_MESSAGES.ai_failed }
   } catch (e) {
@@ -1512,8 +1496,8 @@ import { wordCount } from '@/lib/ai/input'
 import { MIN_WORDS } from '@/lib/ai/summary'
 import { postAi } from '@/components/ai/aiFetch'
 
-export function SummaryTab({ note, prepare, applyContent, disabled }: {
-  note: { id: string; content_md: string }; prepare: () => Promise<void>; applyContent: (md: string) => void; disabled: boolean
+export function SummaryTab({ note, prepare, applyContent }: {
+  note: { id: string; content_md: string }; prepare: () => Promise<void>; applyContent: (md: string) => void
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1534,7 +1518,7 @@ export function SummaryTab({ note, prepare, applyContent, disabled }: {
     <div className="space-y-3">
       <p className="text-sm text-muted">{tooShort && !existing ? 'Too short to summarise yet. Add a bit more to this note first.' : existing ? 'This note has a summary at the top.' : 'Add a short summary to the top of this note.'}</p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-primary" disabled={busy || disabled || tooShort} onClick={summarise}>
+        <button type="button" className="btn-primary" disabled={busy || tooShort} onClick={summarise}>
           {busy ? 'Summarising…' : existing ? '✦ Regenerate summary' : '✦ Summarise'}
         </button>
         {existing && <button type="button" className="btn" onClick={() => applyContent(removeSummary(note.content_md))}>Remove summary</button>}
@@ -1557,7 +1541,7 @@ import { CardReviewList, keptCards, type ReviewCard } from '@/components/ai/Card
 import { DeckPicker, resolveDeck, type DeckChoice } from '@/components/ai/DeckPicker'
 import { useToast } from '@/components/providers/ToastProvider'
 
-export function CardsTab({ note, prepare, disabled }: { note: { id: string; title: string }; prepare: () => Promise<void>; disabled: boolean }) {
+export function CardsTab({ note, prepare }: { note: { id: string; title: string }; prepare: () => Promise<void> }) {
   const toast = useToast()
   const [cards, setCards] = useState<ReviewCard[] | null>(null)
   const [deck, setDeck] = useState<DeckChoice>({ kind: 'new', name: note.title || 'New deck' })
@@ -1588,7 +1572,7 @@ export function CardsTab({ note, prepare, disabled }: { note: { id: string; titl
   if (!cards) return (
     <div className="space-y-3">
       <p className="text-sm text-muted">Turn this note into flashcards. You'll check them before they're saved.</p>
-      <button type="button" className="btn-primary" disabled={busy || disabled} onClick={generate}>{busy ? 'Making cards…' : '✦ Make flashcards'}</button>
+      <button type="button" className="btn-primary" disabled={busy} onClick={generate}>{busy ? 'Making cards…' : '✦ Make flashcards'}</button>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </div>
   )
@@ -1615,7 +1599,6 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { SummaryTab } from './SummaryTab'
 import { CardsTab } from './CardsTab'
-import { allowanceText, useAiActionsLeft } from '@/components/ai/AiAllowance'
 
 type Tab = 'summary' | 'cards'
 const TABS: [Tab, string][] = [['summary', 'Summary'], ['cards', 'Cards']]
@@ -1626,8 +1609,6 @@ export function StudyPanel({ note, onClose, prepare, applyContent }: {
   onClose: () => void; prepare: () => Promise<void>; applyContent: (md: string) => void
 }) {
   const [tab, setTab] = useState<Tab>('summary')
-  const left = useAiActionsLeft()
-  const out = left === 0
   return (
     <aside aria-label="Study" className="no-print fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto rounded-t-2xl border border-line bg-raised p-4 shadow-lg md:inset-x-auto md:bottom-0 md:right-0 md:top-[49px] md:max-h-none md:w-[360px] md:rounded-none md:border-y-0 md:border-r-0">
       <div className="mb-3 flex items-center justify-between">
@@ -1640,9 +1621,8 @@ export function StudyPanel({ note, onClose, prepare, applyContent }: {
             className={`flex-1 rounded-lg px-2 py-1 text-sm ${tab === id ? 'bg-raised font-medium shadow-sm' : 'text-muted'}`}>{label}</button>
         ))}
       </div>
-      {tab === 'summary' && <SummaryTab note={note} prepare={prepare} applyContent={applyContent} disabled={out} />}
-      {tab === 'cards' && <CardsTab note={note} prepare={prepare} disabled={out} />}
-      {left !== null && <p className="mt-4 text-xs text-muted" aria-live="polite">{allowanceText(left)}</p>}
+      {tab === 'summary' && <SummaryTab note={note} prepare={prepare} applyContent={applyContent} />}
+      {tab === 'cards' && <CardsTab note={note} prepare={prepare} />}
     </aside>
   )
 }
@@ -1689,14 +1669,14 @@ git commit -m "feat: Study panel with AI summary and flashcards"
 
 ---
 
-### Task 9: Quiz tables and free-marking guard
+### Task 9: Quiz tables
 
 **Files:**
 - Create: `supabase/migrations/20261006000100_quizzes.sql`
 - Test: `tests/db/quizzes.test.ts`
 
 **Interfaces:**
-- Produces: tables `quizzes(id, user_id, note_id, title, questions jsonb, created_at)`, `quiz_attempts(id, user_id, quiz_id, answers jsonb, correct, total, started_at, finished_at)`, `quiz_marks(attempt_id, question_id, user_id, at)`; helper `owns_note(uuid)`, `owns_quiz(uuid)`; RPC `claim_short_answer_mark(p_attempt uuid, p_question text) → boolean`.
+- Produces: tables `quizzes(id, user_id, note_id, title, questions jsonb, created_at)`, `quiz_attempts(id, user_id, quiz_id, answers jsonb, correct, total, started_at, finished_at)`; helpers `owns_note(uuid)`, `owns_quiz(uuid)`.
 
 - [ ] **Step 1: Write the failing DB test** — `tests/db/quizzes.test.ts`
 
@@ -1744,39 +1724,6 @@ describe('quizzes and attempts', () => {
     expect((await A.sb.from('quiz_attempts').select('id').eq('id', attemptId)).data).toEqual([])
   })
 })
-
-describe('claim_short_answer_mark (free AI marking guard)', () => {
-  const claim = (u: U, attempt: string, q: string) => u.sb.rpc('claim_short_answer_mark', { p_attempt: attempt, p_question: q })
-  it('allows each short-answer question once per attempt', async () => {
-    const { attemptId } = await makeQuiz(A)
-    expect((await claim(A, attemptId, 'q3')).data).toBe(true)
-    expect((await claim(A, attemptId, 'q3')).data).toBe(false)
-  })
-  it('refuses multiple-choice questions, unknown questions, finished attempts and other students', async () => {
-    const { attemptId } = await makeQuiz(A)
-    expect((await claim(A, attemptId, 'q1')).data).toBe(false)
-    expect((await claim(A, attemptId, 'nope')).data).toBe(false)
-    expect((await claim(B, attemptId, 'q3')).data).toBe(false)
-    await A.sb.from('quiz_attempts').update({ finished_at: new Date().toISOString() }).eq('id', attemptId)
-    expect((await claim(A, attemptId, 'q3')).data).toBe(false)
-  })
-  it('students cannot delete marks to claim again', async () => {
-    const { attemptId } = await makeQuiz(A)
-    await claim(A, attemptId, 'q3')
-    await A.sb.from('quiz_marks').delete().eq('attempt_id', attemptId)
-    expect((await claim(A, attemptId, 'q3')).data).toBe(false)
-  })
-  it('stops after 60 free marks a day', async () => {
-    const u = await newUser()
-    const results: boolean[] = []
-    for (let i = 0; i < 61; i++) {
-      const { attemptId } = await makeQuiz(u)
-      results.push((await claim(u, attemptId, 'q3')).data as boolean)
-    }
-    expect(results.slice(0, 60).every(Boolean)).toBe(true)
-    expect(results[60]).toBe(false)
-  }, 60_000)
-})
 ```
 
 - [ ] **Step 2: Run to see it fail**
@@ -1787,7 +1734,7 @@ Expected: FAIL — relation `quizzes` does not exist.
 - [ ] **Step 3: Write the migration** — `supabase/migrations/20261006000100_quizzes.sql`
 
 ```sql
--- Quizzes made from a note, attempts (score history), and the guard on free AI marking.
+-- Quizzes made from a note, and attempts (score history).
 create function public.owns_note(nid uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.notes n where n.id = nid and n.user_id = auth.uid())
@@ -1822,17 +1769,6 @@ create table public.quiz_attempts (
 create index quiz_attempts_quiz on public.quiz_attempts (quiz_id, started_at);
 create index quiz_attempts_finished on public.quiz_attempts (user_id, finished_at);
 
--- One row per AI-marked short answer. Students can read theirs but not add, change or delete them
--- (only claim_short_answer_mark writes here), so free marking can't be reused.
-create table public.quiz_marks (
-  attempt_id uuid not null references public.quiz_attempts on delete cascade,
-  question_id text not null,
-  user_id uuid not null default auth.uid() references auth.users on delete cascade,
-  at timestamptz not null default now(),
-  primary key (attempt_id, question_id)
-);
-create index quiz_marks_user_day on public.quiz_marks (user_id, at);
-
 alter table public.quizzes enable row level security;
 create policy "own rows" on public.quizzes for all
   using (user_id = (select auth.uid()))
@@ -1841,31 +1777,6 @@ alter table public.quiz_attempts enable row level security;
 create policy "own rows" on public.quiz_attempts for all
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()) and public.owns_quiz(quiz_id));
-alter table public.quiz_marks enable row level security;
-create policy "read own marks" on public.quiz_marks for select using (user_id = (select auth.uid()));
-
--- True (and records the mark) only for the caller's own unfinished attempt, a short-answer
--- question in that quiz, not marked before, and under 60 free marks today (UTC).
-create function public.claim_short_answer_mark(p_attempt uuid, p_question text) returns boolean
-language plpgsql security definer set search_path = '' as $$
-declare
-  uid uuid := auth.uid();
-begin
-  if uid is null then return false; end if;
-  if not exists (
-    select 1 from public.quiz_attempts a join public.quizzes q on q.id = a.quiz_id
-     where a.id = p_attempt and a.user_id = uid and a.finished_at is null
-       and exists (select 1 from jsonb_array_elements(q.questions) e where e->>'id' = p_question and e->>'type' = 'short')
-  ) then return false; end if;
-  if (select count(*) from public.quiz_marks m
-       where m.user_id = uid and (m.at at time zone 'utc')::date = (now() at time zone 'utc')::date) >= 60
-  then return false; end if;
-  insert into public.quiz_marks (attempt_id, question_id, user_id) values (p_attempt, p_question, uid)
-  on conflict do nothing;
-  return found;
-end $$;
-revoke execute on function public.claim_short_answer_mark(uuid, text) from public, anon;
-grant execute on function public.claim_short_answer_mark(uuid, text) to authenticated;
 ```
 
 - [ ] **Step 4: Apply and run**
@@ -1877,7 +1788,7 @@ Expected: all DB tests PASS.
 
 ```bash
 git add supabase/migrations/20261006000100_quizzes.sql tests/db/quizzes.test.ts
-git commit -m "feat: quiz, attempt and mark tables with a guard on free AI marking"
+git commit -m "feat: quiz and attempt tables"
 ```
 
 ---
@@ -1894,7 +1805,7 @@ git commit -m "feat: quiz, attempt and mark tables with a guard on free AI marki
 - Produces:
   - `type QuestionType = 'mcq' | 'true_false' | 'short'`; `type Question = { id: string; type: QuestionType; prompt: string; options: string[] | null; answer: string; explanation: string }`; `type AnswerRecord = { given: string; correct: boolean; feedback: string | null }`; `type Quiz = { id: string; note_id: string; title: string; questions: Question[]; created_at: string }`; `type QuizAttempt = { id: string; quiz_id: string; answers: Record<string, AnswerRecord>; correct: number; total: number; started_at: string; finished_at: string | null }`
   - `QUIZ_COUNTS = [5, 10, 15] as const`; `validateQuestions(raw: RawQuestion[], types: QuestionType[], count: number): Question[]`; `makeQuiz(client, note, opts: { count: number; types: QuestionType[] }, signal?): Promise<{ title: string; questions: Question[] }>`
-  - `POST /api/ai/quiz` `{ noteId, count, types }` → 200 `Quiz` (saved) | 400 | 422 `too_short` | AI codes (`empty` when fewer than 3 valid questions)
+  - `POST /api/ai/quiz` `{ noteId, count, types }` → 200 `Quiz` (saved) | 400 | 422 `too_short` | AI codes (`empty` when fewer than 3 valid questions, `rate_limited`)
   - Data: `listQuizSummaries(sb, noteId): Promise<{ quiz: Quiz; attempts: number; best: { correct: number; total: number } | null }[]>`, `getQuiz(sb, id): Promise<Quiz>`, `getOpenAttempt(sb, quizId): Promise<QuizAttempt | null>`, `latestFinishedAttempt(sb, quizId, beforeId?): Promise<QuizAttempt | null>`, `startAttempt(sb, quiz: Quiz): Promise<QuizAttempt>`, `saveAttempt(sb, id, answers, correct): Promise<void>`, `finishAttempt(sb, id, answers, correct): Promise<QuizAttempt>`, `listFinishedAttemptsSince(sb, since: Date): Promise<{ id; correct; total; finished_at; quiz_title: string; course_id: string | null }[]>`
 
 - [ ] **Step 1: Write the failing test** — `tests/unit/aiQuiz.test.ts`
@@ -1945,7 +1856,7 @@ describe('makeQuiz', () => {
     expect(p.input[0].content).toMatch(/5 questions/)
     expect(p.input[0].content).toMatch(/multiple choice/)
   })
-  it('rejects a quiz with fewer than 3 usable questions, so it is not charged', async () => {
+  it('rejects a quiz with fewer than 3 usable questions', async () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { title: 'x', questions: [raw({}), raw({ answer: 'nope' })] } })
     await expect(makeQuiz({ responses: { parse } } as never, { title: 'K', content_md: 'x' }, { count: 5, types: ['mcq'] })).rejects.toBeInstanceOf(AiEmptyError)
   })
@@ -1963,7 +1874,7 @@ let insertError: object | null = null
 const inserted: unknown[] = []
 const sb = {
   auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_actions_left' ? 5 : true, error: null })),
+  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? true : null, error: null })),
   from: (table: string) => table === 'notes'
     ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: note, error: null }) }) }) }
     : { insert: (row: Record<string, unknown>) => { inserted.push(row); return { select: () => ({ single: async () => (
@@ -1985,13 +1896,13 @@ beforeEach(() => {
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
 describe('POST /api/ai/quiz', () => {
-  it('saves the quiz, returns it, and counts one action', async () => {
+  it('saves the quiz and returns it', async () => {
     const res = await call()
     const quiz = await res.json() as { id: string; note_id: string; questions: { id: string }[] }
     expect(quiz.id).toBe('qz1')
     expect(quiz.note_id).toBe(NOTE_ID)
     expect(quiz.questions.map(q => q.id)).toEqual(['q1', 'q2', 'q3'])
-    expect(fns()).toEqual(['ai_actions_left', 'consume_ai_action'])
+    expect(fns()).toEqual(['ai_request_allowed'])
   })
   it('rejects bad counts and types', async () => {
     expect((await call({ count: 7 })).status).toBe(400)
@@ -2003,17 +1914,15 @@ describe('POST /api/ai/quiz', () => {
     note = { id: NOTE_ID, title: 'x', content_md: 'Too short.' }
     expect(await (await call()).json()).toEqual({ error: 'too_short' })
   })
-  it('does not charge when fewer than 3 questions are usable', async () => {
+  it('says so when fewer than 3 questions are usable, and saves nothing', async () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { title: 'x', questions: [mcq('A')] } })
     const res = await call()
     expect(await res.json()).toEqual({ error: 'empty' })
-    expect(fns()).not.toContain('consume_ai_action')
+    expect(inserted).toHaveLength(0)
   })
-  it('does not charge when the quiz cannot be saved', async () => {
+  it('reports ai_failed when the quiz cannot be saved', async () => {
     insertError = { message: 'db down' }
-    const res = await call()
-    expect(res.status).toBe(502)
-    expect(fns()).not.toContain('consume_ai_action')
+    expect((await call()).status).toBe(502)
   })
 })
 ```
@@ -2129,7 +2038,7 @@ import type { Quiz, QuestionType } from '@/lib/quiz/types'
 
 export const maxDuration = 60
 
-// POST { noteId, count: 5|10|15, types: QuestionType[] } → the saved Quiz (1 AI action)
+// POST { noteId, count: 5|10|15, types: QuestionType[] } → the saved Quiz
 export async function POST(request: Request) {
   const r = await readOwnNote(request)
   if ('response' in r) return r.response
@@ -2140,7 +2049,6 @@ export async function POST(request: Request) {
   }
   if (wordCount(removeSummary(r.note.content_md)) < MIN_WORDS) return NextResponse.json({ error: 'too_short' }, { status: 422 })
 
-  // Saving happens inside the action, so a quiz that can't be saved isn't charged
   const result = await runAiAction(r.sb, async client => {
     const made = await makeQuiz(client, r.note, { count: count as number, types: typeList as QuestionType[] }, request.signal)
     const { data, error } = await r.sb.from('quizzes')
@@ -2234,11 +2142,11 @@ git commit -m "feat: generate and save quizzes from a note"
 - Test: `tests/unit/quizMarking.test.ts`
 
 **Interfaces:**
-- Consumes: `Question`, `AnswerRecord`, `generateObject`, `classifyAiError`, `aiErrorResponse`, `isAiConfigured`, `openai`.
+- Consumes: `Question`, `AnswerRecord`, `generateObject`, `runAiAction`, `aiErrorResponse`.
 - Produces:
   - `normalizeAnswer(s: string): string`; `markInstant(q: Question, given: string): boolean | null` (null = short answer needing AI); `scoreOf(answers: Record<string, AnswerRecord>): number`
   - `markShortAnswer(client, q: Question, given: string, signal?): Promise<{ correct: boolean; feedback: string }>`
-  - `POST /api/ai/quiz/mark` `{ attemptId, questionId, answer }` → 200 `{ correct, feedback }` | 400 | 401 | 404 | 409 `cannot_mark` | AI codes. Never counts an AI action.
+  - `POST /api/ai/quiz/mark` `{ attemptId, questionId, answer }` → 200 `{ correct, feedback }` | 400 | 401 | 404 | 409 `finished` | AI codes (incl. 429 `rate_limited`).
 
 - [ ] **Step 1: Write the failing test** — `tests/unit/quizMarking.test.ts`
 
@@ -2269,11 +2177,11 @@ describe('instant marking', () => {
 
 // ---- route ----
 let user: { id: string } | null = { id: 'u1' }
-let claim = true
-const attempt = { id: '22222222-2222-4222-8222-222222222222', quiz_id: 'qz', finished_at: null, quizzes: { questions: [mcq, tf, short] } }
+let allowed = true
+const attempt = { id: '22222222-2222-4222-8222-222222222222', quiz_id: 'qz', finished_at: null as string | null, quizzes: { questions: [mcq, tf, short] } }
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'claim_short_answer_mark' ? claim : null, error: null })),
+  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? allowed : null, error: null })),
   from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: attempt, error: null }) }) }) }),
 }
 const parse = vi.fn()
@@ -2283,27 +2191,31 @@ import { POST } from '@/app/api/ai/quiz/mark/route'
 
 const call = (body: object) => POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ attemptId: attempt.id, ...body }) }))
 beforeEach(() => {
-  user = { id: 'u1' }; claim = true; sb.rpc.mockClear(); parse.mockReset()
+  user = { id: 'u1' }; allowed = true; attempt.finished_at = null; sb.rpc.mockClear(); parse.mockReset()
   parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { correct: true, feedback: 'Yes, NADH.' } })
   process.env.OPENAI_API_KEY = 'k'
 })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
 describe('POST /api/ai/quiz/mark', () => {
-  it('accepts an exact match without asking the AI or claiming a mark', async () => {
+  it('accepts an exact match without asking the AI', async () => {
     const res = await call({ questionId: 'q3', answer: 'nadh' })
     expect(await res.json()).toEqual({ correct: true, feedback: 'Made by the cycle.' })
     expect(parse).not.toHaveBeenCalled()
     expect(sb.rpc).not.toHaveBeenCalled()
   })
-  it('asks the AI for other answers after claiming the mark, and never charges an action', async () => {
+  it('asks the AI for other answers, after the speed-limit check', async () => {
     const res = await call({ questionId: 'q3', answer: 'it produces NADH' })
     expect(await res.json()).toEqual({ correct: true, feedback: 'Yes, NADH.' })
-    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['claim_short_answer_mark'])
+    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_request_allowed'])
   })
-  it('refuses when the mark was already used, or for non-short questions', async () => {
-    claim = false
+  it('refuses when going too fast, for finished attempts, and for non-short questions', async () => {
+    allowed = false
+    expect((await call({ questionId: 'q3', answer: 'something else' })).status).toBe(429)
+    allowed = true
+    attempt.finished_at = 'yesterday'
     expect((await call({ questionId: 'q3', answer: 'something else' })).status).toBe(409)
+    attempt.finished_at = null
     expect((await call({ questionId: 'q1', answer: 'Matrix' })).status).toBe(400)
     expect(parse).not.toHaveBeenCalled()
   })
@@ -2367,8 +2279,7 @@ export async function markShortAnswer(client: AiClient, q: Question, given: stri
 ```ts
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { isAiConfigured, openai } from '@/lib/ai/openai'
-import { aiErrorResponse, classifyAiError } from '@/lib/ai/run'
+import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 import { markShortAnswer } from '@/lib/ai/markAnswer'
 import { markInstant } from '@/lib/quiz/marking'
 import type { Question } from '@/lib/quiz/types'
@@ -2377,9 +2288,8 @@ export const maxDuration = 60
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const bad = () => NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
-// POST { attemptId, questionId, answer } → { correct, feedback }. Marking is included in the quiz's
-// one AI action, so it never counts against the allowance; claim_short_answer_mark limits it
-// to once per short-answer question per attempt (and 60 a day).
+// POST { attemptId, questionId, answer } → { correct, feedback } for a short answer in an unfinished
+// attempt. Exact matches are marked without AI; others go through the speed-limited AI helper.
 export async function POST(request: Request) {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
@@ -2394,16 +2304,11 @@ export async function POST(request: Request) {
   const q = questions.find(x => x.id === questionId)
   if (!attempt || !q) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   if (q.type !== 'short') return bad()
+  if ((attempt as { finished_at: string | null }).finished_at) return NextResponse.json({ error: 'finished' }, { status: 409 })
 
   if (markInstant(q, answer) === true) return NextResponse.json({ correct: true, feedback: q.explanation })
-  if (!isAiConfigured()) return aiErrorResponse('ai_unavailable')
-  const { data: allowed } = await sb.rpc('claim_short_answer_mark', { p_attempt: attemptId, p_question: questionId })
-  if (allowed !== true) return NextResponse.json({ error: 'cannot_mark' }, { status: 409 })
-  try {
-    return NextResponse.json(await markShortAnswer(openai(), q, answer, request.signal))
-  } catch (e) {
-    return aiErrorResponse(classifyAiError(e, request.signal))
-  }
+  const result = await runAiAction(sb, client => markShortAnswer(client, q, answer, request.signal), { signal: request.signal })
+  return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
 }
 ```
 
@@ -2416,7 +2321,7 @@ Expected: PASS.
 
 ```bash
 git add lib/quiz/marking.ts lib/ai/markAnswer.ts app/api/ai/quiz/mark/route.ts tests/unit/quizMarking.test.ts
-git commit -m "feat: quiz answer marking with guarded AI marking for short answers"
+git commit -m "feat: quiz answer marking (instant, or AI for short answers)"
 ```
 
 ---
@@ -2430,7 +2335,7 @@ git commit -m "feat: quiz answer marking with guarded AI marking for short answe
 
 **Interfaces:**
 - Consumes: `/api/ai/quiz`, `/api/ai/quiz/mark`, `postAi`, data functions from Task 10, `markInstant`, `scoreOf`, `CardReviewList`-free path: `DeckPicker`, `resolveDeck`, `createCards`.
-- Produces: `<QuizTab note prepare disabled />`; `<QuizPlayer quiz attempt onFinished={(attempt: QuizAttempt) => void} />`; `<QuizResults quiz attempt previous onRetake />`; route `/quiz/[id]`.
+- Produces: `<QuizTab note prepare />`; `<QuizPlayer quiz attempt onFinished={(attempt: QuizAttempt) => void} />`; `<QuizResults quiz attempt previous onRetake />`; route `/quiz/[id]`.
 
 - [ ] **Step 1: Write the failing test** — `tests/unit/quizPlayer.test.tsx`
 
@@ -2490,7 +2395,7 @@ describe('QuizPlayer', () => {
     expect(screen.getByText('Question 2 of 3')).toBeTruthy()
   })
   it('lets the student mark themselves when AI marking is unavailable', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'cannot_mark' }), { status: 409 }))
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }))
     render(<QuizPlayer quiz={quiz} attempt={attempt({ q1: { given: 'Matrix', correct: true, feedback: null }, q2: { given: 'false', correct: true, feedback: null } })} onFinished={() => {}} />)
     fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'electrons' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check' })) })
@@ -2761,7 +2666,7 @@ import type { Quiz, QuestionType } from '@/lib/quiz/types'
 
 const TYPES: [QuestionType, string][] = [['mcq', 'Multiple choice'], ['true_false', 'True/false'], ['short', 'Short answer']]
 
-export function QuizTab({ note, prepare, disabled }: { note: { id: string }; prepare: () => Promise<void>; disabled: boolean }) {
+export function QuizTab({ note, prepare }: { note: { id: string }; prepare: () => Promise<void> }) {
   const router = useRouter()
   const [count, setCount] = useState(10)
   const [types, setTypes] = useState<QuestionType[]>(['mcq', 'true_false', 'short'])
@@ -2792,7 +2697,7 @@ export function QuizTab({ note, prepare, disabled }: { note: { id: string }; pre
           </label>
         ))}
       </fieldset>
-      <button type="button" className="btn-primary" disabled={busy || disabled || !types.length} onClick={create}>{busy ? 'Writing quiz…' : '✦ New quiz'}</button>
+      <button type="button" className="btn-primary" disabled={busy || !types.length} onClick={create}>{busy ? 'Writing quiz…' : '✦ New quiz'}</button>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       {past.length > 0 && (
         <div className="pt-2">
@@ -2812,7 +2717,7 @@ export function QuizTab({ note, prepare, disabled }: { note: { id: string }; pre
 }
 ```
 
-`components/notes/study/StudyPanel.tsx`: change `type Tab = 'summary' | 'cards' | 'quiz'`, add `['quiz', 'Quiz']` to `TABS`, import `QuizTab`, and render `{tab === 'quiz' && <QuizTab note={note} prepare={prepare} disabled={out} />}`.
+`components/notes/study/StudyPanel.tsx`: change `type Tab = 'summary' | 'cards' | 'quiz'`, add `['quiz', 'Quiz']` to `TABS`, import `QuizTab`, and render `{tab === 'quiz' && <QuizTab note={note} prepare={prepare} />}`.
 
 `components/shell/AppShell.tsx:37`: `const immersive = /^\/(notes|quiz)\/[^/]+$/.test(path)`.
 
@@ -2965,7 +2870,7 @@ git commit -m "feat: quiz scores per course on Progress"
 ### Task 14: End-to-end tests with a fake OpenAI
 
 **Files:**
-- Create: `app/api/test-openai/v1/responses/route.ts`, `app/api/test-openai/burn/route.ts`, `e2e/study.spec.ts`
+- Create: `app/api/test-openai/v1/responses/route.ts`, `app/api/test-openai/flood/route.ts`, `e2e/study.spec.ts`
 - Modify: `playwright.config.ts`, `e2e/helpers.ts` (add `noteWithText`)
 - Test: `tests/unit/fakeOpenAiRoute.test.ts`
 
@@ -3034,16 +2939,16 @@ export async function POST(request: Request) {
 }
 ```
 
-`app/api/test-openai/burn/route.ts`
+`app/api/test-openai/flood/route.ts`
 
 ```ts
 import { createServerSupabase } from '@/lib/supabase/server'
 
-// E2E ONLY: uses up the signed-in student's AI actions for today, to test the limit screens
+// E2E ONLY: uses up the signed-in student's 10 AI requests for this minute, to test the speed limit
 export async function POST() {
   if (process.env.E2E_FAKE_AI !== '1' || process.env.NODE_ENV === 'production') return new Response('Not found', { status: 404 })
   const sb = await createServerSupabase()
-  for (let i = 0; i < 20; i++) await sb.rpc('consume_ai_action')
+  for (let i = 0; i < 10; i++) await sb.rpc('ai_request_allowed')
   return Response.json({ ok: true })
 }
 ```
@@ -3108,7 +3013,6 @@ test('summary: add at the top of the note, then remove it', async ({ page }) => 
   await study.getByRole('button', { name: '✦ Summarise' }).click()
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('Summary')
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('NADH')
-  await expect(study.getByText('19 of 20 AI actions left today')).toBeVisible()
   await expect(page.getByText('Saved')).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('NADH') // it was saved
@@ -3170,14 +3074,13 @@ test('refreshing mid-quiz resumes where you left off', async ({ page }) => {
   await expect(page.getByText('Question 2 of 4')).toBeVisible()
 })
 
-test('when today\'s AI actions are used up, the buttons explain why', async ({ page }) => {
+test('going too fast gets a "try again in a minute" message, not a cap', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
-  expect((await page.request.post('/api/test-openai/burn')).ok()).toBe(true)
-  await page.reload()
+  expect((await page.request.post('/api/test-openai/flood')).ok()).toBe(true)
   const study = await openStudy(page)
-  await expect(study.getByRole('button', { name: '✦ Summarise' })).toBeDisabled()
-  await expect(study.getByText(/You've used today's 20 AI actions/)).toBeVisible()
+  await study.getByRole('button', { name: '✦ Summarise' }).click()
+  await expect(study.getByRole('alert')).toHaveText('You\'re going a bit fast. Try again in a minute.')
 })
 ```
 
@@ -3203,7 +3106,7 @@ npm run build
 All must pass/clean. Then:
 ```bash
 git add app/api/test-openai e2e playwright.config.ts tests/unit/fakeOpenAiRoute.test.ts
-git commit -m "test: E2E for summary, flashcards, quizzes and the AI limit with a fake OpenAI"
+git commit -m "test: E2E for summary, flashcards, quizzes and the speed limit with a fake OpenAI"
 ```
 
 ---
@@ -3212,5 +3115,7 @@ git commit -m "test: E2E for summary, flashcards, quizzes and the AI limit with 
 
 - Push `main` (Vercel deploys). In Vercel: add `OPENAI_API_KEY` (Sensitive, Production), remove `ANTHROPIC_API_KEY`, redeploy.
 - Run `npx supabase db push` against the hosted project for the two new migrations.
+- Hosted Supabase: Authentication → Sign In / Providers → Email → turn **Confirm email** on. Check Authentication → URL Configuration lists `https://<your-app>/auth/callback`.
+- OpenAI: buy prepaid credit for what you're willing to spend per month, keep **auto-recharge off** (that's the hard ceiling), and set usage alerts.
 - Optional real-AI smoke check: with a real `OPENAI_API_KEY` in `.env.local`, make a summary, flashcards and a quiz from a real note and read them.
 - Then write Plan 2B (Scan) and Plan 2C (Lectures).
