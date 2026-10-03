@@ -14,7 +14,7 @@
 
 - AI provider is OpenAI only; the Anthropic SDK is removed in Task 3. One server-only env var: `OPENAI_API_KEY`. Never `NEXT_PUBLIC_` for keys.
 - Models live in `lib/ai/openai.ts`: `MODELS.light = 'gpt-6-luna'` (summary, flashcards, quiz, marking), `MODELS.strong = 'gpt-6.1-sol'` (PDF import; later scan and lecture notes).
-- Allowance: **20 AI actions per student per UTC day**; checked before a call, counted only after success. Quiz marking is not counted (gated separately).
+- Allowance: **20 AI actions per student per UTC day**; checked before a call, counted only after success. Big jobs cost by size: **PDF import = 1 action per 10 pages (rounded up)**; summary, flashcards and quiz = 1. Quiz marking is not counted (gated separately). (Scans and lecture notes come in Plans 2B/2C: scan = 1 per 10 pages, lecture note = 2.)
 - Every AI result is validated with Zod before it reaches the client; student text is passed as quoted material, never as instructions.
 - `maxDuration`: 300 on `/api/import/pdf`; 60 on the new `/api/ai/*` routes.
 - TDD for every change: write the test, run it and see it fail, implement, see it pass. Commit after each task with the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -85,7 +85,7 @@ components/progress/QuizScores.tsx
 - Modify: `package.json` (add `openai`, `zod`)
 
 **Interfaces:**
-- Produces: RPC `ai_actions_left()` → `int` (0–20); RPC `consume_ai_action()` → `boolean`. Table `ai_usage(user_id, day, actions)`. RPC `consume_ai_import` no longer exists.
+- Produces: RPC `ai_actions_left()` → `int` (0–20); RPC `consume_ai_action(p_cost int default 1)` → `boolean` (cost must be 1–10; false and nothing counted if it would pass 20). Table `ai_usage(user_id, day, actions)`. RPC `consume_ai_import` no longer exists.
 
 - [ ] **Step 1: Install the SDK and Zod**
 
@@ -109,6 +109,21 @@ describe('shared daily AI allowance', () => {
     expect(results.slice(0, 20).every(Boolean)).toBe(true)
     expect(results[20]).toBe(false)
     expect((await u.sb.rpc('ai_actions_left')).data).toBe(0)
+  })
+  it('counts the cost of big jobs, and refuses (counting nothing) when there is not enough left', async () => {
+    const u = await newUser()
+    expect((await u.sb.rpc('consume_ai_action', { p_cost: 10 })).data).toBe(true)
+    expect((await u.sb.rpc('ai_actions_left')).data).toBe(10)
+    expect((await u.sb.rpc('consume_ai_action', { p_cost: 8 })).data).toBe(true)
+    expect((await u.sb.rpc('consume_ai_action', { p_cost: 3 })).data).toBe(false)
+    expect((await u.sb.rpc('ai_actions_left')).data).toBe(2)
+  })
+  it('rejects costs outside 1–10, so a student cannot give themselves actions back', async () => {
+    const u = await newUser()
+    expect((await u.sb.rpc('consume_ai_action', { p_cost: 0 })).error).not.toBeNull()
+    expect((await u.sb.rpc('consume_ai_action', { p_cost: -5 })).error).not.toBeNull()
+    expect((await u.sb.rpc('consume_ai_action', { p_cost: 11 })).error).not.toBeNull()
+    expect((await u.sb.rpc('ai_actions_left')).data).toBe(20)
   })
   it('is per student', async () => {
     const a = await newUser(), b = await newUser()
@@ -151,32 +166,36 @@ language sql stable security definer set search_path = '' as $$
      where u.user_id = auth.uid() and u.day = (now() at time zone 'utc')::date), 0))
 $$;
 
--- Counts one action. False once today's 20 are used. The limit is fixed here, not a parameter.
-create function public.consume_ai_action() returns boolean
+-- Counts p_cost actions (big jobs cost more: a PDF uses 1 per 10 pages). False, counting nothing,
+-- if that would take today past 20. The limit is fixed here; the cost must be 1–10.
+create function public.consume_ai_action(p_cost int default 1) returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare
   uid uuid := auth.uid();
   used int;
 begin
-  if uid is null then return false; end if;
+  if p_cost is null or p_cost < 1 or p_cost > 10 then
+    raise exception 'AI action cost must be between 1 and 10' using errcode = '22023';
+  end if;
+  if uid is null or p_cost > 20 then return false; end if;
   insert into public.ai_usage (user_id, day, actions)
-  values (uid, (now() at time zone 'utc')::date, 1)
-  on conflict (user_id, day) do update set actions = public.ai_usage.actions + 1
-    where public.ai_usage.actions < 20
+  values (uid, (now() at time zone 'utc')::date, p_cost)
+  on conflict (user_id, day) do update set actions = public.ai_usage.actions + p_cost
+    where public.ai_usage.actions + p_cost <= 20
   returning actions into used;
   return used is not null;
 end $$;
 
 revoke execute on function public.ai_actions_left() from public, anon;
-revoke execute on function public.consume_ai_action() from public, anon;
+revoke execute on function public.consume_ai_action(int) from public, anon;
 grant execute on function public.ai_actions_left() to authenticated;
-grant execute on function public.consume_ai_action() to authenticated;
+grant execute on function public.consume_ai_action(int) to authenticated;
 ```
 
 - [ ] **Step 5: Apply and re-run**
 
 Run: `npx supabase migration up` then `npm run test:db -- aiUsage`
-Expected: PASS (4 tests). Then delete the old `describe('AI import daily limit', …)` block from `tests/db/storage.test.ts` and run `npm run test:db` — all pass.
+Expected: PASS (6 tests). Then delete the old `describe('AI import daily limit', …)` block from `tests/db/storage.test.ts` and run `npm run test:db` — all pass.
 
 - [ ] **Step 6: Commit**
 
@@ -202,7 +221,7 @@ git commit -m "feat: shared daily AI allowance (20 actions) replaces the import-
   - `generateObject<T extends z.ZodType>(client: AiClient, o: { model: string; instructions: string; input: string; schema: T; name: string; maxOutputTokens?: number; signal?: AbortSignal }): Promise<z.infer<T>>`
   - `hasRefusal(res: { output?: unknown[] }): boolean`
   - `type AiErrorCode = 'ai_unavailable' | 'quota' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'`
-  - `runAiAction<T>(sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts?: { signal?: AbortSignal; client?: AiClient }): Promise<{ ok: true; value: T } | { ok: false; error: AiErrorCode }>`
+  - `runAiAction<T>(sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts?: { signal?: AbortSignal; client?: AiClient; cost?: number }): Promise<{ ok: true; value: T } | { ok: false; error: AiErrorCode }>` — `cost` defaults to 1
   - `classifyAiError(e: unknown, signal?: AbortSignal): AiErrorCode`, `aiErrorResponse(code: AiErrorCode): Response`
   - `noteInput(title: string, md: string): string`, `wordCount(md: string): number`
 
@@ -219,7 +238,8 @@ import { noteInput, wordCount } from '@/lib/ai/input'
 
 const fakeSb = (left: number) => {
   const calls: string[] = []
-  return { calls, sb: { rpc: vi.fn(async (fn: string) => { calls.push(fn); return { data: fn === 'ai_actions_left' ? left : true, error: null } }) } }
+  const rpc = vi.fn(async (fn: string, _args?: object) => { calls.push(fn); return { data: fn === 'ai_actions_left' ? left : true, error: null } })
+  return { calls, rpc, sb: { rpc } }
 }
 const client = {} as never
 const asError = <T extends object>(cls: { prototype: T }) => Object.create(cls.prototype) as T
@@ -233,6 +253,15 @@ describe('runAiAction', () => {
     const r = await runAiAction(sb as never, async () => { expect(calls).toEqual(['ai_actions_left']); return 42 }, { client })
     expect(r).toEqual({ ok: true, value: 42 })
     expect(calls).toEqual(['ai_actions_left', 'consume_ai_action'])
+  })
+  it('charges big jobs their cost, and refuses them when not enough is left', async () => {
+    const enough = fakeSb(5)
+    await runAiAction(enough.sb as never, async () => 1, { client, cost: 3 })
+    expect(enough.rpc).toHaveBeenLastCalledWith('consume_ai_action', { p_cost: 3 })
+    const short = fakeSb(2)
+    const call = vi.fn()
+    expect(await runAiAction(short.sb as never, call, { client, cost: 3 })).toEqual({ ok: false, error: 'quota' })
+    expect(call).not.toHaveBeenCalled()
   })
   it('refuses without calling the AI when no actions are left', async () => {
     const { sb, calls } = fakeSb(0)
@@ -383,17 +412,18 @@ const STATUS: Record<AiErrorCode, number> = {
   ai_unavailable: 503, quota: 429, busy: 429, refused: 422, too_long: 413, empty: 422, ai_failed: 502, aborted: 499,
 }
 
-// Every AI feature goes through here: check the student has an action left, run the call, and
-// count the action only if it succeeded (failed or cancelled work is free).
+// Every AI feature goes through here: check the student has enough actions left, run the call, and
+// count them only if it succeeded (failed or cancelled work is free).
 export async function runAiAction<T>(
-  sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts: { signal?: AbortSignal; client?: AiClient } = {},
+  sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts: { signal?: AbortSignal; client?: AiClient; cost?: number } = {},
 ): Promise<AiResult<T>> {
+  const cost = opts.cost ?? 1 // big jobs cost more, e.g. a PDF is 1 per 10 pages
   if (!opts.client && !isAiConfigured()) return { ok: false, error: 'ai_unavailable' }
   const { data: left } = await sb.rpc('ai_actions_left')
-  if (typeof left !== 'number' || left < 1) return { ok: false, error: 'quota' }
+  if (typeof left !== 'number' || left < cost) return { ok: false, error: 'quota' }
   try {
     const value = await call(opts.client ?? openai())
-    await sb.rpc('consume_ai_action')
+    await sb.rpc('consume_ai_action', { p_cost: cost })
     return { ok: true, value }
   } catch (e) {
     return { ok: false, error: classifyAiError(e, opts.signal) }
@@ -462,13 +492,13 @@ git commit -m "feat: OpenAI client, structured output helper and allowance-check
 
 **Interfaces:**
 - Consumes: `runAiAction`, `aiErrorResponse`, `isAiConfigured`, `MODELS`, `AiRefusedError`, `hasRefusal`, `type AiClient`.
-- Produces: `pdfToNote(client: AiClient, pdfBase64: string, fileName: string, options?: { signal?: AbortSignal }): Promise<{ title: string; content_md: string; truncated: boolean }>`, `PDF_IMPORT_MODEL = MODELS.strong`, `MAX_PDF_PAGES = 100`, `parseNoteMarkdown` (unchanged).
+- Produces: `pdfToNote(client: AiClient, pdfBase64: string, fileName: string, options?: { signal?: AbortSignal }): Promise<{ title: string; content_md: string; truncated: boolean }>`, `PDF_IMPORT_MODEL = MODELS.strong`, `MAX_PDF_PAGES = 100`, `pdfActionCost(pages: number): number` (1 per 10 pages, rounded up, 1–10), `parseNoteMarkdown` (unchanged).
 
 - [ ] **Step 1: Rewrite the unit test** — replace `fakeClient` and the first test in `tests/unit/pdfToNote.test.ts`:
 
 ```ts
 import { describe, it, expect, vi } from 'vitest'
-import { pdfToNote, parseNoteMarkdown, PDF_IMPORT_MODEL } from '@/lib/ai/pdfToNote'
+import { pdfToNote, parseNoteMarkdown, PDF_IMPORT_MODEL, pdfActionCost } from '@/lib/ai/pdfToNote'
 import { AiRefusedError } from '@/lib/ai/openai'
 
 function fakeClient(reply: { text: string; status?: string; reason?: string; refusal?: boolean }) {
@@ -500,22 +530,26 @@ describe('pdfToNote', () => {
     const { client } = fakeClient({ text: '', refusal: true })
     await expect(pdfToNote(client as never, 'x', 'a.pdf')).rejects.toBeInstanceOf(AiRefusedError)
   })
+  it('costs 1 AI action per 10 pages, rounded up', () => {
+    expect([0, 1, 10, 11, 25, 100].map(pdfActionCost)).toEqual([1, 1, 1, 2, 3, 10])
+  })
 ```
 
 Keep the existing `parseNoteMarkdown` tests and the "returns the title and the Markdown body" test (adapt it to `fakeClient({ text })`). Delete any test that references `betas`, `fallbacks` or `stop_reason`.
 
 In `tests/unit/importPdfRoute.test.ts`, replace the Anthropic mocks:
-- remove `vi.mock('@anthropic-ai/sdk', …)` and the `PdfRefusedError` export from the `pdfToNote` mock;
+- remove `vi.mock('@anthropic-ai/sdk', …)` and the `PdfRefusedError` export from the `pdfToNote` mock, and add `pdfActionCost: (p: number) => Math.min(10, Math.max(1, Math.ceil(p / 10)))` to that mock;
 - change `rpc` to: `rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_actions_left' ? (quotaLeft ? 5 : 0) : true, error: null }))`;
 - `process.env.OPENAI_API_KEY = 'test-key'` in `beforeEach`, delete it in `afterEach` (replace the ANTHROPIC lines);
 - add `vi.mock('@/lib/ai/openai', async (orig) => ({ ...(await orig<typeof import('@/lib/ai/openai')>()), openai: () => ({}) }))`.
 Then add these tests:
 
 ```ts
-  it('counts an AI action only after a successful conversion', async () => {
+  it('counts AI actions only after a successful conversion: 1 per 10 pages', async () => {
+    pdfBytes = Buffer.from('%PDF-1.4\n' + '1 0 obj << /Type /Page >> endobj\n'.repeat(25) + '%%EOF')
     await call({ path: 'u1/a.pdf' })
-    const fns = sb.rpc.mock.calls.map(c => c[0])
-    expect(fns).toEqual(['ai_actions_left', 'consume_ai_action'])
+    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_actions_left', 'consume_ai_action'])
+    expect(sb.rpc).toHaveBeenLastCalledWith('consume_ai_action', { p_cost: 3 })
   })
   it('does not count a failed conversion', async () => {
     pdfToNote.mockRejectedValueOnce(new Error('boom'))
@@ -550,6 +584,9 @@ import { hasRefusal } from './structured'
 export const PDF_IMPORT_MODEL = MODELS.strong
 // Keeps a conversion within the route's time limit and bounds its cost
 export const MAX_PDF_PAGES = 100
+
+// AI actions a PDF costs: 1 per 10 pages, rounded up (a page count we couldn't read counts as 1)
+export const pdfActionCost = (pages: number) => Math.min(10, Math.max(1, Math.ceil(pages / 10)))
 
 const INSTRUCTIONS = `You turn a PDF a student uploaded into a study note written in Markdown.
 
@@ -601,7 +638,7 @@ export async function pdfToNote(
 ```ts
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { MAX_PDF_PAGES, pdfToNote } from '@/lib/ai/pdfToNote'
+import { MAX_PDF_PAGES, pdfActionCost, pdfToNote } from '@/lib/ai/pdfToNote'
 import { isAiConfigured } from '@/lib/ai/openai'
 import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 ```
@@ -609,9 +646,10 @@ Keep `maxDuration = 300`, `MAX_BYTES`, `STALE_UPLOAD_MS`, `countPages`, the path
 
 ```ts
     const displayName = fileName.replace(/^[0-9a-f-]{36}-/i, '')
-    // Counts one of the student's 20 daily AI actions, only if the conversion succeeds.
+    // Costs 1 of the student's 20 daily AI actions per 10 pages (rounded up), only if it succeeds.
     // request.signal: if the student cancels or closes the tab, the model call stops too.
-    const result = await runAiAction(sb, client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { signal: request.signal })
+    const cost = pdfActionCost(countPages(bytes))
+    const result = await runAiAction(sb, client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { signal: request.signal, cost })
     return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
   } finally {
 ```
@@ -626,14 +664,14 @@ const MESSAGES: Record<string, string> = {
   busy: 'The AI service is busy right now, so only the plain text was kept.',
   refused: 'This PDF couldn\'t be converted by AI, so only the plain text was kept.',
   empty: 'The AI couldn\'t find text in this PDF, so only the plain text was kept.',
-  quota: 'You\'ve used today\'s 20 AI actions, so only the plain text was kept. They reset at midnight UTC.',
+  quota: 'Not enough AI actions left today for this PDF (it uses 1 per 10 pages), so only the plain text was kept. They reset at midnight UTC.',
   too_long: 'This PDF is too long for AI import, so only the plain text was kept.',
   too_large: 'This PDF is too large for AI import, so only the plain text was kept.',
 }
 ```
 and change the comment `convert on the server with Claude` → `convert on the server with OpenAI`.
 
-`components/notes/ImportDialog.tsx`: in the PDF branch, after `result = await importPdf(...)`, add `if (result.via === 'ai') announceAiUsed()` (import from `@/lib/data/ai` — created in Task 4; if executing strictly in order, add this line in Task 4 Step 3 instead). Change the button hint text `PDFs are structured by Claude (Anthropic)` → `PDFs are structured by AI (OpenAI)`.
+`components/notes/ImportDialog.tsx`: in the PDF branch, after `result = await importPdf(...)`, add `if (result.via === 'ai') announceAiUsed()` (import from `@/lib/data/ai` — created in Task 4; if executing strictly in order, add this line in Task 4 Step 3 instead). Change the button hint text `PDFs are structured by Claude (Anthropic) — headings, lists, tables and equations. Up to 24 MB and 100 pages.` → `PDFs are structured by AI (OpenAI): headings, lists, tables and equations. Up to 24 MB and 100 pages; uses 1 AI action per 10 pages.`
 
 `.env.example`: replace the AI lines with
 

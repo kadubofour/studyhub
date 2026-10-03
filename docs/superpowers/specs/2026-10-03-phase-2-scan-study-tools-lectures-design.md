@@ -35,7 +35,7 @@ Three parts, designed together and built in the order in §11:
 | Lecture audio | Kept, with playback and tap-a-line-to-seek. |
 | Plans/billing | None. Everyone gets everything; limits live in one place so plans can be added later. |
 | Models (OpenAI) | GPT-6 Luna (`gpt-6-luna`, $0.10/$0.50 per M tokens) for flashcards, summaries, quizzes, quiz marking. GPT-6.1 Sol (`gpt-6.1-sol`, $2/$10) for scans, PDF import (moved from Claude Opus 5.5) and lecture notes. Model names are constants in one file. |
-| Limits | 20 AI actions per student per UTC day (every AI call except quiz marking). 3 hours of accurate transcription per rolling 7 days, max 2 hours per lecture. Recording and live transcripts are unlimited. |
+| Limits | 20 AI actions per student per UTC day (every AI call except quiz marking). Big jobs cost by size: PDF import and scans use 1 action per 10 pages (rounded up; a 100-page PDF uses 10), turning a lecture into a note uses 2, everything else 1. 3 hours of accurate transcription per rolling 7 days, max 2 hours per lecture. Recording and live transcripts are unlimited. |
 | Charging | Check before, count only after success. Failed or cancelled work is free. |
 | Transcription | OpenAI `whisper-1` ($0.006/min, about $0.36/hr): the OpenAI model that returns segment timestamps, which tap-to-seek needs. OpenAI accepts at most 25 MB per file and has no async mode, so recordings are saved in parts of up to 20 minutes and transcribed part by part. (Considered: AssemblyAI at $0.15/hr with async jobs; cheaper, but a second account.) |
 
@@ -57,7 +57,7 @@ Three parts, designed together and built in the order in §11:
 ### 4.1 Scan (agreed mockup: three steps)
 1. **Add pages** — take photos (`<input capture>` on phones), choose images or one PDF; thumbnails
    to reorder/remove; pick what to make and where (note + course; deck; planner). Button
-   "✦ Scan N pages · uses 1 AI action".
+   "✦ Scan N pages · uses 1 AI action" (scans are at most 10 pages, so always 1).
 2. **Reading…** — progress text, "usually 10–30 seconds", Cancel (aborts the request; not charged).
 3. **Review, then save** —
    - **Note:** title, course, editable Markdown preview (same component as PDF import review).
@@ -92,7 +92,7 @@ Three parts, designed together and built in the order in §11:
 2. **During:** timer, mic level, live transcript text (if chosen), Pause, Stop & save. Warning at
    1h55m, automatic stop at 2h.
 3. **Lecture page:** audio player; transcript beside it, timestamped, tap a line to seek, search;
-   "✦ Make a note" (1 action; links the note to the lecture); "↻ Get accurate transcript"
+   "✦ Make a note" (2 actions; links the note to the lecture); "↻ Get accurate transcript"
    (progress "part 2 of 3");
    "Delete lecture" (confirm; deletes audio).
 
@@ -119,7 +119,8 @@ transcription_usage  id, user_id, lecture_id, seconds int, at timestamptz
   options; for `true_false` it is 'true' or 'false'.
 - Row-level security: "own rows" on every new table, as in Phase 1.
 - **Functions (security definer, fixed limits inside, not parameters):**
-  - `ai_actions_left()` → int; `consume_ai_action()` → boolean (limit 20, UTC day).
+  - `ai_actions_left()` → int; `consume_ai_action(p_cost int default 1)` → boolean (cost 1–10;
+    false, and nothing counted, if it would take the day past 20; UTC day).
     `consume_ai_import` is dropped; PDF import uses these.
   - `transcription_seconds_left()` → int over the last 7 days (limit 10800);
     `record_transcription(lecture_id, seconds)` → inserts usage when a job finishes.
@@ -132,8 +133,8 @@ transcription_usage  id, user_id, lecture_id, seconds int, at timestamptz
 ## 6. Server design
 
 ### 6.1 Shared AI helper (`lib/ai/run.ts`)
-`runAiAction({ supabase, kind, call })`: verifies the session; returns `limit` if
-`ai_actions_left() < 1`; runs `call(client)`; on success calls `consume_ai_action()` and returns
+`runAiAction({ supabase, call, cost })`: verifies the session; returns `limit` if
+`ai_actions_left() < cost`; runs `call(client)`; on success calls `consume_ai_action(cost)` and returns
 the result; maps failures to `{ error: 'busy' | 'refused' | 'too_long' | 'limit' | 'failed' }`.
 Every call uses OpenAI's Responses API with **structured outputs** (a strict JSON schema; exact
 parameter names taken from OpenAI's docs at implementation time) so results always parse, and every result is re-validated (Zod, added as a direct dependency; MIT) before it
@@ -233,7 +234,8 @@ plain-text fallback keep working.
   `whisper-1` segments with part offsets; player time to (part, offset) mapping; live-transcript timing; storage-use thresholds; review
   screens, Study panel, quiz player (resume, scoring, wrong → cards), recorder controls with a
   fake `MediaRecorder`/`SpeechRecognition`.
-- **DB (Vitest, local Supabase):** RLS on new tables; `consume_ai_action` stops at 20;
+- **DB (Vitest, local Supabase):** RLS on new tables; `consume_ai_action` stops at 20, counts its
+  cost, and rejects costs outside 1–10;
   transcription limit over a rolling week; `mark_short_answer_allowed` once per question, only
   for own unfinished attempts; deleting a note deletes its quizzes; bucket policies.
 - **E2E (Playwright, desktop + Pixel 7):** with OpenAI replaced by local stand-in
@@ -255,9 +257,20 @@ plain-text fallback keep working.
 
 ## 10. Costs (for the app owner)
 
-Approximate, at OpenAI's current list prices: Luna actions well under 1¢, Sol actions ~2–6¢,
-accurate transcription about $0.36 per audio hour. Worst case per student (20 actions/day,
-3 h/week) ≈ 20–45¢ a day; typical use a few cents a day. Storage: free up to 1 GB per project; beyond that Supabase
+Approximate, at OpenAI's list prices; token counts are estimates and reasoning tokens bill as
+output, so treat these as ranges.
+
+| Action | Model | Typical | Largest allowed |
+|---|---|---|---|
+| Summary / flashcards / quiz | Luna | ~0.2–0.3¢ | ~0.5¢ |
+| Short-answer marking | Luna | ~0.02¢ (≤60/day) | ~1¢/day |
+| Scan | Sol | ~3–5¢ (3 pages) | ~7¢ (10 pages) |
+| PDF import | Sol | ~10¢ (10 pages) | ~70¢ (100 pages, = 10 actions) |
+| Lecture → note | Sol | ~8¢ (1 h) | ~13¢ (2 h, = 2 actions) |
+| Accurate transcript | whisper-1 | 36¢ per hour | 3 h/week ≈ 15¢/day |
+
+Per student per day: light use ≈ 5–15¢; heavy but realistic ≈ $2; worst case with size-based
+charging ≈ $1.50–2 (without it, 20 × 100-page PDFs would be ≈ $14). Storage: free up to 1 GB per project; beyond that Supabase
 Pro (100 GB included) is the next step.
 
 ## 11. Build order
