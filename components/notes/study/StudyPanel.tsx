@@ -3,9 +3,10 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { SummaryTab } from './SummaryTab'
 import { CardsTab } from './CardsTab'
+import { QuizTab } from './QuizTab'
 
-type Tab = 'summary' | 'cards'
-const TABS: [Tab, string][] = [['summary', 'Summary'], ['cards', 'Cards']]
+type Tab = 'summary' | 'cards' | 'quiz'
+const TABS: [Tab, string][] = [['summary', 'Summary'], ['cards', 'Cards'], ['quiz', 'Quiz']]
 
 // Beside the note on wide screens, a sheet from the bottom on phones
 export function StudyPanel({ note, onClose, prepare, applyContent }: {
@@ -27,6 +28,7 @@ export function StudyPanel({ note, onClose, prepare, applyContent }: {
       </div>
       {tab === 'summary' && <SummaryTab note={note} prepare={prepare} applyContent={applyContent} />}
       {tab === 'cards' && <CardsTab note={note} prepare={prepare} />}
+      {tab === 'quiz' && <QuizTab note={note} prepare={prepare} />}
     </aside>
   )
 }

@@ -34,7 +34,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const dark = mounted && resolvedTheme === 'dark'
   // Writing a note takes the whole screen: no app sidebar or tab bar
-  const immersive = /^\/notes\/[^/]+$/.test(path)
+  const immersive = /^\/(notes|quiz)\/[^/]+$/.test(path)
   const sidebar = !immersive && !collapsed
 
   function toggleTheme() {
