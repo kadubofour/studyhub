@@ -57,17 +57,21 @@ payments         id, user_id, provider, reference (unique), product ('pass_1m'|'
                  'other'), status ('success'|'failed'|'refunded'|'needs_review'), months int,
                  paid_at, created_at
 billing_events   id (provider event key, unique), provider, type, received_at
-ai_requests      + cost int default 1 (from Phase 2's speed-limit table)
+ai_requests      (from Phase 2; one row per AI request started; drives the speed limit)
+ai_charges       id, user_id, cost int (1–10), at  (one row per successful AI action; drives the
+                 free daily limit and Premium fair use)
 transcription_usage  id, user_id, lecture_id, seconds int, at
 ```
 
-- RLS: students `select` their own rows in all five; no insert/update/delete policies.
+- RLS: students `select` their own rows in `entitlements`, `payments`, `ai_requests`, `ai_charges`
+  and `transcription_usage`; no insert/update/delete policies. `billing_events` has no student access.
 - Functions, `security definer`, **executable by `service_role` only** (revoked from `anon` and
   `authenticated`):
-  - `ai_check(p_user uuid, p_cost int) → text`: `'ok'` | `'rate_limited'` (10 requests in the
-    last 60 s) | `'daily_limit'` (Free: today's successful costs + p_cost > 10) | `'fair_use'`
-    (Premium: this month's costs + p_cost > 400). Records the request for the speed limit.
-  - `ai_charge(p_user uuid, p_cost int)`: records a successful action's cost.
+  - `ai_check(p_user uuid, p_cost int) → text`: `'ok'` | `'rate_limited'` (10 rows in
+    `ai_requests` in the last 60 s) | `'daily_limit'` (Free: today's `ai_charges` + p_cost > 10) |
+    `'fair_use'` (Premium: this month's `ai_charges` + p_cost > 400). On `'ok'` it records an
+    `ai_requests` row.
+  - `ai_charge(p_user uuid, p_cost int)`: inserts an `ai_charges` row after the AI call succeeded.
   - `transcription_check(p_user uuid, p_seconds int) → text`: `'ok'` | `'premium_required'` |
     `'fair_use'` (this month's seconds + p_seconds > 72000). `transcription_record(p_user, p_lecture,
     p_seconds)`.
