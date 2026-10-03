@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import fs from 'node:fs'
 import path from 'node:path'
 import { signUp, switchToMarkdown } from './helpers'
 
@@ -59,16 +60,25 @@ test('import a Word document with equations, then export it back to Word', async
   expect((await download).suggestedFilename()).toBe('Quadratics.docx')
 })
 
-test('a PDF falls back to plain text when AI import is not configured', async ({ page }) => {
-  test.skip(!!process.env.OPENAI_API_KEY, 'AI is configured; this checks the fallback path')
+test('a PDF is structured by AI', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Import' }).first().click()
   await page.getByLabel('File to import').setInputFiles(fixture('cells.pdf'))
+  await expect(page.getByText('Structured by AI — check it before saving.')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByLabel('Preview').getByText('Converted by the fake AI.')).toBeVisible()
+})
+
+test('a PDF falls back to plain text when the AI cannot convert it', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/notes')
+  await page.getByRole('button', { name: 'Import' }).first().click()
+  // The E2E fake AI refuses files named "…fallback…"
+  await page.getByLabel('File to import').setInputFiles({ name: 'cells-fallback.pdf', mimeType: 'application/pdf', buffer: fs.readFileSync(fixture('cells.pdf')) })
   await expect(page.getByText(/only the plain text was kept/)).toBeVisible({ timeout: 20_000 })
   await expect(page.getByLabel('Preview').getByText('The Krebs cycle makes ATP.')).toBeVisible()
   await page.getByRole('button', { name: 'Save note' }).click()
-  await expect(page.getByLabel('Title')).toHaveValue('cells')
+  await expect(page.getByLabel('Title')).toHaveValue('cells-fallback')
 })
 
 test('printing from dark mode gives dark text on white paper', async ({ page }) => {

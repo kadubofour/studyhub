@@ -20,3 +20,15 @@ export async function switchToMarkdown(page: Page) {
   await page.getByRole('menuitem', { name: 'View' }).click()
   await page.getByRole('menuitemradio', { name: 'Markdown editor' }).click()
 }
+
+// A note with enough text for the AI study tools (they need at least 40 words)
+export async function noteWithText(page: Page, title = 'Krebs cycle') {
+  await page.goto('/notes')
+  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
+  await page.waitForLoadState('networkidle')
+  await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
+  await expect(page.getByText('Saved')).toBeVisible()
+}

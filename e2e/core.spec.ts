@@ -50,6 +50,7 @@ test('add a task in the planner and complete it', async ({ page }) => {
 test('a task ticked by mistake can be undone', async ({ page }) => {
   await signUp(page)
   await page.goto('/planner')
+  await page.waitForLoadState('networkidle') // typing before the page hydrates gets wiped
   await page.getByLabel('Add a task').fill('Lab report')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   const box = page.getByLabel('Mark Lab report done')
