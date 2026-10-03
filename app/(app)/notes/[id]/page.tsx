@@ -8,6 +8,7 @@ import { TextSelection } from '@tiptap/pm/state'
 import { RichEditor, insertTable } from '@/components/notes/RichEditor'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
+import { StudyPanel } from '@/components/notes/study/StudyPanel'
 import { FindBar } from '@/components/notes/FindBar'
 import { EquationDialog, type EquationInit } from '@/components/notes/EquationDialog'
 import { ImportDialog } from '@/components/notes/ImportDialog'
@@ -64,6 +65,7 @@ function NoteEditor({ id }: { id: string }) {
   const [fullWidth, setFullWidth] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [studyOpen, setStudyOpen] = useState(false)
   const [equation, setEquation] = useState<EquationEdit | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [draft, setDraft] = useState<Note | null>(null)
@@ -72,7 +74,7 @@ function NoteEditor({ id }: { id: string }) {
   const draftRef = useRef<Note | null>(null)
   const markdownRef = useRef<HTMLTextAreaElement>(null)
   const renderedRef = useRef<HTMLDivElement>(null) // Markdown preview or reading view
-  const { update, status } = useAutosave<Patch>(patch => updateNote(supabase(), id, patch).then(notifyList))
+  const { update, status, flush } = useAutosave<Patch>(patch => updateNote(supabase(), id, patch).then(notifyList))
 
   useEffect(() => {
     const sb = supabase()
@@ -88,6 +90,16 @@ function NoteEditor({ id }: { id: string }) {
     setDraft(next)
     // Always save the full editable state so the latest value of every field wins
     update({ title: next.title, content_md: next.content_md, course_id: next.course_id })
+  }
+
+  // Replace the whole note text from outside the editor (e.g. adding a summary). In the rich editor
+  // this goes through Tiptap, so the change shows, autosaves via onUpdate and can be undone.
+  function applyContent(md: string) {
+    if (mode === 'rich' && !reading && editor && !editor.isDestroyed) {
+      editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: true })
+    } else {
+      change({ content_md: md })
+    }
   }
 
   async function remove() {
@@ -230,7 +242,7 @@ function NoteEditor({ id }: { id: string }) {
   const width = fullWidth ? 'max-w-none' : reading || mode === 'rich' ? 'max-w-3xl' : 'max-w-6xl'
 
   return (
-    <div className="min-h-dvh">
+    <div className={`min-h-dvh ${studyOpen ? 'md:pr-[380px]' : ''}`}>
       <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur md:px-6">
         <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
         <NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} />
@@ -240,7 +252,8 @@ function NoteEditor({ id }: { id: string }) {
         </select>
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
-        {findOpen && <div className="ml-auto"><FindBar search={search} onClose={closeFind} /></div>}
+        <button type="button" className={`btn ml-auto ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦ Study</button>
+        {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>
       <div className={`mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
         {reading ? (
@@ -273,6 +286,7 @@ function NoteEditor({ id }: { id: string }) {
           </>
         )}
       </div>
+      {studyOpen && <StudyPanel note={draft} onClose={() => setStudyOpen(false)} prepare={flush} applyContent={applyContent} />}
       {equation && (
         <EquationDialog key={equation.seq} open initial={equation.initial} onClose={() => setEquation(null)} onSave={saveEquation} />
       )}
