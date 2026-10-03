@@ -14,6 +14,12 @@ describe('instant marking', () => {
     expect(markInstant(short, '  nadh. ')).toBe(true)
     expect(markInstant(short, 'it makes NADH and FADH2')).toBeNull()
   })
+  it('does not confuse options that differ only by punctuation', () => {
+    const calc: Question = { id: 'q9', type: 'mcq', prompt: 'Derivative?', options: ['f(x)', "f'(x)", 'x', '(x)'], answer: "f'(x)", explanation: 'x' }
+    expect(markInstant(calc, 'f(x)')).toBe(false)
+    expect(markInstant(calc, "f'(x)")).toBe(true)
+    expect(markInstant({ ...calc, answer: '(x)' }, 'x')).toBe(false)
+  })
   it('normalises case, spacing and punctuation', () => {
     expect(normalizeAnswer('  The  Matrix! ')).toBe('the matrix')
   })

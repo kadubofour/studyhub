@@ -92,13 +92,14 @@ function NoteEditor({ id }: { id: string }) {
     update({ title: next.title, content_md: next.content_md, course_id: next.course_id })
   }
 
-  // Replace the whole note text from outside the editor (e.g. adding a summary). In the rich editor
-  // this goes through Tiptap, so the change shows, autosaves via onUpdate and can be undone.
-  function applyContent(md: string) {
+  // Change the whole note text from outside the editor (e.g. adding a summary). `update` gets the
+  // text as it is right now, so edits made while an AI call ran aren't lost. In the rich editor this
+  // goes through Tiptap, so the change shows, autosaves via onUpdate and can be undone.
+  function applyContent(update: (current: string) => string) {
     if (mode === 'rich' && !reading && editor && !editor.isDestroyed) {
-      editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: true })
-    } else {
-      change({ content_md: md })
+      editor.commands.setContent(update(editor.getMarkdown()), { contentType: 'markdown', emitUpdate: true })
+    } else if (draftRef.current) {
+      change({ content_md: update(draftRef.current.content_md) })
     }
   }
 

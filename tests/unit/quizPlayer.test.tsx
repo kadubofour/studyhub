@@ -52,6 +52,27 @@ describe('QuizPlayer', () => {
     render(<QuizPlayer quiz={quiz} attempt={attempt({ q1: { given: 'Matrix', correct: true, feedback: null } })} onFinished={() => {}} />)
     expect(screen.getByText('Question 2 of 3')).toBeTruthy()
   })
+  it('reopens on the last question, ready for results, when every answer was given before a refresh', () => {
+    render(<QuizPlayer quiz={quiz} attempt={attempt({
+      q1: { given: 'Matrix', correct: true, feedback: null },
+      q2: { given: 'false', correct: true, feedback: null },
+      q3: { given: 'NADH', correct: true, feedback: null },
+    })} onFinished={() => {}} />)
+    expect(screen.getByText('Question 3 of 3')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'See results' })).toBeTruthy()
+  })
+  it('says so when finishing fails, instead of silently doing nothing', async () => {
+    finishAttempt.mockRejectedValueOnce(new Error('offline'))
+    const onFinished = vi.fn()
+    render(<QuizPlayer quiz={quiz} attempt={attempt({
+      q1: { given: 'Matrix', correct: true, feedback: null },
+      q2: { given: 'false', correct: true, feedback: null },
+      q3: { given: 'NADH', correct: true, feedback: null },
+    })} onFinished={onFinished} />)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'See results' })) })
+    expect(onFinished).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toMatch(/Couldn't finish the quiz/)
+  })
   it('lets the student mark themselves when AI marking is unavailable', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }))
     render(<QuizPlayer quiz={quiz} attempt={attempt({ q1: { given: 'Matrix', correct: true, feedback: null }, q2: { given: 'false', correct: true, feedback: null } })} onFinished={() => {}} />)

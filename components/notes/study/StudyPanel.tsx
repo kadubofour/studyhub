@@ -11,7 +11,7 @@ const TABS: [Tab, string][] = [['summary', 'Summary'], ['cards', 'Cards'], ['qui
 // Beside the note on wide screens, a sheet from the bottom on phones
 export function StudyPanel({ note, onClose, prepare, applyContent }: {
   note: { id: string; title: string; content_md: string }
-  onClose: () => void; prepare: () => Promise<void>; applyContent: (md: string) => void
+  onClose: () => void; prepare: () => Promise<void>; applyContent: (update: (current: string) => string) => void
 }) {
   const [tab, setTab] = useState<Tab>('summary')
   return (

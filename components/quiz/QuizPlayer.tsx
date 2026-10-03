@@ -10,8 +10,12 @@ const choicesOf = (q: Question) => (q.type === 'true_false' ? ['True', 'False'] 
 
 export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt: QuizAttempt; onFinished: (a: QuizAttempt) => void }) {
   const [answers, setAnswers] = useState<Record<string, AnswerRecord>>(attempt.answers)
-  // Resume at the first question without an answer
-  const [index, setIndex] = useState(() => Math.max(0, quiz.questions.findIndex(q => !attempt.answers[q.id])))
+  // Resume at the first unanswered question; if all are answered (refreshed before "See results"),
+  // open the last one so finishing is one tap away
+  const [index, setIndex] = useState(() => {
+    const first = quiz.questions.findIndex(q => !attempt.answers[q.id])
+    return first === -1 ? quiz.questions.length - 1 : first
+  })
   const [typed, setTyped] = useState('')
   const [checking, setChecking] = useState(false)
   const [selfMark, setSelfMark] = useState<string | null>(null) // answer awaiting "I was right/wrong"
@@ -44,8 +48,12 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
   }
 
   async function finish() {
-    const a = await finishAttempt(supabase(), attempt.id, answers, scoreOf(answers))
-    onFinished(a)
+    setError(null)
+    try {
+      onFinished(await finishAttempt(supabase(), attempt.id, answers, scoreOf(answers)))
+    } catch {
+      setError('Couldn\'t finish the quiz. Check your connection and try again.')
+    }
   }
 
   function next() { setTyped(''); setIndex(i => i + 1) }

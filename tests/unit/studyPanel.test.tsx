@@ -34,13 +34,17 @@ describe('StudyPanel — summary', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '✦ Summarise' })) })
     expect(prepare).toHaveBeenCalled()
     expect(fetchMock.mock.calls[0][0]).toBe('/api/ai/summary')
-    expect(applyContent).toHaveBeenCalledWith('> **Summary**\n>\n> Makes NADH.\n\n' + note.content_md)
+    // The change is applied to the note as it is when the AI answers, so text typed meanwhile survives
+    const apply = applyContent.mock.calls[0][0] as (md: string) => string
+    expect(apply(note.content_md)).toBe('> **Summary**\n>\n> Makes NADH.\n\n' + note.content_md)
+    expect(apply(note.content_md + ' Typed while waiting.')).toBe('> **Summary**\n>\n> Makes NADH.\n\n' + note.content_md + ' Typed while waiting.')
   })
   it('offers Regenerate and Remove when the note already has a summary', async () => {
     const { applyContent } = setup({ content_md: '> **Summary**\n>\n> Old.\n\nBody text' })
     expect(screen.getByRole('button', { name: '✦ Regenerate summary' })).toBeTruthy()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove summary' })) })
-    expect(applyContent).toHaveBeenCalledWith('Body text')
+    const apply = applyContent.mock.calls[0][0] as (md: string) => string
+    expect(apply('> **Summary**\n>\n> Old.\n\nBody text and more')).toBe('Body text and more')
   })
   it('explains errors in plain words', async () => {
     fetchMock.mockImplementation(() => fail(422, 'too_short'))
