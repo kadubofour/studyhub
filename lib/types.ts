@@ -42,3 +42,4 @@ export interface Card {
 }
 export interface Review { id: string; card_id: string; rating: 1 | 2 | 3 | 4; reviewed_at: string }
 export interface FocusSession { id: string; started_at: string; ended_at: string; minutes: number; completed: boolean }
+export type { Question, QuestionType, AnswerRecord, Quiz, QuizAttempt } from './quiz/types'
