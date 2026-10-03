@@ -19,13 +19,19 @@ function LoginForm() {
     return null
   })
   const [busy, setBusy] = useState(false)
+  const [unconfirmed, setUnconfirmed] = useState(false)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true); setError(null)
     const { error } = await supabase().auth.signInWithPassword({ email, password })
     setBusy(false)
-    if (error) { setError('That email and password don\'t match. Try again.'); return }
+    if (error) {
+      const notConfirmed = (error as { code?: string }).code === 'email_not_confirmed'
+      setUnconfirmed(notConfirmed)
+      setError(notConfirmed ? 'Confirm your email first. We sent you a link when you signed up.' : 'That email and password don\'t match. Try again.')
+      return
+    }
     router.replace(next)
     router.refresh()
   }
@@ -48,6 +54,12 @@ function LoginForm() {
         </label>
         <PasswordField label="Password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} />
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {unconfirmed && (
+          <button type="button" className="text-sm text-accent" onClick={async () => {
+            await supabase().auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } })
+            setError('We sent a new confirmation link. Check your email.')
+          }}>Resend confirmation email</button>
+        )}
         <button disabled={busy} className="btn-primary w-full">{busy ? 'Logging in…' : 'Log in'}</button>
       </form>
       <div className="flex justify-between text-sm">
