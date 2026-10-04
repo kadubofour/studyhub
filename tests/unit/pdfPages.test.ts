@@ -36,6 +36,11 @@ describe('countPdfPages', () => {
     expect(pdf.toString('latin1')).not.toMatch(/\/Type\s*\/Page(?![a-zA-Z])/) // the old count saw 0 pages
     expect(await countPdfPages(pdf)).toBe(23)
   })
+  it('hands pdf.js its worker, which a bundled server build cannot find on its own', async () => {
+    delete (globalThis as { pdfjsWorker?: unknown }).pdfjsWorker
+    await countPdfPages(compressedPdf(1))
+    expect((globalThis as { pdfjsWorker?: { WorkerMessageHandler?: unknown } }).pdfjsWorker?.WorkerMessageHandler).toBeTruthy()
+  })
   it('falls back to counting page objects when pdf.js can\'t read the file', async () => {
     expect(await countPdfPages(Buffer.from('not a pdf /Type /Page /Type /Page', 'latin1'))).toBe(2)
   })
