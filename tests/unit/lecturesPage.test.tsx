@@ -9,7 +9,8 @@ const finishRecording = vi.fn(async () => ({ id: 'L9' }))
 const push = vi.fn()
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'c1', name: 'Biology', color: '#1D9E75' }] }))
-vi.mock('@/lib/data/lectures', () => ({ listLectures: async () => lectures, audioUsed: async () => used }))
+let usedFails = false
+vi.mock('@/lib/data/lectures', () => ({ listLectures: async () => lectures, audioUsed: async () => { if (usedFails) throw new Error('no function'); return used } }))
 const removed: string[] = []
 vi.mock('@/lib/lectures/localStore', () => ({ indexedDbStore: () => ({ sessions: async () => leftover, remove: async (id: string) => { removed.push(id) } }) }))
 vi.mock('@/lib/lectures/saveRecording', () => ({ finishRecording: (...a: unknown[]) => finishRecording(...(a as [])) }))
@@ -24,7 +25,7 @@ import { StorageCard } from '@/components/settings/StorageCard'
 const MB = 1024 * 1024
 beforeEach(() => {
   lectures = [{ id: 'L1', course_id: 'c1', title: 'Krebs cycle', recorded_at: '2026-10-03T09:00:00Z', duration_seconds: 3723, transcript_status: 'done', audio_bytes: 5 * MB }]
-  used = 5 * MB; leftover = []; removed.length = 0; finishRecording.mockClear(); push.mockClear()
+  used = 5 * MB; usedFails = false; leftover = []; removed.length = 0; finishRecording.mockClear(); push.mockClear()
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
@@ -56,6 +57,14 @@ describe('Lectures page', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Recover unsaved recording' })) })
     expect(finishRecording).toHaveBeenCalled()
     expect(push).toHaveBeenCalledWith('/lectures/L9')
+  })
+})
+
+describe('Lectures page: storage count unavailable', () => {
+  it('still lists the lectures when storage used cannot be counted', async () => {
+    usedFails = true
+    await open()
+    expect(screen.getByRole('link', { name: /Krebs cycle/ })).toBeTruthy()
   })
 })
 

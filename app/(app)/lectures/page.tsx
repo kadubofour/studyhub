@@ -38,7 +38,8 @@ export default function LecturesPage() {
 
   useEffect(() => {
     const sb = supabase()
-    Promise.all([listLectures(sb), listCourses(sb), audioUsed(sb)])
+    // If storage used can't be counted, still list the lectures (and treat storage as unknown: 0)
+    Promise.all([listLectures(sb), listCourses(sb), audioUsed(sb).catch(() => 0)])
       .then(([l, c, u]) => { setLectures(l); setCourses(c); setUsed(u) })
       .catch(() => setLectures([]))
     // Only this student's: a shared device may hold someone else's unsaved recording
