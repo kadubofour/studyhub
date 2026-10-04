@@ -51,6 +51,28 @@ describe('createLiveTranscriber', () => {
     expect(blocked).toHaveBeenCalled()
     expect(made).toHaveLength(1)
   })
+  it('after a network or microphone error it waits longer before each retry, not in a tight loop', () => {
+    vi.useFakeTimers()
+    const { t } = setup()
+    t.start()
+    made[0].onerror?.({ error: 'network' })
+    made[0].onend?.()
+    expect(made).toHaveLength(1) // not straight away
+    vi.advanceTimersByTime(1000)
+    expect(made).toHaveLength(2)
+    made[1].onerror?.({ error: 'network' })
+    made[1].onend?.()
+    vi.advanceTimersByTime(1000)
+    expect(made).toHaveLength(2) // the wait doubles
+    vi.advanceTimersByTime(1000)
+    expect(made).toHaveLength(3)
+    t.stop()
+    made[2].onerror?.({ error: 'network' })
+    made[2].onend?.()
+    vi.advanceTimersByTime(60_000)
+    expect(made).toHaveLength(3) // stopped: no retry
+    vi.useRealTimers()
+  })
   it('finds the browser\'s speech recognition, if any', () => {
     expect(speechRecognition()).toBeNull()
     ;(window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = FakeRecognition

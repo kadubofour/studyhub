@@ -29,8 +29,12 @@ export function createLiveTranscriber(o: {
   let rec: Recognition | null = null
   let running = false
   let lineStart: number | null = null
+  // After an error (offline, microphone busy) wait before listening again: 1 s, then 2, 4… up to 30 s
+  let failures = 0
+  let retry: ReturnType<typeof setTimeout> | null = null
 
   function listen() {
+    retry = null
     const r = new o.Ctor()
     rec = r
     r.continuous = true
@@ -42,6 +46,7 @@ export function createLiveTranscriber(o: {
         const result = e.results[i]
         const text = result[0].transcript.trim()
         if (!text) continue
+        failures = 0
         if (lineStart == null) lineStart = round(o.now())
         if (result.isFinal) {
           o.onLine({ start: lineStart, end: Math.max(lineStart, round(o.now())), text })
@@ -54,13 +59,22 @@ export function createLiveTranscriber(o: {
     }
     r.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { running = false; o.onBlocked?.() }
+      else if (e.error !== 'no-speech' && e.error !== 'aborted') failures++
     }
-    r.onend = () => { if (running && rec === r) listen() }
+    r.onend = () => {
+      if (!running || rec !== r) return
+      if (!failures) { listen(); return }
+      retry = setTimeout(() => { if (running) listen() }, Math.min(30_000, 1000 * 2 ** (failures - 1)))
+    }
     r.start()
   }
 
   return {
     start() { if (running) return; running = true; listen() },
-    stop() { running = false; lineStart = null; rec?.stop(); o.onInterim('') },
+    stop() {
+      running = false; lineStart = null; failures = 0
+      if (retry) { clearTimeout(retry); retry = null }
+      rec?.stop(); o.onInterim('')
+    },
   }
 }
