@@ -38,10 +38,10 @@ export async function audioUsed(sb: SupabaseClient): Promise<number> {
   return rows.reduce((n, r) => n + Number(r.audio_bytes), 0)
 }
 
-// Private audio: playable links that last an hour
+// Private audio: playable links that last a day, long enough for any listening session
 export async function partUrls(sb: SupabaseClient, parts: LecturePart[]): Promise<string[]> {
   if (!parts.length) return []
-  const { data, error } = await sb.storage.from('lectures').createSignedUrls(parts.map(p => p.path), 3600)
+  const { data, error } = await sb.storage.from('lectures').createSignedUrls(parts.map(p => p.path), 86400)
   if (error || !data) throw error ?? new Error('no urls')
   return data.map(d => d.signedUrl ?? '')
 }
