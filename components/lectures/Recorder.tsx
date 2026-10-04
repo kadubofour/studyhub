@@ -248,7 +248,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
       <div className="flex items-center gap-3">
         <span className={`size-3 rounded-full ${stage === 'recording' && !paused ? 'animate-pulse bg-danger' : 'bg-line'}`} aria-hidden />
         <span role="timer" className="font-mono text-3xl tabular-nums" aria-label="Recording time">{formatClock(seconds)}</span>
-        {paused && <span className="text-sm text-muted">Paused</span>}
+        <span role="status" className="text-sm text-muted">{paused ? 'Paused' : ''}</span>
       </div>
       {metering && (
         <div role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level * 100)} className="h-2 w-full max-w-xs rounded-full bg-surface">
