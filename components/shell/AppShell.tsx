@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { OfflineBanner } from './OfflineBanner'
+import { PremiumBadge } from '@/components/billing/PremiumBadge'
+import { EndingBanner } from '@/components/billing/EndingBanner'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
@@ -62,6 +64,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 <GraduationCap size={16} aria-hidden />
               </span>
               Studyhub
+              <PremiumBadge />
             </Link>
             <button className="btn-ghost px-1.5" onClick={() => setCollapsed(true)} aria-label="Hide sidebar" title="Hide sidebar">
               <PanelLeftClose size={16} aria-hidden />
@@ -92,7 +95,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <PanelLeftOpen size={18} aria-hidden />
           </button>
         )}
-        <main className={immersive ? 'w-full' : 'mx-auto w-full max-w-5xl px-4 py-5 md:px-10 md:py-9'}>{children}</main>
+        <main className={immersive ? 'w-full' : 'mx-auto w-full max-w-5xl px-4 py-5 md:px-10 md:py-9'}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">
