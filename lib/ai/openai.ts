@@ -4,9 +4,10 @@ import OpenAI from 'openai'
 export const MODELS = {
   light: 'gpt-6-luna',    // summaries, flashcards, quizzes, marking
   strong: 'gpt-6.1-sol',  // PDF import, scans, lecture notes
+  transcribe: 'whisper-1', // accurate lecture transcripts (segment timestamps for tap-to-seek)
 } as const
 
-export type AiClient = Pick<OpenAI, 'responses'>
+export type AiClient = Pick<OpenAI, 'responses' | 'audio'>
 
 export const isAiConfigured = () => !!process.env.OPENAI_API_KEY
 export const openai = (): AiClient => new OpenAI()
