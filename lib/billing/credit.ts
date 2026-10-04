@@ -26,7 +26,7 @@ export async function creditVerifiedCharge(c: VerifiedCharge, userId: string): P
   const matches = !!product && c.currency === 'GHS' && c.amountMinor === PRODUCTS[product].amountMinor
   const state = c.status === 'failed' ? 'failed' : matches ? 'credited' : 'needs_review'
   const { data, error } = await adminClient().rpc('apply_payment', {
-    p_user: userId, p_reference: c.reference, p_product: product ?? 'pass_1m', p_amount_minor: c.amountMinor,
+    p_user: userId, p_reference: c.reference, p_product: product, p_amount_minor: c.amountMinor,
     p_currency: c.currency, p_channel: c.channel, p_status: state === 'credited' ? 'success' : state,
     p_months: state === 'credited' ? PRODUCTS[product!].months : 0, p_paid_at: c.paidAt,
     p_customer_code: c.customerCode, p_card_brand: c.cardBrand, p_card_last4: c.cardLast4,

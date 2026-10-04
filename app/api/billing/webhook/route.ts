@@ -31,7 +31,8 @@ export async function POST(request: Request) {
       await creditVerifiedCharge(charge, userId)
     } else if (event === 'refund.processed') {
       const reference = str(data.transaction_reference) ?? str((data.transaction as Record<string, unknown> | undefined)?.reference)
-      if (reference) await rpc('apply_refund', { p_reference: reference })
+      // `amount` is what was refunded; less than the payment means a partial refund
+      if (reference) await rpc('apply_refund', { p_reference: reference, p_amount_minor: typeof data.amount === 'number' ? data.amount : null })
     } else {
       const customer = str((data.customer as Record<string, unknown> | undefined)?.customer_code)
       const userId = await userForCharge({ userId: null, customerCode: customer } as never)

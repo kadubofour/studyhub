@@ -164,3 +164,33 @@ describe('review fixes', () => {
     expect((await ent())?.auto_renew).toBe(false)
   })
 })
+
+describe('audit fixes', () => {
+  const until = async (user: string) => new Date((await admin().from('entitlements').select('premium_until').eq('user_id', user).single()).data!.premium_until).getTime()
+  it('a payment held for checking can have no known product', async () => {
+    const u = await newUser()
+    const r = ref()
+    expect((await pay(u.id, r, { p_product: null, p_status: 'needs_review', p_months: 0 })).error).toBeNull()
+    expect((await admin().from('payments').select('product').eq('reference', r).single()).data).toEqual({ product: null })
+  })
+  it('a partial refund takes back only that share of the time', async () => {
+    const u = await newUser()
+    await pay(u.id, ref())
+    const r = ref()
+    await pay(u.id, r, { p_product: 'pass_12m', p_amount_minor: 48000, p_months: 12 })
+    const before = await until(u.id)
+    expect((await admin().rpc('apply_refund', { p_reference: r, p_amount_minor: 24000 })).error).toBeNull()
+    const days = (before - await until(u.id)) / 86_400_000
+    expect(days).toBeGreaterThan(178) // half of 12 months
+    expect(days).toBeLessThan(186)
+  })
+  it('a refund with no amount (or the full amount) takes back all of it', async () => {
+    const u = await newUser()
+    await pay(u.id, ref())
+    const r = ref()
+    await pay(u.id, r, { p_product: 'pass_3m', p_amount_minor: 13500, p_months: 3 })
+    const before = await until(u.id)
+    await admin().rpc('apply_refund', { p_reference: r })
+    expect((before - await until(u.id)) / 86_400_000).toBeGreaterThan(88)
+  })
+})

@@ -33,6 +33,9 @@ describe('creditVerifiedCharge', () => {
     expect(args()).toMatchObject({ p_status: 'needs_review', p_months: 0 })
     rpc.mockClear()
     expect((await creditVerifiedCharge({ ...base, currency: 'NGN' }, 'u1')).state).toBe('needs_review')
+    rpc.mockClear()
+    expect((await creditVerifiedCharge({ ...base, product: 'gold' }, 'u1')).state).toBe('needs_review')
+    expect(args()).toMatchObject({ p_product: null, p_status: 'needs_review' }) // not recorded as a month
   })
   it('records failures and leaves pending charges alone', async () => {
     expect((await creditVerifiedCharge({ ...base, status: 'failed' }, 'u1')).state).toBe('failed')

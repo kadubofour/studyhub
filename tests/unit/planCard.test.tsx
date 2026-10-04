@@ -36,6 +36,11 @@ describe('PlanCard', () => {
     expect(screen.getByText('This month: 112 of 400 AI actions')).toBeTruthy()
     expect(screen.getByText(/3 Oct 2026 · 1 month · GHS 50 · MoMo/)).toBeTruthy()
   })
+  it('lists a payment of unknown product as a payment being checked', async () => {
+    payments = [{ id: 'p2', product: null, amount_minor: 100, channel: 'card', status: 'needs_review', paid_at: '2026-10-02T10:00:00Z', created_at: '2026-10-02T10:00:00Z' }]
+    renderCard()
+    expect(await screen.findByText('2 Oct 2026 · Payment · GHS 1 · Card being checked')).toBeTruthy()
+  })
   it('turns off renewal after confirming', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
     renderCard()

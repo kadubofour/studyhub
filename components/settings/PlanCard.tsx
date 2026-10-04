@@ -6,7 +6,7 @@ import { announcePlanChanged, billingEnabled, usePlan } from '@/components/billi
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { FAIR_USE_MONTHLY_ACTIONS, PRODUCTS, formatGhs, type ProductId } from '@/lib/billing/plans'
 
-type Payment = { id: string; product: ProductId; amount_minor: number; channel: string; status: string; paid_at: string | null; created_at: string }
+type Payment = { id: string; product: ProductId | null;amount_minor: number; channel: string; status: string; paid_at: string | null; created_at: string }
 const date = (iso: string, withYear = true) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC' })
 const CHANNEL: Record<string, string> = { mobile_money: 'MoMo', card: 'Card', other: 'Other' }
 const STATUS: Record<string, string> = { success: '✓', failed: 'failed', refunded: 'refunded', needs_review: 'being checked' }
@@ -54,7 +54,7 @@ export function PlanCard() {
           <h3 className="section-label">Payments</h3>
           <ul className="space-y-0.5 text-sm text-muted">
             {payments.map(p => (
-              <li key={p.id}>{date(p.paid_at ?? p.created_at)} · {PRODUCTS[p.product]?.label.replace(' (renewal)', '') ?? p.product} · {formatGhs(p.amount_minor)} · {CHANNEL[p.channel] ?? p.channel} {STATUS[p.status] ?? p.status}</li>
+              <li key={p.id}>{date(p.paid_at ?? p.created_at)} · {(p.product && PRODUCTS[p.product]?.label.replace(' (renewal)', '')) ?? 'Payment'} · {formatGhs(p.amount_minor)} · {CHANNEL[p.channel] ?? p.channel} {STATUS[p.status] ?? p.status}</li>
             ))}
           </ul>
         </div>

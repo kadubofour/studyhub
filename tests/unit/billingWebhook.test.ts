@@ -59,7 +59,9 @@ describe('POST /api/billing/webhook', () => {
   })
   it('applies refunds by transaction reference', async () => {
     await send({ event: 'refund.processed', data: { id: 9, transaction_reference: 'R1' } })
-    expect(rpc).toHaveBeenLastCalledWith('apply_refund', { p_reference: 'R1' })
+    expect(rpc).toHaveBeenLastCalledWith('apply_refund', { p_reference: 'R1', p_amount_minor: null })
+    await send({ event: 'refund.processed', data: { id: 10, transaction_reference: 'R2', amount: 2500 } })
+    expect(rpc).toHaveBeenLastCalledWith('apply_refund', { p_reference: 'R2', p_amount_minor: 2500 }) // partial
   })
   it('returns 500 (so Paystack retries) and forgets the event when processing fails', async () => {
     creditVerifiedCharge.mockRejectedValueOnce(new Error('db down'))
