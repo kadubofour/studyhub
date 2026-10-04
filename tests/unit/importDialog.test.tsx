@@ -5,13 +5,14 @@ import type { Profile } from '@/lib/types'
 
 let resolveDocx: ((n: { title: string; content_md: string }) => void) | null = null
 let lastSignal: AbortSignal | undefined
+let pdfResult: Record<string, unknown> | null = null
 const createNote = vi.fn(async () => ({ id: 'new' }))
 
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/notes', () => ({ createNote: () => createNote() }))
 vi.mock('@/lib/import/docxToNote', () => ({ docxToNote: () => new Promise(r => { resolveDocx = r }) }))
 vi.mock('@/lib/import/pdfImport', () => ({
-  importPdf: (_f: File, _u: string, signal?: AbortSignal) => { lastSignal = signal; return new Promise(() => {}) },
+  importPdf: (_f: File, _u: string, signal?: AbortSignal) => { lastSignal = signal; return pdfResult ? Promise.resolve(pdfResult) : new Promise(() => {}) },
 }))
 const router = { push: vi.fn(), replace: vi.fn() }
 vi.mock('next/navigation', () => ({ useRouter: () => router }))
@@ -27,7 +28,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
-afterEach(() => { cleanup(); createNote.mockClear() })
+afterEach(() => { cleanup(); createNote.mockClear(); pdfResult = null; delete process.env.NEXT_PUBLIC_BILLING_ENABLED })
 
 function Harness() {
   const [open, setOpen] = React.useState(true)
@@ -51,6 +52,15 @@ describe('ImportDialog', () => {
     await act(async () => { fireEvent.click(screen.getByText('reopen')) })
     expect(screen.queryByDisplayValue('Late')).toBeNull()
     expect(screen.getByText('Choose a Word document or PDF')).toBeTruthy()
+  })
+
+  it('a PDF over the free limit shows the Get Premium prompt with the plain text', async () => {
+    process.env.NEXT_PUBLIC_BILLING_ENABLED = '1'
+    pdfResult = { title: 'Week 3', content_md: 'Plain', via: 'text', notice: 'This PDF needs more AI actions than you have left today.', limit: 'daily_limit' }
+    render(<ProfileProvider initial={profile}><ToastProvider><Harness /></ToastProvider></ProfileProvider>)
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to import'), { target: { files: [file('a.pdf')] } }) })
+    expect(screen.getByText('This PDF needs more AI actions than you have left today.')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Get Premium/ }).getAttribute('href')).toBe('/plans')
   })
 
   it('cancelling a PDF import aborts the AI request', async () => {

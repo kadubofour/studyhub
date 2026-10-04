@@ -1,6 +1,7 @@
 'use client'
 import { supabase } from '@/lib/supabase/client'
 import type { ImportedNote } from './docxToNote'
+import { AI_USED } from '@/components/ai/aiFetch'
 
 // Base64 grows a PDF by a third and the AI request is capped at 32 MB, hence 24 MB
 export const MAX_PDF_BYTES = 24 * 1024 * 1024
@@ -11,6 +12,8 @@ export type PdfImportResult = ImportedNote & {
   /** Why plain-text extraction was used instead of AI, for a short notice */
   notice?: string
   truncated?: boolean
+  /** Set when the student's plan refused AI import, so the dialog can offer Premium */
+  limit?: 'daily_limit' | 'fair_use'
 }
 
 const MESSAGES: Record<string, string> = {
@@ -20,7 +23,7 @@ const MESSAGES: Record<string, string> = {
   refused: 'This PDF couldn\'t be converted by AI, so only the plain text was kept.',
   empty: 'The AI couldn\'t find text in this PDF, so only the plain text was kept.',
   rate_limited: 'You\'re going a bit fast, so only the plain text was kept. Try AI import again in a minute.',
-  daily_limit: 'You\'ve used today\'s free AI actions (PDFs use 1 per 10 pages), so only the plain text was kept. Premium has no daily limit.',
+  daily_limit: 'This PDF needs more AI actions than you have left today (PDFs use 1 per 10 pages), so only the plain text was kept.',
   fair_use: 'You\'ve reached this month\'s fair use, so only the plain text was kept.',
   too_long: 'This PDF is too long for AI import, so only the plain text was kept.',
   too_large: 'This PDF is too large for AI import, so only the plain text was kept.',
@@ -54,6 +57,7 @@ export async function importPdf(file: File, userId: string, signal?: AbortSignal
       })
       if (res.ok) {
         const note = await res.json() as ImportedNote & { truncated: boolean }
+        window.dispatchEvent(new Event(AI_USED))
         return { ...note, via: 'ai', notice: note.truncated ? 'This PDF is very long; the end may be missing.' : undefined }
       }
       reason = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'ai_failed'
@@ -66,7 +70,8 @@ export async function importPdf(file: File, userId: string, signal?: AbortSignal
   }
   if (signal?.aborted) throw Object.assign(new Error('Import cancelled'), { name: 'AbortError' })
   const text = await pdfToText(doc)
-  return { title: file.name.replace(/\.pdf$/i, ''), content_md: text, via: 'text', notice: MESSAGES[reason] ?? MESSAGES.ai_failed }
+  const limit = reason === 'daily_limit' || reason === 'fair_use' ? reason : undefined
+  return { title: file.name.replace(/\.pdf$/i, ''), content_md: text, via: 'text', notice: MESSAGES[reason] ?? MESSAGES.ai_failed, limit }
 }
 
 // Plain-text fallback: one paragraph per text block, pages separated by a rule

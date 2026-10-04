@@ -15,11 +15,12 @@ const TEXT = {
   premium_required: { title: 'This is a Premium feature', body: () => 'Premium includes accurate lecture transcripts and unlimited AI.', upgrade: true },
 } as const
 
-export function LimitPrompt({ kind }: { kind: keyof typeof TEXT }) {
+// `title` replaces the standard heading when the caller knows more (e.g. a PDF that costs more than is left)
+export function LimitPrompt({ kind, title }: { kind: keyof typeof TEXT; title?: string }) {
   const t = TEXT[kind]
   return (
     <div role="status" className="rounded-xl bg-accent-soft p-3 text-sm">
-      <p className="font-medium">{t.title}</p>
+      <p className="font-medium">{title ?? t.title}</p>
       <p className="mt-0.5 text-xs text-muted">{t.body()}</p>
       {t.upgrade && billingEnabled() && (
         <div className="mt-2 flex flex-wrap items-center gap-3">

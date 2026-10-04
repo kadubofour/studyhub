@@ -52,6 +52,22 @@ describe('importPdf (browser side)', () => {
     expect(r.content_md).toContain('Plain text')
   })
 
+  it('at the free limit: keeps the plain text and says how to get more, accurately', async () => {
+    respond(402, { error: 'daily_limit' })
+    const r = await importPdf(pdf(), 'u1')
+    expect(r.limit).toBe('daily_limit')
+    expect(r.notice).toMatch(/more AI actions than you have left today/)
+  })
+
+  it('a successful AI import refreshes the "free actions left" count', async () => {
+    respond(200, { title: 'T', content_md: 'b', truncated: false })
+    const used = vi.fn()
+    window.addEventListener('studyhub:ai-used', used)
+    await importPdf(pdf(), 'u1')
+    window.removeEventListener('studyhub:ai-used', used)
+    expect(used).toHaveBeenCalledTimes(1)
+  })
+
   it('stops without a fallback when the student cancels', async () => {
     const controller = new AbortController()
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {

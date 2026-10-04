@@ -9,8 +9,9 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
 import type { Course } from '@/lib/types'
+import { LimitPrompt } from '@/components/billing/LimitPrompt'
 
-type Draft = { title: string; content_md: string; notice?: string; via?: 'ai' | 'text' }
+type Draft = { title: string; content_md: string; notice?: string; via?: 'ai' | 'text'; limit?: 'daily_limit' | 'fair_use' }
 
 // Import a Word document or a PDF (structured by AI) and review it before it becomes a note
 export function ImportDialog({ open, onClose, courses, onImported }: {
@@ -110,7 +111,9 @@ export function ImportDialog({ open, onClose, courses, onImported }: {
       {stage === 'review' && draft && (
         <div className="space-y-3">
           {draft.via === 'ai' && <p className="flex items-center gap-1.5 text-xs text-accent"><Sparkles size={13} aria-hidden />Structured by AI — check it before saving.</p>}
-          {draft.notice && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs">{draft.notice}</p>}
+          {draft.limit
+            ? <LimitPrompt kind={draft.limit} title={draft.notice} />
+            : draft.notice && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs">{draft.notice}</p>}
           <label className="field"><span>Title</span><input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label>
           <label className="field"><span>Course</span>
             <select value={courseId} onChange={e => setCourseId(e.target.value)}>
