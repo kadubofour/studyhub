@@ -3,10 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const NOTE_ID = '11111111-1111-4111-8111-111111111111'
 let user: { id: string } | null = { id: 'u1' }
 let note: { id: string; title: string; content_md: string } | null
-let allowed = true
+let check = 'ok'
+const adminRpc = vi.fn(async (...a: unknown[]) => ({ data: a[0] === 'ai_check' ? check : null, error: null }))
+vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc: adminRpc }) }))
+const adminCalls = () => adminRpc.mock.calls.map(c => [c[0], (c[1] as { p_cost: number }).p_cost])
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? allowed : null, error: null })),
   from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: note, error: null }) }) }) }),
 }
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: async () => sb }))
@@ -21,8 +23,8 @@ const long = 'The Krebs cycle '.repeat(20)
 const call = (body: unknown) => POST(new Request('http://x/api/ai/summary', { method: 'POST', body: JSON.stringify(body) }))
 
 beforeEach(() => {
-  user = { id: 'u1' }; allowed = true; note = { id: NOTE_ID, title: 'Krebs', content_md: long }
-  sb.rpc.mockClear(); parse.mockReset()
+  user = { id: 'u1' }; check = 'ok'; note = { id: NOTE_ID, title: 'Krebs', content_md: long }
+  adminRpc.mockClear(); parse.mockReset()
   parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { summary_md: '  Makes NADH.  ' } })
   process.env.OPENAI_API_KEY = 'k'
 })
@@ -45,13 +47,20 @@ describe('POST /api/ai/summary', () => {
     const res = await call({ noteId: NOTE_ID })
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ summary_md: 'Makes NADH.' })
-    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_request_allowed'])
+    expect(adminCalls()).toEqual([['ai_check', 1], ['ai_charge', 1]])
   })
   it('says to slow down when the speed limit is hit', async () => {
-    allowed = false
+    check = 'rate_limited'
     const res = await call({ noteId: NOTE_ID })
     expect(res.status).toBe(429)
     expect(await res.json()).toEqual({ error: 'rate_limited' })
+    expect(parse).not.toHaveBeenCalled()
+  })
+  it('tells a Free student they have used today\'s actions (402), without calling the AI', async () => {
+    check = 'daily_limit'
+    const res = await call({ noteId: NOTE_ID })
+    expect(res.status).toBe(402)
+    expect(await res.json()).toEqual({ error: 'daily_limit' })
     expect(parse).not.toHaveBeenCalled()
   })
   it('refuses notes too short to summarise, without calling the AI', async () => {

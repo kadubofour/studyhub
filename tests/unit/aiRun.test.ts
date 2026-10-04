@@ -6,40 +6,47 @@ import { generateObject } from '@/lib/ai/structured'
 import { AiEmptyError, AiIncompleteError, AiRefusedError } from '@/lib/ai/openai'
 import { noteInput, wordCount } from '@/lib/ai/input'
 
-const fakeSb = (allowed: boolean) => {
-  const calls: string[] = []
-  const rpc = vi.fn(async (fn: string) => { calls.push(fn); return { data: fn === 'ai_request_allowed' ? allowed : null, error: null } })
-  return { calls, rpc, sb: { rpc } }
-}
 const client = {} as never
 const asError = <T extends object>(cls: { prototype: T }) => Object.create(cls.prototype) as T
 
 beforeEach(() => { process.env.OPENAI_API_KEY = 'test' })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
+const rpc = vi.fn()
+vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc }) }))
+const result = (check: string) => rpc.mockImplementation(async (fn: string) => ({ data: fn === 'ai_check' ? check : null, error: null }))
+const calls = () => rpc.mock.calls.map(c => [c[0], (c[1] as { p_cost: number }).p_cost])
+
 describe('runAiAction', () => {
-  it('checks the speed limit, then runs the call (no usage is counted afterwards)', async () => {
-    const { sb, calls } = fakeSb(true)
-    const r = await runAiAction(sb as never, async () => { expect(calls).toEqual(['ai_request_allowed']); return 42 }, { client })
+  beforeEach(() => rpc.mockReset())
+  it('checks the plan, runs the call, then charges its cost', async () => {
+    result('ok')
+    const r = await runAiAction(async () => 42, { userId: 'u1', cost: 3, client })
     expect(r).toEqual({ ok: true, value: 42 })
-    expect(calls).toEqual(['ai_request_allowed'])
+    expect(calls()).toEqual([['ai_check', 3], ['ai_charge', 3]])
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_user: 'u1' })
   })
-  it('refuses without calling the AI when the student is going too fast', async () => {
-    const { sb } = fakeSb(false)
+  it('does not charge failed calls', async () => {
+    result('ok')
+    const r = await runAiAction(async () => { throw asError(OpenAI.RateLimitError) }, { userId: 'u1', cost: 1, client })
+    expect(r).toEqual({ ok: false, error: 'busy' })
+    expect(calls()).toEqual([['ai_check', 1]])
+  })
+  it.each([['rate_limited'], ['daily_limit'], ['fair_use']])('refuses without calling the AI when the check says %s', async code => {
+    result(code)
     const call = vi.fn()
-    expect(await runAiAction(sb as never, call, { client })).toEqual({ ok: false, error: 'rate_limited' })
+    expect(await runAiAction(call, { userId: 'u1', cost: 1, client })).toEqual({ ok: false, error: code })
     expect(call).not.toHaveBeenCalled()
   })
-  it('maps AI failures to codes', async () => {
-    const { sb } = fakeSb(true)
-    const r = await runAiAction(sb as never, async () => { throw asError(OpenAI.RateLimitError) }, { client })
-    expect(r).toEqual({ ok: false, error: 'busy' })
+  it('free marking (cost 0) is checked for speed but never charged', async () => {
+    result('ok')
+    await runAiAction(async () => 1, { userId: 'u1', cost: 0, client })
+    expect(calls()).toEqual([['ai_check', 0]])
   })
-  it('says AI is unavailable when no key is set, without touching the speed limit', async () => {
+  it('says AI is unavailable when no key is set, without checking anything', async () => {
     delete process.env.OPENAI_API_KEY
-    const { sb, calls } = fakeSb(true)
-    expect(await runAiAction(sb as never, vi.fn())).toEqual({ ok: false, error: 'ai_unavailable' })
-    expect(calls).toEqual([])
+    expect(await runAiAction(vi.fn(), { userId: 'u1', cost: 1 })).toEqual({ ok: false, error: 'ai_unavailable' })
+    expect(rpc).not.toHaveBeenCalled()
   })
 })
 
@@ -63,6 +70,8 @@ describe('classifyAiError', () => {
     expect(res.status).toBe(429)
     expect(await res.json()).toEqual({ error: 'rate_limited' })
     expect(aiErrorResponse('aborted').status).toBe(499)
+    expect(aiErrorResponse('daily_limit').status).toBe(402)
+    expect(aiErrorResponse('fair_use').status).toBe(402)
   })
 })
 

@@ -3,13 +3,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // ---- fakes for Supabase, the AI conversion and the OpenAI client ----
 const removed: string[][] = []
 let user: { id: string } | null = { id: 'u1' }
-let allowed = true
+let check = 'ok'
+const adminRpc = vi.fn(async (...a: unknown[]) => ({ data: a[0] === 'ai_check' ? check : null, error: null }))
+vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc: adminRpc }) }))
+const adminCalls = () => adminRpc.mock.calls.map(c => [c[0], (c[1] as { p_cost: number }).p_cost])
 let pdfBytes = Buffer.from('%PDF-1.4\n1 0 obj << /Type /Page >> endobj\n%%EOF')
 let listed: { name: string; created_at: string }[] = []
 
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? allowed : null, error: null })),
+  rpc: vi.fn(),
   storage: {
     from: () => ({
       download: async () => ({ data: new Blob([pdfBytes]), error: null }),
@@ -33,9 +36,9 @@ const call = (body: unknown, signal?: AbortSignal) =>
   POST(new Request('http://x/api/import/pdf', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' }, signal }))
 
 beforeEach(() => {
-  removed.length = 0; user = { id: 'u1' }; allowed = true; listed = []
+  removed.length = 0; user = { id: 'u1' }; check = 'ok'; listed = []
   pdfBytes = Buffer.from('%PDF-1.4\n1 0 obj << /Type /Page >> endobj\n%%EOF')
-  pdfToNote.mockClear(); sb.rpc.mockClear()
+  pdfToNote.mockClear(); adminRpc.mockClear()
   process.env.OPENAI_API_KEY = 'test-key'
 })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
@@ -56,16 +59,21 @@ describe('POST /api/import/pdf', () => {
   it('checks the speed limit once, then converts (no daily cap)', async () => {
     const res = await call({ path: 'u1/a.pdf' })
     expect(res.status).toBe(200)
-    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_request_allowed'])
+    expect(adminCalls()).toEqual([['ai_check', 1], ['ai_charge', 1]])
   })
 
+  it('charges 1 AI action per 10 pages', async () => {
+    pdfBytes = Buffer.from('%PDF-1.4\n' + '1 0 obj << /Type /Page >> endobj\n'.repeat(25) + '%%EOF')
+    await call({ path: 'u1/a.pdf' })
+    expect(adminCalls()).toEqual([['ai_check', 3], ['ai_charge', 3]])
+  })
   it('reports a failed conversion as ai_failed', async () => {
     pdfToNote.mockRejectedValueOnce(new Error('boom'))
     expect((await call({ path: 'u1/a.pdf' })).status).toBe(502)
   })
 
   it('returns rate_limited when the student is going too fast, without converting, and still deletes the upload', async () => {
-    allowed = false
+    check = 'rate_limited'
     const res = await call({ path: 'u1/a.pdf' })
     expect(res.status).toBe(429)
     expect(await res.json()).toEqual({ error: 'rate_limited' })
@@ -79,7 +87,7 @@ describe('POST /api/import/pdf', () => {
     expect(res.status).toBe(413)
     expect(await res.json()).toEqual({ error: 'too_long' })
     expect(pdfToNote).not.toHaveBeenCalled()
-    expect(sb.rpc).not.toHaveBeenCalled() // the speed limit isn't touched either
+    expect(adminRpc).not.toHaveBeenCalled() // the plan check isn't touched either
   })
 
   it('converts the PDF, passes the request\'s abort signal on, and deletes the upload', async () => {
@@ -107,6 +115,6 @@ describe('POST /api/import/pdf', () => {
     const res = await call({ path: 'u1/a.pdf' })
     expect(res.status).toBe(503)
     expect(await res.json()).toEqual({ error: 'ai_unavailable' })
-    expect(sb.rpc).not.toHaveBeenCalled()
+    expect(adminRpc).not.toHaveBeenCalled()
   })
 })

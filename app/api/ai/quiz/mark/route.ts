@@ -28,6 +28,6 @@ export async function POST(request: Request) {
   if ((attempt as { finished_at: string | null }).finished_at) return NextResponse.json({ error: 'finished' }, { status: 409 })
 
   if (markInstant(q, answer) === true) return NextResponse.json({ correct: true, feedback: q.explanation })
-  const result = await runAiAction(sb, client => markShortAnswer(client, q, answer, request.signal), { signal: request.signal })
+  const result = await runAiAction(client => markShortAnswer(client, q, answer, request.signal), { userId: user.id, cost: 0, signal: request.signal })
   return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
 }

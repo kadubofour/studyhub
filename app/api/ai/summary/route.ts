@@ -12,6 +12,6 @@ export async function POST(request: Request) {
   const r = await readOwnNote(request)
   if ('response' in r) return r.response
   if (wordCount(removeSummary(r.note.content_md)) < MIN_WORDS) return NextResponse.json({ error: 'too_short' }, { status: 422 })
-  const result = await runAiAction(r.sb, client => summariseNote(client, r.note, request.signal), { signal: request.signal })
+  const result = await runAiAction(client => summariseNote(client, r.note, request.signal), { userId: r.userId, cost: 1, signal: request.signal })
   return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
 }

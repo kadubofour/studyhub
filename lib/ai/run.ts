@@ -1,25 +1,32 @@
 import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { adminClient } from '@/lib/supabase/admin'
 import { AiEmptyError, AiIncompleteError, AiRefusedError, isAiConfigured, openai, type AiClient } from './openai'
 
-export type AiErrorCode = 'ai_unavailable' | 'rate_limited' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'
+export type AiErrorCode = 'ai_unavailable' | 'rate_limited' | 'daily_limit' | 'fair_use' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'
 export type AiResult<T> = { ok: true; value: T } | { ok: false; error: AiErrorCode }
 
 const STATUS: Record<AiErrorCode, number> = {
-  ai_unavailable: 503, rate_limited: 429, busy: 429, refused: 422, too_long: 413, empty: 422, ai_failed: 502, aborted: 499,
+  ai_unavailable: 503, rate_limited: 429, daily_limit: 402, fair_use: 402, busy: 429,
+  refused: 422, too_long: 413, empty: 422, ai_failed: 502, aborted: 499,
 }
 
-// Every AI feature goes through here. There are no usage caps: the only check is a speed limit
-// (10 AI requests a minute per student) that stops scripted abuse.
+// Every AI feature goes through here: the plan check (speed limit, Free daily limit or Premium fair
+// use) before the call, and the charge only after it succeeds. Both run with the service role, so a
+// student can't skip, fake or refund their own usage. Cost 0 (quiz marking) is speed-limited only.
 export async function runAiAction<T>(
-  sb: SupabaseClient, call: (client: AiClient) => Promise<T>, opts: { signal?: AbortSignal; client?: AiClient } = {},
+  call: (client: AiClient) => Promise<T>,
+  opts: { userId: string; cost: number; signal?: AbortSignal; client?: AiClient },
 ): Promise<AiResult<T>> {
   if (!opts.client && !isAiConfigured()) return { ok: false, error: 'ai_unavailable' }
-  const { data: allowed } = await sb.rpc('ai_request_allowed')
-  if (allowed !== true) return { ok: false, error: 'rate_limited' }
+  const admin = adminClient()
+  const { data: check, error } = await admin.rpc('ai_check', { p_user: opts.userId, p_cost: opts.cost })
+  if (error) return { ok: false, error: 'ai_failed' }
+  if (check !== 'ok') return { ok: false, error: check as AiErrorCode }
   try {
-    return { ok: true, value: await call(opts.client ?? openai()) }
+    const value = await call(opts.client ?? openai())
+    if (opts.cost > 0) await admin.rpc('ai_charge', { p_user: opts.userId, p_cost: opts.cost })
+    return { ok: true, value }
   } catch (e) {
     return { ok: false, error: classifyAiError(e, opts.signal) }
   }

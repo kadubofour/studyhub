@@ -30,11 +30,14 @@ describe('instant marking', () => {
 
 // ---- route ----
 let user: { id: string } | null = { id: 'u1' }
-let allowed = true
+let check = 'ok'
+const adminRpc = vi.fn(async (...a: unknown[]) => ({ data: a[0] === 'ai_check' ? check : null, error: null }))
+vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc: adminRpc }) }))
+const adminCalls = () => adminRpc.mock.calls.map(c => [c[0], (c[1] as { p_cost: number }).p_cost])
 const attempt = { id: '22222222-2222-4222-8222-222222222222', quiz_id: 'qz', finished_at: null as string | null, quizzes: { questions: [mcq, tf, short] } }
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? allowed : null, error: null })),
+  rpc: vi.fn(),
   from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: attempt, error: null }) }) }) }),
 }
 const parse = vi.fn()
@@ -44,7 +47,7 @@ import { POST } from '@/app/api/ai/quiz/mark/route'
 
 const call = (body: object) => POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ attemptId: attempt.id, ...body }) }))
 beforeEach(() => {
-  user = { id: 'u1' }; allowed = true; attempt.finished_at = null; sb.rpc.mockClear(); parse.mockReset()
+  user = { id: 'u1' }; check = 'ok'; attempt.finished_at = null; adminRpc.mockClear(); parse.mockReset()
   parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { correct: true, feedback: 'Yes, NADH.' } })
   process.env.OPENAI_API_KEY = 'k'
 })
@@ -55,17 +58,17 @@ describe('POST /api/ai/quiz/mark', () => {
     const res = await call({ questionId: 'q3', answer: 'nadh' })
     expect(await res.json()).toEqual({ correct: true, feedback: 'Made by the cycle.' })
     expect(parse).not.toHaveBeenCalled()
-    expect(sb.rpc).not.toHaveBeenCalled()
+    expect(adminRpc).not.toHaveBeenCalled()
   })
   it('asks the AI for other answers, after the speed-limit check', async () => {
     const res = await call({ questionId: 'q3', answer: 'it produces NADH' })
     expect(await res.json()).toEqual({ correct: true, feedback: 'Yes, NADH.' })
-    expect(sb.rpc.mock.calls.map(c => c[0])).toEqual(['ai_request_allowed'])
+    expect(adminCalls()).toEqual([['ai_check', 0]]) // free marking: speed-checked, never charged
   })
   it('refuses when going too fast, for finished attempts, and for non-short questions', async () => {
-    allowed = false
+    check = 'rate_limited'
     expect((await call({ questionId: 'q3', answer: 'something else' })).status).toBe(429)
-    allowed = true
+    check = 'ok'
     attempt.finished_at = 'yesterday'
     expect((await call({ questionId: 'q3', answer: 'something else' })).status).toBe(409)
     attempt.finished_at = null

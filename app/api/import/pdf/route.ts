@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { MAX_PDF_PAGES, pdfToNote } from '@/lib/ai/pdfToNote'
 import { isAiConfigured } from '@/lib/ai/openai'
 import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
+import { pdfActionCost } from '@/lib/billing/plans'
 
 // A long PDF can take several minutes to convert. 300 s is the most Vercel's Hobby plan allows
 // (a higher value fails the deploy); very long PDFs may time out. On Pro this can go up to 800.
@@ -53,9 +54,10 @@ export async function POST(request: Request) {
     if (countPages(bytes) > MAX_PDF_PAGES) return NextResponse.json({ error: 'too_long' }, { status: 413 })
 
     const displayName = fileName.replace(/^[0-9a-f-]{36}-/i, '')
-    // runAiAction checks the speed limit and maps AI errors (checked last, so rejections above are free).
-    // request.signal: if the student cancels or closes the tab, the model call stops too.
-    const result = await runAiAction(sb, client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { signal: request.signal })
+    // runAiAction checks the plan (checked last, so rejections above are free) and charges 1 AI
+    // action per 10 pages only if the conversion succeeds. request.signal: if the student cancels
+    // or closes the tab, the model call stops too.
+    const result = await runAiAction(client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { userId: user.id, cost: pdfActionCost(countPages(bytes)), signal: request.signal })
     return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
   } finally {
     // The PDF is only needed for this one conversion

@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const NOTE_ID = '11111111-1111-4111-8111-111111111111'
 let note: { id: string; title: string; content_md: string } | null
+let check = 'ok'
+const adminRpc = vi.fn(async (...a: unknown[]) => ({ data: a[0] === 'ai_check' ? check : null, error: null }))
+vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc: adminRpc }) }))
 const sb = {
   auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
-  rpc: vi.fn(async (fn: string) => ({ data: fn === 'ai_request_allowed' ? true : null, error: null })),
   from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: note, error: null }) }) }) }),
 }
 const parse = vi.fn()
@@ -13,10 +15,10 @@ vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/
 import { POST } from '@/app/api/ai/flashcards/route'
 
 const call = () => POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ noteId: NOTE_ID }) }))
-const fns = () => sb.rpc.mock.calls.map(c => c[0])
+const fns = () => adminRpc.mock.calls.map(c => c[0])
 beforeEach(() => {
   note = { id: NOTE_ID, title: 'Krebs', content_md: 'The Krebs cycle happens in the matrix. '.repeat(3) }
-  sb.rpc.mockClear(); parse.mockReset(); process.env.OPENAI_API_KEY = 'k'
+  adminRpc.mockClear(); check = 'ok'; parse.mockReset(); process.env.OPENAI_API_KEY = 'k'
 })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
@@ -25,7 +27,7 @@ describe('POST /api/ai/flashcards', () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { cards: [{ front: ' Where? ', back: 'Matrix' }] } })
     const res = await call()
     expect(await res.json()).toEqual({ cards: [{ front: 'Where?', back: 'Matrix' }] })
-    expect(fns()).toEqual(['ai_request_allowed'])
+    expect(fns()).toEqual(['ai_check', 'ai_charge'])
   })
   it('refuses very short notes without calling the AI', async () => {
     note = { id: NOTE_ID, title: 'x', content_md: 'Too short.' }

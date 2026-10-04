@@ -8,7 +8,7 @@ const fail = (status: number, error: string) => ({ response: NextResponse.json({
 // Shared start of every "AI from a note" route: signed in, a valid noteId, and the note read
 // with the student's own session (row-level security means it can only be their note).
 export async function readOwnNote(request: Request): Promise<
-  { sb: SupabaseClient; note: { id: string; title: string; content_md: string }; body: Record<string, unknown> } | { response: Response }
+  { sb: SupabaseClient; note: { id: string; title: string; content_md: string }; body: Record<string, unknown>; userId: string } | { response: Response }
 > {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
@@ -18,5 +18,5 @@ export async function readOwnNote(request: Request): Promise<
   if (typeof noteId !== 'string' || !UUID.test(noteId)) return fail(400, 'bad_request')
   const { data: note } = await sb.from('notes').select('id,title,content_md').eq('id', noteId).maybeSingle()
   if (!note) return fail(404, 'not_found')
-  return { sb, note, body: body! }
+  return { sb, note, body: body!, userId: user.id }
 }

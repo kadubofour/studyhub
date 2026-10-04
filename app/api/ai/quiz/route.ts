@@ -20,13 +20,13 @@ export async function POST(request: Request) {
   }
   if (wordCount(removeSummary(r.note.content_md)) < MIN_WORDS) return NextResponse.json({ error: 'too_short' }, { status: 422 })
 
-  const result = await runAiAction(r.sb, async client => {
+  const result = await runAiAction(async client => {
     const made = await makeQuiz(client, r.note, { count: count as number, types: typeList as QuestionType[] }, request.signal)
     const { data, error } = await r.sb.from('quizzes')
       .insert({ note_id: r.note.id, title: made.title, questions: made.questions })
       .select('id,note_id,title,questions,created_at').single()
     if (error || !data) throw new Error('save failed')
     return data as Quiz
-  }, { signal: request.signal })
+  }, { userId: r.userId, cost: 1, signal: request.signal })
   return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
 }
