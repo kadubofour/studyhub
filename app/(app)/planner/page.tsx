@@ -14,8 +14,16 @@ import { ClassDialog } from '@/components/planner/ClassDialog'
 import { createClass, deleteClass, listClasses, updateClass } from '@/lib/data/classes'
 import { bucketTasks, localDayKey, weekKeysFor } from '@/lib/dates'
 import type { ClassSlot, Course, Task } from '@/lib/types'
+import { ScanLine } from 'lucide-react'
+import { ScanDialog } from '@/components/scan/ScanDialog'
 
 type Tab = 'tasks' | 'week' | 'timetable'
+
+// Everything the planner shows; loaded at first and again after a scan adds items
+const loadPlanner = () => {
+  const sb = supabase()
+  return Promise.all([listCourses(sb), listOpenTasks(sb), listClasses(sb)])
+}
 
 export default function PlannerPage() {
   const { profile } = useProfile()
@@ -29,11 +37,10 @@ export default function PlannerPage() {
   const [loaded, setLoaded] = useState(false)
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [dialog, setDialog] = useState<Partial<ClassSlot> | null>(null)
+  const [scanning, setScanning] = useState(false)
 
   useEffect(() => {
-    const sb = supabase()
-    Promise.all([listCourses(sb), listOpenTasks(sb), listClasses(sb)])
-      .then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl); setLoaded(true) })
+    loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl); setLoaded(true) })
   }, [])
 
   const now = new Date()
@@ -128,7 +135,9 @@ export default function PlannerPage() {
 
   return (
     <div>
-      <PageHeader title="Planner" />
+      <PageHeader title="Planner" actions={<button className="btn" onClick={() => setScanning(true)}><ScanLine size={14} aria-hidden />Scan</button>} />
+      <ScanDialog open={scanning} onClose={() => setScanning(false)} initialTarget="planner"
+        onSaved={() => { loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl) }).catch(() => {}) }} />
       <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
         setCourses(next)
         listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks

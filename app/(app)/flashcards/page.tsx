@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Layers } from 'lucide-react'
+import { Plus, Layers, ScanLine } from 'lucide-react'
+import { ScanDialog } from '@/components/scan/ScanDialog'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Dialog } from '@/components/ui/Dialog'
 import { CourseTag } from '@/components/ui/CourseTag'
@@ -16,6 +17,7 @@ export default function FlashcardsPage() {
   const [decks, setDecks] = useState<DeckWithDue[] | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [open, setOpen] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [name, setName] = useState('')
   const [courseId, setCourseId] = useState('')
 
@@ -41,6 +43,7 @@ export default function FlashcardsPage() {
     <div>
       <PageHeader title="Flashcards" actions={<>
         {totalDue > 0 && <Link href="/review" className="btn-primary">Review all ({totalDue})</Link>}
+        <button className="btn" onClick={() => setScanning(true)}><ScanLine size={14} aria-hidden />Scan</button>
         <button className="btn" onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
       </>} />
       {decks?.length === 0 && (
@@ -86,6 +89,8 @@ export default function FlashcardsPage() {
           <div className="flex justify-end gap-2"><button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn-primary">Create</button></div>
         </form>
       </Dialog>
+      <ScanDialog open={scanning} onClose={() => setScanning(false)} initialTarget="cards"
+        onSaved={() => { listDecksWithDue(supabase(), new Date()).then(setDecks).catch(() => {}) }} />
     </div>
   )
 }

@@ -12,6 +12,17 @@ const CANNED: Record<string, unknown> = {
     { type: 'short', prompt: 'What molecule enters the cycle?', options: null, answer: 'Acetyl-CoA', explanation: 'Acetyl-CoA joins oxaloacetate.' },
   ] },
   mark: { correct: true, feedback: 'Yes, that means acetyl-CoA.' },
+  scan_cards: { cards: [{ front: 'What is the powerhouse of the cell?', back: 'The mitochondrion' }, { front: 'What do ribosomes make?', back: 'Proteins' }] },
+  scan_planner: {
+    tasks: [
+      { title: 'Cell biology essay', type: 'assignment', due_date: '2030-05-17', unsure: false },
+      { title: 'Midterm exam', type: 'exam', due_date: null, unsure: true },
+    ],
+    classes: [
+      { course: 'biology', day: 1, start: '09:00', end: '10:30', room: 'LT 2', kind: 'lecture', unsure: false },
+      { course: 'Chemistry', day: 3, start: '14:00', end: '16:00', room: null, kind: 'lab', unsure: true },
+    ],
+  },
 }
 
 export async function POST(request: Request) {
