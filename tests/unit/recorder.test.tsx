@@ -86,7 +86,7 @@ describe('Recorder', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
     expect(getUserMedia).toHaveBeenCalled()
     await act(async () => { vi.advanceTimersByTime(3000) })
-    expect(screen.getByText('0:03')).toBeTruthy()
+    expect(screen.getByRole('timer', { name: 'Recording time' }).textContent).toBe('0:03')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Stop & save' })) })
     const saved = finishRecording.mock.calls[0][2] as { title: string; userId: string; choice: string }
     expect(saved).toMatchObject({ title: 'Krebs cycle', userId: 'u1', choice: 'none' })

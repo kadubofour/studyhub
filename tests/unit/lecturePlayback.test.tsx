@@ -51,6 +51,18 @@ describe('LecturePlayer', () => {
   })
 })
 
+describe('LecturePlayer accessibility and refusals', () => {
+  it('the position reads as time, and a refused play leaves the button on Play', async () => {
+    const player = createRef<PlayerHandle>()
+    render(<LecturePlayer ref={player} urls={urls} parts={parts} duration={2700} onTime={vi.fn()} />)
+    await act(async () => { player.current!.seek(2500) })
+    expect(screen.getByLabelText('Position').getAttribute('aria-valuetext')).toBe('41:40 of 45:00')
+    vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(new Error('NotAllowedError'))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Play' })) })
+    expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
+  })
+})
+
 describe('TranscriptView', () => {
   const lines = [{ start: 0, end: 4, text: 'Welcome to the lecture.' }, { start: 75, end: 80, text: 'The Krebs cycle.' }, { start: 90, end: 95, text: 'It happens in the matrix.' }]
   it('tapping a line seeks to it, and the line being spoken is marked', () => {

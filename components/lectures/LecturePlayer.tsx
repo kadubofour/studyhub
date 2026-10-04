@@ -27,11 +27,18 @@ export function LecturePlayer({ urls, parts, duration, onTime, ref }: {
 
   useImperativeHandle(ref, () => ({ seek: go }))
 
+  // Browsers may refuse to play (autoplay rules, a file that won't load): stay on Play then
+  function play(el: HTMLAudioElement) {
+    Promise.resolve(el.play())
+      .then(() => { setPlaying(true); wasPlaying.current = true })
+      .catch(() => { setPlaying(false); wasPlaying.current = false })
+  }
+
   function loaded() {
     const el = audio.current
     if (!el) return
     if (pendingOffset.current != null) { el.currentTime = pendingOffset.current; pendingOffset.current = null }
-    if (wasPlaying.current) void el.play()
+    if (wasPlaying.current) play(el)
   }
 
   function timeupdate() {
@@ -43,7 +50,8 @@ export function LecturePlayer({ urls, parts, duration, onTime, ref }: {
   }
 
   function ended() {
-    if (index + 1 < parts.length) { wasPlaying.current = true; pendingOffset.current = 0; setIndex(index + 1); void Promise.resolve().then(() => audio.current?.play()) }
+    // The next part's file loads, then loaded() carries on playing it
+    if (index + 1 < parts.length) { wasPlaying.current = true; pendingOffset.current = 0; setIndex(index + 1) }
     else { setPlaying(false); wasPlaying.current = false }
   }
 
@@ -51,7 +59,7 @@ export function LecturePlayer({ urls, parts, duration, onTime, ref }: {
     const el = audio.current
     if (!el) return
     if (playing) { el.pause(); setPlaying(false); wasPlaying.current = false }
-    else { void el.play(); setPlaying(true); wasPlaying.current = true }
+    else play(el)
   }
 
   return (
@@ -62,7 +70,7 @@ export function LecturePlayer({ urls, parts, duration, onTime, ref }: {
         <button type="button" className="btn-primary size-10 justify-center rounded-full p-0" aria-label={playing ? 'Pause' : 'Play'} onClick={toggle}>
           {playing ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}
         </button>
-        <input type="range" aria-label="Position" className="flex-1" min={0} max={Math.max(1, Math.round(duration))} step={1} value={Math.round(time)}
+        <input type="range" aria-label="Position" aria-valuetext={`${formatClock(time)} of ${formatClock(duration)}`} className="flex-1" min={0} max={Math.max(1, Math.round(duration))} step={1} value={Math.round(time)}
           onChange={e => go(Number(e.target.value))} />
         <span className="text-xs tabular-nums text-muted">{formatClock(time)} / {formatClock(duration)}</span>
       </div>
