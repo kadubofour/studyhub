@@ -88,3 +88,15 @@ describe('transcribing parts safely', () => {
     expect((await other.sb.rpc('save_lecture_part', { p_lecture: id, p_part: 0, p_segments: [] })).data).toBeNull()
   })
 })
+
+describe('lecture audio storage used', () => {
+  it('is the real size of the student\'s own audio files, counted on the server', async () => {
+    const u = await newUser(), other = await newUser()
+    const bytes = (n: number) => new Blob([new Uint8Array(n)], { type: 'audio/webm' })
+    await u.sb.storage.from('lectures').upload(`${u.id}/${crypto.randomUUID()}-0.webm`, bytes(1000), { contentType: 'audio/webm' })
+    await u.sb.storage.from('lectures').upload(`${u.id}/${crypto.randomUUID()}-1.webm`, bytes(500), { contentType: 'audio/webm' })
+    await other.sb.storage.from('lectures').upload(`${other.id}/${crypto.randomUUID()}-0.webm`, bytes(700), { contentType: 'audio/webm' })
+    expect((await u.sb.rpc('lecture_audio_bytes')).data).toBe(1500)
+    expect((await other.sb.rpc('lecture_audio_bytes')).data).toBe(700)
+  })
+})

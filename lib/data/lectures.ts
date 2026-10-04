@@ -33,9 +33,12 @@ export async function deleteLecture(sb: SupabaseClient, lecture: { id: string; p
   check(await sb.from('lectures').delete().eq('id', lecture.id))
 }
 
+// The real size of the student's audio files, counted by the server (the same figure storage
+// uses to stop uploads at the 300 MB limit)
 export async function audioUsed(sb: SupabaseClient): Promise<number> {
-  const rows = must(await sb.from('lectures').select('audio_bytes')) as { audio_bytes: number }[]
-  return rows.reduce((n, r) => n + Number(r.audio_bytes), 0)
+  const { data, error } = await sb.rpc('lecture_audio_bytes')
+  if (error) throw error
+  return Number(data ?? 0)
 }
 
 // Private audio: playable links that last a day, long enough for any listening session
