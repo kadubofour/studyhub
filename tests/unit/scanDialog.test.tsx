@@ -5,7 +5,11 @@ import type { Profile } from '@/lib/types'
 
 const runScan = vi.fn()
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
-vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'c1', name: 'Biology', color: '#1D9E75' }], createCourse: vi.fn() }))
+let coursesFail = false
+vi.mock('@/lib/data/courses', () => ({
+  listCourses: async () => { if (coursesFail) throw new Error('offline'); return [{ id: 'c1', name: 'Biology', color: '#1D9E75' }] },
+  createCourse: vi.fn(),
+}))
 vi.mock('@/lib/data/decks', () => ({ listDecksWithDue: async () => [], createDeck: async () => ({ id: 'd-new' }) }))
 vi.mock('@/lib/scan/scanClient', async orig => ({
   ...(await orig<typeof import('@/lib/scan/scanClient')>()),
@@ -28,7 +32,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
-beforeEach(() => { runScan.mockReset() })
+beforeEach(() => { runScan.mockReset(); coursesFail = false })
 afterEach(() => { cleanup(); delete process.env.NEXT_PUBLIC_BILLING_ENABLED })
 
 const openDialog = async (initialTarget: 'note' | 'cards' | 'planner' = 'note') => {
@@ -107,6 +111,35 @@ describe('ScanDialog', () => {
     runScan.mockResolvedValueOnce({ ok: false, code: 'daily_limit', message: 'x' })
     await act(async () => { fireEvent.click(scanButton(1)) })
     expect(screen.getByRole('link', { name: /Get Premium/ })).toBeTruthy()
+  })
+
+  it('a planner scan needs the course list; if it can\'t load, it says so and reads nothing', async () => {
+    coursesFail = true
+    await openDialog('planner')
+    await add(photo('timetable.jpg'))
+    await act(async () => { fireEvent.click(scanButton(1)) })
+    expect(screen.getByRole('alert').textContent).toBe('Couldn\'t load your courses. Check your connection and try again.')
+    expect(runScan).not.toHaveBeenCalled()
+    coursesFail = false
+    runScan.mockResolvedValue({ ok: true, value: { tasks: [], classes: [{ course: 'biology', day: 1, start: '09:00', end: '10:00', room: null, kind: 'lecture', unsure: false }] } })
+    await act(async () => { fireEvent.click(scanButton(1)) })
+    expect((screen.getByLabelText('Class 1 course') as HTMLSelectElement).value).toBe('c1') // matched now
+  })
+
+  it('camera inputs ask for JPEG, PNG or WebP, so phones convert HEIC photos', async () => {
+    await openDialog()
+    for (const label of ['Photos from camera', 'Retake photo']) {
+      expect(screen.getByLabelText(label).getAttribute('accept'), label).toBe('image/jpeg,image/png,image/webp')
+    }
+  })
+
+  it('after removing a page, focus moves to the next page, or to adding pages when none are left', async () => {
+    await openDialog()
+    await add(photo('a.jpg'), photo('b.jpg'))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove page 1' })) })
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Remove page 1')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove page 1' })) })
+    expect(document.activeElement?.textContent).toBe('Choose images or a PDF')
   })
 
   it('"Scan again" goes back to the same pages', async () => {

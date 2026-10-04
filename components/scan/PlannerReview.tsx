@@ -93,8 +93,10 @@ export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanA
                   {newNames.map(n => <option key={`new:${n}`} value={`new:${n}`}>Create course {n}</option>)}
                 </select>
                 {c.course.kind === 'new' && (
-                  <input aria-label={`Class ${i + 1} new course name`} placeholder="New course name" maxLength={80} value={c.course.name}
-                    onChange={e => renameCourse((c.course as { name: string }).name, e.target.value)} />
+                  <label className="field col-span-2 sm:col-span-3"><span>New course name</span>
+                    <input aria-label={`Class ${i + 1} new course name`} maxLength={80} value={c.course.name}
+                      onChange={e => renameCourse((c.course as { name: string }).name, e.target.value)} />
+                  </label>
                 )}
                 <select aria-label={`Class ${i + 1} day`} value={c.day} onChange={e => setClass(i, { day: Number(e.target.value) })}>
                   {DAYS.map((day, n) => <option key={day} value={n}>{day}</option>)}

@@ -44,6 +44,8 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved }: {
   const retakeInput = useRef<HTMLInputElement>(null)
   const retaking = useRef<number | null>(null)
   const abort = useRef<AbortController | null>(null)
+  const chooseButton = useRef<HTMLButtonElement>(null)
+  const focusAfterRemove = useRef<number | null>(null)
   const n = pageCount(pages)
 
   useEffect(() => { if (open) listCourses(supabase()).then(setCourses).catch(() => {}) }, [open])
@@ -90,13 +92,32 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved }: {
 
   function remove(i: number) {
     release(pages[i])
+    focusAfterRemove.current = i
     setPages(ps => ps.filter((_, j) => j !== i))
   }
 
+  // After removing a page, keep focus in the dialog: on the page that took its place (or the
+  // one before), or on "Choose images or a PDF" when no pages are left
+  useEffect(() => {
+    const i = focusAfterRemove.current
+    if (i == null) return
+    focusAfterRemove.current = null
+    if (!pages.length) { chooseButton.current?.focus(); return }
+    document.querySelector<HTMLButtonElement>(`[aria-label="Remove page ${Math.min(i, pages.length - 1) + 1}"]`)?.focus()
+  }, [pages])
+
   async function scan() {
+    setProblem(null)
+    if (target === 'planner') {
+      // Classes are matched to the student's courses, so the list must be there first
+      try { setCourses(await listCourses(supabase())) } catch {
+        setProblem({ code: 'courses', message: 'Couldn\'t load your courses. Check your connection and try again.' })
+        return
+      }
+    }
     const controller = new AbortController()
     abort.current = controller
-    setProblem(null); setStage('reading')
+    setStage('reading')
     try {
       const r = await runScan({ pages, target, userId: profile.id, today: localDayKey(new Date(), profile.timezone), signal: controller.signal })
       if (controller.signal.aborted) return
@@ -135,11 +156,11 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved }: {
           </label>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" className="btn justify-center" onClick={() => camera.current?.click()}><Camera size={14} aria-hidden />Take photos</button>
-            <button type="button" className="btn justify-center" onClick={() => chooser.current?.click()}><ImagePlus size={14} aria-hidden />Choose images or a PDF</button>
+            <button ref={chooseButton} type="button" className="btn justify-center" onClick={() => chooser.current?.click()}><ImagePlus size={14} aria-hidden />Choose images or a PDF</button>
           </div>
-          <input ref={camera} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-label="Photos from camera" onChange={e => void add(e.currentTarget)} />
+          <input ref={camera} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" tabIndex={-1} aria-label="Photos from camera" onChange={e => void add(e.currentTarget)} />
           <input ref={chooser} type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" className="sr-only" tabIndex={-1} aria-label="Images or a PDF to scan" onChange={e => void add(e.currentTarget)} />
-          <input ref={retakeInput} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-label="Retake photo" onChange={e => void retake(e.currentTarget)} />
+          <input ref={retakeInput} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" tabIndex={-1} aria-label="Retake photo" onChange={e => void retake(e.currentTarget)} />
           {pages.length > 0
             ? <ScanPages pages={pages} onMove={move} onRemove={remove} onRetake={i => { retaking.current = i; retakeInput.current?.click() }} />
             : <p className="rounded-2xl border-2 border-dashed border-line px-4 py-6 text-center text-sm text-muted">Add up to 10 pages: photos of notes, slides, a whiteboard or a timetable, or one short PDF.</p>}

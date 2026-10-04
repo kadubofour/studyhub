@@ -7,7 +7,7 @@ export function ScanPages({ pages, onMove, onRetake, onRemove }: {
   pages: ScanPage[]; onMove: (i: number, by: -1 | 1) => void; onRetake: (i: number) => void; onRemove: (i: number) => void
 }) {
   return (
-    <ol className="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="Pages">
+    <ol className="grid max-h-80 grid-cols-2 gap-2 overflow-y-auto" aria-label="Pages">
       {pages.map((p, i) => (
         <li key={p.id} className="relative overflow-hidden rounded-xl border border-line bg-surface">
           {p.preview
@@ -23,10 +23,10 @@ export function ScanPages({ pages, onMove, onRetake, onRemove }: {
           <span className="absolute left-1 top-1 rounded-md bg-raised/90 px-1.5 text-[11px] font-medium">{i + 1}</span>
           {p.preview && <span className="sr-only">{p.file.name}</span>}
           <div className="flex justify-between border-t border-line bg-raised p-0.5">
-            <button type="button" className="btn-ghost px-1" aria-label={`Move page ${i + 1} earlier`} disabled={i === 0} onClick={() => onMove(i, -1)}><ArrowLeft size={14} aria-hidden /></button>
-            {p.kind === 'image' && <button type="button" className="btn-ghost px-1" aria-label={`Retake page ${i + 1}`} onClick={() => onRetake(i)}><Camera size={14} aria-hidden /></button>}
-            <button type="button" className="btn-ghost px-1" aria-label={`Remove page ${i + 1}`} onClick={() => onRemove(i)}><X size={14} aria-hidden /></button>
-            <button type="button" className="btn-ghost px-1" aria-label={`Move page ${i + 1} later`} disabled={i === pages.length - 1} onClick={() => onMove(i, 1)}><ArrowRight size={14} aria-hidden /></button>
+            <button type="button" className="btn-ghost size-8 justify-center p-0" aria-label={`Move page ${i + 1} earlier`} disabled={i === 0} onClick={() => onMove(i, -1)}><ArrowLeft size={14} aria-hidden /></button>
+            {p.kind === 'image' && <button type="button" className="btn-ghost size-8 justify-center p-0" aria-label={`Retake page ${i + 1}`} onClick={() => onRetake(i)}><Camera size={14} aria-hidden /></button>}
+            <button type="button" className="btn-ghost size-8 justify-center p-0" aria-label={`Remove page ${i + 1}`} onClick={() => onRemove(i)}><X size={14} aria-hidden /></button>
+            <button type="button" className="btn-ghost size-8 justify-center p-0" aria-label={`Move page ${i + 1} later`} disabled={i === pages.length - 1} onClick={() => onMove(i, 1)}><ArrowRight size={14} aria-hidden /></button>
           </div>
         </li>
       ))}

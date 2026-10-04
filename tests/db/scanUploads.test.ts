@@ -15,6 +15,14 @@ describe('imports bucket: scan pages', () => {
     }
     expect((await u.sb.storage.from('imports').remove([path])).error).toBeNull()
   })
+  it('a student can\'t read or delete another student\'s scan pages', async () => {
+    const owner = await newUser(), other = await newUser()
+    const path = `${owner.id}/${crypto.randomUUID()}-scan-1.jpg`
+    expect((await owner.sb.storage.from('imports').upload(path, jpeg(), { contentType: 'image/jpeg' })).error).toBeNull()
+    expect((await other.sb.storage.from('imports').download(path)).data).toBeNull()
+    await other.sb.storage.from('imports').remove([path])
+    expect((await owner.sb.storage.from('imports').download(path)).data).not.toBeNull() // still there
+  })
   it('other image types and other students\' folders are refused', async () => {
     const u = await newUser(), other = await newUser()
     expect((await u.sb.storage.from('imports').upload(`${u.id}/a.gif`, blob('image/gif'), { contentType: 'image/gif' })).error).not.toBeNull()
