@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { SummaryTab } from './SummaryTab'
 import { CardsTab } from './CardsTab'
 import { QuizTab } from './QuizTab'
+import { freeAllowanceText, usePlan } from '@/components/billing/usePlan'
 
 type Tab = 'summary' | 'cards' | 'quiz'
 const TABS: [Tab, string][] = [['summary', 'Summary'], ['cards', 'Cards'], ['quiz', 'Quiz']]
@@ -14,6 +15,7 @@ export function StudyPanel({ note, onClose, prepare, applyContent }: {
   onClose: () => void; prepare: () => Promise<void>; applyContent: (update: (current: string) => string) => void
 }) {
   const [tab, setTab] = useState<Tab>('summary')
+  const plan = usePlan()
   return (
     <aside aria-label="Study" className="no-print fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto rounded-t-2xl border border-line bg-raised p-4 shadow-lg md:inset-x-auto md:bottom-0 md:right-0 md:top-[49px] md:max-h-none md:w-[360px] md:rounded-none md:border-y-0 md:border-r-0">
       <div className="mb-3 flex items-center justify-between">
@@ -29,6 +31,7 @@ export function StudyPanel({ note, onClose, prepare, applyContent }: {
       {tab === 'summary' && <SummaryTab note={note} prepare={prepare} applyContent={applyContent} />}
       {tab === 'cards' && <CardsTab note={note} prepare={prepare} />}
       {tab === 'quiz' && <QuizTab note={note} prepare={prepare} />}
+      {plan.billing && !plan.loading && !plan.isPremium && <p className="mt-4 text-xs text-muted" aria-live="polite">{freeAllowanceText(plan.usedToday)}</p>}
     </aside>
   )
 }

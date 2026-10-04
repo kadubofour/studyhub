@@ -20,6 +20,8 @@ const MESSAGES: Record<string, string> = {
   refused: 'This PDF couldn\'t be converted by AI, so only the plain text was kept.',
   empty: 'The AI couldn\'t find text in this PDF, so only the plain text was kept.',
   rate_limited: 'You\'re going a bit fast, so only the plain text was kept. Try AI import again in a minute.',
+  daily_limit: 'You\'ve used today\'s free AI actions (PDFs use 1 per 10 pages), so only the plain text was kept. Premium has no daily limit.',
+  fair_use: 'You\'ve reached this month\'s fair use, so only the plain text was kept.',
   too_long: 'This PDF is too long for AI import, so only the plain text was kept.',
   too_large: 'This PDF is too large for AI import, so only the plain text was kept.',
 }

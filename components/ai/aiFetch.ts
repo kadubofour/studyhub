@@ -1,5 +1,8 @@
 'use client'
 
+// Fired after any AI request succeeds, so usage counters refresh
+export const AI_USED = 'studyhub:ai-used'
+
 export const AI_MESSAGES: Record<string, string> = {
   rate_limited: 'You\'re going a bit fast. Try again in a minute.',
   busy: 'Couldn\'t reach the AI. Try again.',
@@ -11,6 +14,8 @@ export const AI_MESSAGES: Record<string, string> = {
   empty: 'The AI couldn\'t find enough in this note to work with.',
   not_found: 'This note no longer exists.',
   unauthorized: 'You\'ve been signed out. Log in again.',
+  daily_limit: 'You\'ve used today\'s free AI actions.',
+  fair_use: 'You\'ve reached fair use for this month.',
 }
 
 // POST to an AI route; errors come back as plain words.
@@ -19,7 +24,11 @@ export async function postAi<T>(url: string, body: object, signal?: AbortSignal)
 > {
   try {
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal })
-    if (res.ok) return { ok: true, value: await res.json() as T }
+    if (res.ok) {
+      const value = await res.json() as T
+      window.dispatchEvent(new Event(AI_USED))
+      return { ok: true, value }
+    }
     const error = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'ai_failed'
     return { ok: false, error, message: AI_MESSAGES[error] ?? AI_MESSAGES.ai_failed }
   } catch (e) {

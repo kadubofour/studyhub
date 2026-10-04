@@ -4,7 +4,7 @@ import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 
 const createDeck = vi.fn(async (_sb: unknown, input: { name: string }) => ({ id: 'd-new', course_id: null, name: input.name }))
 const createCards = vi.fn(async () => [])
-vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
+vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ from: () => ({ select: () => ({ maybeSingle: async () => ({ data: null }), gte: async () => ({ data: [] }) }) }) }) }))
 vi.mock('@/lib/data/decks', () => ({ listDecksWithDue: async () => [{ id: 'd1', name: 'Biology', course_id: null, due: 0, total: 3 }], createDeck: (...a: [unknown, { name: string }]) => createDeck(...a) }))
 vi.mock('@/lib/data/cards', () => ({ createCards: (...a: unknown[]) => createCards(...(a as [])) }))
 
@@ -51,6 +51,21 @@ describe('StudyPanel — summary', () => {
     setup()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '✦ Summarise' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/too short/i)
+  })
+  it('shows the Get Premium prompt when the free limit is reached', async () => {
+    process.env.NEXT_PUBLIC_BILLING_ENABLED = '1'
+    fetchMock.mockImplementation(() => fail(402, 'daily_limit'))
+    setup()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '✦ Summarise' })) })
+    expect(screen.getByText("You've used today's 10 free AI actions")).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Get Premium/ }).getAttribute('href')).toBe('/plans')
+    delete process.env.NEXT_PUBLIC_BILLING_ENABLED
+  })
+  it('shows free actions left under the tools on the Free plan', async () => {
+    process.env.NEXT_PUBLIC_BILLING_ENABLED = '1'
+    setup()
+    expect(await screen.findByText('10 of 10 free AI actions left today')).toBeTruthy()
+    delete process.env.NEXT_PUBLIC_BILLING_ENABLED
   })
 })
 

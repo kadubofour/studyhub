@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { listQuizSummaries } from '@/lib/data/quizzes'
 import { postAi } from '@/components/ai/aiFetch'
+import { AiError } from '@/components/ai/AiError'
 import type { Quiz, QuestionType } from '@/lib/quiz/types'
 
 const TYPES: [QuestionType, string][] = [['mcq', 'Multiple choice'], ['true_false', 'True/false'], ['short', 'Short answer']]
@@ -15,7 +16,7 @@ export function QuizTab({ note, prepare }: { note: { id: string }; prepare: () =
   const [types, setTypes] = useState<QuestionType[]>(['mcq', 'true_false', 'short'])
   const [past, setPast] = useState<Awaited<ReturnType<typeof listQuizSummaries>>>([])
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ code: string; message: string } | null>(null)
 
   useEffect(() => { listQuizSummaries(supabase(), note.id).then(setPast).catch(() => {}) }, [note.id])
 
@@ -25,7 +26,7 @@ export function QuizTab({ note, prepare }: { note: { id: string }; prepare: () =
     const r = await postAi<Quiz>('/api/ai/quiz', { noteId: note.id, count, types })
     setBusy(false)
     if (r.ok) router.push(`/quiz/${r.value.id}`)
-    else setError(r.message)
+    else setError({ code: r.error, message: r.message })
   }
 
   return (
@@ -41,7 +42,7 @@ export function QuizTab({ note, prepare }: { note: { id: string }; prepare: () =
         ))}
       </fieldset>
       <button type="button" className="btn-primary" disabled={busy || !types.length} onClick={create}>{busy ? 'Writing quiz…' : '✦ New quiz'}</button>
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {error && <AiError code={error.code} message={error.message} />}
       {past.length > 0 && (
         <div className="pt-2">
           <h3 className="section-label">Past quizzes</h3>
