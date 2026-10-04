@@ -22,6 +22,8 @@ export type RecorderDeps = {
   Recognition: RecognitionCtor | null
   store: RecordingStore
   partSeconds: number
+  /** Milliseconds, for measuring recording time (performance.now() unless a test supplies one) */
+  now?: () => number
 }
 type Stage = 'setup' | 'recording' | 'saving' | 'failed'
 
@@ -80,7 +82,15 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     listCourses(sb).then(setCourses).catch(() => {})
     audioUsed(sb).then(setUsed).catch(() => {})
   }, [])
-  useEffect(() => () => { if (clock.current) clearInterval(clock.current); stopMeter(); stream.current?.getTracks().forEach(t => t.stop()) }, [])
+  const wake = useRef<WakeLockSentinel | null>(null)
+  const releaseWake = () => { void wake.current?.release().catch(() => {}); wake.current = null }
+  useEffect(() => () => {
+    if (clock.current) clearInterval(clock.current)
+    live.current?.stop() // otherwise speech recognition keeps restarting with the mic on after leaving
+    releaseWake()
+    stopMeter()
+    stream.current?.getTracks().forEach(t => t.stop())
+  }, [])
 
   const full = storageState(used) === 'full'
   const type = deps.MediaRecorder ? pickAudioType(t => deps.MediaRecorder!.isTypeSupported(t)) : null
@@ -106,7 +116,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     session.current = s
     await deps.store.saveSession(s)
     const rec = createPartRecorder({
-      stream: media, Ctor: deps.MediaRecorder, recorderType: type.recorderType, mime: type.mime, partSeconds: deps.partSeconds,
+      stream: media, Ctor: deps.MediaRecorder, recorderType: type.recorderType, mime: type.mime, partSeconds: deps.partSeconds, now: deps.now,
       onChunk: (i, chunk) => { void deps.store.addChunk(s.id, i, chunk) },
       onPart: async part => {
         // This part is finished and the next one (if recording goes on) has started, length
@@ -142,6 +152,9 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
       live.current.start()
     }
     setStage('recording')
+    // Keep the screen on where the browser allows it: phones pause pages whose screen is off
+    const wl = (navigator as Navigator & { wakeLock?: { request(t: 'screen'): Promise<WakeLockSentinel> } }).wakeLock
+    wl?.request('screen').then(l => { wake.current = l }).catch(() => {})
     clock.current = setInterval(() => {
       rec.tick()
       const t = rec.elapsed()
@@ -164,6 +177,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     setStage('saving')
     await recorder.current.stop()
     stopMeter()
+    releaseWake()
     stream.current?.getTracks().forEach(t => t.stop())
     // The unfinished last part was closed by stop(); drop the empty "next part" placeholder
     if (session.current) session.current = { ...session.current, parts: session.current.parts.filter(p => p.duration != null || p.uploaded) }

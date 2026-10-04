@@ -12,14 +12,18 @@ class FakeRecorder {
   emit(text: string) { this.ondataavailable?.({ data: new Blob([text]) }) }
   stop() { this.state = 'inactive'; this.emit('last'); this.onstop?.() }
 }
+let clock = 0 // ms, standing in for performance.now()
 const setup = (partSeconds = 3) => {
   made.length = 0
+  clock = 0
   const chunks: [number, number][] = [], parts: RecordedPart[] = []
   const r = createPartRecorder({
     stream: {} as MediaStream, Ctor: FakeRecorder as never, recorderType: 'audio/webm;codecs=opus', mime: 'audio/webm', partSeconds,
-    onChunk: (i, blob) => chunks.push([i, blob.size]), onPart: p => { parts.push(p) },
+    onChunk: (i, blob) => chunks.push([i, blob.size]), onPart: p => { parts.push(p) }, now: () => clock,
   })
-  return { r, chunks, parts }
+  // One second passes and the page's timer fires
+  const step = (ms = 1000) => { clock += ms; r.tick() }
+  return { r, chunks, parts, step }
 }
 
 describe('pickAudioType', () => {
@@ -40,26 +44,36 @@ describe('createPartRecorder', () => {
     expect(chunks).toEqual([[0, 3]])
   })
   it('starts a new file every part, so each part is complete, timed on the recording clock', async () => {
-    const { r, parts } = setup(3)
+    const { r, parts, step } = setup(3)
     r.start()
-    r.tick(); r.tick(); r.tick() // 3 s: part 0 is full
+    step(); step(); step() // 3 s: part 0 is full
     expect(made).toHaveLength(2)
-    r.tick()
+    step()
     await r.stop()
     expect(parts.map(p => [p.index, p.start, p.duration])).toEqual([[0, 0, 3], [1, 3, 1]])
     expect(parts[0].blob.type).toBe('audio/webm')
   })
   it('doesn\'t count paused time', async () => {
-    const { r, parts } = setup(100)
+    const { r, parts, step } = setup(100)
     r.start()
-    r.tick()
+    step()
     r.pause()
-    r.tick(); r.tick()
+    step(); step()
     expect(made[0].state).toBe('paused')
     r.resume()
-    r.tick()
+    step()
     expect(r.elapsed()).toBe(2)
     await r.stop()
     expect(parts[0].duration).toBe(2)
+  })
+  it('measures real time, so a phone that slows the page\'s timer (screen off) keeps parts and times right', async () => {
+    const { r, parts, step } = setup(3)
+    r.start()
+    step(4500) // the timer fired once in 4.5 s
+    expect(r.elapsed()).toBe(4.5)
+    expect(made).toHaveLength(2)
+    clock += 500
+    await r.stop()
+    expect(parts.map(p => [p.start, p.duration])).toEqual([[0, 4.5], [4.5, 0.5]])
   })
 })
