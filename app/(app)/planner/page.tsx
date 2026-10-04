@@ -14,8 +14,7 @@ import { ClassDialog } from '@/components/planner/ClassDialog'
 import { createClass, deleteClass, listClasses, updateClass } from '@/lib/data/classes'
 import { bucketTasks, localDayKey, weekKeysFor } from '@/lib/dates'
 import type { ClassSlot, Course, Task } from '@/lib/types'
-import { ScanLine } from 'lucide-react'
-import { ScanDialog } from '@/components/scan/ScanDialog'
+import { useScanSaved } from '@/lib/scan/events'
 
 type Tab = 'tasks' | 'week' | 'timetable'
 
@@ -37,7 +36,8 @@ export default function PlannerPage() {
   const [loaded, setLoaded] = useState(false)
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [dialog, setDialog] = useState<Partial<ClassSlot> | null>(null)
-  const [scanning, setScanning] = useState(false)
+  // Scan (in the app's sidebar) saved tasks or classes: show them
+  useScanSaved(() => { loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl) }).catch(() => {}) })
 
   useEffect(() => {
     loadPlanner().then(([c, t, cl]) => {
@@ -139,9 +139,7 @@ export default function PlannerPage() {
 
   return (
     <div>
-      <PageHeader title="Planner" actions={<button className="btn" onClick={() => setScanning(true)}><ScanLine size={14} aria-hidden />Scan</button>} />
-      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget="planner"
-        onSaved={() => { loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl) }).catch(() => {}) }} />}
+      <PageHeader title="Planner" />
       <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
         setCourses(next)
         listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks

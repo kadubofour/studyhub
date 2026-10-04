@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: 
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import PlannerPage from '@/app/(app)/planner/page'
+import { SCAN_SAVED } from '@/lib/scan/events'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 afterEach(() => cleanup())
@@ -29,5 +30,13 @@ describe('Planner page', () => {
     expect(screen.getByText('Calc problem set', { exact: true })).toBeTruthy()
     await act(async () => { finishLoad([]) }) // the first load answers late, from before the task existed
     expect(screen.getByText('Calc problem set', { exact: true })).toBeTruthy()
+  })
+
+  it('reloads when a scan saves planner items', async () => {
+    await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><PlannerPage /></ToastProvider></ProfileProvider>) })
+    await act(async () => { finishLoad([]) })
+    await act(async () => { window.dispatchEvent(new Event(SCAN_SAVED)) })
+    await act(async () => { finishLoad([{ id: 't9', course_id: null, title: 'Cell biology essay', type: 'assignment', due_at: null, priority: 'normal', done_at: null, created_at: '' }]) })
+    expect(screen.getByText('Cell biology essay')).toBeTruthy()
   })
 })

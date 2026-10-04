@@ -1,11 +1,14 @@
 'use client'
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, ScanLine,
 } from 'lucide-react'
+import { ScanDialog } from '@/components/scan/ScanDialog'
+import { announceScanSaved } from '@/lib/scan/events'
+import type { ScanTarget } from '@/lib/ai/scan'
 import { useTheme } from 'next-themes'
 import { OfflineBanner } from './OfflineBanner'
 import { PremiumBadge } from '@/components/billing/PremiumBadge'
@@ -26,12 +29,16 @@ const NAV = [
 ]
 const MOBILE = NAV.slice(0, 5)
 const noopSubscribe = () => () => {}
+// Scan starts on what the current page holds; the student can change it in the dialog
+const scanTargetFor = (path: string): ScanTarget =>
+  path.startsWith('/planner') ? 'planner' : path.startsWith('/flashcards') || path.startsWith('/review') ? 'cards' : 'note'
 
 export function AppShell({ children, initialCollapsed = false }: { children: React.ReactNode; initialCollapsed?: boolean }) {
   const path = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
   const { profile, setProfile } = useProfile()
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
+  const [scanning, setScanning] = useState(false)
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const dark = mounted && resolvedTheme === 'dark'
@@ -77,6 +84,10 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 <Icon size={17} aria-hidden />{label}
               </Link>
             ))}
+            <button type="button" onClick={() => setScanning(true)}
+              className="mt-2 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+              <ScanLine size={17} aria-hidden />Scan
+            </button>
           </nav>
           <div className="mt-auto flex flex-col gap-0.5">
             <button className="btn-ghost" onClick={toggleTheme}>
@@ -99,14 +110,22 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       </div>
       {!immersive && (
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">
-          {MOBILE.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} aria-current={active(href) ? 'page' : undefined}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] ${active(href) ? 'text-accent' : 'text-muted'}`}>
-              <Icon size={19} aria-hidden />{label}
-            </Link>
+          {MOBILE.map(({ href, label, icon: Icon }, i) => (
+            <span key={href} className="contents">
+              {i === 2 && (
+                <button type="button" onClick={() => setScanning(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] text-muted">
+                  <ScanLine size={19} aria-hidden />Scan
+                </button>
+              )}
+              <Link href={href} aria-current={active(href) ? 'page' : undefined}
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] ${active(href) ? 'text-accent' : 'text-muted'}`}>
+                <Icon size={19} aria-hidden />{label}
+              </Link>
+            </span>
           ))}
         </nav>
       )}
+      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>
   )
 }
