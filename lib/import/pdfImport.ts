@@ -29,7 +29,7 @@ const MESSAGES: Record<string, string> = {
   too_large: 'This PDF is too large for AI import, so only the plain text was kept.',
 }
 
-async function loadPdf(file: File) {
+export async function loadPdf(file: File) {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
   return pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
