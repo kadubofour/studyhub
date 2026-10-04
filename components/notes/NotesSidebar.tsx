@@ -183,7 +183,7 @@ export function NotesSidebar() {
 
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
       <ImportDialog open={importing} onClose={() => setImporting(false)} courses={courses} onImported={() => setVersion(v => v + 1)} />
-      <ScanDialog open={scanning} onClose={() => setScanning(false)} initialTarget="note" onSaved={() => setVersion(v => v + 1)} />
+      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget="note" onSaved={() => setVersion(v => v + 1)} />}
     </div>
   )
 }

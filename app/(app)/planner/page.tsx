@@ -40,7 +40,11 @@ export default function PlannerPage() {
   const [scanning, setScanning] = useState(false)
 
   useEffect(() => {
-    loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl); setLoaded(true) })
+    loadPlanner().then(([c, t, cl]) => {
+      setCourses(c); setClasses(cl); setLoaded(true)
+      // Keep tasks added while this was loading: the list fetched before they existed lacks them
+      setTasks(current => [...t, ...current.filter(x => !t.some(y => y.id === x.id))])
+    })
   }, [])
 
   const now = new Date()
@@ -136,8 +140,8 @@ export default function PlannerPage() {
   return (
     <div>
       <PageHeader title="Planner" actions={<button className="btn" onClick={() => setScanning(true)}><ScanLine size={14} aria-hidden />Scan</button>} />
-      <ScanDialog open={scanning} onClose={() => setScanning(false)} initialTarget="planner"
-        onSaved={() => { loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl) }).catch(() => {}) }} />
+      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget="planner"
+        onSaved={() => { loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl) }).catch(() => {}) }} />}
       <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
         setCourses(next)
         listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks

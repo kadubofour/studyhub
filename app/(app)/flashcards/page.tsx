@@ -89,8 +89,8 @@ export default function FlashcardsPage() {
           <div className="flex justify-end gap-2"><button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn-primary">Create</button></div>
         </form>
       </Dialog>
-      <ScanDialog open={scanning} onClose={() => setScanning(false)} initialTarget="cards"
-        onSaved={() => { listDecksWithDue(supabase(), new Date()).then(setDecks).catch(() => {}) }} />
+      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget="cards"
+        onSaved={() => { listDecksWithDue(supabase(), new Date()).then(setDecks).catch(() => {}) }} />}
     </div>
   )
 }
