@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { memoryStore, type LocalSession } from '@/lib/lectures/localStore'
-import { finishRecording, partPath, uploadPart } from '@/lib/lectures/saveRecording'
+import { finishRecording, partPath, uploadPart, uploadPartFile } from '@/lib/lectures/saveRecording'
 
 let failUploads = false
 const uploads: string[] = []
@@ -70,5 +70,20 @@ describe('finishRecording', () => {
     expect(saved).toBeNull()
     expect(await store.sessions()).toHaveLength(1)
     await expect(finishRecording(sb, memoryStore(), session({ parts: [] }))).rejects.toThrow('nothing_recorded')
+  })
+})
+
+describe('uploadPartFile', () => {
+  const part = { index: 0, start: 0, duration: 5, blob: blob(10) }
+  const s = session()
+  it('tries a failed upload again before giving up', async () => {
+    let calls = 0
+    const flaky = { storage: { from: () => ({ upload: async () => { calls++; return { error: calls < 3 ? { message: 'offline' } : null } } }) } } as never
+    expect(await uploadPartFile(flaky, s, part, { wait: async () => {} })).toEqual({ path: 'u1/L1-0.webm', bytes: 10 })
+    expect(calls).toBe(3)
+  })
+  it('gives up on an upload that hangs, so Stop can offer Retry upload', async () => {
+    const hangs = { storage: { from: () => ({ upload: () => new Promise(() => {}) }) } } as never
+    await expect(uploadPartFile(hangs, s, part, { attempts: 1, timeoutMs: 20, wait: async () => {} })).rejects.toThrow('upload_failed')
   })
 })

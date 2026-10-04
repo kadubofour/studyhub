@@ -13,13 +13,26 @@ export function withPart(s: LocalSession, part: LocalPart): LocalSession {
   return { ...s, parts: [...s.parts.filter(p => p.index !== part.index), part].sort((a, b) => a.index - b.index) }
 }
 
-// Upload one part's file; throws 'upload_failed'. The caller records the result in its latest
-// session (others may have changed it during a slow upload).
-export async function uploadPartFile(sb: SupabaseClient, s: Pick<LocalSession, 'userId' | 'id' | 'ext' | 'mime'>, part: RecordedPart): Promise<{ path: string; bytes: number }> {
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+
+// Upload one part's file, trying again after a short wait when it fails (campus Wi-Fi drops) and
+// giving up on an attempt that hangs. Throws 'upload_failed'; the part stays on the device. The
+// caller records the result in its latest session (others may have changed it meanwhile).
+export async function uploadPartFile(
+  sb: SupabaseClient, s: Pick<LocalSession, 'userId' | 'id' | 'ext' | 'mime'>, part: RecordedPart,
+  o: { attempts?: number; timeoutMs?: number; wait?: (ms: number) => Promise<void> } = {},
+): Promise<{ path: string; bytes: number }> {
+  const attempts = o.attempts ?? 3, timeoutMs = o.timeoutMs ?? 90_000, wait = o.wait ?? sleep
   const path = partPath(s.userId, s.id, part.index, s.ext)
-  const { error } = await sb.storage.from('lectures').upload(path, part.blob, { contentType: s.mime, upsert: true })
-  if (error) throw new Error('upload_failed')
-  return { path, bytes: part.blob.size }
+  for (let i = 0; i < attempts; i++) {
+    if (i) await wait(500 * 3 ** (i - 1)) // 0.5 s, then 1.5 s
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const gaveUp = new Promise<{ error: string }>(resolve => { timer = setTimeout(() => resolve({ error: 'timeout' }), timeoutMs) })
+    const { error } = await Promise.race([sb.storage.from('lectures').upload(path, part.blob, { contentType: s.mime, upsert: true }), gaveUp])
+    clearTimeout(timer)
+    if (!error) return { path, bytes: part.blob.size }
+  }
+  throw new Error('upload_failed')
 }
 
 // Upload one part and record the result in the safety copy either way; a failed upload throws
