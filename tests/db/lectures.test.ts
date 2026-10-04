@@ -58,3 +58,33 @@ describe('accurate transcripts: Premium, 20 hours a month', () => {
     expect((await u.sb.from('transcription_usage').select('id')).data).toEqual([])
   })
 })
+
+describe('transcribing parts safely', () => {
+  const parts = [0, 1].map(i => ({ path: `x/${i}.webm`, start: i * 1200, duration: 1200, bytes: 1, transcribed: false }))
+  const make = async () => {
+    const u = await newUser()
+    const { data } = await u.sb.from('lectures').insert({ title: 'Parts', duration_seconds: 2400, mime: 'audio/webm', parts }).select('id').single()
+    return { u, id: data!.id as string }
+  }
+  it('a part can be claimed once, so two requests can\'t transcribe (and charge) it twice', async () => {
+    const { u, id } = await make()
+    const [a, b] = await Promise.all([u.sb.rpc('claim_lecture_part', { p_lecture: id, p_part: 0 }), u.sb.rpc('claim_lecture_part', { p_lecture: id, p_part: 0 })])
+    expect([a.data, b.data].sort()).toEqual([false, true])
+    await u.sb.rpc('release_lecture_part', { p_lecture: id, p_part: 0 })
+    expect((await u.sb.rpc('claim_lecture_part', { p_lecture: id, p_part: 0 })).data).toBe(true)
+    expect((await u.sb.rpc('claim_lecture_part', { p_lecture: id, p_part: 5 })).data).toBe(false)
+  })
+  it('parts saved at the same time both stay saved, and a saved part can\'t be claimed again', async () => {
+    const { u, id } = await make()
+    await Promise.all([0, 1].map(p => u.sb.rpc('save_lecture_part', { p_lecture: id, p_part: p, p_segments: [{ start: p, end: p + 1, text: `part ${p}` }] })))
+    const saved = (await u.sb.from('lectures').select('parts').eq('id', id).single()).data!.parts as { transcribed: boolean; segments: unknown[] }[]
+    expect(saved.map(p => [p.transcribed, p.segments.length])).toEqual([[true, 1], [true, 1]])
+    expect((await u.sb.rpc('claim_lecture_part', { p_lecture: id, p_part: 0 })).data).toBe(false)
+  })
+  it('a student can\'t claim or save another student\'s lecture', async () => {
+    const { id } = await make()
+    const other = await newUser()
+    expect((await other.sb.rpc('claim_lecture_part', { p_lecture: id, p_part: 0 })).data).toBe(false)
+    expect((await other.sb.rpc('save_lecture_part', { p_lecture: id, p_part: 0, p_segments: [] })).data).toBeNull()
+  })
+})
