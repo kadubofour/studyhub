@@ -107,10 +107,12 @@ describe('Recorder', () => {
 
   it('says so when the device can\'t keep its safety copy (e.g. storage full)', async () => {
     const store = { ...memoryStore(), addChunk: async () => { throw new Error('QuotaExceededError') } }
-    await renderRecorder({ store })
+    // A recorder that hands over a chunk as soon as it starts, as a real one does every 5 s
+    class ChunkyRecorder extends FakeRecorder { start() { this.ondataavailable?.({ data: new Blob(['x']) }) } }
+    await renderRecorder({ store, MediaRecorder: ChunkyRecorder })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Stop & save' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/safety copy/)
+    expect(screen.getByRole('button', { name: 'Stop & save' })).toBeTruthy() // still recording
   })
 
   it('a denied microphone gets a tip on allowing it', async () => {
