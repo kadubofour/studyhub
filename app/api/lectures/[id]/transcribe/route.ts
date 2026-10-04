@@ -60,7 +60,13 @@ export async function POST(request: Request, { params }: Ctx) {
     })
     // Count everything OpenAI heard, in pieces of at most 2 hours
     for (let left = seconds; left > 0; left -= 7200) {
-      await admin.rpc('transcription_record', { p_user: user.id, p_lecture: id, p_seconds: Math.min(7200, left) })
+      const args = { p_user: user.id, p_lecture: id, p_seconds: Math.min(7200, left) }
+      // Try once more if it fails, so fair use isn't undercounted; the student's transcript is kept either way
+      const { error: first } = await admin.rpc('transcription_record', args)
+      if (first) {
+        const { error: second } = await admin.rpc('transcription_record', args)
+        if (second) console.error('transcription_record failed', { lecture: id, seconds: args.p_seconds, error: second })
+      }
     }
     if (seconds > MAX_PART_SECONDS) {
       await release()

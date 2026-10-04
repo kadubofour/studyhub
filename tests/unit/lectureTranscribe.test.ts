@@ -5,9 +5,13 @@ let user: { id: string } | null = { id: 'u1' }
 let check = 'ok'
 let speed = 'ok'
 let claimOk = true
+let recordFails = 0
 let parts: Record<string, unknown>[] = []
 const updates: Record<string, unknown>[] = []
-const adminRpc = vi.fn(async (...a: unknown[]) => ({ data: a[0] === 'transcription_check' ? check : a[0] === 'ai_check' ? speed : null, error: null }))
+const adminRpc = vi.fn(async (...a: unknown[]) => {
+  if (a[0] === 'transcription_record' && recordFails > 0) { recordFails--; return { data: null, error: { message: 'db down' } } }
+  return { data: a[0] === 'transcription_check' ? check : a[0] === 'ai_check' ? speed : null, error: null }
+})
 vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc: adminRpc }) }))
 // The student's own session: the lecture row, the part claim/save functions and the audio
 const sbRpc = vi.fn(async (fn: string, args: { p_part: number; p_segments?: unknown }) => {
@@ -40,7 +44,7 @@ const adminCalls = () => adminRpc.mock.calls.map(c => [c[0], (c[1] as { p_second
 const sbCalls = () => sbRpc.mock.calls.map(c => c[0])
 
 beforeEach(() => {
-  user = { id: 'u1' }; check = 'ok'; speed = 'ok'; claimOk = true; updates.length = 0
+  user = { id: 'u1' }; check = 'ok'; speed = 'ok'; claimOk = true; recordFails = 0; updates.length = 0
   adminRpc.mockClear(); sbRpc.mockClear(); create.mockReset()
   parts = [part(0), part(1)]
   process.env.OPENAI_API_KEY = 'test-key'
@@ -103,6 +107,13 @@ describe('POST /api/lectures/[id]/transcribe', () => {
     expect(res.status).toBe(413)
     expect(adminCalls().filter(c => c[0] === 'transcription_record')).toEqual([['transcription_record', 7200], ['transcription_record', 1800]])
     expect(sbCalls()).toEqual(['claim_lecture_part', 'release_lecture_part'])
+  })
+
+  it('if counting the seconds fails, it tries once more, so fair use is not undercounted', async () => {
+    recordFails = 1
+    whisper([{ start: 0, end: 5, text: 'Hello.' }], 600)
+    expect((await call(0)).status).toBe(200)
+    expect(adminCalls().filter(c => c[0] === 'transcription_record')).toEqual([['transcription_record', 600], ['transcription_record', 600]])
   })
 
   it('a failed part marks the transcript failed, gives the part back and charges nothing', async () => {
