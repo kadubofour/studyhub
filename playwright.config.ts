@@ -14,7 +14,7 @@ export default defineConfig({
     env: {
       E2E_FAKE_AI: '1', OPENAI_API_KEY: 'e2e-fake', OPENAI_BASE_URL: `http://localhost:${PORT}/api/test-openai/v1`,
       E2E_FAKE_PAYSTACK: '1', PAYSTACK_SECRET_KEY: 'sk_test_e2e', PAYSTACK_BASE_URL: `http://localhost:${PORT}/api/test-paystack`,
-      PAYSTACK_PLAN_MONTHLY: 'PLN_e2e_monthly', PAYSTACK_PLAN_YEARLY: 'PLN_e2e_yearly', NEXT_PUBLIC_BILLING_ENABLED: '1',
+      PAYSTACK_PLAN_MONTHLY: 'PLN_e2e_monthly', PAYSTACK_PLAN_YEARLY: 'PLN_e2e_yearly', // billing UI turns on from these keys
     },
   },
   projects: [
