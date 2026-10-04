@@ -49,4 +49,16 @@ describe('Scan in the app shell', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     window.removeEventListener(SCAN_SAVED, heard)
   })
+
+  it('has Lectures in the sidebar after Notes, and in the phone tab bar instead of Focus', () => {
+    path = '/home'
+    renderShell()
+    const links = screen.getAllByRole('link', { name: 'Lectures' })
+    expect(links).toHaveLength(2)
+    expect(links[0].getAttribute('href')).toBe('/lectures')
+    const sidebar = screen.getAllByRole('navigation')[0]
+    const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
+    expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
+    expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(1) // sidebar only
+  })
 })

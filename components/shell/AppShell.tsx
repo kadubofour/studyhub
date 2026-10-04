@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
-  PanelLeftClose, PanelLeftOpen, ScanLine,
+  PanelLeftClose, PanelLeftOpen, ScanLine, Mic,
 } from 'lucide-react'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { announceScanSaved } from '@/lib/scan/events'
@@ -25,9 +25,11 @@ const NAV = [
   { href: '/flashcards', label: 'Flashcards', icon: Layers },
   { href: '/focus', label: 'Focus', icon: Timer },
   { href: '/notes', label: 'Notes', icon: NotebookPen },
+  { href: '/lectures', label: 'Lectures', icon: Mic },
   { href: '/progress', label: 'Progress', icon: BarChart3 },
 ]
-const MOBILE = NAV.slice(0, 5)
+// Phones: recording happens there, so Lectures takes Focus's place (Focus stays on Home)
+const MOBILE = NAV.filter(n => ['/home', '/planner', '/flashcards', '/notes', '/lectures'].includes(n.href))
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
 const scanTargetFor = (path: string): ScanTarget =>

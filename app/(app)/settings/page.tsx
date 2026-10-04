@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
 import { PlanCard } from '@/components/settings/PlanCard'
+import { StorageCard } from '@/components/settings/StorageCard'
 import { Switch } from '@/components/ui/Switch'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -80,6 +81,7 @@ export default function SettingsPage() {
     <div className="max-w-xl space-y-5">
       <PageHeader title="Settings" />
       <PlanCard />
+      <StorageCard />
       <AppearanceCard />
       <form onSubmit={save} className="card space-y-5">
       <h2 className="text-base font-semibold">Profile and focus</h2>
