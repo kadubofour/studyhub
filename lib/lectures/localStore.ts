@@ -47,6 +47,7 @@ function openDb(): Promise<IDBDatabase> {
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
+    req.onblocked = () => reject(new Error('blocked')) // another tab holds an older version open
   })
 }
 function run<T>(stores: string[], mode: IDBTransactionMode, work: (tx: IDBTransaction) => IDBRequest<T> | void): Promise<T | undefined> {
@@ -55,6 +56,8 @@ function run<T>(stores: string[], mode: IDBTransactionMode, work: (tx: IDBTransa
     const req = work(tx)
     tx.oncomplete = () => { db.close(); resolve(req ? req.result : undefined) }
     tx.onerror = () => { db.close(); reject(tx.error) }
+    // A full device aborts the transaction rather than erroring it
+    tx.onabort = () => { db.close(); reject(tx.error ?? new Error('aborted')) }
   }))
 }
 

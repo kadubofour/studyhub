@@ -52,6 +52,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
   const stream = useRef<MediaStream | null>(null)
   const clock = useRef<ReturnType<typeof setInterval> | null>(null)
   const stopping = useRef(false)
+  const copyWarned = useRef(false)
   const [level, setLevel] = useState(0)
   const [metering, setMetering] = useState(false)
   const meter = useRef<{ ctx: AudioContext; timer: ReturnType<typeof setInterval> } | null>(null)
@@ -127,7 +128,14 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     await deps.store.saveSession(s)
     const rec = createPartRecorder({
       stream: media, Ctor: deps.MediaRecorder, recorderType: type.recorderType, mime: type.mime, partSeconds: deps.partSeconds, now: deps.now,
-      onChunk: (i, chunk) => { void deps.store.addChunk(s.id, i, chunk) },
+      onChunk: (i, chunk) => {
+        deps.store.addChunk(s.id, i, chunk).catch(() => {
+          // Once is enough: recording and uploading carry on, only the device copy is missing
+          if (copyWarned.current) return
+          copyWarned.current = true
+          setProblem('Couldn\'t keep a safety copy on this device (is it out of space?). Recording continues: keep this page open until it\'s saved.')
+        })
+      },
       onPart: async part => {
         // This part is finished and the next one (if recording goes on) has started, length
         // unknown. The device copy lists both before uploading, so a dead phone loses neither.

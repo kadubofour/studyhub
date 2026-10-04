@@ -105,6 +105,14 @@ describe('Recorder', () => {
     expect(leave()).toBe(false)
   })
 
+  it('says so when the device can\'t keep its safety copy (e.g. storage full)', async () => {
+    const store = { ...memoryStore(), addChunk: async () => { throw new Error('QuotaExceededError') } }
+    await renderRecorder({ store })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Stop & save' })) })
+    expect(screen.getByRole('alert').textContent).toMatch(/safety copy/)
+  })
+
   it('a denied microphone gets a tip on allowing it', async () => {
     getUserMedia = vi.fn(async () => { throw Object.assign(new Error('no'), { name: 'NotAllowedError' }) })
     await renderRecorder({ getUserMedia })
