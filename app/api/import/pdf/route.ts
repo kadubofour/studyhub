@@ -4,6 +4,7 @@ import { MAX_PDF_PAGES, pdfToNote } from '@/lib/ai/pdfToNote'
 import { isAiConfigured } from '@/lib/ai/openai'
 import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 import { pdfActionCost } from '@/lib/billing/plans'
+import { countPdfPages } from '@/lib/import/pdfPages'
 
 // A long PDF can take several minutes to convert. 300 s is the most Vercel's Hobby plan allows
 // (a higher value fails the deploy); very long PDFs may time out. On Pro this can go up to 800.
@@ -12,12 +13,6 @@ export const maxDuration = 300
 // Base64 grows the PDF by a third and the API caps a request at 32 MB, so files over ~24 MB can't be sent
 const MAX_BYTES = 24 * 1024 * 1024
 const STALE_UPLOAD_MS = 60 * 60 * 1000
-
-// Rough page count from the PDF's page objects (compressed object streams can hide them; the API
-// enforces its own page limit then, which we report the same way)
-function countPages(bytes: Buffer): number {
-  return (bytes.toString('latin1').match(/\/Type\s*\/Page(?![a-zA-Z])/g) ?? []).length
-}
 
 // POST { path } — a PDF the signed-in student uploaded to the private "imports" bucket as
 // "<user id>/<file>.pdf". Returns { title, content_md, truncated }, or { error }:
@@ -51,13 +46,14 @@ export async function POST(request: Request) {
     if (error || !file) return NextResponse.json({ error: 'not_found' }, { status: 404 })
     if (file.size > MAX_BYTES) return NextResponse.json({ error: 'too_large' }, { status: 413 })
     const bytes = Buffer.from(await file.arrayBuffer())
-    if (countPages(bytes) > MAX_PDF_PAGES) return NextResponse.json({ error: 'too_long' }, { status: 413 })
+    const pages = await countPdfPages(bytes)
+    if (pages > MAX_PDF_PAGES) return NextResponse.json({ error: 'too_long' }, { status: 413 })
 
     const displayName = fileName.replace(/^[0-9a-f-]{36}-/i, '')
     // runAiAction checks the plan (checked last, so rejections above are free) and charges 1 AI
     // action per 10 pages only if the conversion succeeds. request.signal: if the student cancels
     // or closes the tab, the model call stops too.
-    const result = await runAiAction(client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { userId: user.id, cost: pdfActionCost(countPages(bytes)), signal: request.signal })
+    const result = await runAiAction(client => pdfToNote(client, bytes.toString('base64'), displayName, { signal: request.signal }), { userId: user.id, cost: pdfActionCost(pages), signal: request.signal })
     return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
   } finally {
     // The PDF is only needed for this one conversion
