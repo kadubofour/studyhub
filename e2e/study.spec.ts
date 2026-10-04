@@ -68,8 +68,10 @@ test('refreshing mid-quiz resumes where you left off', async ({ page }) => {
   const study = await openStudy(page)
   await study.getByRole('tab', { name: 'Quiz' }).click()
   await study.getByRole('button', { name: '✦ New quiz' }).click()
+  const saved = page.waitForResponse(r => r.url().includes('/quiz_attempts') && r.request().method() === 'PATCH')
   await page.getByRole('button', { name: 'Mitochondrial matrix' }).click()
   await expect(page.getByText('Correct.')).toBeVisible()
+  await saved // "Correct." shows before the answer is saved; reloading sooner would lose it
   await page.reload()
   await expect(page.getByText('Question 2 of 4')).toBeVisible()
 })
