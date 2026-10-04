@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { finishAttempt, saveAttempt } from '@/lib/data/quizzes'
 import { markInstant, scoreOf } from '@/lib/quiz/marking'
@@ -24,10 +24,21 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
   const done = answers[q.id]
   const last = index === quiz.questions.length - 1
 
+  // The answer shows straight away but saves in the background; leaving mid-save would lose it
+  const [saving, setSaving] = useState(0)
+  useEffect(() => {
+    if (!saving) return
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [saving])
+
   async function record(rec: AnswerRecord) {
     const next = { ...answers, [q.id]: rec }
     setAnswers(next); setSelfMark(null)
+    setSaving(n => n + 1)
     await saveAttempt(supabase(), attempt.id, next, scoreOf(next)).catch(() => setError('Couldn\'t save your answer. Check your connection.'))
+    setSaving(n => n - 1)
   }
 
   async function choose(choice: string) {

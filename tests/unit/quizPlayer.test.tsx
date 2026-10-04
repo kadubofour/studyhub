@@ -28,6 +28,17 @@ beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); sav
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 describe('QuizPlayer', () => {
+  it('warns before leaving the page while an answer is still saving', async () => {
+    let finishSave = () => {}
+    saveAttempt.mockImplementationOnce(() => new Promise<void>(r => { finishSave = r }))
+    render(<QuizPlayer quiz={quiz} attempt={attempt()} onFinished={vi.fn()} />)
+    const leave = () => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented }
+    expect(leave()).toBe(false)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Matrix' })) })
+    expect(leave()).toBe(true) // the browser asks "Leave site?" instead of losing the answer
+    await act(async () => { finishSave() })
+    expect(leave()).toBe(false)
+  })
   it('marks each answer, shows the explanation, saves progress and finishes', async () => {
     const onFinished = vi.fn()
     render(<QuizPlayer quiz={quiz} attempt={attempt()} onFinished={onFinished} />)
