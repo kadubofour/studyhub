@@ -27,7 +27,7 @@ describe('POST /api/ai/flashcards', () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { cards: [{ front: ' Where? ', back: 'Matrix' }] } })
     const res = await call()
     expect(await res.json()).toEqual({ cards: [{ front: 'Where?', back: 'Matrix' }] })
-    expect(fns()).toEqual(['ai_check', 'ai_charge'])
+    expect(fns()).toEqual(['ai_check'])
   })
   it('refuses very short notes without calling the AI', async () => {
     note = { id: NOTE_ID, title: 'x', content_md: 'Too short.' }

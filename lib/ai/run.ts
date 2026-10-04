@@ -12,8 +12,8 @@ const STATUS: Record<AiErrorCode, number> = {
 }
 
 // Every AI feature goes through here: the plan check (speed limit, Free daily limit or Premium fair
-// use) before the call, and the charge only after it succeeds. Both run with the service role, so a
-// student can't skip, fake or refund their own usage. Cost 0 (quiz marking) is speed-limited only.
+// use) reserves the cost before the call, and a failed call releases it. Both run with the service
+// role, so a student can't skip, fake or refund their own usage. Cost 0 (quiz marking) is speed-limited only.
 export async function runAiAction<T>(
   call: (client: AiClient) => Promise<T>,
   opts: { userId: string; cost: number; signal?: AbortSignal; client?: AiClient },
@@ -24,10 +24,10 @@ export async function runAiAction<T>(
   if (error) return { ok: false, error: 'ai_failed' }
   if (check !== 'ok') return { ok: false, error: check as AiErrorCode }
   try {
-    const value = await call(opts.client ?? openai())
-    if (opts.cost > 0) await admin.rpc('ai_charge', { p_user: opts.userId, p_cost: opts.cost })
-    return { ok: true, value }
+    return { ok: true, value: await call(opts.client ?? openai()) }
   } catch (e) {
+    // The check reserved the cost so parallel requests can't overshoot; a failed call gives it back
+    if (opts.cost > 0) await admin.rpc('ai_release', { p_user: opts.userId, p_cost: opts.cost })
     return { ok: false, error: classifyAiError(e, opts.signal) }
   }
 }

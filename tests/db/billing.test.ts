@@ -39,8 +39,8 @@ describe('usage functions are server-only', () => {
 describe('Free plan: 10 AI actions a day, by cost', () => {
   it('allows up to 10 cost, then says daily_limit', async () => {
     const u = await newUser()
-    expect((await check(u.id, 3)).data).toBe('ok'); await charge(u.id, 3)
-    expect((await check(u.id, 7)).data).toBe('ok'); await charge(u.id, 7)
+    expect((await check(u.id, 3)).data).toBe('ok') // an ok check reserves its cost
+    expect((await check(u.id, 7)).data).toBe('ok')
     expect((await check(u.id, 1)).data).toBe('daily_limit')
     expect((await check(u.id, 0)).data).toBe('ok') // free marking still allowed
   })
@@ -124,5 +124,43 @@ describe('apply_payment', () => {
     await admin().rpc('set_subscription', { p_user: u.id, p_subscription_code: 'SUB_1', p_email_token: 'tok', p_auto_renew: true })
     const ent = (await u.sb.from('entitlements').select('auto_renew,subscription_code').single()).data!
     expect(ent).toEqual({ auto_renew: true, subscription_code: 'SUB_1' })
+  })
+})
+
+describe('review fixes', () => {
+  const release = (user: string, cost: number) => admin().rpc('ai_release', { p_user: user, p_cost: cost })
+  it('parallel AI requests cannot overshoot the free limit', async () => {
+    const u = await newUser()
+    const results = await Promise.all(Array.from({ length: 8 }, () => check(u.id, 3)))
+    expect(results.filter(r => r.data === 'ok')).toHaveLength(3)
+    expect(results.filter(r => r.data === 'daily_limit')).toHaveLength(5)
+  })
+  it('a failed AI call gives its reservation back', async () => {
+    const u = await newUser()
+    expect((await check(u.id, 10)).data).toBe('ok')
+    expect((await release(u.id, 10)).error).toBeNull()
+    expect((await check(u.id, 10)).data).toBe('ok')
+    expect((await u.sb.rpc('ai_release', { p_user: u.id, p_cost: 10 })).error).not.toBeNull() // server only
+  })
+  it('a reference that failed first and then succeeded is credited once', async () => {
+    const u = await newUser()
+    const r = ref()
+    await pay(u.id, r, { p_status: 'failed', p_months: 0 })
+    const until = (await pay(u.id, r)).data as string
+    expect(until).toBeTruthy()
+    expect((await admin().from('payments').select('status,months').eq('reference', r).single()).data).toEqual({ status: 'success', months: 1 })
+    expect((await pay(u.id, r)).data).toBe(until) // and only once
+  })
+  it('a late disable for an old subscription leaves the current one alone', async () => {
+    const u = await newUser()
+    const sub = (code: string | null, on: boolean) => admin().rpc('set_subscription', { p_user: u.id, p_subscription_code: code, p_email_token: on ? 'tok' : null, p_auto_renew: on })
+    const ent = async () => (await u.sb.from('entitlements').select('auto_renew,subscription_code').single()).data
+    await sub('SUB_old', true); await sub('SUB_new', true)
+    await sub('SUB_old', false)
+    expect(await ent()).toEqual({ auto_renew: true, subscription_code: 'SUB_new' })
+    await sub('SUB_new', false)
+    expect(await ent()).toEqual({ auto_renew: false, subscription_code: 'SUB_new' })
+    await sub('SUB_new', true); await sub(null, false) // turning renewal off in Settings
+    expect((await ent())?.auto_renew).toBe(false)
   })
 })

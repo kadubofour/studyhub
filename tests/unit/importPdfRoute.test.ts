@@ -59,13 +59,13 @@ describe('POST /api/import/pdf', () => {
   it('checks the speed limit once, then converts (no daily cap)', async () => {
     const res = await call({ path: 'u1/a.pdf' })
     expect(res.status).toBe(200)
-    expect(adminCalls()).toEqual([['ai_check', 1], ['ai_charge', 1]])
+    expect(adminCalls()).toEqual([['ai_check', 1]])
   })
 
   it('charges 1 AI action per 10 pages', async () => {
     pdfBytes = Buffer.from('%PDF-1.4\n' + '1 0 obj << /Type /Page >> endobj\n'.repeat(25) + '%%EOF')
     await call({ path: 'u1/a.pdf' })
-    expect(adminCalls()).toEqual([['ai_check', 3], ['ai_charge', 3]])
+    expect(adminCalls()).toEqual([['ai_check', 3]])
   })
   it('reports a failed conversion as ai_failed', async () => {
     pdfToNote.mockRejectedValueOnce(new Error('boom'))

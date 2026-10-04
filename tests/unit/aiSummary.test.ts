@@ -47,7 +47,7 @@ describe('POST /api/ai/summary', () => {
     const res = await call({ noteId: NOTE_ID })
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ summary_md: 'Makes NADH.' })
-    expect(adminCalls()).toEqual([['ai_check', 1], ['ai_charge', 1]])
+    expect(adminCalls()).toEqual([['ai_check', 1]])
   })
   it('says to slow down when the speed limit is hit', async () => {
     check = 'rate_limited'

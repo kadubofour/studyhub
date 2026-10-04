@@ -19,18 +19,18 @@ const calls = () => rpc.mock.calls.map(c => [c[0], (c[1] as { p_cost: number }).
 
 describe('runAiAction', () => {
   beforeEach(() => rpc.mockReset())
-  it('checks the plan, runs the call, then charges its cost', async () => {
+  it('checks the plan (which reserves the cost), then runs the call', async () => {
     result('ok')
     const r = await runAiAction(async () => 42, { userId: 'u1', cost: 3, client })
     expect(r).toEqual({ ok: true, value: 42 })
-    expect(calls()).toEqual([['ai_check', 3], ['ai_charge', 3]])
+    expect(calls()).toEqual([['ai_check', 3]])
     expect(rpc.mock.calls[0][1]).toMatchObject({ p_user: 'u1' })
   })
-  it('does not charge failed calls', async () => {
+  it('gives the reservation back when the call fails', async () => {
     result('ok')
     const r = await runAiAction(async () => { throw asError(OpenAI.RateLimitError) }, { userId: 'u1', cost: 1, client })
     expect(r).toEqual({ ok: false, error: 'busy' })
-    expect(calls()).toEqual([['ai_check', 1]])
+    expect(calls()).toEqual([['ai_check', 1], ['ai_release', 1]])
   })
   it.each([['rate_limited'], ['daily_limit'], ['fair_use']])('refuses without calling the AI when the check says %s', async code => {
     result(code)
@@ -41,7 +41,8 @@ describe('runAiAction', () => {
   it('free marking (cost 0) is checked for speed but never charged', async () => {
     result('ok')
     await runAiAction(async () => 1, { userId: 'u1', cost: 0, client })
-    expect(calls()).toEqual([['ai_check', 0]])
+    await runAiAction(async () => { throw new Error('x') }, { userId: 'u1', cost: 0, client })
+    expect(calls()).toEqual([['ai_check', 0], ['ai_check', 0]])
   })
   it('says AI is unavailable when no key is set, without checking anything', async () => {
     delete process.env.OPENAI_API_KEY

@@ -36,7 +36,7 @@ describe('POST /api/ai/quiz', () => {
     expect(quiz.id).toBe('qz1')
     expect(quiz.note_id).toBe(NOTE_ID)
     expect(quiz.questions.map(q => q.id)).toEqual(['q1', 'q2', 'q3'])
-    expect(fns()).toEqual(['ai_check', 'ai_charge'])
+    expect(fns()).toEqual(['ai_check'])
   })
   it('rejects bad counts and types', async () => {
     expect((await call({ count: 7 })).status).toBe(400)
