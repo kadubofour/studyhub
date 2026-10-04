@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
-import { CHOICES, FAIR_USE_MONTHLY_ACTIONS, FREE_DAILY_ACTIONS, PRODUCTS, SPEED_LIMIT_PER_MINUTE, formatGhs, pdfActionCost } from '@/lib/billing/plans'
+import { CHOICES, FAIR_USE_MONTHLY_ACTIONS, FAIR_USE_TRANSCRIPT_HOURS, FREE_DAILY_ACTIONS, PRODUCTS, SPEED_LIMIT_PER_MINUTE, formatGhs, pdfActionCost } from '@/lib/billing/plans'
 
 // The definition of a SQL function the database actually runs: the one in the newest migration
 function latestDefinition(fn: string): string {
@@ -19,6 +19,7 @@ describe('plan constants', () => {
     expect(check).toContain(`> ${FREE_DAILY_ACTIONS} then return 'daily_limit'`)
     expect(check).toContain(`> ${FAIR_USE_MONTHLY_ACTIONS} then return 'fair_use'`)
     expect(check).toContain(`>= ${SPEED_LIMIT_PER_MINUTE} then\n    return 'rate_limited'`)
+    expect(latestDefinition('transcription_check')).toContain(`> ${FAIR_USE_TRANSCRIPT_HOURS * 3600} then return 'fair_use'`)
   })
   it('have the agreed prices in pesewas', () => {
     expect(PRODUCTS.pass_1m).toMatchObject({ months: 1, amountMinor: 5000 })
