@@ -21,6 +21,11 @@ export async function POST(request: Request) {
   const product = autoRenew ? choice.renew! : choice.pass
   const planCode = autoRenew ? (product === 'renew_1m' ? process.env.PAYSTACK_PLAN_MONTHLY : process.env.PAYSTACK_PLAN_YEARLY) : undefined
   if (autoRenew && !planCode) return err(503, 'billing_unavailable')
+  if (autoRenew) {
+    // A second Paystack subscription would charge the card twice, and Settings can cancel only one
+    const { data: ent } = await sb.from('entitlements').select('auto_renew').maybeSingle()
+    if (ent?.auto_renew) return err(409, 'already_renewing')
+  }
   try {
     const { url } = await initializeCheckout({
       email: user.email, amountMinor: PRODUCTS[product].amountMinor,

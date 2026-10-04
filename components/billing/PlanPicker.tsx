@@ -18,7 +18,9 @@ export function PlanPicker({ go = url => window.location.assign(url) }: { go?: (
       const res = await fetch('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ choice, autoRenew: canRenew && autoRenew }) })
       const body = await res.json().catch(() => ({})) as { url?: string; error?: string }
       if (res.ok && body.url) { go(body.url); return }
-      setError(body.error === 'email_unconfirmed' ? 'Confirm your email address first, then try again.' : 'Couldn\'t start checkout. Try again.')
+      setError(body.error === 'email_unconfirmed' ? 'Confirm your email address first, then try again.'
+        : body.error === 'already_renewing' ? 'Premium already renews automatically. Untick "Renew automatically" to add a pass instead.'
+        : 'Couldn\'t start checkout. Try again.')
     } catch { setError('Couldn\'t start checkout. Try again.') }
     setBusy(false)
   }

@@ -17,21 +17,26 @@ export async function POST(request: Request) {
 
   const key = `${event}:${str(data.reference) ?? str(data.subscription_code) ?? String(data.id ?? '')}`
   const admin = adminClient()
-  const { error: dup } = await admin.from('billing_events').insert({ id: key, provider: 'paystack', type: event })
-  if (dup) return NextResponse.json({ ok: true }) // already handled
+  const { error: logged } = await admin.from('billing_events').insert({ id: key, provider: 'paystack', type: event })
+  if (logged?.code === '23505') return NextResponse.json({ ok: true }) // already handled
+  if (logged) return NextResponse.json({ error: 'failed' }, { status: 500 })
+  // A database error must not be mistaken for success, or the event is never retried
+  const rpc = async (fn: string, args: Record<string, unknown>) => { const { error } = await admin.rpc(fn, args); if (error) throw error }
 
   try {
     if (event === 'charge.success') {
       const charge = await verifyTransaction(String(data.reference))
       const userId = await userForCharge(charge)
-      if (userId) await creditVerifiedCharge(charge, userId)
+      if (!userId) throw new Error('student not known yet') // retried: a renewal can arrive before its first charge
+      await creditVerifiedCharge(charge, userId)
     } else if (event === 'refund.processed') {
       const reference = str(data.transaction_reference) ?? str((data.transaction as Record<string, unknown> | undefined)?.reference)
-      if (reference) await admin.rpc('apply_refund', { p_reference: reference })
+      if (reference) await rpc('apply_refund', { p_reference: reference })
     } else {
       const customer = str((data.customer as Record<string, unknown> | undefined)?.customer_code)
       const userId = await userForCharge({ userId: null, customerCode: customer } as never)
-      if (userId) await admin.rpc('set_subscription', {
+      if (!userId) throw new Error('student not known yet') // retried: Paystack may send this before charge.success
+      await rpc('set_subscription', {
         p_user: userId, p_subscription_code: str(data.subscription_code),
         p_email_token: event === 'subscription.create' ? str(data.email_token) : null,
         p_auto_renew: event === 'subscription.create',

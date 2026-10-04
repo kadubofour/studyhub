@@ -4,11 +4,12 @@ import crypto from 'node:crypto'
 const events = new Set<string>()
 const rpc = vi.fn(async (...a: unknown[]) => { void a; return { data: null, error: null } })
 let customerUser: string | null = 'u1'
+let insertFails = false
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({
   rpc: (...a: unknown[]) => rpc(...a),
   from: (t: string) => t === 'billing_events'
-    ? { insert: async (row: { id: string }) => (events.has(row.id) ? { error: { code: '23505' } } : (events.add(row.id), { error: null })),
+    ? { insert: async (row: { id: string }) => insertFails ? { error: { code: '08006' } } : (events.has(row.id) ? { error: { code: '23505' } } : (events.add(row.id), { error: null })),
         delete: () => ({ eq: async (_c: string, id: string) => { events.delete(id); return { error: null } } }) }
     : { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: customerUser ? { user_id: customerUser } : null }) }) }) },
 }) }))
@@ -28,7 +29,7 @@ const send = (payload: object, signature?: string) => {
 }
 const charge = { reference: 'R1', status: 'success', amount: 5000, currency: 'GHS', channel: 'card', metadata: { user_id: 'u1', product: 'pass_1m' } }
 beforeEach(() => {
-  events.clear(); rpc.mockClear(); creditVerifiedCharge.mockClear(); verifyTransaction.mockReset(); customerUser = 'u1'
+  events.clear(); rpc.mockClear(); creditVerifiedCharge.mockClear(); verifyTransaction.mockReset(); customerUser = 'u1'; insertFails = false
   process.env.PAYSTACK_SECRET_KEY = 'sk_test'
   verifyTransaction.mockResolvedValue({ reference: 'R1', status: 'success', amountMinor: 5000, currency: 'GHS', channel: 'card', paidAt: null, userId: 'u1', product: 'pass_1m', planCode: null, customerCode: 'CUS_1', cardBrand: null, cardLast4: null })
 })
@@ -65,6 +66,23 @@ describe('POST /api/billing/webhook', () => {
     expect((await send({ event: 'charge.success', data: charge })).status).toBe(500)
     expect((await send({ event: 'charge.success', data: charge })).status).toBe(200)
     expect(creditVerifiedCharge).toHaveBeenCalledTimes(2)
+  })
+  it('retries a subscription event that arrives before its student is known', async () => {
+    customerUser = null
+    const create = { event: 'subscription.create', data: { subscription_code: 'SUB_1', email_token: 'tok', customer: { customer_code: 'CUS_1' }, plan: { plan_code: 'PLN_m' } } }
+    expect((await send(create)).status).toBe(500)
+    customerUser = 'u1' // the charge has been credited since
+    expect((await send(create)).status).toBe(200)
+    expect(rpc).toHaveBeenLastCalledWith('set_subscription', expect.objectContaining({ p_user: 'u1', p_auto_renew: true }))
+  })
+  it('retries when the event log or a database call fails, instead of dropping the event', async () => {
+    insertFails = true
+    expect((await send({ event: 'charge.success', data: charge })).status).toBe(500)
+    expect(creditVerifiedCharge).not.toHaveBeenCalled()
+    insertFails = false
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'down' } } as never)
+    expect((await send({ event: 'refund.processed', data: { id: 9, transaction_reference: 'R1' } })).status).toBe(500)
+    expect((await send({ event: 'refund.processed', data: { id: 9, transaction_reference: 'R1' } })).status).toBe(200)
   })
   it('ignores events it does not use', async () => {
     expect((await send({ event: 'transfer.success', data: { id: 1 } })).status).toBe(200)
