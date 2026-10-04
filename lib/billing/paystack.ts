@@ -1,16 +1,13 @@
 import 'server-only'
 import crypto from 'node:crypto'
 
+import type { BillingEvent, CheckoutRequest, VerifiedCharge } from './provider'
+
 // Everything Paystack-specific lives here, so field-name differences are fixed in one file.
+// It implements the BillingProvider interface in ./provider.
 
+export type { VerifiedCharge }
 export class PaystackError extends Error {}
-
-export type VerifiedCharge = {
-  reference: string; status: 'success' | 'failed' | 'pending'; amountMinor: number; currency: string
-  channel: 'mobile_money' | 'card' | 'other'; paidAt: string | null
-  userId: string | null; product: string | null; planCode: string | null
-  customerCode: string | null; cardBrand: string | null; cardLast4: string | null
-}
 
 export const paystackBase = () => (process.env.PAYSTACK_BASE_URL ?? 'https://api.paystack.co').replace(/\/$/, '')
 const secret = () => process.env.PAYSTACK_SECRET_KEY ?? ''
@@ -27,10 +24,7 @@ async function call<T>(path: string, init: { method: 'GET' | 'POST'; body?: obje
   return json.data as T
 }
 
-export async function initializeCheckout(o: {
-  email: string; amountMinor: number; callbackUrl: string; channels: ('card' | 'mobile_money')[]
-  metadata: { user_id: string; product: string }; planCode?: string
-}): Promise<{ url: string; reference: string }> {
+export async function initializeCheckout(o: CheckoutRequest): Promise<{ url: string; reference: string }> {
   const data = await call<{ authorization_url: string; reference: string }>('/transaction/initialize', {
     method: 'POST',
     body: {
@@ -67,6 +61,33 @@ export async function verifyTransaction(reference: string): Promise<VerifiedChar
 
 export async function disableSubscription(code: string, token: string): Promise<void> {
   await call('/subscription/disable', { method: 'POST', body: { code, token } })
+}
+
+// Paystack's webhook payload → a provider-neutral event (null for events Studyhub doesn't use)
+export function parseWebhook(rawBody: string): BillingEvent | null {
+  let payload: { event?: unknown; data?: Record<string, unknown> }
+  try { payload = JSON.parse(rawBody) } catch { return null }
+  const type = typeof payload?.event === 'string' ? payload.event : ''
+  const data = payload?.data ?? {}
+  const key = `${type}:${str(data.reference) ?? str(data.subscription_code) ?? String(data.id ?? '')}`
+  if (type === 'charge.success') return { kind: 'charge', type, key, reference: String(data.reference ?? '') }
+  if (type === 'subscription.create' || type === 'subscription.disable' || type === 'subscription.not_renew') {
+    const active = type === 'subscription.create'
+    return {
+      kind: 'subscription', type, key, active,
+      customerCode: str((data.customer as Record<string, unknown> | undefined)?.customer_code),
+      subscriptionCode: str(data.subscription_code), emailToken: active ? str(data.email_token) : null,
+    }
+  }
+  if (type === 'refund.processed') {
+    return {
+      kind: 'refund', type, key,
+      reference: str(data.transaction_reference) ?? str((data.transaction as Record<string, unknown> | undefined)?.reference),
+      // what was refunded; less than the payment means a partial refund
+      amountMinor: typeof data.amount === 'number' ? data.amount : null,
+    }
+  }
+  return null
 }
 
 export function verifySignature(rawBody: string, header: string | null): boolean {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
-import { disableSubscription } from '@/lib/billing/paystack'
+import { billing } from '@/lib/billing/provider'
 
 // Turn off auto-renew: Premium continues to the end of the paid period
 export async function POST() {
@@ -13,7 +13,7 @@ export async function POST() {
   const e = ent as { subscription_code: string | null; email_token: string | null } | null
   if (!e?.subscription_code || !e.email_token) return NextResponse.json({ error: 'no_subscription' }, { status: 404 })
   try {
-    await disableSubscription(e.subscription_code, e.email_token)
+    await billing.disableSubscription(e.subscription_code, e.email_token)
   } catch {
     return NextResponse.json({ error: 'cancel_failed' }, { status: 502 })
   }

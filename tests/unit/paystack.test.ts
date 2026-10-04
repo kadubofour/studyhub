@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import crypto from 'node:crypto'
-import { disableSubscription, initializeCheckout, parseCharge, verifySignature, verifyTransaction } from '@/lib/billing/paystack'
+import { disableSubscription, initializeCheckout, parseCharge, parseWebhook, verifySignature, verifyTransaction } from '@/lib/billing/paystack'
 
 const fetchMock = vi.fn()
 beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); process.env.PAYSTACK_SECRET_KEY = 'sk_test_x'; delete process.env.PAYSTACK_BASE_URL })
@@ -60,5 +60,22 @@ describe('disableSubscription', () => {
     reply({ status: true, message: 'ok' })
     await disableSubscription('SUB_1', 'tok')
     expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ code: 'SUB_1', token: 'tok' })
+  })
+})
+
+describe('parseWebhook (Paystack payload → provider-neutral event)', () => {
+  const parse = (event: string, data: object) => parseWebhook(JSON.stringify({ event, data }))
+  it('reads charges, subscriptions and refunds', () => {
+    expect(parse('charge.success', { reference: 'R1', id: 5 })).toEqual({ kind: 'charge', type: 'charge.success', key: 'charge.success:R1', reference: 'R1' })
+    expect(parse('subscription.create', { subscription_code: 'SUB_1', email_token: 'tok', customer: { customer_code: 'CUS_1' } }))
+      .toEqual({ kind: 'subscription', type: 'subscription.create', key: 'subscription.create:SUB_1', customerCode: 'CUS_1', subscriptionCode: 'SUB_1', emailToken: 'tok', active: true })
+    expect(parse('subscription.not_renew', { subscription_code: 'SUB_1', email_token: 'tok', customer: { customer_code: 'CUS_1' } }))
+      .toMatchObject({ kind: 'subscription', subscriptionCode: 'SUB_1', emailToken: null, active: false })
+    expect(parse('refund.processed', { id: 9, transaction_reference: 'R1', amount: 2500 })).toEqual({ kind: 'refund', type: 'refund.processed', key: 'refund.processed:9', reference: 'R1', amountMinor: 2500 })
+    expect(parse('refund.processed', { id: 9, transaction: { reference: 'R2' } })).toMatchObject({ reference: 'R2', amountMinor: null })
+  })
+  it('ignores events Studyhub does not use, and bad JSON', () => {
+    expect(parse('transfer.success', { id: 1 })).toBeNull()
+    expect(parseWebhook('not json')).toBeNull()
   })
 })

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { isBillingConfigured } from '@/lib/supabase/admin'
-import { initializeCheckout } from '@/lib/billing/paystack'
+import { billing } from '@/lib/billing/provider'
 import { CHOICES, PRODUCTS, type CheckoutChoice } from '@/lib/billing/plans'
 
 const err = (status: number, error: string) => NextResponse.json({ error }, { status })
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     if (ent?.auto_renew) return err(409, 'already_renewing')
   }
   try {
-    const { url } = await initializeCheckout({
+    const { url } = await billing.initializeCheckout({
       email: user.email, amountMinor: PRODUCTS[product].amountMinor,
       callbackUrl: `${new URL(request.url).origin}/plans/return`,
       // Auto-renew charges a saved card; MoMo needs approval each time, so it's for passes

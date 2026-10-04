@@ -1,7 +1,7 @@
 import 'server-only'
 import { adminClient } from '@/lib/supabase/admin'
 import { PRODUCTS, type ProductId } from './plans'
-import type { VerifiedCharge } from './paystack'
+import type { VerifiedCharge } from './provider'
 
 export function productFor(c: VerifiedCharge): ProductId | null {
   if (c.product && c.product in PRODUCTS) return c.product as ProductId
