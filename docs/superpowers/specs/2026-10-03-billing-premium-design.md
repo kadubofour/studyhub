@@ -1,7 +1,8 @@
 # Studyhub — Billing: Free and Premium plans (Paystack) Design
 
 Date: 2026-10-03
-Status: Draft — awaiting review
+Status: Approved; built (Plan `2026-10-04-billing-premium.md`). Transcript limits (§2, §4 `transcription_*`)
+ship with Phase 2 Plan C (Lectures). Changes made while building are noted inline as **Built:**.
 Builds on: `2026-10-03-phase-2-scan-study-tools-lectures-design.md` (Phase 2). This spec replaces
 Phase 2's "no caps" limits with Free and Premium plans; everything else in Phase 2 stands.
 
@@ -26,7 +27,7 @@ any time; nobody can make themselves Premium or reset their usage without paying
 | Payment types | **Prepaid passes** (any Paystack channel incl. MoMo), and optional **auto-renew** (card only; monthly GHS 50 or yearly GHS 480 via Paystack Plans). |
 | Stacking | Buying while Premium is active adds the time to the end date. |
 | Ending | When Premium ends, the student is on Free immediately; no data is lost. |
-| Charging | AI usage is checked before a call and counted only after success; failed or cancelled work is free (possible now that usage is server-only). |
+| Charging | AI usage is checked before a call and counted only after success; failed or cancelled work is free (possible now that usage is server-only). **Built:** the check reserves the cost under a lock and a failed or cancelled call releases it, so parallel requests can't overshoot a limit. |
 | Trusted writes | The server uses the Supabase **service role key** for billing and usage only (`lib/supabase/admin.ts`, `server-only`). Students can read their own plan, payments and usage, never write them. |
 
 ## 3. Screens (agreed mockup)
@@ -35,7 +36,7 @@ any time; nobody can make themselves Premium or reset their usage without paying
   AI actions. They reset in 6h 40m. Premium has no daily limit." · **✦ Get Premium · GHS 50/month** ·
   See plans. On Free, AI buttons carry "7 of 10 free AI actions left today". Choosing "Accurate"
   transcript on Free opens the same prompt ("Accurate transcripts are a Premium feature").
-- **Plans** (`/plans`, also a sheet from the prompts): Free vs ✦ Premium; Premium options 1 month /
+- **Plans** (`/plans`; **Built:** the prompts link to this page rather than opening a sheet): Free vs ✦ Premium; Premium options 1 month /
   3 months / 1 year; "Renew automatically (card only)" (enabled for 1 month and 1 year); **Pay GHS
   N with Paystack**; small print: "MoMo or card. *Fair use: 400 AI actions & 20 h transcripts a month."
 - **Settings → Plan:** current plan and end date; auto-renew status (card brand •• last4) with
@@ -72,12 +73,15 @@ transcription_usage  id, user_id, lecture_id, seconds int, at
     `'fair_use'` (Premium: this month's `ai_charges` + p_cost > 400). On `'ok'` it records an
     `ai_requests` row.
   - `ai_charge(p_user uuid, p_cost int)`: inserts an `ai_charges` row after the AI call succeeded.
+    **Built:** `ai_check` inserts that row itself on `'ok'`; `ai_release(p_user, p_cost)` removes it
+    when the call fails.
   - `transcription_check(p_user uuid, p_seconds int) → text`: `'ok'` | `'premium_required'` |
     `'fair_use'` (this month's seconds + p_seconds > 72000). `transcription_record(p_user, p_lecture,
     p_seconds)`.
   - `apply_payment(...)`: in one transaction — insert the payment (ignore a known reference),
     extend `premium_until = greatest(now(), coalesce(premium_until, now())) + months`, and update
     renewal fields. `apply_refund(reference)`: mark refunded, subtract the months (not below now).
+    **Built:** `apply_refund(reference, amount)` subtracts only the refunded share for a partial refund.
   - Phase 2's student-callable `ai_request_allowed()` is dropped (replaced by `ai_check`).
 - Limits and prices live in code constants (`lib/billing/plans.ts`) **and** inside the SQL
   functions; a unit test asserts they match.
@@ -109,6 +113,8 @@ transcription_usage  id, user_id, lecture_id, seconds int, at
   `auto_renew = false`.
 - **Env (server-only):** `PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_MONTHLY`, `PAYSTACK_PLAN_YEARLY`,
   `SUPABASE_SERVICE_ROLE_KEY`. Without Paystack keys: billing UI hidden, everyone on Free.
+  **Built:** the build sets `NEXT_PUBLIC_BILLING_ENABLED` from `PAYSTACK_SECRET_KEY` and
+  `SUPABASE_SERVICE_ROLE_KEY` (`next.config.ts`), so it never needs setting by hand.
 
 ## 6. Provider interface
 
