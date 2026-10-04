@@ -12,3 +12,10 @@ export async function newUser(): Promise<{ sb: SupabaseClient; id: string }> {
   if (error || !data.user) throw error ?? new Error('no user')
   return { sb, id: data.user.id }
 }
+
+// Service-role client: what the server uses for billing and usage (bypasses RLS)
+export function adminClient(): SupabaseClient {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
