@@ -11,7 +11,8 @@ const createClass = vi.fn(async (...a: unknown[]) => ({ id: 'k', ...(a[1] as obj
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/notes', () => ({ createNote: (...a: unknown[]) => createNote(...a) }))
 vi.mock('@/lib/data/cards', () => ({ createCards: (...a: unknown[]) => createCards(...a) }))
-vi.mock('@/lib/data/decks', () => ({ listDecksWithDue: async () => [], createDeck: async () => ({ id: 'd-new' }) }))
+const createDeck = vi.fn(async (...a: unknown[]) => { void a; return { id: 'd-new' } })
+vi.mock('@/lib/data/decks', () => ({ listDecksWithDue: async () => [], createDeck: (...a: unknown[]) => createDeck(...a) }))
 vi.mock('@/lib/data/courses', () => ({ createCourse: (...a: unknown[]) => createCourse(...a) }))
 vi.mock('@/lib/data/tasks', () => ({ createTask: (...a: unknown[]) => createTask(...a) }))
 vi.mock('@/lib/data/classes', () => ({ createClass: (...a: unknown[]) => createClass(...a) }))
@@ -23,7 +24,7 @@ import { PlannerReview } from '@/components/scan/PlannerReview'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 const courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }]
-beforeEach(() => { createNote.mockClear(); createCards.mockClear(); createCourse.mockClear(); createTask.mockClear(); createClass.mockClear() })
+beforeEach(() => { createDeck.mockClear(); createNote.mockClear(); createCards.mockClear(); createCourse.mockClear(); createTask.mockClear(); createClass.mockClear() })
 afterEach(() => cleanup())
 
 describe('NoteReview', () => {
@@ -50,6 +51,18 @@ describe('CardsReview', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Keep card 2' }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 1 card' })) })
     expect(createCards.mock.calls[0].slice(1)).toEqual(['d-new', [{ front: 'A?', back: 'a' }]])
+    expect(onSaved).toHaveBeenCalledWith(1)
+  })
+  it('retrying a failed save uses the deck already made, not a second one', async () => {
+    createCards.mockRejectedValueOnce(new Error('offline'))
+    const onSaved = vi.fn()
+    await act(async () => {
+      render(<CardsReview result={{ cards: [{ front: 'A?', back: 'a' }] }} deckName="Scanned cards" onSaved={onSaved} onScanAgain={vi.fn()} />)
+    })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 1 card' })) })
+    expect(screen.getByRole('alert')).toBeTruthy()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 1 card' })) })
+    expect(createDeck).toHaveBeenCalledTimes(1)
     expect(onSaved).toHaveBeenCalledWith(1)
   })
 })
@@ -98,6 +111,20 @@ describe('PlannerReview', () => {
     expect(createTask.mock.calls.map(c => (c[1] as { title: string }).title)).toEqual(['Essay', 'Midterm', 'Midterm'])
     expect(createClass).toHaveBeenCalledTimes(3)
     expect(onSaved).toHaveBeenCalledWith({ tasks: 1, classes: 3, courses: 0 })
+  })
+  it('a misread new course can be renamed, for every class that uses it', async () => {
+    renderPlanner()
+    fireEvent.change(screen.getByLabelText('Class 2 new course name'), { target: { value: 'Chemistry II' } })
+    expect((screen.getByLabelText('Class 3 new course name') as HTMLInputElement).value).toBe('Chemistry II')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 5 items' })) })
+    expect(createCourse.mock.calls.map(c => (c[1] as { name: string }).name)).toEqual(['Chemistry II'])
+  })
+  it('"Create course" stays available after switching a class to an existing course', () => {
+    renderPlanner()
+    fireEvent.change(screen.getByLabelText('Class 2 course'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('Class 3 course'), { target: { value: 'c1' } })
+    const options = [...(screen.getByLabelText('Class 2 course') as HTMLSelectElement).options].map(o => o.textContent)
+    expect(options).toContain('Create course Chemistry')
   })
   it('a class that ends before it starts can\'t be saved', () => {
     renderPlanner()

@@ -28,7 +28,14 @@ export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanA
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const savingRef = useRef(false)
-  const newNames = [...new Set(d.classes.flatMap(c => (c.course.kind === 'new' ? [c.course.name] : [])))]
+  const newNamesOf = (x: PlannerDrafts) => x.classes.flatMap(c => (c.course.kind === 'new' ? [c.course.name] : []))
+  // The scanned names stay on offer even after every class is switched to an existing course
+  const [scannedNew] = useState(() => newNamesOf(d))
+  const newNames = [...new Set([...scannedNew, ...newNamesOf(d)])]
+  // Renaming a new course renames it for every class that uses it
+  const renameCourse = (from: string, to: string) => setD(x => ({
+    ...x, classes: x.classes.map(c => (c.course.kind === 'new' && c.course.name === from ? { ...c, course: { kind: 'new', name: to } } : c)),
+  }))
   const setTask = (i: number, patch: Partial<TaskDraft>) => setD(x => ({ ...x, tasks: x.tasks.map((t, j) => (j === i ? { ...t, ...patch } : t)) }))
   const setClass = (i: number, patch: Partial<ClassDraft>) => setD(x => ({ ...x, classes: x.classes.map((c, j) => (j === i ? { ...c, ...patch } : c)) }))
   const problem = plannerProblem(d)
@@ -85,6 +92,10 @@ export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanA
                   {allCourses.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
                   {newNames.map(n => <option key={`new:${n}`} value={`new:${n}`}>Create course {n}</option>)}
                 </select>
+                {c.course.kind === 'new' && (
+                  <input aria-label={`Class ${i + 1} new course name`} placeholder="New course name" maxLength={80} value={c.course.name}
+                    onChange={e => renameCourse((c.course as { name: string }).name, e.target.value)} />
+                )}
                 <select aria-label={`Class ${i + 1} day`} value={c.day} onChange={e => setClass(i, { day: Number(e.target.value) })}>
                   {DAYS.map((day, n) => <option key={day} value={n}>{day}</option>)}
                 </select>

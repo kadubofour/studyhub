@@ -19,6 +19,18 @@ describe('matchCourse', () => {
     expect(matchCourse('  biology ', courses)).toEqual({ kind: 'existing', id: 'c1' })
     expect(matchCourse('Chemistry ', courses)).toEqual({ kind: 'new', name: 'Chemistry' })
   })
+  it('ignores spaces inside names too ("BIO 101" is "BIO101")', () => {
+    const mine = [{ id: 'b', name: 'BIO101', color: '#000' }, { id: 'o', name: 'Organic Chemistry', color: '#000' }]
+    expect(matchCourse('BIO 101', mine)).toEqual({ kind: 'existing', id: 'b' })
+    expect(matchCourse('organic  chemistry', mine)).toEqual({ kind: 'existing', id: 'o' })
+  })
+  it('saving a new course whose name matches an existing one uses the existing course', async () => {
+    const d = toDrafts({ tasks: [], classes: [cls('Chem')] }, courses)
+    d.classes[0].course = { kind: 'new', name: 'biology' } // renamed in the review to a course the student has
+    await savePlanner({} as never, d, 'Africa/Accra', courses)
+    expect(createCourse).not.toHaveBeenCalled()
+    expect((createClass.mock.calls[0][1] as { course_id: string }).course_id).toBe('c1')
+  })
 })
 
 describe('toDrafts', () => {

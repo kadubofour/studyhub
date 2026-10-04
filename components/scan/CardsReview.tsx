@@ -15,6 +15,7 @@ export function CardsReview({ result, deckName, onSaved, onScanAgain }: {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const savingRef = useRef(false)
+  const madeDeck = useRef<string | null>(null)
   const keep = keptCards(cards)
 
   async function save() {
@@ -22,7 +23,9 @@ export function CardsReview({ result, deckName, onSaved, onScanAgain }: {
     savingRef.current = true; setSaving(true); setError(null)
     try {
       const sb = supabase()
-      await createCards(sb, await resolveDeck(sb, deck), keep)
+      // A deck made by an earlier attempt that failed is reused, so a retry doesn't make a second one
+      madeDeck.current ??= await resolveDeck(sb, deck)
+      await createCards(sb, madeDeck.current, keep)
       onSaved(keep.length)
     } catch {
       setError('Couldn\'t save the cards. Try again.')
@@ -35,7 +38,7 @@ export function CardsReview({ result, deckName, onSaved, onScanAgain }: {
     <div className="space-y-3">
       <p className="text-sm text-muted">{cards.length} cards found. Edit or untick any before saving.</p>
       <CardReviewList cards={cards} onChange={setCards} />
-      <DeckPicker value={deck} onChange={setDeck} />
+      <DeckPicker value={deck} onChange={choice => { madeDeck.current = null; setDeck(choice) }} />
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       <div className="flex justify-between gap-2">
         <button type="button" className="btn" onClick={onScanAgain}>↺ Scan again</button>

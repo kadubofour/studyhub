@@ -13,7 +13,8 @@ export type TaskDraft = { keep: boolean; title: string; type: TaskType; due: str
 export type ClassDraft = { keep: boolean; course: CourseChoice; day: number; start: string; end: string; room: string; kind: ClassKind; unsure: boolean }
 export type PlannerDrafts = { tasks: TaskDraft[]; classes: ClassDraft[] }
 
-const key = (name: string) => name.trim().toLowerCase()
+// Course names compared ignoring case and all spaces: "BIO 101" is "bio101", "Organic  Chemistry" is "Organic Chemistry"
+const key = (name: string) => name.toLowerCase().replace(/\s+/g, '')
 
 // A scanned course name → the student's course with that name (ignoring case and spaces), or a new one
 export function matchCourse(name: string, courses: Course[]): CourseChoice {
@@ -64,7 +65,10 @@ export async function savePlanner(sb: SupabaseClient, d: PlannerDrafts, tz: stri
   try {
     for (const c of d.classes) {
       if (!c.keep || c.course.kind !== 'new' || made.has(key(c.course.name))) continue
-      const color = COURSE_COLORS[(existing.length + made.size) % COURSE_COLORS.length]
+      // Renamed in the review to a course the student already has: use that one
+      const have = existing.find(e => key(e.name) === key((c.course as { name: string }).name))
+      if (have) { made.set(key(c.course.name), have.id); continue }
+      const color = COURSE_COLORS[(existing.length + saved.courses.length) % COURSE_COLORS.length]
       const course = await createCourse(sb, { name: c.course.name.trim().slice(0, 80), color })
       made.set(key(c.course.name), course.id)
       saved.courses.push(course)
@@ -83,7 +87,7 @@ export async function savePlanner(sb: SupabaseClient, d: PlannerDrafts, tz: stri
   } catch {
     throw new PartialSaveError(saved)
   }
-  return { tasks: saved.tasks.size, classes: saved.classes.size, courses: made.size }
+  return { tasks: saved.tasks.size, classes: saved.classes.size, courses: saved.courses.length }
 }
 
 /** The drafts left after a partial save: saved rows removed, saved new courses now existing */
