@@ -10,19 +10,26 @@ const push = vi.fn()
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'c1', name: 'Biology', color: '#1D9E75' }] }))
 vi.mock('@/lib/data/lectures', () => ({ listLectures: async () => lectures, audioUsed: async () => used }))
-vi.mock('@/lib/lectures/localStore', () => ({ indexedDbStore: () => ({ sessions: async () => leftover }) }))
+const removed: string[] = []
+vi.mock('@/lib/lectures/localStore', () => ({ indexedDbStore: () => ({ sessions: async () => leftover, remove: async (id: string) => { removed.push(id) } }) }))
 vi.mock('@/lib/lectures/saveRecording', () => ({ finishRecording: (...a: unknown[]) => finishRecording(...(a as [])) }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
 import LecturesPage from '@/app/(app)/lectures/page'
+import { ProfileProvider } from '@/components/providers/ProfileProvider'
+import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
+import type { Profile } from '@/lib/types'
+const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 import { StorageCard } from '@/components/settings/StorageCard'
 
 const MB = 1024 * 1024
 beforeEach(() => {
   lectures = [{ id: 'L1', course_id: 'c1', title: 'Krebs cycle', recorded_at: '2026-10-03T09:00:00Z', duration_seconds: 3723, transcript_status: 'done', audio_bytes: 5 * MB }]
-  used = 5 * MB; leftover = []; finishRecording.mockClear(); push.mockClear()
+  used = 5 * MB; leftover = []; removed.length = 0; finishRecording.mockClear(); push.mockClear()
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => cleanup())
-const open = async () => { await act(async () => { render(<LecturesPage />) }) }
+const open = async () => { await act(async () => { render(<ProfileProvider initial={profile}><ConfirmProvider><LecturesPage /></ConfirmProvider></ProfileProvider>) }) }
 
 describe('Lectures page', () => {
   it('lists lectures with course, length and transcript status, and links to record', async () => {
@@ -44,11 +51,27 @@ describe('Lectures page', () => {
     expect(screen.queryByRole('link', { name: /Record/ })).toBeNull()
   })
   it('offers to recover a recording that wasn\'t saved, and saves it', async () => {
-    leftover = [{ id: 'L9', title: 'Lost lecture', parts: [] }]
+    leftover = [{ id: 'L9', userId: 'u1', title: 'Lost lecture', parts: [] }]
     await open()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Recover unsaved recording' })) })
     expect(finishRecording).toHaveBeenCalled()
     expect(push).toHaveBeenCalledWith('/lectures/L9')
+  })
+})
+
+describe('Lectures page: unsaved recordings', () => {
+  it('only offers recordings made by the signed-in student', async () => {
+    leftover = [{ id: 'L8', userId: 'someone-else', title: 'Their lecture', parts: [] }]
+    await open()
+    expect(screen.queryByRole('button', { name: 'Recover unsaved recording' })).toBeNull()
+  })
+  it('an unsaved recording can be discarded after confirming', async () => {
+    leftover = [{ id: 'L9', userId: 'u1', title: 'Lost lecture', parts: [] }]
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Discard' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('dialog').querySelector('button.btn-danger') as HTMLElement) })
+    expect(removed).toEqual(['L9'])
+    expect(screen.queryByRole('button', { name: 'Recover unsaved recording' })).toBeNull()
   })
 })
 

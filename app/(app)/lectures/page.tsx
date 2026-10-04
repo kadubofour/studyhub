@@ -11,6 +11,8 @@ import { listCourses } from '@/lib/data/courses'
 import { audioUsed, listLectures, type LectureSummary, type TranscriptStatus } from '@/lib/data/lectures'
 import { indexedDbStore, type LocalSession } from '@/lib/lectures/localStore'
 import { finishRecording } from '@/lib/lectures/saveRecording'
+import { useProfile } from '@/components/providers/ProfileProvider'
+import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { AUDIO_QUOTA_BYTES, formatClock, formatMb, storageState } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
 
@@ -21,6 +23,8 @@ const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 
 
 export default function LecturesPage() {
   const router = useRouter()
+  const { profile } = useProfile()
+  const confirm = useConfirm()
   const [lectures, setLectures] = useState<LectureSummary[] | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [used, setUsed] = useState(0)
@@ -33,8 +37,16 @@ export default function LecturesPage() {
     Promise.all([listLectures(sb), listCourses(sb), audioUsed(sb)])
       .then(([l, c, u]) => { setLectures(l); setCourses(c); setUsed(u) })
       .catch(() => setLectures([]))
-    indexedDbStore().sessions().then(s => setLeftover(s[0] ?? null)).catch(() => {})
-  }, [])
+    // Only this student's: a shared device may hold someone else's unsaved recording
+    indexedDbStore().sessions().then(s => setLeftover(s.find(x => x.userId === profile.id) ?? null)).catch(() => {})
+  }, [profile.id])
+
+  async function discard() {
+    if (!leftover) return
+    if (!await confirm({ title: 'Discard this recording?', body: 'It was never saved, and it will be deleted from this device.', confirmLabel: 'Discard', danger: true })) return
+    await indexedDbStore().remove(leftover.id).catch(() => {})
+    setLeftover(null)
+  }
 
   async function recover() {
     if (!leftover) return
@@ -57,7 +69,10 @@ export default function LecturesPage() {
       {leftover && (
         <div role="status" className="card mb-4 space-y-2">
           <p className="text-sm">A recording wasn&apos;t saved: <b>{leftover.title}</b>.</p>
-          <button type="button" className="btn-primary" disabled={recovering} onClick={recover}>{recovering ? 'Saving…' : 'Recover unsaved recording'}</button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-primary" disabled={recovering} onClick={recover}>{recovering ? 'Saving…' : 'Recover unsaved recording'}</button>
+            <button type="button" className="btn" disabled={recovering} onClick={discard}>Discard</button>
+          </div>
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         </div>
       )}
