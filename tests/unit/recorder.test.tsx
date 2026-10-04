@@ -7,22 +7,33 @@ import { memoryStore } from '@/lib/lectures/localStore'
 const push = vi.fn()
 let used = 0
 const finishRecording = vi.fn(async (...a: unknown[]) => ({ id: (a[2] as { id: string }).id }))
-const uploadPart = vi.fn(async (...a: unknown[]) => a[2])
+const uploadPartFile = vi.fn(async (...a: unknown[]) => { const part = a[2] as { index: number; blob: Blob }; return { path: `u1/L-${part.index}.webm`, bytes: part.blob.size } })
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'c1', name: 'Biology', color: '#1D9E75' }] }))
 vi.mock('@/lib/data/lectures', () => ({ audioUsed: async () => used }))
-vi.mock('@/lib/lectures/saveRecording', () => ({
-  finishRecording: (...a: unknown[]) => finishRecording(...a), uploadPart: (...a: unknown[]) => uploadPart(...a),
+vi.mock('@/lib/lectures/saveRecording', async orig => ({
+  ...(await orig<typeof import('@/lib/lectures/saveRecording')>()),
+  finishRecording: (...a: unknown[]) => finishRecording(...a), uploadPartFile: (...a: unknown[]) => uploadPartFile(...a),
 }))
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { Recorder } from '@/components/lectures/Recorder'
+import type { LocalSession } from '@/lib/lectures/localStore'
 
 class FakeRecorder {
   static isTypeSupported = (t: string) => t === 'audio/webm;codecs=opus'
   ondataavailable: ((e: { data: Blob }) => void) | null = null; onstop: (() => void) | null = null
   start() {} pause() {} resume() {}
   stop() { this.ondataavailable?.({ data: new Blob(['x']) }); this.onstop?.() }
+}
+const heard: FakeRecognition[] = []
+class FakeRecognition {
+  continuous = false; interimResults = false; lang = ''
+  onresult: ((e: { resultIndex: number; results: { isFinal: boolean; 0: { transcript: string } }[] }) => void) | null = null
+  onend: (() => void) | null = null; onerror: ((e: { error: string }) => void) | null = null
+  constructor() { heard.push(this) }
+  start() {} stop() {}
+  say(text: string) { this.onresult?.({ resultIndex: 0, results: [{ isFinal: true, 0: { transcript: text } }] }) }
 }
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 const stream = { getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream
@@ -32,10 +43,27 @@ const renderRecorder = async (over: object = {}) => {
   await act(async () => { render(<ProfileProvider initial={profile}><Recorder deps={deps(over)} /></ProfileProvider>) })
 }
 
-beforeEach(() => { vi.useFakeTimers(); used = 0; push.mockClear(); finishRecording.mockClear(); getUserMedia = vi.fn(async () => stream) })
+beforeEach(() => { vi.useFakeTimers(); used = 0; heard.length = 0; push.mockClear(); finishRecording.mockClear(); uploadPartFile.mockClear(); getUserMedia = vi.fn(async () => stream) })
 afterEach(() => { cleanup(); vi.useRealTimers(); delete process.env.NEXT_PUBLIC_BILLING_ENABLED })
 
 describe('Recorder', () => {
+  it('a slow part upload loses neither the next part nor live lines, and the device lists the next part at once', async () => {
+    let finishFirstUpload!: () => void
+    uploadPartFile.mockImplementationOnce(async () => { await new Promise<void>(r => { finishFirstUpload = r }); return { path: 'u1/L-0.webm', bytes: 1 } })
+    const store = memoryStore()
+    await renderRecorder({ partSeconds: 2, store, Recognition: FakeRecognition })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    await act(async () => { vi.advanceTimersByTime(2000) }) // part 0 is full: its upload starts and hangs
+    expect((await store.sessions())[0].parts.map(p => p.index)).toEqual([0, 1])
+    await act(async () => { heard[0].say('Mitochondria make ATP.') })
+    await act(async () => { vi.advanceTimersByTime(1000) })
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Stop & save' })) }) // part 1 uploads at once
+    await act(async () => { finishFirstUpload() }) // part 0's upload finishes last
+    const saved = finishRecording.mock.calls[0][2] as LocalSession
+    expect(saved.parts.map(p => [p.index, p.duration != null, !!p.uploaded])).toEqual([[0, true, true], [1, true, true]])
+    expect(saved.lines.map(l => l.text)).toEqual(['Mitochondria make ATP.'])
+  })
+
   it('asks for the lecturer\'s permission and explains live transcripts aren\'t available here', async () => {
     await renderRecorder()
     expect(screen.getByText('Ask your lecturer before recording.')).toBeTruthy()

@@ -12,7 +12,7 @@ import { audioUsed } from '@/lib/data/lectures'
 import { createPartRecorder, pickAudioType, type RecorderCtor } from '@/lib/lectures/recorder'
 import { createLiveTranscriber, type RecognitionCtor } from '@/lib/lectures/liveTranscript'
 import type { LocalSession, RecordingStore, TranscriptChoice } from '@/lib/lectures/localStore'
-import { finishRecording, uploadPart } from '@/lib/lectures/saveRecording'
+import { finishRecording, uploadPartFile, withPart } from '@/lib/lectures/saveRecording'
 import { MAX_LECTURE_SECONDS, WARN_LECTURE_SECONDS, formatClock, storageState, type TranscriptLine } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
 
@@ -109,16 +109,22 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
       stream: media, Ctor: deps.MediaRecorder, recorderType: type.recorderType, mime: type.mime, partSeconds: deps.partSeconds,
       onChunk: (i, chunk) => { void deps.store.addChunk(s.id, i, chunk) },
       onPart: async part => {
-        // This part is finished; the next one (if recording goes on) has started, length unknown
-        const cur = session.current!
-        const others = cur.parts.filter(p => p.index !== part.index && p.index !== part.index + 1)
-        const next: LocalSession = { ...cur, parts: [
-          ...others,
-          { index: part.index, start: part.start, duration: part.duration, uploaded: null },
-          { index: part.index + 1, start: part.start + part.duration, duration: null, uploaded: null },
-        ].sort((a, b) => a.index - b.index) }
-        session.current = next
-        try { session.current = await uploadPart(supabase(), deps.store, next, part) } catch { /* kept on the device; Stop uploads it */ }
+        // This part is finished and the next one (if recording goes on) has started, length
+        // unknown. The device copy lists both before uploading, so a dead phone loses neither.
+        let cur = withPart(session.current!, { index: part.index, start: part.start, duration: part.duration, uploaded: null })
+        if (!cur.parts.some(p => p.index === part.index + 1)) {
+          cur = withPart(cur, { index: part.index + 1, start: part.start + part.duration, duration: null, uploaded: null })
+        }
+        session.current = cur
+        await deps.store.saveSession(cur)
+        try {
+          const uploaded = await uploadPartFile(supabase(), cur, part)
+          // Merge into the latest session: live lines and later parts may have changed meanwhile
+          const latest = session.current!
+          const mine = latest.parts.find(p => p.index === part.index)!
+          session.current = withPart(latest, { ...mine, uploaded })
+          await deps.store.saveSession(session.current)
+        } catch { /* kept on the device; Stop uploads it */ }
       },
     })
     recorder.current = rec

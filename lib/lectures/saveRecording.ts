@@ -8,18 +8,28 @@ export const partPath = (userId: string, lectureId: string, index: number, ext: 
 // A part that never finished has no recorded length: at 32 kbps, 4000 bytes are one second
 const secondsFromBytes = (bytes: number) => Math.round((bytes * 8) / 32000)
 
-function withPart(s: LocalSession, part: LocalPart): LocalSession {
+/** The session with one part's entry added or replaced */
+export function withPart(s: LocalSession, part: LocalPart): LocalSession {
   return { ...s, parts: [...s.parts.filter(p => p.index !== part.index), part].sort((a, b) => a.index - b.index) }
 }
 
-// Upload one part. The safety copy records the result either way; a failed upload throws
-// 'upload_failed' and the part stays on the device for later.
-export async function uploadPart(sb: SupabaseClient, store: RecordingStore, s: LocalSession, part: RecordedPart): Promise<LocalSession> {
+// Upload one part's file; throws 'upload_failed'. The caller records the result in its latest
+// session (others may have changed it during a slow upload).
+export async function uploadPartFile(sb: SupabaseClient, s: Pick<LocalSession, 'userId' | 'id' | 'ext' | 'mime'>, part: RecordedPart): Promise<{ path: string; bytes: number }> {
   const path = partPath(s.userId, s.id, part.index, s.ext)
   const { error } = await sb.storage.from('lectures').upload(path, part.blob, { contentType: s.mime, upsert: true })
-  const next = withPart(s, { index: part.index, start: part.start, duration: part.duration, uploaded: error ? null : { path, bytes: part.blob.size } })
-  await store.saveSession(next)
   if (error) throw new Error('upload_failed')
+  return { path, bytes: part.blob.size }
+}
+
+// Upload one part and record the result in the safety copy either way; a failed upload throws
+// 'upload_failed' and the part stays on the device for later.
+export async function uploadPart(sb: SupabaseClient, store: RecordingStore, s: LocalSession, part: RecordedPart): Promise<LocalSession> {
+  let uploaded: { path: string; bytes: number } | null = null
+  try { uploaded = await uploadPartFile(sb, s, part) } catch { /* recorded below as not uploaded */ }
+  const next = withPart(s, { index: part.index, start: part.start, duration: part.duration, uploaded })
+  await store.saveSession(next)
+  if (!uploaded) throw new Error('upload_failed')
   return next
 }
 
