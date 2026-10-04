@@ -32,3 +32,11 @@ export async function noteWithText(page: Page, title = 'Krebs cycle') {
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
   await expect(page.getByText('Saved')).toBeVisible()
 }
+
+// Pays for a month of Premium through the fake Paystack (E2E only)
+export async function becomePremium(page: Page) {
+  await page.goto('/plans')
+  await page.getByRole('button', { name: 'Pay GHS 50 with Paystack' }).click()
+  await page.getByRole('link', { name: 'Pay', exact: true }).click()
+  await expect(page.getByText(/You're on Premium until/)).toBeVisible()
+}

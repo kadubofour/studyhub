@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 3100
+// Chromium's fake microphone (a test tone), allowed without a permission prompt, for recording lectures
+const media = { launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] } }
 export default defineConfig({
   testDir: 'e2e',
   timeout: 60_000,
@@ -15,10 +17,11 @@ export default defineConfig({
       E2E_FAKE_AI: '1', OPENAI_API_KEY: 'e2e-fake', OPENAI_BASE_URL: `http://localhost:${PORT}/api/test-openai/v1`,
       E2E_FAKE_PAYSTACK: '1', PAYSTACK_SECRET_KEY: 'sk_test_e2e', PAYSTACK_BASE_URL: `http://localhost:${PORT}/api/test-paystack`,
       PAYSTACK_PLAN_MONTHLY: 'PLN_e2e_monthly', PAYSTACK_PLAN_YEARLY: 'PLN_e2e_yearly', // billing UI turns on from these keys
+      NEXT_PUBLIC_LECTURE_PART_SECONDS: '3', // lecture parts of 3 s, so a short recording has several
     },
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], ...media } },
+    { name: 'mobile', use: { ...devices['Pixel 7'], ...media } },
   ],
 })
