@@ -2,13 +2,23 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import { CHOICES, FAIR_USE_MONTHLY_ACTIONS, FREE_DAILY_ACTIONS, PRODUCTS, SPEED_LIMIT_PER_MINUTE, formatGhs, pdfActionCost } from '@/lib/billing/plans'
 
-const sql = fs.readFileSync('supabase/migrations/20261007000000_billing.sql', 'utf8')
+// The definition of a SQL function the database actually runs: the one in the newest migration
+function latestDefinition(fn: string): string {
+  const dir = 'supabase/migrations'
+  const marker = new RegExp(`create (or replace )?function public\\.${fn}\\(`)
+  const file = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort().reverse()
+    .map(f => fs.readFileSync(`${dir}/${f}`, 'utf8').replace(/\r\n/g, '\n'))
+    .find(sql => marker.test(sql))!
+  const start = file.search(marker)
+  return file.slice(start, file.indexOf('end $$;', start))
+}
 
 describe('plan constants', () => {
   it('match the limits enforced in SQL', () => {
-    expect(sql).toContain(`> ${FREE_DAILY_ACTIONS} then return 'daily_limit'`)
-    expect(sql).toContain(`> ${FAIR_USE_MONTHLY_ACTIONS} then return 'fair_use'`)
-    expect(sql).toContain(`>= ${SPEED_LIMIT_PER_MINUTE} then\n    return 'rate_limited'`)
+    const check = latestDefinition('ai_check')
+    expect(check).toContain(`> ${FREE_DAILY_ACTIONS} then return 'daily_limit'`)
+    expect(check).toContain(`> ${FAIR_USE_MONTHLY_ACTIONS} then return 'fair_use'`)
+    expect(check).toContain(`>= ${SPEED_LIMIT_PER_MINUTE} then\n    return 'rate_limited'`)
   })
   it('have the agreed prices in pesewas', () => {
     expect(PRODUCTS.pass_1m).toMatchObject({ months: 1, amountMinor: 5000 })
