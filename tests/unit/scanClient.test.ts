@@ -12,7 +12,7 @@ vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ storage: { from: ()
   },
   remove: async (paths: string[]) => { removed.push(paths); return { error: null } },
 }) } }) }))
-import { addFiles, fitWithin, runScan } from '@/lib/scan/scanClient'
+import { addFiles, fitWithin, prepareImage, runScan } from '@/lib/scan/scanClient'
 
 const photo = (name: string, type = 'image/jpeg') => new File(['x'], name, { type })
 const pdf = (name = 'w.pdf', size = 10) => new File([new Uint8Array(size)], name, { type: 'application/pdf' })
@@ -54,6 +54,21 @@ describe('fitWithin', () => {
     expect(fitWithin(4000, 3000)).toEqual({ width: 2000, height: 1500 })
     expect(fitWithin(1500, 3000)).toEqual({ width: 1000, height: 2000 })
     expect(fitWithin(800, 600)).toEqual({ width: 800, height: 600 })
+  })
+})
+
+describe('prepareImage', () => {
+  it('paints transparent areas white, so a transparent screenshot isn\'t sent as a black page', async () => {
+    const calls: string[] = []
+    const ctx = { set fillStyle(v: string) { calls.push(`fillStyle ${v}`) }, fillRect: () => calls.push('fillRect'), drawImage: () => calls.push('drawImage') }
+    const canvas = { width: 0, height: 0, getContext: () => ctx, toBlob: (cb: (b: Blob) => void) => cb(new Blob(['jpg'], { type: 'image/jpeg' })) }
+    const realCreate = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => (tag === 'canvas' ? canvas : realCreate(tag))) as typeof document.createElement)
+    vi.stubGlobal('createImageBitmap', async () => ({ width: 4000, height: 3000, close: () => {} }))
+    await prepareImage(photo('shot.png', 'image/png'))
+    expect(calls).toEqual(['fillStyle #ffffff', 'fillRect', 'drawImage'])
+    expect([canvas.width, canvas.height]).toEqual([2000, 1500])
+    vi.restoreAllMocks()
   })
 })
 

@@ -60,7 +60,11 @@ export async function prepareImage(file: File): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, width, height)
+  const ctx = canvas.getContext('2d')!
+  // JPEG has no transparency: without a white background, transparent areas turn black
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, width, height)
+  ctx.drawImage(bitmap, 0, 0, width, height)
   bitmap.close()
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85))
   if (!blob) throw new Error(unreadable)
