@@ -1,7 +1,7 @@
 'use client'
 import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
   PanelLeftClose, PanelLeftOpen, ScanLine, Mic,
@@ -14,6 +14,8 @@ import { OfflineBanner } from './OfflineBanner'
 import { PremiumBadge } from '@/components/billing/PremiumBadge'
 import { EndingBanner } from '@/components/billing/EndingBanner'
 import { useProfile } from '@/components/providers/ProfileProvider'
+import { useConfirm } from '@/components/providers/ConfirmProvider'
+import { isRecording } from '@/lib/lectures/recordingGuard'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { ACCENTS, FONTS } from '@/lib/appearance'
@@ -37,6 +39,17 @@ const scanTargetFor = (path: string): ScanTarget =>
 
 export function AppShell({ children, initialCollapsed = false }: { children: React.ReactNode; initialCollapsed?: boolean }) {
   const path = usePathname()
+  const router = useRouter()
+  const confirm = useConfirm()
+  // A lecture is recording on this page and leaving stops it, so ask first
+  function guard(e: React.MouseEvent, href: string) {
+    if (!isRecording()) return
+    e.preventDefault()
+    void confirm({
+      title: 'Stop recording?', confirmLabel: 'Leave', danger: true,
+      body: 'Leaving this page stops the recording. What was recorded is kept on this device; save it from Lectures.',
+    }).then(ok => { if (ok) router.push(href) })
+  }
   const { resolvedTheme, setTheme } = useTheme()
   const { profile, setProfile } = useProfile()
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
@@ -68,7 +81,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       {sidebar && (
         <aside className="no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
           <div className="mb-6 flex items-center justify-between px-1">
-            <Link href="/home" className="flex items-center gap-2 text-[15px] font-semibold">
+            <Link href="/home" onClick={e => guard(e, '/home')} className="flex items-center gap-2 text-[15px] font-semibold">
               <span className="flex size-7 items-center justify-center rounded-lg text-white" style={{ background: 'linear-gradient(135deg, var(--accent-solid), var(--accent-glow))' }}>
                 <GraduationCap size={16} aria-hidden />
               </span>
@@ -81,7 +94,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           </div>
           <nav className="flex flex-col gap-0.5">
             {NAV.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} aria-current={active(href) ? 'page' : undefined}
+              <Link key={href} href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
                 className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition ${active(href) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
                 <Icon size={17} aria-hidden />{label}
               </Link>
@@ -96,7 +109,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
               {dark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
               {dark ? 'Light mode' : 'Dark mode'}
             </button>
-            <Link href="/settings" className={`btn-ghost ${active('/settings') ? 'text-fg' : ''}`}><Settings size={16} aria-hidden />Settings</Link>
+            <Link href="/settings" onClick={e => guard(e, '/settings')} className={`btn-ghost ${active('/settings') ? 'text-fg' : ''}`}><Settings size={16} aria-hidden />Settings</Link>
           </div>
         </aside>
       )}
@@ -119,7 +132,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                   <ScanLine size={19} aria-hidden />Scan
                 </button>
               )}
-              <Link href={href} aria-current={active(href) ? 'page' : undefined}
+              <Link href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
                 className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] ${active(href) ? 'text-accent' : 'text-muted'}`}>
                 <Icon size={19} aria-hidden />{label}
               </Link>

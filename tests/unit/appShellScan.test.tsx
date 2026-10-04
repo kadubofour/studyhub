@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 
 let path = '/planner'
-vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }))
+const push = vi.fn()
+vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }) }))
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/components/scan/ScanDialog', () => ({
@@ -16,6 +17,8 @@ vi.mock('@/components/scan/ScanDialog', () => ({
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { AppShell } from '@/components/shell/AppShell'
 import { SCAN_SAVED } from '@/lib/scan/events'
+import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
+import { setRecording } from '@/lib/lectures/recordingGuard'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 const renderShell = () => render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
@@ -60,5 +63,18 @@ describe('Scan in the app shell', () => {
     const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
     expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
     expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(1) // sidebar only
+  })
+
+  it('while a lecture is recording, leaving through the sidebar asks first', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+    path = '/lectures/record'
+    setRecording(true)
+    render(<ProfileProvider initial={profile}><ConfirmProvider><AppShell><p>page</p></AppShell></ConfirmProvider></ProfileProvider>)
+    fireEvent.click(screen.getAllByRole('link', { name: 'Planner' })[0])
+    expect(screen.getByText('Stop recording?')).toBeTruthy()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Leave' })) })
+    expect(push).toHaveBeenCalledWith('/planner')
+    setRecording(false)
   })
 })

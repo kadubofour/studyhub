@@ -19,6 +19,7 @@ vi.mock('@/lib/lectures/saveRecording', async orig => ({
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { Recorder } from '@/components/lectures/Recorder'
 import type { LocalSession } from '@/lib/lectures/localStore'
+import { isRecording } from '@/lib/lectures/recordingGuard'
 
 class FakeRecorder {
   static isTypeSupported = (t: string) => t === 'audio/webm;codecs=opus'
@@ -90,6 +91,18 @@ describe('Recorder', () => {
     const saved = finishRecording.mock.calls[0][2] as { title: string; userId: string; choice: string }
     expect(saved).toMatchObject({ title: 'Krebs cycle', userId: 'u1', choice: 'none' })
     expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/lectures\/[0-9a-f-]{36}$/))
+  })
+
+  it('while recording, closing the tab warns and the app knows a recording is running', async () => {
+    await renderRecorder()
+    const leave = () => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented }
+    expect(leave()).toBe(false)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    expect(isRecording()).toBe(true)
+    expect(leave()).toBe(true)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Stop & save' })) })
+    expect(isRecording()).toBe(false)
+    expect(leave()).toBe(false)
   })
 
   it('a denied microphone gets a tip on allowing it', async () => {

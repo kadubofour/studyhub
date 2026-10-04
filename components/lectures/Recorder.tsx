@@ -13,6 +13,7 @@ import { createPartRecorder, pickAudioType, type RecorderCtor } from '@/lib/lect
 import { createLiveTranscriber, type RecognitionCtor } from '@/lib/lectures/liveTranscript'
 import type { LocalSession, RecordingStore, TranscriptChoice } from '@/lib/lectures/localStore'
 import { finishRecording, uploadPartFile, withPart } from '@/lib/lectures/saveRecording'
+import { setRecording } from '@/lib/lectures/recordingGuard'
 import { MAX_LECTURE_SECONDS, WARN_LECTURE_SECONDS, formatClock, storageState, type TranscriptLine } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
 
@@ -82,6 +83,15 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     listCourses(sb).then(setCourses).catch(() => {})
     audioUsed(sb).then(setUsed).catch(() => {})
   }, [])
+  // While recording: closing or reloading the tab warns, and the app's navigation asks first
+  useEffect(() => {
+    if (stage !== 'recording') return
+    setRecording(true)
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', warn)
+    return () => { setRecording(false); window.removeEventListener('beforeunload', warn) }
+  }, [stage])
+
   const wake = useRef<WakeLockSentinel | null>(null)
   const releaseWake = () => { void wake.current?.release().catch(() => {}); wake.current = null }
   useEffect(() => () => {
