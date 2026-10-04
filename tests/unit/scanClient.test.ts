@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const uploads: { path: string; type: string }[] = []
 const removed: string[][] = []
 let failUploadNo = 0
+let afterUpload = () => {}
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ storage: { from: () => ({
   upload: async (...a: unknown[]) => {
     const [path, , o] = a as [string, Blob, { contentType: string }]
     uploads.push({ path, type: o.contentType })
+    afterUpload()
     return { error: uploads.length === failUploadNo ? { message: 'down' } : null }
   },
   remove: async (paths: string[]) => { removed.push(paths); return { error: null } },
@@ -20,7 +22,7 @@ const count = (n: number) => async () => n
 const prepare = async (f: File) => new Blob([`small ${f.name}`], { type: 'image/jpeg' })
 const fetchMock = vi.fn()
 const reply = (body: object, status = 200) => fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status }))
-beforeEach(() => { uploads.length = 0; removed.length = 0; failUploadNo = 0; vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset() })
+beforeEach(() => { uploads.length = 0; removed.length = 0; failUploadNo = 0; afterUpload = () => {}; vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset() })
 afterEach(() => { vi.unstubAllGlobals() })
 
 describe('addFiles', () => {
@@ -64,8 +66,10 @@ describe('prepareImage', () => {
     const canvas = { width: 0, height: 0, getContext: () => ctx, toBlob: (cb: (b: Blob) => void) => cb(new Blob(['jpg'], { type: 'image/jpeg' })) }
     const realCreate = document.createElement.bind(document)
     vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => (tag === 'canvas' ? canvas : realCreate(tag))) as typeof document.createElement)
-    vi.stubGlobal('createImageBitmap', async () => ({ width: 4000, height: 3000, close: () => {} }))
+    const bitmapArgs: unknown[][] = []
+    vi.stubGlobal('createImageBitmap', async (...a: unknown[]) => { bitmapArgs.push(a); return { width: 4000, height: 3000, close: () => {} } })
     await prepareImage(photo('shot.png', 'image/png'))
+    expect(bitmapArgs[0][1]).toEqual({ imageOrientation: 'from-image' }) // portrait phone photos stay upright
     expect(calls).toEqual(['fillStyle #ffffff', 'fillRect', 'drawImage'])
     expect([canvas.width, canvas.height]).toEqual([2000, 1500])
     vi.restoreAllMocks()
@@ -99,6 +103,21 @@ describe('runScan', () => {
   it('stops at a failed upload and deletes what was already uploaded', async () => {
     failUploadNo = 2
     expect(await runScan({ ...base, pages: await photos(), target: 'note' })).toMatchObject({ ok: false, code: 'upload_failed' })
+    expect(removed).toEqual([[uploads[0].path]])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('refuses pages over 24 MB together before uploading anything', async () => {
+    const ten = (await addFiles([], Array.from({ length: 10 }, (_, i) => photo(`${i}.jpg`)), count(0))).pages
+    const big = async () => new Blob([new Uint8Array(3 * 1024 * 1024)], { type: 'image/jpeg' })
+    expect(await runScan({ ...base, prepare: big, pages: ten, target: 'note' }))
+      .toEqual({ ok: false, code: 'too_large', message: 'These pages are too large together. Try fewer photos.' })
+    expect(uploads).toEqual([])
+  })
+  it('cancelling partway through uploading deletes what was uploaded and reads nothing', async () => {
+    const controller = new AbortController()
+    afterUpload = () => controller.abort()
+    await expect(runScan({ ...base, pages: await photos(), target: 'note', signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(uploads).toHaveLength(1)
     expect(removed).toEqual([[uploads[0].path]])
     expect(fetchMock).not.toHaveBeenCalled()
   })

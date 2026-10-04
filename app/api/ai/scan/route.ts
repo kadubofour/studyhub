@@ -6,7 +6,7 @@ import {
   isDayKey, scanToCards, scanToNote, scanToPlanner,
   type ScanCardsResult, type ScanFile, type ScanNoteResult, type ScanPlannerResult, type ScanTarget,
 } from '@/lib/ai/scan'
-import { MAX_SCAN_PAGES } from '@/lib/scan/limits'
+import { MAX_SCAN_BYTES, MAX_SCAN_PAGES } from '@/lib/scan/limits'
 import { countPdfPages } from '@/lib/import/pdfPages'
 import { pdfActionCost } from '@/lib/billing/plans'
 
@@ -15,8 +15,6 @@ export const maxDuration = 300
 
 const TARGETS: ScanTarget[] = ['note', 'cards', 'planner']
 const IMAGE_TYPES: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
-// Base64 grows files by a third and OpenAI caps a request at 32 MB
-const MAX_TOTAL_BYTES = 24 * 1024 * 1024
 const err = (status: number, error: string) => NextResponse.json({ error }, { status })
 const extOf = (path: string) => path.slice(path.lastIndexOf('.') + 1).toLowerCase()
 
@@ -55,7 +53,7 @@ export async function POST(request: Request) {
       const { data, error } = await bucket.download(path)
       if (error || !data) return err(404, 'not_found')
       total += data.size
-      if (total > MAX_TOTAL_BYTES) return err(413, 'too_large')
+      if (total > MAX_SCAN_BYTES) return err(413, 'too_large')
       const bytes = Buffer.from(await data.arrayBuffer())
       const ext = extOf(path)
       if (ext === 'pdf') {

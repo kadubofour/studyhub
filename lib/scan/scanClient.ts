@@ -2,7 +2,7 @@
 import { supabase } from '@/lib/supabase/client'
 import { postAi } from '@/components/ai/aiFetch'
 import { MAX_PDF_BYTES, loadPdf } from '@/lib/import/pdfImport'
-import { MAX_SCAN_PAGES } from './limits'
+import { MAX_SCAN_BYTES, MAX_SCAN_PAGES } from './limits'
 import type { ScanCardsResult, ScanNoteResult, ScanPlannerResult, ScanTarget } from '@/lib/ai/scan'
 
 export type ScanPage = { id: string; file: File; kind: 'image' | 'pdf'; pages: number; preview: string | null }
@@ -55,7 +55,8 @@ export function fitWithin(width: number, height: number, max = MAX_IMAGE_SIDE) {
 export async function prepareImage(file: File): Promise<Blob> {
   const unreadable = 'Couldn\'t read one of the photos. Try taking it again.'
   let bitmap: ImageBitmap
-  try { bitmap = await createImageBitmap(file) } catch { throw new Error(unreadable) }
+  // Use the photo's own orientation, so portrait phone photos aren't sent sideways
+  try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }) } catch { throw new Error(unreadable) }
   const { width, height } = fitWithin(bitmap.width, bitmap.height)
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -78,17 +79,25 @@ export async function runScan<T extends ScanTarget>(o: {
 }): Promise<{ ok: true; value: ScanResult[T] } | { ok: false; code: string; message: string }> {
   const bucket = supabase().storage.from('imports')
   const prepare = o.prepare ?? prepareImage
+  const cancelled = () => new DOMException('Scan cancelled', 'AbortError')
+  // Shrink every photo first, so pages too large together are refused before anything uploads
+  const blobs: Blob[] = []
+  for (const p of o.pages) {
+    try { blobs.push(p.kind === 'pdf' ? p.file : await prepare(p.file)) } catch (e) { return { ok: false, code: 'photo', message: (e as Error).message } }
+    if (o.signal?.aborted) throw cancelled()
+  }
+  if (blobs.reduce((n, b) => n + b.size, 0) > MAX_SCAN_BYTES) return { ok: false, code: 'too_large', message: SCAN_MESSAGES.too_large }
+
   const paths: string[] = []
   try {
     for (const [i, p] of o.pages.entries()) {
-      let blob: Blob
-      try { blob = p.kind === 'pdf' ? p.file : await prepare(p.file) } catch (e) { return { ok: false, code: 'photo', message: (e as Error).message } }
-      if (o.signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
+      if (o.signal?.aborted) throw cancelled()
       const path = `${o.userId}/${crypto.randomUUID()}-scan-${i + 1}.${p.kind === 'pdf' ? 'pdf' : 'jpg'}`
-      const up = await bucket.upload(path, blob, { contentType: p.kind === 'pdf' ? 'application/pdf' : 'image/jpeg' })
+      const up = await bucket.upload(path, blobs[i], { contentType: p.kind === 'pdf' ? 'application/pdf' : 'image/jpeg' })
       if (up.error) return { ok: false, code: 'upload_failed', message: SCAN_MESSAGES.upload_failed }
       paths.push(path)
     }
+    if (o.signal?.aborted) throw cancelled()
     const r = await postAi<ScanResult[T]>('/api/ai/scan', { paths, target: o.target, today: o.today }, o.signal)
     return r.ok ? r : { ok: false, code: r.error, message: SCAN_MESSAGES[r.error] ?? r.message }
   } finally {

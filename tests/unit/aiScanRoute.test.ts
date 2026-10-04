@@ -98,6 +98,15 @@ describe('POST /api/ai/scan', () => {
     expect(await res.json()).toEqual({ error: 'too_large' })
   })
 
+  it('a read that fails or is cancelled gives the AI action back, and still deletes the uploads', async () => {
+    scanToNote.mockRejectedValueOnce(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+    const controller = new AbortController()
+    controller.abort()
+    await POST(new Request('http://x/api/ai/scan', { method: 'POST', body: JSON.stringify({ paths: ['u1/a.jpg'], target: 'note' }), headers: { 'content-type': 'application/json' }, signal: controller.signal }))
+    expect(adminCalls()).toEqual([['ai_check', 1], ['ai_release', 1]])
+    expect(removed).toEqual([['u1/a.jpg']])
+  })
+
   it('at the plan limit: 402, no AI call, uploads deleted', async () => {
     check = 'daily_limit'
     const res = await call({ paths: ['u1/a.jpg'], target: 'note' })
