@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
-import { announcePlanChanged, usePlan } from '@/components/billing/usePlan'
+import { announcePlanChanged, billingEnabled, usePlan } from '@/components/billing/usePlan'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { FAIR_USE_MONTHLY_ACTIONS, PRODUCTS, formatGhs, type ProductId } from '@/lib/billing/plans'
 
@@ -17,6 +17,7 @@ export function PlanCard() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
+    if (!billingEnabled()) return
     supabase().from('payments').select('id,product,amount_minor,channel,status,paid_at,created_at').order('created_at', { ascending: false }).limit(20)
       .then(({ data }) => setPayments((data ?? []) as Payment[]))
   }, [])

@@ -4,8 +4,9 @@ import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 
 let ent: Record<string, unknown> | null
 let payments: Record<string, unknown>[] = []
+const tables: string[] = []
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({
-  from: (t: string) => t === 'entitlements'
+  from: (t: string) => (tables.push(t), t) === 'entitlements'
     ? { select: () => ({ maybeSingle: async () => ({ data: ent }) }) }
     : t === 'payments'
       ? { select: () => ({ order: () => ({ limit: async () => ({ data: payments }) }) }) }
@@ -48,6 +49,18 @@ describe('PlanCard', () => {
     renderCard()
     expect(await screen.findByText('Free')).toBeTruthy()
     expect(screen.getByRole('link', { name: '✦ Get Premium' }).getAttribute('href')).toBe('/plans')
+  })
+})
+
+describe('PlanCard with billing off', () => {
+  it('renders nothing and loads no payments', async () => {
+    delete process.env.NEXT_PUBLIC_BILLING_ENABLED
+    tables.length = 0
+    payments = [{ id: 'p1', product: 'pass_1m', amount_minor: 5000, channel: 'card', status: 'success', paid_at: null, created_at: '2026-10-03T10:00:00Z' }]
+    const { container } = renderCard()
+    await act(async () => {})
+    expect(container.textContent).toBe('')
+    expect(tables).not.toContain('payments')
   })
 })
 
