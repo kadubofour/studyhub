@@ -59,6 +59,14 @@ describe('Lectures page', () => {
   })
 })
 
+describe('Lectures page: transcript labels', () => {
+  it('a lecture whose accurate transcript stopped still says it has its live transcript', async () => {
+    lectures = [{ id: 'L2', course_id: null, title: 'Half done', recorded_at: '2026-10-03T09:00:00Z', duration_seconds: 60, transcript_status: 'failed', transcript_source: 'browser', audio_bytes: 1 }]
+    await open()
+    expect(screen.getByText('Live transcript')).toBeTruthy()
+  })
+})
+
 describe('Lectures page: unsaved recordings', () => {
   it('only offers recordings made by the signed-in student', async () => {
     leftover = [{ id: 'L8', userId: 'someone-else', title: 'Their lecture', parts: [] }]

@@ -239,7 +239,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
         : <LimitPrompt kind="premium_required" />)}
       <StorageMessage used={used} />
       {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
-      <button type="button" className="btn-primary" disabled={full} onClick={start}><Mic size={14} aria-hidden />Start recording</button>
+      <button type="button" className="btn-primary" disabled={full || (choice === 'accurate' && !plan.isPremium)} onClick={start}><Mic size={14} aria-hidden />Start recording</button>
     </div>
   )
 

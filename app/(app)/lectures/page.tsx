@@ -19,6 +19,10 @@ import type { Course } from '@/lib/types'
 const STATUS: Record<TranscriptStatus, string> = {
   none: 'No transcript', live: 'Live transcript', processing: 'Transcribing…', done: 'Accurate transcript', failed: 'Transcript failed',
 }
+// The live transcript stays until the accurate one is complete, so a stopped or paused accurate
+// transcript still leaves the lecture with its live one
+const statusOf = (l: LectureSummary) =>
+  (l.transcript_source === 'browser' && (l.transcript_status === 'failed' || l.transcript_status === 'processing') ? 'Live transcript' : STATUS[l.transcript_status])
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
 export default function LecturesPage() {
@@ -90,7 +94,7 @@ export default function LecturesPage() {
                 <CourseTag course={courseOf(l.course_id)} />
                 <span>{day(l.recorded_at)}</span>
                 <span>{formatClock(l.duration_seconds)}</span>
-                <span>{STATUS[l.transcript_status]}</span>
+                <span>{statusOf(l)}</span>
               </span>
             </Link>
           </li>

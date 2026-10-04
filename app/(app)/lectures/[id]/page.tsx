@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase/client'
 import { deleteLecture, getLecture, partUrls, updateLecture, type Lecture } from '@/lib/data/lectures'
 import { createNote } from '@/lib/data/notes'
 import { runAccurate } from '@/lib/lectures/accurate'
+import { usePlan } from '@/components/billing/usePlan'
 import { formatClock } from '@/lib/lectures/time'
 
 type Problem = { code: string; message: string }
@@ -21,6 +22,7 @@ export default function LecturePage() {
   const router = useRouter()
   const search = useSearchParams()
   const confirm = useConfirm()
+  const plan = usePlan()
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [urls, setUrls] = useState<string[]>([])
   const [time, setTime] = useState(0)
@@ -95,10 +97,13 @@ export default function LecturePage() {
   const done = lecture.parts.filter(p => p.transcribed).length
   const accurateDone = lecture.transcript_source === 'openai' && lecture.transcript_status === 'done'
   const resuming = done > 0 && !accurateDone
+  // The live transcript stays until the accurate one is complete, so say which one is showing
+  const halted = lecture.transcript_status === 'failed' ? 'stopped' : lecture.transcript_status === 'processing' && !progress ? 'paused' : null
   const statusText = accurateDone ? 'Accurate transcript'
-    : lecture.transcript_status === 'failed' ? 'Transcript failed'
-      : lecture.transcript_source === 'browser' ? 'Live transcript (free)'
+    : lecture.transcript_source === 'browser' ? `Live transcript (free)${halted ? ` · accurate transcript ${halted}` : ''}`
+      : lecture.transcript_status === 'failed' ? 'Transcript failed'
         : lecture.transcript.length ? 'Transcript' : 'No transcript'
+  const free = !plan.loading && !plan.isPremium
 
   return (
     <div className="space-y-4">
@@ -117,9 +122,14 @@ export default function LecturePage() {
               ? <Link href={`/notes/${lecture.note_id}`} className="btn">Open note</Link>
               : <button type="button" className="btn-primary" disabled={making || !lecture.transcript.length} onClick={makeNote}>{making ? 'Making a note…' : '✦ Make a note'}</button>}
             {!accurateDone && !progress && (
-              <button type="button" className="btn" onClick={() => void accurate(lecture)}>
+              <button type="button" className="btn" onClick={() => (free
+                ? setProblem({ code: 'premium_required', message: 'Accurate transcripts are a Premium feature.' })
+                : void accurate(lecture))}>
                 {resuming ? `↻ Resume accurate transcript (${done} of ${lecture.parts.length} parts done)` : '↻ Get accurate transcript'}
               </button>
+            )}
+            {free && !accurateDone && (
+              <span className="self-center rounded-md bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent">✦ Premium</span>
             )}
           </div>
           {!lecture.transcript.length && !lecture.note_id && <p className="text-xs text-muted">Making a note needs a transcript first.</p>}

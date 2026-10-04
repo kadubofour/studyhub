@@ -78,6 +78,8 @@ describe('Recorder', () => {
     await renderRecorder()
     fireEvent.click(screen.getByLabelText(/Accurate, after recording/))
     expect(screen.getByText('This is a Premium feature')).toBeTruthy()
+    // Recording with no transcript coming would waste the lecture: choose another option first
+    expect((screen.getByRole('button', { name: 'Start recording' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('records with a running clock, then saves and opens the lecture', async () => {

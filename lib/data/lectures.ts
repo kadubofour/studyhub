@@ -8,12 +8,12 @@ export type Lecture = {
   mime: AudioMime; parts: LecturePart[]; transcript: TranscriptLine[]; transcript_status: TranscriptStatus
   transcript_source: 'browser' | 'openai' | null; note_id: string | null
 }
-export type LectureSummary = Pick<Lecture, 'id' | 'course_id' | 'title' | 'recorded_at' | 'duration_seconds' | 'transcript_status' | 'audio_bytes'>
+export type LectureSummary = Pick<Lecture, 'id' | 'course_id' | 'title' | 'recorded_at' | 'duration_seconds' | 'transcript_status' | 'transcript_source' | 'audio_bytes'>
 
 const COLS = 'id,course_id,title,recorded_at,duration_seconds,audio_bytes,mime,parts,transcript,transcript_status,transcript_source,note_id'
 
 export async function listLectures(sb: SupabaseClient): Promise<LectureSummary[]> {
-  return must(await sb.from('lectures').select('id,course_id,title,recorded_at,duration_seconds,transcript_status,audio_bytes').order('recorded_at', { ascending: false }))
+  return must(await sb.from('lectures').select('id,course_id,title,recorded_at,duration_seconds,transcript_status,transcript_source,audio_bytes').order('recorded_at', { ascending: false }))
 }
 
 export async function getLecture(sb: SupabaseClient, id: string): Promise<Lecture> {

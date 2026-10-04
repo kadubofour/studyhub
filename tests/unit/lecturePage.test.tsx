@@ -15,6 +15,11 @@ vi.mock('@/lib/data/lectures', () => ({
   updateLecture: (...a: unknown[]) => updateLecture(...a), deleteLecture: (...a: unknown[]) => deleteLecture(...a),
 }))
 vi.mock('@/lib/data/notes', () => ({ createNote: (...a: unknown[]) => createNote(...a) }))
+let premium = true
+vi.mock('@/components/billing/usePlan', async orig => ({
+  ...(await orig<typeof import('@/components/billing/usePlan')>()),
+  usePlan: () => ({ loading: false, billing: true, isPremium: premium, premiumUntil: null, autoRenew: false, cardLabel: null, usedToday: 0, usedThisMonth: 0 }),
+}))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useParams: () => ({ id: ID }), useSearchParams: () => ({ get: () => accurateParam }) }))
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import LecturePage from '@/app/(app)/lectures/[id]/page'
@@ -31,7 +36,7 @@ beforeAll(() => {
 beforeEach(() => {
   lecture = { id: ID, course_id: null, title: 'Krebs cycle', recorded_at: '2026-10-03T09:00:00Z', duration_seconds: 2400, audio_bytes: 2, mime: 'audio/webm',
     parts: [part(0), part(1)], transcript: [{ start: 0, end: 3, text: 'Welcome.' }], transcript_status: 'live', transcript_source: 'browser', note_id: null }
-  accurateParam = null; push.mockClear(); updateLecture.mockClear(); createNote.mockClear(); deleteLecture.mockClear()
+  accurateParam = null; premium = true; push.mockClear(); updateLecture.mockClear(); createNote.mockClear(); deleteLecture.mockClear()
   vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset()
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
@@ -71,17 +76,24 @@ describe('Lecture page', () => {
   it('a failed part offers to resume from where it stopped, keeping the live transcript', async () => {
     lecture = { ...lecture, parts: [part(0, true), part(1)], transcript_status: 'failed' }
     await open()
-    expect(screen.getByText(/Transcript failed/)).toBeTruthy()
+    expect(screen.getByText('Live transcript (free) · accurate transcript stopped')).toBeTruthy()
     expect(screen.getByRole('button', { name: /0:00 Welcome\./ })).toBeTruthy()
     fetchMock.mockResolvedValueOnce(reply({ status: 'done', done: 2, total: 2 }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '↻ Resume accurate transcript (1 of 2 parts done)' })) })
     expect(fetchMock.mock.calls.map(c => c[0])).toEqual([`/api/lectures/${ID}/transcribe?part=1`])
   })
-  it('on Free, asking for an accurate transcript says it\'s a Premium feature', async () => {
-    fetchMock.mockResolvedValueOnce(reply({ error: 'premium_required' }, 402))
+  it('on Free, the accurate transcript is marked Premium and explains without sending anything', async () => {
+    premium = false
     await open()
+    expect(screen.getByText('✦ Premium')).toBeTruthy()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '↻ Get accurate transcript' })) })
     expect(screen.getByText('This is a Premium feature')).toBeTruthy()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('an accurate transcript left half-way still shows the live one', async () => {
+    lecture = { ...lecture, parts: [part(0, true), part(1)], transcript_status: 'processing' }
+    await open()
+    expect(screen.getByText('Live transcript (free) · accurate transcript paused')).toBeTruthy()
   })
   it('starts the accurate transcript on arrival when it was chosen before recording', async () => {
     accurateParam = '1'
