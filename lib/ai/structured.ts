@@ -1,4 +1,5 @@
 import { zodTextFormat } from 'openai/helpers/zod'
+import type { ResponseInputMessageContentList } from 'openai/resources/responses/responses'
 import type { z } from 'zod'
 import { AiIncompleteError, AiRefusedError, type AiClient } from './openai'
 
@@ -11,7 +12,7 @@ export function hasRefusal(res: { output?: unknown[] }): boolean {
 // One structured-output call: the reply always matches `schema` (strict JSON schema), and is
 // validated again with Zod before anyone uses it.
 export async function generateObject<T extends z.ZodType>(client: AiClient, o: {
-  model: string; instructions: string; input: string; schema: T; name: string; maxOutputTokens?: number; signal?: AbortSignal
+  model: string; instructions: string; input: string | ResponseInputMessageContentList; schema: T; name: string; maxOutputTokens?: number; signal?: AbortSignal
 }): Promise<z.infer<T>> {
   const res = await client.responses.parse({
     model: o.model,
