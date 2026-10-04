@@ -66,9 +66,13 @@ describe('PlanCard with billing off', () => {
 
 describe('endingSoon', () => {
   const now = new Date('2026-10-04T12:00:00Z')
-  it('warns within 7 days for a pass, not with auto-renew or when far off', () => {
-    expect(endingSoon({ isPremium: true, autoRenew: false, premiumUntil: new Date('2026-10-09T12:00:00Z') }, now)).toEqual({ days: 5, date: '9 Oct' })
-    expect(endingSoon({ isPremium: true, autoRenew: true, premiumUntil: new Date('2026-10-09T12:00:00Z') }, now)).toBeNull()
+  const pass = (until: string) => ({ isPremium: true, autoRenew: false, premiumUntil: new Date(until) })
+  it('warns 7 days and 1 day before a pass ends, not with auto-renew or when far off', () => {
+    expect(endingSoon(pass('2026-10-11T12:00:00Z'), now)).toEqual({ days: 7, date: '11 Oct' })
+    expect(endingSoon(pass('2026-10-05T12:00:00Z'), now)).toEqual({ days: 1, date: '5 Oct' })
+    expect(endingSoon(pass('2026-10-04T18:00:00Z'), now)).toEqual({ days: 1, date: '4 Oct' }) // ends later today
+    expect(endingSoon(pass('2026-10-09T12:00:00Z'), now)).toBeNull() // 5 days: between the two reminders
+    expect(endingSoon({ isPremium: true, autoRenew: true, premiumUntil: new Date('2026-10-05T12:00:00Z') }, now)).toBeNull()
     expect(endingSoon({ isPremium: true, autoRenew: false, premiumUntil: new Date('2026-10-20T12:00:00Z') }, now)).toBeNull()
     expect(endingSoon({ isPremium: false, autoRenew: false, premiumUntil: null }, now)).toBeNull()
   })

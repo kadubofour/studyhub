@@ -5,7 +5,7 @@ import { usePlan } from './usePlan'
 export function endingSoon(p: { isPremium: boolean; autoRenew: boolean; premiumUntil: Date | null }, now: Date) {
   if (!p.isPremium || p.autoRenew || !p.premiumUntil) return null
   const days = Math.ceil((p.premiumUntil.getTime() - now.getTime()) / 86_400_000)
-  if (days > 7) return null
+  if (days !== 7 && days > 1) return null // reminders 7 days and 1 day before, as agreed
   return { days, date: p.premiumUntil.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) }
 }
 
