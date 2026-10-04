@@ -168,7 +168,7 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved }: {
           onSaved={count => finished(`Saved ${count} card${count === 1 ? '' : 's'}.`)} />
       )}
       {stage === 'review' && result?.target === 'planner' && (
-        <PlannerReview result={result.value} courses={courses} onScanAgain={scanAgain}
+        <PlannerReview result={result.value} courses={courses} onScanAgain={scanAgain} onPartialSave={() => onSaved?.()}
           onSaved={saved => finished(savedText(saved))} />
       )}
     </Dialog>

@@ -86,6 +86,19 @@ describe('PlannerReview', () => {
     expect(createClass).toHaveBeenCalledTimes(3)
     expect(onSaved).toHaveBeenCalledWith({ tasks: 1, classes: 3, courses: 1 })
   })
+  it('after a save that fails partway, retrying saves only the rest', async () => {
+    createTask.mockResolvedValueOnce({ id: 't1' }).mockRejectedValueOnce(new Error('offline'))
+    const onSaved = vi.fn(), onPartialSave = vi.fn()
+    render(<ProfileProvider initial={profile}><PlannerReview result={result} courses={courses} onSaved={onSaved} onPartialSave={onPartialSave} onScanAgain={vi.fn()} /></ProfileProvider>)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 5 items' })) })
+    expect(screen.getByRole('alert').textContent).toContain('Some items were saved')
+    expect(onPartialSave).toHaveBeenCalledTimes(1) // the planner behind refreshes
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 4 items' })) })
+    expect(createCourse).toHaveBeenCalledTimes(1) // "Chemistry" made once, not again
+    expect(createTask.mock.calls.map(c => (c[1] as { title: string }).title)).toEqual(['Essay', 'Midterm', 'Midterm'])
+    expect(createClass).toHaveBeenCalledTimes(3)
+    expect(onSaved).toHaveBeenCalledWith({ tasks: 1, classes: 3, courses: 0 })
+  })
   it('a class that ends before it starts can\'t be saved', () => {
     renderPlanner()
     fireEvent.change(screen.getByLabelText('Class 1 end'), { target: { value: '08:00' } })

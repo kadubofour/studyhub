@@ -48,26 +48,53 @@ export function plannerProblem(d: PlannerDrafts): string | null {
   return null
 }
 
+/** Thrown when saving stops partway: which rows (indexes into the drafts) and courses were saved */
+export class PartialSaveError extends Error {
+  constructor(readonly saved: { tasks: Set<number>; classes: Set<number>; courses: Course[] }) {
+    super('Some planner items were saved, the rest were not')
+  }
+}
+
 // Saves the ticked items: new courses first (one per name), then tasks (due at the end of that
-// day in the student's time zone), then classes
+// day in the student's time zone), then classes. If it stops partway it throws PartialSaveError,
+// so a retry can skip what was already saved.
 export async function savePlanner(sb: SupabaseClient, d: PlannerDrafts, tz: string, existing: Course[]): Promise<{ tasks: number; classes: number; courses: number }> {
-  const tasks = d.tasks.filter(t => t.keep)
-  const classes = d.classes.filter(c => c.keep)
+  const saved = { tasks: new Set<number>(), classes: new Set<number>(), courses: [] as Course[] }
   const made = new Map<string, string>()
-  for (const c of classes) {
-    if (c.course.kind !== 'new' || made.has(key(c.course.name))) continue
-    const color = COURSE_COLORS[(existing.length + made.size) % COURSE_COLORS.length]
-    const course = await createCourse(sb, { name: c.course.name.trim().slice(0, 80), color })
-    made.set(key(c.course.name), course.id)
+  try {
+    for (const c of d.classes) {
+      if (!c.keep || c.course.kind !== 'new' || made.has(key(c.course.name))) continue
+      const color = COURSE_COLORS[(existing.length + made.size) % COURSE_COLORS.length]
+      const course = await createCourse(sb, { name: c.course.name.trim().slice(0, 80), color })
+      made.set(key(c.course.name), course.id)
+      saved.courses.push(course)
+    }
+    for (const [i, t] of d.tasks.entries()) {
+      if (!t.keep) continue
+      await createTask(sb, { title: t.title.trim().slice(0, 300), type: t.type, due_at: t.due ? endOfLocalDay(t.due, tz).toISOString() : null })
+      saved.tasks.add(i)
+    }
+    for (const [i, c] of d.classes.entries()) {
+      if (!c.keep) continue
+      const course_id = c.course.kind === 'existing' ? c.course.id : made.get(key(c.course.name))!
+      await createClass(sb, { course_id, day_of_week: c.day, start_time: c.start, end_time: c.end, location: c.room.trim() || null, kind: c.kind })
+      saved.classes.add(i)
+    }
+  } catch {
+    throw new PartialSaveError(saved)
   }
-  for (const t of tasks) {
-    await createTask(sb, { title: t.title.trim().slice(0, 300), type: t.type, due_at: t.due ? endOfLocalDay(t.due, tz).toISOString() : null })
+  return { tasks: saved.tasks.size, classes: saved.classes.size, courses: made.size }
+}
+
+/** The drafts left after a partial save: saved rows removed, saved new courses now existing */
+export function withoutSaved(d: PlannerDrafts, saved: PartialSaveError['saved']): PlannerDrafts {
+  const made = new Map(saved.courses.map(c => [key(c.name), c.id]))
+  return {
+    tasks: d.tasks.filter((_, i) => !saved.tasks.has(i)),
+    classes: d.classes
+      .filter((_, i) => !saved.classes.has(i))
+      .map(c => (c.course.kind === 'new' && made.has(key(c.course.name)) ? { ...c, course: { kind: 'existing' as const, id: made.get(key(c.course.name))! } } : c)),
   }
-  for (const c of classes) {
-    const course_id = c.course.kind === 'existing' ? c.course.id : made.get(key(c.course.name))!
-    await createClass(sb, { course_id, day_of_week: c.day, start_time: c.start, end_time: c.end, location: c.room.trim() || null, kind: c.kind })
-  }
-  return { tasks: tasks.length, classes: classes.length, courses: made.size }
 }
 
 export function savedText(r: { tasks: number; classes: number }): string {

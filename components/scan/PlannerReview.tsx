@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useProfile } from '@/components/providers/ProfileProvider'
-import { plannerProblem, savePlanner, toDrafts, type ClassDraft, type CourseChoice, type PlannerDrafts, type TaskDraft } from '@/lib/scan/planner'
+import { PartialSaveError, plannerProblem, savePlanner, toDrafts, withoutSaved, type ClassDraft, type CourseChoice, type PlannerDrafts, type TaskDraft } from '@/lib/scan/planner'
 import type { ClassKind, Course, TaskType } from '@/lib/types'
 import type { ScanPlannerResult } from '@/lib/ai/scan'
 
@@ -15,12 +15,16 @@ const courseValue = (c: CourseChoice) => (c.kind === 'existing' ? c.id : `new:${
 const courseFrom = (value: string): CourseChoice => (value.startsWith('new:') ? { kind: 'new', name: value.slice(4) } : { kind: 'existing', id: value })
 
 // Scanned tasks and weekly classes: edit, untick, fix courses, then save to the planner
-export function PlannerReview({ result, courses, onSaved, onScanAgain }: {
+export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanAgain }: {
   result: ScanPlannerResult; courses: Course[]
   onSaved: (saved: { tasks: number; classes: number; courses: number }) => void; onScanAgain: () => void
+  /** Some items were saved before an error: the planner behind can refresh */
+  onPartialSave?: () => void
 }) {
   const { profile } = useProfile()
   const [d, setD] = useState<PlannerDrafts>(() => toDrafts(result, courses))
+  const [madeCourses, setMadeCourses] = useState<Course[]>([]) // created by a save that stopped partway
+  const allCourses = [...courses, ...madeCourses]
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const savingRef = useRef(false)
@@ -34,9 +38,17 @@ export function PlannerReview({ result, courses, onSaved, onScanAgain }: {
     if (problem || savingRef.current) return
     savingRef.current = true; setSaving(true); setError(null)
     try {
-      onSaved(await savePlanner(supabase(), d, profile.timezone, courses))
-    } catch {
-      setError('Couldn\'t save everything. Check the planner before trying again.')
+      onSaved(await savePlanner(supabase(), d, profile.timezone, allCourses))
+    } catch (e) {
+      if (e instanceof PartialSaveError && (e.saved.tasks.size || e.saved.classes.size || e.saved.courses.length)) {
+        // Drop what was saved, so pressing Save again only saves the rest
+        setD(x => withoutSaved(x, e.saved))
+        setMadeCourses(m => [...m, ...e.saved.courses])
+        setError('Some items were saved, but not all. Press Save to try the rest again.')
+        onPartialSave?.()
+      } else {
+        setError('Couldn\'t save. Check your connection and try again.')
+      }
     } finally {
       savingRef.current = false; setSaving(false)
     }
@@ -70,7 +82,7 @@ export function PlannerReview({ result, courses, onSaved, onScanAgain }: {
               <input type="checkbox" className="mt-2" aria-label={`Keep class ${i + 1}`} checked={c.keep} onChange={e => setClass(i, { keep: e.target.checked })} />
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <select aria-label={`Class ${i + 1} course`} value={courseValue(c.course)} onChange={e => setClass(i, { course: courseFrom(e.target.value) })}>
-                  {courses.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
+                  {allCourses.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
                   {newNames.map(n => <option key={`new:${n}`} value={`new:${n}`}>Create course {n}</option>)}
                 </select>
                 <select aria-label={`Class ${i + 1} day`} value={c.day} onChange={e => setClass(i, { day: Number(e.target.value) })}>

@@ -7,7 +7,7 @@ const createClass = vi.fn(async (...a: unknown[]) => ({ id: 'k', ...(a[1] as obj
 vi.mock('@/lib/data/courses', () => ({ createCourse: (...a: unknown[]) => createCourse(...a) }))
 vi.mock('@/lib/data/tasks', () => ({ createTask: (...a: unknown[]) => createTask(...a) }))
 vi.mock('@/lib/data/classes', () => ({ createClass: (...a: unknown[]) => createClass(...a) }))
-import { matchCourse, plannerProblem, savePlanner, savedText, toDrafts } from '@/lib/scan/planner'
+import { PartialSaveError, matchCourse, plannerProblem, savePlanner, savedText, toDrafts } from '@/lib/scan/planner'
 
 const courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }]
 const task = (over: object = {}) => ({ title: 'Essay', type: 'assignment' as const, due_date: '2026-10-16' as string | null, unsure: false, ...over })
@@ -51,6 +51,18 @@ describe('savePlanner', () => {
     expect(createClass.mock.calls.map(c => (c[1] as { course_id: string }).course_id)).toEqual(['c1', 'c-Chemistry', 'c-Chemistry'])
     expect(createClass.mock.calls[0][1]).toEqual({ course_id: 'c1', day_of_week: 1, start_time: '09:00', end_time: '10:30', location: 'LT 2', kind: 'lecture' })
     expect((createClass.mock.calls[2][1] as { location: string | null }).location).toBeNull()
+  })
+})
+
+describe('savePlanner when the connection drops partway', () => {
+  it('says exactly what was saved, so a retry doesn\'t save it twice', async () => {
+    createTask.mockResolvedValueOnce({ id: 't1' }).mockRejectedValueOnce(new Error('offline'))
+    const d = toDrafts({ tasks: [task(), task({ title: 'Lab report' })], classes: [cls('Chemistry')] }, courses)
+    const e = await savePlanner({} as never, d, 'Africa/Accra', courses).catch(err => err)
+    expect(e).toBeInstanceOf(PartialSaveError)
+    expect([...(e as PartialSaveError).saved.tasks]).toEqual([0])
+    expect([...(e as PartialSaveError).saved.classes]).toEqual([])
+    expect((e as PartialSaveError).saved.courses).toEqual([{ id: 'c-Chemistry', name: 'Chemistry', color: COURSE_COLORS[1] }])
   })
 })
 
