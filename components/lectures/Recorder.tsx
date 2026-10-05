@@ -14,6 +14,7 @@ import { createLiveTranscriber, type RecognitionCtor } from '@/lib/lectures/live
 import type { LocalSession, RecordingStore, TranscriptChoice } from '@/lib/lectures/localStore'
 import { finishRecording, uploadPartFile, withPart } from '@/lib/lectures/saveRecording'
 import { setRecording } from '@/lib/lectures/recordingGuard'
+import { LIVE_LANGUAGES, saveLiveLanguage, savedLiveLanguage } from '@/lib/lectures/languages'
 import { MAX_LECTURE_SECONDS, WARN_LECTURE_SECONDS, formatClock, storageState, type TranscriptLine } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
 
@@ -47,6 +48,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
   const [title, setTitle] = useState(() => `Lecture ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`)
   const [courseId, setCourseId] = useState('')
   const [choice, setChoice] = useState<TranscriptChoice>(deps.Recognition ? 'live' : 'none')
+  const [language, setLanguage] = useState(savedLiveLanguage)
   const [stage, setStage] = useState<Stage>('setup')
   const [paused, setPaused] = useState(false)
   const [seconds, setSeconds] = useState(0)
@@ -190,7 +192,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     }
     if (choice === 'live' && deps.Recognition) {
       live.current = createLiveTranscriber({
-        Ctor: deps.Recognition, now: () => rec.elapsed(),
+        Ctor: deps.Recognition, now: () => rec.elapsed(), lang: language,
         onLine: line => {
           setLines(ls => [...ls, line])
           if (session.current) { session.current = { ...session.current, lines: [...session.current.lines, line] }; void deps.store.saveSession(session.current) }
@@ -267,6 +269,13 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
       <fieldset className="space-y-1.5 text-sm">
         <legend className="mb-1 text-muted">Transcript</legend>
         <label className="flex items-center gap-2"><input type="radio" name="choice" checked={choice === 'live'} disabled={!deps.Recognition} onChange={() => setChoice('live')} />Live, free</label>
+        {choice === 'live' && (
+          <label className="field pl-6"><span>Language</span>
+            <select value={language} onChange={e => { setLanguage(e.target.value); saveLiveLanguage(e.target.value) }}>
+              {LIVE_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+            </select>
+          </label>
+        )}
         {!deps.Recognition && <p className="pl-6 text-xs text-muted">This browser can&apos;t do live transcripts. Try Chrome, Edge or Safari, or choose Accurate.</p>}
         <label className="flex items-center gap-2"><input type="radio" name="choice" checked={choice === 'accurate'} onChange={() => setChoice('accurate')} />Accurate, after recording</label>
         <label className="flex items-center gap-2"><input type="radio" name="choice" checked={choice === 'none'} onChange={() => setChoice('none')} />None</label>

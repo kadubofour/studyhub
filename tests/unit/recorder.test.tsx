@@ -159,6 +159,20 @@ describe('Recorder', () => {
     expect(screen.getByLabelText('Live transcript').textContent).not.toMatch(/speech service/)
   })
 
+  it('live transcript listens in the chosen language, English (Ghana) by default, and remembers it', async () => {
+    localStorage.removeItem('studyhub:live-language')
+    await renderRecorder({ Recognition: FakeRecognition })
+    const language = screen.getByLabelText('Language') as HTMLSelectElement
+    expect(language.value).toBe('en-GH')
+    fireEvent.change(language, { target: { value: 'fr-FR' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    expect(heard[0].lang).toBe('fr-FR')
+    cleanup()
+    await renderRecorder({ Recognition: FakeRecognition })
+    expect((screen.getByLabelText('Language') as HTMLSelectElement).value).toBe('fr-FR')
+    localStorage.removeItem('studyhub:live-language')
+  })
+
   it('a denied microphone gets a tip on allowing it', async () => {
     getUserMedia = vi.fn(async () => { throw Object.assign(new Error('no'), { name: 'NotAllowedError' }) })
     await renderRecorder({ getUserMedia })
