@@ -117,6 +117,48 @@ describe('Recorder', () => {
     expect(screen.getByRole('button', { name: 'Stop & save' })).toBeTruthy() // still recording
   })
 
+  it('a second click while the microphone opens doesn\'t start a second recording', async () => {
+    let grant!: (s: MediaStream) => void
+    getUserMedia = vi.fn(() => new Promise<MediaStream>(r => { grant = r })) // Chrome is slow to open the mic
+    await renderRecorder({ getUserMedia, Recognition: FakeRecognition })
+    const button = screen.getByRole('button', { name: 'Start recording' })
+    fireEvent.click(button)
+    fireEvent.click(button)
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+    await act(async () => { grant(stream) })
+    expect(getUserMedia).toHaveBeenCalledTimes(1)
+    expect(heard).toHaveLength(1) // one live transcriber, not two fighting over speech recognition
+  })
+
+  it('if live transcription can\'t start, it records anyway and says so', async () => {
+    class Broken extends FakeRecognition { start() { throw new Error('InvalidStateError') } }
+    await renderRecorder({ Recognition: Broken })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    expect(screen.getByRole('timer', { name: 'Recording time' })).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toMatch(/Live transcript couldn.t start/)
+  })
+
+  it('if starting fails after the microphone opened, it says so and lets go of the microphone', async () => {
+    const stop = vi.fn()
+    const mic = { getTracks: () => [{ stop }] } as unknown as MediaStream
+    const store = { ...memoryStore(), saveSession: async () => { throw new Error('QuotaExceededError') } }
+    await renderRecorder({ getUserMedia: vi.fn(async () => mic), store })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    expect(screen.getByRole('alert').textContent).toMatch(/Couldn.t start recording/)
+    expect(stop).toHaveBeenCalled()
+    expect((screen.getByRole('button', { name: 'Start recording' }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('shows why live text isn\'t coming through while it retries', async () => {
+    await renderRecorder({ Recognition: FakeRecognition })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
+    await act(async () => { heard[0].onerror?.({ error: 'network' }) })
+    expect(screen.getByLabelText('Live transcript').textContent).toMatch(/can.t reach the speech service/)
+    await act(async () => { heard[0].onend?.(); vi.advanceTimersByTime(1000) })
+    await act(async () => { heard[1].say('Back again.') })
+    expect(screen.getByLabelText('Live transcript').textContent).not.toMatch(/speech service/)
+  })
+
   it('a denied microphone gets a tip on allowing it', async () => {
     getUserMedia = vi.fn(async () => { throw Object.assign(new Error('no'), { name: 'NotAllowedError' }) })
     await renderRecorder({ getUserMedia })

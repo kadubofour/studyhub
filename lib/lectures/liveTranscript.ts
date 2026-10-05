@@ -25,6 +25,8 @@ const round = (n: number) => Math.round(n * 10) / 10
 export function createLiveTranscriber(o: {
   Ctor: RecognitionCtor; now: () => number; lang?: string
   onLine: (line: TranscriptLine) => void; onInterim: (text: string) => void; onBlocked?: () => void
+  /** Why live text isn't coming through ('network', 'audio-capture', 'aborted'…), or null once it is */
+  onTrouble?: (reason: string | null) => void
 }) {
   let rec: Recognition | null = null
   let running = false
@@ -46,7 +48,7 @@ export function createLiveTranscriber(o: {
         const result = e.results[i]
         const text = result[0].transcript.trim()
         if (!text) continue
-        failures = 0
+        if (failures) { failures = 0; o.onTrouble?.(null) }
         if (lineStart == null) lineStart = round(o.now())
         if (result.isFinal) {
           o.onLine({ start: lineStart, end: Math.max(lineStart, round(o.now())), text })
@@ -59,7 +61,9 @@ export function createLiveTranscriber(o: {
     }
     r.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { running = false; o.onBlocked?.() }
-      else if (e.error !== 'no-speech' && e.error !== 'aborted') failures++
+      // 'aborted' too: another recognition (another tab) took over; restarting at once would
+      // just take it back, and the two would cancel each other forever
+      else if (e.error !== 'no-speech') { failures++; o.onTrouble?.(e.error) }
     }
     r.onend = () => {
       if (!running || rec !== r) return

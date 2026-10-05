@@ -73,6 +73,32 @@ describe('createLiveTranscriber', () => {
     expect(made).toHaveLength(3) // stopped: no retry
     vi.useRealTimers()
   })
+  it('when another recognition takes over (another tab), it waits before trying again instead of fighting', () => {
+    vi.useFakeTimers()
+    const { t } = setup()
+    t.start()
+    made[0].onerror?.({ error: 'aborted' })
+    made[0].onend?.()
+    expect(made).toHaveLength(1)
+    vi.advanceTimersByTime(1000)
+    expect(made).toHaveLength(2)
+    t.stop()
+    vi.useRealTimers()
+  })
+  it('reports trouble while it retries, and clears it once speech comes through', () => {
+    vi.useFakeTimers()
+    const trouble: (string | null)[] = []
+    const t = createLiveTranscriber({ Ctor: FakeRecognition, now: () => clock, onLine: () => {}, onInterim: () => {}, onTrouble: r => trouble.push(r) })
+    t.start()
+    made[0].onerror?.({ error: 'network' })
+    expect(trouble.at(-1)).toBe('network')
+    made[0].onend?.()
+    vi.advanceTimersByTime(1000)
+    made[1].say([['Hello.', true]])
+    expect(trouble.at(-1)).toBeNull()
+    t.stop()
+    vi.useRealTimers()
+  })
   it('finds the browser\'s speech recognition, if any', () => {
     expect(speechRecognition()).toBeNull()
     ;(window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = FakeRecognition

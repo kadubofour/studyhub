@@ -27,6 +27,13 @@ export type RecorderDeps = {
   now?: () => number
 }
 type Stage = 'setup' | 'recording' | 'saving' | 'failed'
+// Why live text isn't coming through (the browser's speech recognition error codes)
+const TROUBLE: Record<string, string> = {
+  network: 'Live transcript can\'t reach the speech service (check the connection).',
+  'audio-capture': 'Live transcript can\'t hear the microphone (another app may be using it).',
+  aborted: 'Live transcript was taken over by another tab or app.',
+  'language-not-supported': 'Live transcript doesn\'t support this language.',
+}
 
 // Record a lecture: before (title, course, transcript choice), during (clock, live transcript,
 // Pause, Stop & save), then save and open it. Every part is uploaded while recording continues,
@@ -53,6 +60,9 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
   const clock = useRef<ReturnType<typeof setInterval> | null>(null)
   const stopping = useRef(false)
   const copyWarned = useRef(false)
+  const startingRef = useRef(false)
+  const [trouble, setTrouble] = useState<string | null>(null)
+  const [starting, setStarting] = useState(false)
   const [level, setLevel] = useState(0)
   const [metering, setMetering] = useState(false)
   const meter = useRef<{ ctx: AudioContext; timer: ReturnType<typeof setInterval> } | null>(null)
@@ -106,9 +116,18 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
   const full = storageState(used) === 'full'
   const type = deps.MediaRecorder ? pickAudioType(t => deps.MediaRecorder!.isTypeSupported(t)) : null
 
+  // A second click while the microphone opens must not start a second recording: two recorders
+  // and two live transcribers would fight over the mic and Chrome's single speech recognition
   async function start() {
+    if (startingRef.current || recorder.current) return
     if (!deps.MediaRecorder || !type) { setProblem('This browser can\'t record audio. Try Chrome, Edge or Safari.'); return }
+    startingRef.current = true
+    setStarting(true)
     setProblem(null)
+    try { await begin(deps.MediaRecorder, type) } finally { startingRef.current = false; setStarting(false) }
+  }
+
+  async function begin(Ctor: NonNullable<RecorderDeps['MediaRecorder']>, type: NonNullable<ReturnType<typeof pickAudioType>>) {
     let media: MediaStream
     try {
       media = await deps.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
@@ -119,44 +138,56 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
       return
     }
     stream.current = media
-    startMeter(media)
-    const s: LocalSession = {
-      id: crypto.randomUUID(), userId: profile.id, title, courseId: courseId || null, mime: type.mime, ext: type.ext,
-      startedAt: new Date().toISOString(), choice, lines: [], parts: [{ index: 0, start: 0, duration: null, uploaded: null }],
+    let rec: ReturnType<typeof createPartRecorder>
+    try {
+      startMeter(media)
+      const s: LocalSession = {
+        id: crypto.randomUUID(), userId: profile.id, title, courseId: courseId || null, mime: type.mime, ext: type.ext,
+        startedAt: new Date().toISOString(), choice, lines: [], parts: [{ index: 0, start: 0, duration: null, uploaded: null }],
+      }
+      session.current = s
+      await deps.store.saveSession(s)
+      rec = createPartRecorder({
+        stream: media, Ctor, recorderType: type.recorderType, mime: type.mime, partSeconds: deps.partSeconds, now: deps.now,
+        onChunk: (i, chunk) => {
+          deps.store.addChunk(s.id, i, chunk).catch(() => {
+            // Once is enough: recording and uploading carry on, only the device copy is missing
+            if (copyWarned.current) return
+            copyWarned.current = true
+            setProblem('Couldn\'t keep a safety copy on this device (is it out of space?). Recording continues: keep this page open until it\'s saved.')
+          })
+        },
+        onPart: async part => {
+          // This part is finished and the next one (if recording goes on) has started, length
+          // unknown. The device copy lists both before uploading, so a dead phone loses neither.
+          let cur = withPart(session.current!, { index: part.index, start: part.start, duration: part.duration, uploaded: null })
+          if (!cur.parts.some(p => p.index === part.index + 1)) {
+            cur = withPart(cur, { index: part.index + 1, start: part.start + part.duration, duration: null, uploaded: null })
+          }
+          session.current = cur
+          await deps.store.saveSession(cur)
+          try {
+            const uploaded = await uploadPartFile(supabase(), cur, part)
+            // Merge into the latest session: live lines and later parts may have changed meanwhile
+            const latest = session.current!
+            const mine = latest.parts.find(p => p.index === part.index)!
+            session.current = withPart(latest, { ...mine, uploaded })
+            await deps.store.saveSession(session.current)
+          } catch { /* kept on the device; Stop uploads it */ }
+        },
+      })
+      recorder.current = rec
+      rec.start()
+    } catch {
+      // Nothing is recording: let go of the microphone and everything else
+      recorder.current = null
+      session.current = null
+      stopMeter()
+      media.getTracks().forEach(t => t.stop())
+      stream.current = null
+      setProblem('Couldn\'t start recording. Try again; if it keeps happening, reload the page.')
+      return
     }
-    session.current = s
-    await deps.store.saveSession(s)
-    const rec = createPartRecorder({
-      stream: media, Ctor: deps.MediaRecorder, recorderType: type.recorderType, mime: type.mime, partSeconds: deps.partSeconds, now: deps.now,
-      onChunk: (i, chunk) => {
-        deps.store.addChunk(s.id, i, chunk).catch(() => {
-          // Once is enough: recording and uploading carry on, only the device copy is missing
-          if (copyWarned.current) return
-          copyWarned.current = true
-          setProblem('Couldn\'t keep a safety copy on this device (is it out of space?). Recording continues: keep this page open until it\'s saved.')
-        })
-      },
-      onPart: async part => {
-        // This part is finished and the next one (if recording goes on) has started, length
-        // unknown. The device copy lists both before uploading, so a dead phone loses neither.
-        let cur = withPart(session.current!, { index: part.index, start: part.start, duration: part.duration, uploaded: null })
-        if (!cur.parts.some(p => p.index === part.index + 1)) {
-          cur = withPart(cur, { index: part.index + 1, start: part.start + part.duration, duration: null, uploaded: null })
-        }
-        session.current = cur
-        await deps.store.saveSession(cur)
-        try {
-          const uploaded = await uploadPartFile(supabase(), cur, part)
-          // Merge into the latest session: live lines and later parts may have changed meanwhile
-          const latest = session.current!
-          const mine = latest.parts.find(p => p.index === part.index)!
-          session.current = withPart(latest, { ...mine, uploaded })
-          await deps.store.saveSession(session.current)
-        } catch { /* kept on the device; Stop uploads it */ }
-      },
-    })
-    recorder.current = rec
-    rec.start()
     if (choice === 'live' && deps.Recognition) {
       live.current = createLiveTranscriber({
         Ctor: deps.Recognition, now: () => rec.elapsed(),
@@ -166,8 +197,14 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
         },
         onInterim: setInterim,
         onBlocked: () => setProblem('Live transcript was blocked; recording continues.'),
+        onTrouble: setTrouble,
       })
-      live.current.start()
+      try { live.current.start() } catch {
+        // The recording matters more than the live text: carry on without it
+        live.current.stop()
+        live.current = null
+        setProblem('Live transcript couldn\'t start; recording continues without it.')
+      }
     }
     setStage('recording')
     // Keep the screen on where the browser allows it: phones pause pages whose screen is off
@@ -239,7 +276,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
         : <LimitPrompt kind="premium_required" />)}
       <StorageMessage used={used} />
       {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
-      <button type="button" className="btn-primary" disabled={full || (choice === 'accurate' && !plan.isPremium)} onClick={start}><Mic size={14} aria-hidden />Start recording</button>
+      <button type="button" className="btn-primary" disabled={full || starting || (choice === 'accurate' && !plan.isPremium)} onClick={start}><Mic size={14} aria-hidden />Start recording</button>
     </div>
   )
 
@@ -260,7 +297,8 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
         <div className="max-h-64 overflow-y-auto rounded-xl border border-line p-3 text-sm" aria-live="polite" aria-label="Live transcript">
           {lines.map((l, i) => <p key={i}><span className="text-muted">{formatClock(l.start)}</span> {l.text}</p>)}
           {interim && <p className="text-muted">{interim}</p>}
-          {!lines.length && !interim && <p className="text-muted">Listening…</p>}
+          {!lines.length && !interim && !trouble && <p className="text-muted">Listening…</p>}
+          {trouble && <p className="text-xs text-muted">{TROUBLE[trouble] ?? 'Live transcript stopped for a moment.'} Trying again… (the recording itself is fine)</p>}
         </div>
       )}
       {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
