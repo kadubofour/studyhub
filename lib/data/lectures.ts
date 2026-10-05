@@ -20,7 +20,7 @@ export async function getLecture(sb: SupabaseClient, id: string): Promise<Lectur
   return must(await sb.from('lectures').select(COLS).eq('id', id).single())
 }
 
-export async function updateLecture(sb: SupabaseClient, id: string, patch: Partial<Pick<Lecture, 'title' | 'course_id' | 'note_id' | 'transcript_status'>>): Promise<void> {
+export async function updateLecture(sb: SupabaseClient, id: string, patch: Partial<Pick<Lecture, 'title' | 'course_id' | 'note_id' | 'transcript_status' | 'transcript'>>): Promise<void> {
   check(await sb.from('lectures').update(patch).eq('id', id))
 }
 

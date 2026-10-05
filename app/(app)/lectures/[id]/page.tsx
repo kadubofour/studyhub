@@ -4,16 +4,16 @@ import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
-import { postAi } from '@/components/ai/aiFetch'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { LecturePlayer, type PlayerHandle } from '@/components/lectures/LecturePlayer'
 import { TranscriptView } from '@/components/lectures/TranscriptView'
 import { supabase } from '@/lib/supabase/client'
 import { deleteLecture, getLecture, partUrls, updateLecture, type Lecture } from '@/lib/data/lectures'
-import { createNote } from '@/lib/data/notes'
+import { makeAiNote, makeFreeNote } from '@/lib/lectures/lectureNotes'
+import { TranscriptEditor } from '@/components/lectures/TranscriptEditor'
 import { runAccurate } from '@/lib/lectures/accurate'
 import { usePlan } from '@/components/billing/usePlan'
-import { formatClock } from '@/lib/lectures/time'
+import { formatClock, type TranscriptLine } from '@/lib/lectures/time'
 
 type Problem = { code: string; message: string }
 
@@ -30,6 +30,7 @@ export default function LecturePage() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [problem, setProblem] = useState<Problem | null>(null)
   const [making, setMaking] = useState(false)
+  const [editing, setEditing] = useState(false)
   const abort = useRef<AbortController | null>(null)
   const autoStarted = useRef(false)
 
@@ -71,19 +72,29 @@ export default function LecturePage() {
     return () => { live = false; abort.current?.abort() }
   }, [id, accurate, wantAccurate])
 
-  async function makeNote() {
+  // ✦ with AI (2 actions), or free: the transcript as it is, paragraphed
+  async function makeNote(withAi: boolean) {
     if (!lecture) return
     setMaking(true); setProblem(null)
-    const r = await postAi<{ title: string; content_md: string }>('/api/ai/lecture-note', { lectureId: lecture.id })
-    if (!r.ok) { setProblem({ code: r.error, message: r.message }); setMaking(false); return }
     try {
       const sb = supabase()
-      const note = await createNote(sb, { title: r.value.title, content_md: r.value.content_md, course_id: lecture.course_id })
-      await updateLecture(sb, lecture.id, { note_id: note.id })
-      router.push(`/notes/${note.id}`)
+      if (withAi) {
+        const r = await makeAiNote(sb, lecture)
+        if (!r.ok) { setProblem({ code: r.code, message: r.message }); setMaking(false); return }
+        router.push(`/notes/${r.noteId}`)
+      } else {
+        router.push(`/notes/${await makeFreeNote(sb, lecture)}`)
+      }
     } catch {
       setProblem({ code: 'save', message: 'Couldn\'t save the note. Try again.' }); setMaking(false)
     }
+  }
+
+  async function saveTranscript(lines: TranscriptLine[]) {
+    if (!lecture) return
+    await updateLecture(supabase(), lecture.id, { transcript: lines })
+    setLecture({ ...lecture, transcript: lines })
+    setEditing(false)
   }
 
   async function remove() {
@@ -120,7 +131,12 @@ export default function LecturePage() {
           <div className="flex flex-wrap gap-2">
             {lecture.note_id
               ? <Link href={`/notes/${lecture.note_id}`} className="btn">Open note</Link>
-              : <button type="button" className="btn-primary" disabled={making || !lecture.transcript.length} onClick={makeNote}>{making ? 'Making a note…' : '✦ Make a note'}</button>}
+              : (
+                <>
+                  <button type="button" className="btn-primary" disabled={making || !lecture.transcript.length} onClick={() => void makeNote(true)}>{making ? 'Making a note…' : '✦ Make a note'}</button>
+                  <button type="button" className="btn" disabled={making || !lecture.transcript.length} onClick={() => void makeNote(false)}>Make a note (free)</button>
+                </>
+              )}
             {!accurateDone && !progress && (
               <button type="button" className="btn" onClick={() => (free
                 ? setProblem({ code: 'premium_required', message: 'Accurate transcripts are a Premium feature.' })
@@ -139,7 +155,15 @@ export default function LecturePage() {
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted">{statusText}</p>
           {lecture.transcript.length
-            ? <TranscriptView lines={lecture.transcript} currentTime={time} onSeek={t => player.current?.seek(t)} />
+            ? (editing
+              ? <TranscriptEditor lines={lecture.transcript} onSave={saveTranscript} onCancel={() => setEditing(false)} />
+              : (
+                <>
+                  {/* Not while an accurate transcript is being made: it would replace the edits */}
+                  <button type="button" className="btn-ghost text-xs" disabled={!!progress} onClick={() => setEditing(true)}>Edit transcript</button>
+                  <TranscriptView lines={lecture.transcript} currentTime={time} onSeek={t => player.current?.seek(t)} />
+                </>
+              ))
             : <p className="text-sm text-muted">No transcript yet.</p>}
         </div>
       </div>

@@ -109,6 +109,31 @@ describe('Lecture page', () => {
     expect(updateLecture).toHaveBeenCalledWith(expect.anything(), ID, { note_id: 'n1' })
     expect(push).toHaveBeenCalledWith('/notes/n1')
   })
+  it('makes a free note from the transcript, with no AI, linked to the lecture', async () => {
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Make a note (free)' })) })
+    expect(createNote.mock.calls[0][1]).toEqual({ title: 'Krebs cycle', content_md: '*[0:00]* Welcome.', course_id: null })
+    expect(updateLecture).toHaveBeenCalledWith(expect.anything(), ID, { note_id: 'n1' })
+    expect(push).toHaveBeenCalledWith('/notes/n1')
+    expect(fetchMock).not.toHaveBeenCalled() // no AI
+  })
+  it('edits the transcript: change a line, empty one to remove it, save', async () => {
+    lecture = { ...lecture, transcript: [{ start: 0, end: 3, text: 'Welcome.' }, { start: 4, end: 6, text: 'Um, so.' }] }
+    await open()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit transcript' }))
+    fireEvent.change(screen.getByLabelText('Line at 0:00'), { target: { value: 'Welcome, everyone.' } })
+    fireEvent.change(screen.getByLabelText('Line at 0:04'), { target: { value: '  ' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save transcript' })) })
+    expect(updateLecture).toHaveBeenCalledWith(expect.anything(), ID, { transcript: [{ start: 0, end: 3, text: 'Welcome, everyone.' }] })
+    expect(screen.getByRole('button', { name: /0:00 Welcome, everyone\./ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Um, so/ })).toBeNull()
+  })
+  it('editing waits while an accurate transcript is being made', async () => {
+    fetchMock.mockReturnValue(new Promise(() => {}))
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '↻ Get accurate transcript' })) })
+    expect((screen.getByRole('button', { name: 'Edit transcript' }) as HTMLButtonElement).disabled).toBe(true)
+  })
   it('a lecture with a note links to it', async () => {
     lecture = { ...lecture, note_id: 'n7' }
     await open()
