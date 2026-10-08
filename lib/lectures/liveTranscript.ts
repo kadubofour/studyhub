@@ -67,10 +67,17 @@ export function createLiveTranscriber(o: {
     }
     r.onend = () => {
       if (!running || rec !== r) return
-      if (!failures) { listen(); return }
-      retry = setTimeout(() => { if (running) listen() }, Math.min(30_000, 1000 * 2 ** (failures - 1)))
+      if (!failures) { attempt(); return }
+      later()
     }
     r.start()
+  }
+
+  const later = () => { retry = setTimeout(() => { if (running) attempt() }, Math.min(30_000, 1000 * 2 ** (failures - 1))) }
+  // Browsers cut recognition off every minute or so, and starting again can throw (the old session
+  // not quite closed yet). One failed restart must not end the transcript: back off and retry.
+  function attempt() {
+    try { listen() } catch { failures++; later() }
   }
 
   return {

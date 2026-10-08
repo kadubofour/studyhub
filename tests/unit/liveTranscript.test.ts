@@ -106,3 +106,20 @@ describe('createLiveTranscriber', () => {
     delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
   })
 })
+
+describe('createLiveTranscriber: long recordings', () => {
+  it('keeps going when a restart after the browser\'s own ~1 minute cut-off throws, trying again shortly', () => {
+    vi.useFakeTimers()
+    const orig = FakeRecognition.prototype.start
+    let calls = 0
+    FakeRecognition.prototype.start = function (this: FakeRecognition) { calls++; if (calls === 2) throw new Error('InvalidStateError'); orig.call(this) }
+    try {
+      const { t } = setup()
+      t.start()
+      expect(() => made[0].onend?.()).not.toThrow()
+      vi.advanceTimersByTime(5000)
+      expect(made.at(-1)?.started).toBe(1) // a later attempt did start listening
+      t.stop()
+    } finally { FakeRecognition.prototype.start = orig; vi.useRealTimers() }
+  })
+})
