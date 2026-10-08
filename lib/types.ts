@@ -3,8 +3,8 @@ export type Priority = 'low' | 'normal' | 'high'
 export type ClassKind = 'lecture' | 'lab' | 'tutorial' | 'seminar' | 'other'
 export type EditorMode = 'rich' | 'markdown'
 export type ThemePref = 'light' | 'dark' | 'system'
-export type { AccentName, FontName } from './appearance'
-import type { AccentName, FontName } from './appearance'
+export type { AccentName, FontName, LookName } from './appearance'
+import type { AccentName, FontName, LookName } from './appearance'
 
 export interface Profile {
   id: string
@@ -19,6 +19,7 @@ export interface Profile {
   theme: ThemePref
   accent: AccentName
   font: FontName
+  look: LookName
   /** Turn maths typed without dollars (x^2) into equations as you type */
   auto_math: boolean
   onboarded: boolean

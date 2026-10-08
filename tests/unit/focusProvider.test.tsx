@@ -18,7 +18,7 @@ import { FocusProvider, useFocus } from '@/components/providers/FocusProvider'
 const profile: Profile = {
   id: 'u', display_name: 'Ama', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 1,
   short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich',
-  theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true,
+  theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true,
 }
 
 // Stands in for "the user started focus, then went to another page": nothing renders the Focus page.

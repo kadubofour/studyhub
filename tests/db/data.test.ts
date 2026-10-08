@@ -137,6 +137,14 @@ describe('appearance settings', () => {
     const bad = await u.sb.from('profiles').update({ accent: 'neon' }).eq('id', u.id)
     expect(bad.error).not.toBeNull()
   })
+  it('defaults to the Classic look, saves Paper, and rejects unknown looks', async () => {
+    const u = await newUser()
+    const { data: p } = await u.sb.from('profiles').select('look').eq('id', u.id).single()
+    expect(p).toEqual({ look: 'classic' })
+    expect((await u.sb.from('profiles').update({ look: 'paper' }).eq('id', u.id)).error).toBeNull()
+    expect((await u.sb.from('profiles').select('look').eq('id', u.id).single()).data).toEqual({ look: 'paper' })
+    expect((await u.sb.from('profiles').update({ look: 'neon' }).eq('id', u.id)).error).not.toBeNull()
+  })
 })
 
 describe('review fixes', () => {

@@ -25,6 +25,32 @@ export type FontName = keyof typeof FONTS
 export const isAccent = (v: unknown): v is AccentName => typeof v === 'string' && v in ACCENTS
 export const isFont = (v: unknown): v is FontName => typeof v === 'string' && v in FONTS
 
+// The two looks. The colours here are the ones in app/globals.css (tests/unit/lookCss.test.ts keeps them in
+// step); they exist in TypeScript so contrast can be checked and the Settings previews can show them.
+export type ModeColors = { bg: string; raised: string; surface: string; line: string; fg: string; muted: string; tiles: [string, string, string] }
+
+export const LOOKS = {
+  classic: {
+    label: 'Classic', blurb: 'The look you know',
+    light: { bg: '#fbfbfa', raised: '#ffffff', surface: '#f3f3f0', line: '#e6e5e0', fg: '#1f1f1d', muted: '#6b6a65', tiles: ['#ffffff', '#ffffff', '#ffffff'] },
+    dark: { bg: '#121211', raised: '#1a1a19', surface: '#222220', line: '#30302d', fg: '#ededea', muted: '#9a9993', tiles: ['#1a1a19', '#1a1a19', '#1a1a19'] },
+  },
+  paper: {
+    label: 'Paper', blurb: 'Warm cream, softer edges',
+    light: { bg: '#F6F0E4', raised: '#FFFBF2', surface: '#EFE7D6', line: '#E2D8C3', fg: '#2A2520', muted: '#6E6455', tiles: ['#F8E4D4', '#F7EDC4', '#DDEEE3'] },
+    dark: { bg: '#1C1915', raised: '#25211C', surface: '#2E2923', line: '#3A342C', fg: '#EFE8DA', muted: '#A39A8A', tiles: ['#3A2A1F', '#38331B', '#1F3027'] },
+  },
+} as const satisfies Record<string, { label: string; blurb: string; light: ModeColors; dark: ModeColors }>
+
+export type LookName = keyof typeof LOOKS
+export const isLook = (v: unknown): v is LookName => typeof v === 'string' && v in LOOKS
+// An old cached profile, or a look this version doesn't know, shows Classic
+export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'classic')
+
+// Paper's serif greeting only while the student is on the default Sans font: their font choice wins
+export const greetingFont = (look: unknown, font: unknown): string | undefined =>
+  look === 'paper' && font === 'sans' ? 'var(--font-lora)' : undefined
+
 // WCAG relative-luminance contrast ratio between two #rrggbb colours
 export function contrastRatio(a: string, b: string): number {
   const lum = (hex: string) => {
