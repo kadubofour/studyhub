@@ -10,6 +10,7 @@ import { useSaver } from '@/components/providers/ToastProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { greetingFont } from '@/lib/appearance'
 import { countTasksDoneSince, createTask, listOpenTasks, setTaskDone, type NewTask } from '@/lib/data/tasks'
 import { listClasses } from '@/lib/data/classes'
 import { countDueCards } from '@/lib/data/cards'
@@ -95,7 +96,7 @@ export default function HomePage() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMM d')}</p>
-            <h1 className="mt-0.5 text-2xl font-semibold">{greeting(hour)}{name}</h1>
+            <h1 className="mt-0.5 text-2xl font-semibold" style={{ fontFamily: greetingFont(profile.look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
           <div className="flex gap-1 md:hidden">
             <Link href="/progress" aria-label="Progress" className="rounded-lg p-1.5 hover:bg-white/15"><BarChart3 size={17} aria-hidden /></Link>
