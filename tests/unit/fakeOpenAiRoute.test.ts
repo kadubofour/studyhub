@@ -20,4 +20,21 @@ describe('fake OpenAI (E2E only)', () => {
     const res = await call({ input: [{ role: 'user', content: [{ type: 'input_file', filename: 'cells-fallback.pdf', file_data: 'x' }] }] })
     expect(res.status).toBe(400)
   })
+  it('streams a canned tutor reply as server-sent events when asked to', async () => {
+    process.env.E2E_FAKE_AI = '1'
+    const res = await call({ stream: true, input: [{ role: 'user', content: 'Why is it in the matrix?' }] })
+    expect(res.headers.get('content-type')).toContain('text/event-stream')
+    const text = await res.text()
+    expect(text).toContain('event: response.output_text.delta')
+    expect(text).toContain('mitochondrial matrix')
+    expect(text).toContain('event: response.completed')
+    expect(text).not.toContain('function_call')
+  })
+  it('adds a flashcards tool call when the student asks for flashcards', async () => {
+    process.env.E2E_FAKE_AI = '1'
+    const text = await (await call({ stream: true, input: [{ role: 'user', content: 'Make flashcards on this' }] })).text()
+    expect(text).toContain('"type":"function_call"')
+    expect(text).toContain('create_flashcards')
+    expect(text).toContain('Krebs tutor deck')
+  })
 })
