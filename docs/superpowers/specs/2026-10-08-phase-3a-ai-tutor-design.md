@@ -1,13 +1,14 @@
-# Phase 3A: AI tutor chat
+# Phase 3A: AI tutor agent
 
 Part of Phase 3 (AI tutor chat and study scheduling). Study scheduling is 3B and gets its own spec.
+The tutor is an agent: it can propose notes, flashcards, quizzes and tasks, and the student approves each one.
 
 ## 1. Goal
 
 A student can chat with an AI tutor that starts from their own notes, lecture transcripts and
 flashcards, and can go beyond them when asked. Success: from a note or lecture, one click opens a
 chat that answers about that item; from the Tutor page, a free-standing chat finds the relevant
-material on its own; replies show what they drew on and can be saved as a note, flashcards or a quiz.
+material on its own; replies show what they drew on; and when the student asks ("make me flashcards on this"), the tutor shows a preview of what it would create and nothing is saved until the student approves it.
 
 ## 2. Decisions made
 
@@ -16,7 +17,7 @@ material on its own; replies show what they drew on and can be saved as a note, 
 | What the tutor does | Both: grounded in the student's material, and general knowledge when asked |
 | Where it lives | A Tutor page with saved chats, plus an "Ask the tutor" button on notes and lectures |
 | Limits | Free: 20 tutor messages a day, separate from the 10 AI actions. Premium: counts toward the 400 a month fair use, 1 per message |
-| Actions in chat | Buttons on replies (Save as note, Make flashcards, Quiz me on this). The tutor does not create things on its own |
+| Actions in chat | Full agent: the tutor can propose a note, flashcards, a quiz or a task. Each proposal is a preview card with Add and Discard; nothing is saved until the student taps Add |
 | Finding material | The attached item in full, plus Postgres full-text search. No embeddings |
 
 ## 3. Data
@@ -25,7 +26,7 @@ material on its own; replies show what they drew on and can be saved as a note, 
   (nullable), `created_at`, `updated_at`. At most one of `note_id` and `lecture_id` is set.
   Deleting a note, lecture or course sets the link to null; the chat stays.
 - `tutor_messages`: `id`, `chat_id`, `user_id`, `role` (`user` | `assistant`), `content`, `sources`
-  (jsonb list of `{kind: 'note'|'lecture'|'card', id, title}`), `status` (`ok` | `cut_off`), `created_at`.
+  (jsonb list of `{kind: 'note'|'lecture'|'card', id, title}`), `proposals` (jsonb list, see section 6), `status` (`ok` | `cut_off`), `created_at`.
 - Row-level security on both tables: a student reads and writes only their own rows, and a message's
   chat must be theirs. Deleting a chat deletes its messages.
 - Full-text search: a generated `tsvector` column and GIN index on notes (title and text), lecture
@@ -38,7 +39,8 @@ material on its own; replies show what they drew on and can be saved as a note, 
 - **Tutor** (sidebar entry and tab-bar slot): a list of chats (title, course tag, last activity) and a
   New chat button. Opening a chat shows the conversation with a message box at the bottom.
 - **Chat**: messages in order; the assistant's reply streams in. Math and formatting render as in notes.
-  Under each assistant reply: the sources it used (links to the note or lecture) and three buttons.
+  Under each assistant reply: the sources it used (links to the note or lecture), and any proposals
+  as preview cards (section 6).
 - **Ask the tutor** button on the note page and the lecture page. It opens the chat already attached to
   that item, or the existing one if there is one. The chat header names the item it is attached to.
 - A chat can be renamed, moved to another course, and deleted (after confirming).
@@ -67,17 +69,39 @@ inside tags (`lib/ai/input.ts`), so they are read as material, not instructions.
 Model: the strong model for replies. Retrieval is one Postgres function,
 `tutor_find_material(query, limit)`, so semantic search can replace it later without other changes.
 
-## 6. Limits
+## 6. Agent actions (proposals)
+
+The model is given four tools. A tool call never saves anything: it becomes a **proposal** stored on the
+assistant message and shown as a preview card with **Add** and **Discard**. The content is written by the
+model in the tool call, so approving costs no further AI call.
+
+| Tool | Arguments | On Add |
+|---|---|---|
+| `create_note` | `title`, `body` (markdown), `course_id?` | `createNote` in the chat's course |
+| `create_flashcards` | `deck` (existing deck id or a new name), `cards[{front, back}]` (max 30) | `createDeck` if new, then `createCards` |
+| `create_quiz` | `title`, `questions[]` in the existing quiz format, `note_id` | saves a quiz on that note. Only offered when the chat is attached to a note (quizzes belong to a note); otherwise the tutor offers to make the note first |
+| `create_task` | `title`, `type`, `due_at?`, `priority?`, `course_id?` | `createTask` |
+
+- The student can edit a card or the note title in the preview before adding. Discard marks the
+  proposal discarded. Each proposal has a state (`pending`, `added` with the new item's id, `discarded`)
+  stored on the message, so a reload shows what was done and an added item is a link.
+- Add runs in the student's browser with their own session, through the existing data functions, so
+  row-level security applies exactly as it does for anything they create by hand.
+- A tool call with invalid arguments (empty title, no cards, too many cards, a course or deck that is not
+  theirs) is dropped; the reply says the tutor could not prepare it. A proposal is never half-saved:
+  Add either creates all of it or none, and reports failure.
+- The tutor never edits or deletes existing items, and never acts without the Add tap.
+
+## 7. Limits
 
 - Speed limit: 10 requests a minute for everyone, as for other AI features.
 - Free: 20 tutor messages a day (UTC day). Premium: no daily limit; each message counts 1 toward the
   400 a month fair use.
 - `tutor_check` reserves a message before the call and `tutor_release` gives it back if the call fails,
   as `ai_check` / `ai_release` do, so parallel requests cannot overshoot. Both run with the service role.
-- The action buttons use the existing flashcard and quiz generators and cost what those already cost.
-  Save as note is free.
+- Proposals are part of the same message: a message that proposes things still counts 1. Adding is free.
 
-## 7. Errors
+## 8. Errors
 
 | Situation | What the student sees |
 |---|---|
@@ -90,27 +114,29 @@ Model: the strong model for replies. Retrieval is one Postgres function,
 
 The student's message is saved before the call, so it is never lost.
 
-## 8. Out of scope
+## 9. Out of scope
 
-The tutor creating notes, cards or planner items on its own (3B); semantic search with embeddings;
+The tutor acting without approval, editing or deleting existing items, and building a study plan or schedule (3B); semantic search with embeddings;
 voice or image input; sharing chats; chat export.
 
-## 9. Testing
+## 10. Testing
 
 - Unit: the context builder (caps, order, attached item first, other items excluded), source list,
-  trimming, the prompt tags, limit-code to message mapping.
+  trimming, the prompt tags, limit-code to message mapping; the tool-argument validation for all four
+  tools (empty, oversize, someone else's course or deck, quiz with no note); proposal state changes.
 - DB: row-level security on both tables; full-text search returns only the student's own material;
   the 20-a-day allowance; parallel messages cannot overshoot; a failed call gives its message back;
   Premium counts toward fair use; deleting a note leaves the chat.
 - E2E (fake OpenAI): ask a question from a note, see the streamed reply and its sources; free-standing
-  chat; Save as note creates a note in the course; hitting the daily limit shows the message.
+  chat; ask for flashcards, see the preview, edit one card, Add, and find the cards in the deck; Discard
+  saves nothing; a proposal survives a reload; hitting the daily limit shows the message.
 - Each step ends with unit, DB and E2E tests green, lint and build clean, and a commit.
 
-## 10. Build order
+## 11. Build order
 
 1. Tables, search columns, `tutor_find_material`, limit functions, with DB tests.
 2. Context builder and `/api/ai/tutor` streaming route.
 3. Tutor page and chat view.
 4. Ask the tutor buttons on notes and lectures.
-5. Reply buttons (Save as note, Make flashcards, Quiz me on this).
+5. Agent tools: the four tools, proposals on messages, preview cards, Add and Discard.
 6. Settings count and E2E.
