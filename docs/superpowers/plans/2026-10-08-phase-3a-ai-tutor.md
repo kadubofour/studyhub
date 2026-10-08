@@ -146,7 +146,7 @@ describe('tutor_find_material', () => {
     const u = await newUser(), other = await newUser()
     await note(u)
     await note(other, { title: 'Their mitochondrial secrets', content_md: 'mitochondrial mitochondrial' })
-    await u.sb.from('lectures').insert({ title: 'Bio lecture', duration_seconds: 60, mime: 'audio/webm', transcript: [{ start: 0, end: 2, text: 'Today the mitochondrial membrane.' }] })
+    await u.sb.from('lectures').insert({ title: 'Bio lecture', duration_seconds: 60, mime: 'audio/webm', transcript: [{ start: 0, end: 2, text: 'Today the mitochondrial matrix.' }] })
     const deck = (await u.sb.from('decks').insert({ name: 'Bio' }).select('id').single()).data!
     await u.sb.from('cards').insert({ deck_id: deck.id, front: 'Where is the mitochondrial matrix?', back: 'Inside' })
     const { data } = await u.sb.rpc('tutor_find_material', { p_query: 'mitochondrial matrix', p_limit: 5 })
