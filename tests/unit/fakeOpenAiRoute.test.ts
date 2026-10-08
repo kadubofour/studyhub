@@ -37,4 +37,15 @@ describe('fake OpenAI (E2E only)', () => {
     expect(text).toContain('create_flashcards')
     expect(text).toContain('Krebs tutor deck')
   })
+  it('answers a topics request with topics that link the notes found in the prompt', async () => {
+    process.env.E2E_FAKE_AI = '1'
+    const N1 = '22222222-2222-4222-8222-222222222222', N2 = '33333333-3333-4333-8333-333333333333'
+    const input = [{ role: 'user', content: `Course material:\n<note id="${N1}" title="A">\ntext\n</note>\n\n<note id="${N2}" title="B">\ntext\n</note>` }]
+    const draft = await (await call({ text: { format: { name: 'topics' } }, input })).json() as { output: { content: { text: string }[] }[] }
+    expect(JSON.parse(draft.output[0].content[0].text).topics).toEqual([
+      { name: 'Krebs cycle', notes: [N1, N2], lectures: [] }, { name: 'Glycolysis', notes: [N1], lectures: [] },
+    ])
+    const update = await (await call({ text: { format: { name: 'topics' } }, input: [{ role: 'user', content: `Existing topics:\n- Krebs cycle\n\nNew material:\n<note id="${N2}" title="B">\ntext\n</note>` }] })).json() as { output: { content: { text: string }[] }[] }
+    expect(JSON.parse(update.output[0].content[0].text).topics).toEqual([{ name: 'Pyruvate', notes: [N2], lectures: [] }])
+  })
 })

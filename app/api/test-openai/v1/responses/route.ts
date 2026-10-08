@@ -50,6 +50,15 @@ function tutorStream(body: { input?: unknown }): Response {
   return sse(events)
 }
 
+// Topics: link the notes found in the prompt, so E2E can check real links without knowing the ids
+function cannedTopics(body: { input?: unknown }) {
+  const raw = JSON.stringify(body.input ?? '')
+  const ids = [...new Set([...raw.matchAll(/<note id=\\?"([0-9a-f-]{36})/g)].map(m => m[1]))]
+  return raw.includes('Existing topics')
+    ? { topics: [{ name: 'Pyruvate', notes: ids, lectures: [] }] }
+    : { topics: [{ name: 'Krebs cycle', notes: ids, lectures: [] }, { name: 'Glycolysis', notes: ids.slice(0, 1), lectures: [] }] }
+}
+
 export async function POST(request: Request) {
   if (!enabled()) return new Response('Not found', { status: 404 })
   const body = await request.json().catch(() => ({})) as { model?: string; stream?: boolean; input?: unknown; text?: { format?: { name?: string } } }
@@ -59,7 +68,7 @@ export async function POST(request: Request) {
   }
   if ((body as { stream?: boolean }).stream) return tutorStream(body as { input?: unknown })
   const name = body.text?.format?.name
-  const text = name ? JSON.stringify(CANNED[name] ?? {}) : '# Fake note\n\nConverted by the fake AI.'
+  const text = name === 'topics' ? JSON.stringify(cannedTopics(body)) : name ? JSON.stringify(CANNED[name] ?? {}) : '# Fake note\n\nConverted by the fake AI.'
   return Response.json({
     id: 'resp_fake', object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed',
     model: body.model ?? 'fake', incomplete_details: null, error: null,
