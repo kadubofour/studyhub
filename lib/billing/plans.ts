@@ -1,6 +1,7 @@
 // Plan limits and prices. The limits are also enforced in SQL (supabase/migrations/…_billing.sql);
 // tests/unit/billingPlans.test.ts keeps the two in step.
 export const FREE_DAILY_ACTIONS = 10
+export const FREE_DAILY_TUTOR_MESSAGES = 20
 export const FAIR_USE_MONTHLY_ACTIONS = 400
 export const FAIR_USE_TRANSCRIPT_HOURS = 20
 export const SPEED_LIMIT_PER_MINUTE = 10

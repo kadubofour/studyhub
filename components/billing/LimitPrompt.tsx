@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { FREE_DAILY_ACTIONS, PRODUCTS, formatGhs } from '@/lib/billing/plans'
+import { FREE_DAILY_ACTIONS, FREE_DAILY_TUTOR_MESSAGES, PRODUCTS, formatGhs } from '@/lib/billing/plans'
 import { billingEnabled } from './usePlan'
 
 function resetIn(now: Date) {
@@ -11,6 +11,7 @@ function resetIn(now: Date) {
 
 const TEXT = {
   daily_limit: { title: `You've used today's ${FREE_DAILY_ACTIONS} free AI actions`, body: () => `They reset in ${resetIn(new Date())}. Premium has no daily limit.`, upgrade: true },
+  tutor_limit: { title: `You've used today's ${FREE_DAILY_TUTOR_MESSAGES} free tutor messages`, body: () => `They reset in ${resetIn(new Date())}. Premium has no daily limit.`, upgrade: true },
   fair_use: { title: 'You\'ve reached fair use for this month', body: () => 'Premium AI comes back on the 1st. Everything else keeps working.', upgrade: false },
   premium_required: { title: 'This is a Premium feature', body: () => 'Premium includes accurate lecture transcripts and unlimited AI.', upgrade: true },
 } as const

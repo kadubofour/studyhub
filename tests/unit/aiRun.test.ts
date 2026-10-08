@@ -109,3 +109,9 @@ describe('input helpers', () => {
     expect(wordCount('')).toBe(0)
   })
 })
+
+describe('tutor_limit', () => {
+  it('is a 402 like the other plan limits', () => {
+    expect(aiErrorResponse('tutor_limit').status).toBe(402)
+  })
+})

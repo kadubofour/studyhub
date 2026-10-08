@@ -16,6 +16,9 @@ export const AI_MESSAGES: Record<string, string> = {
   unauthorized: 'You\'ve been signed out. Log in again.',
   daily_limit: 'You\'ve used today\'s free AI actions.',
   fair_use: 'You\'ve reached fair use for this month.',
+  tutor_limit: 'You\'ve used today\'s free tutor messages.',
+  cut_off: 'The reply was cut off. Try again.',
+  bad_request: 'That message couldn\'t be sent.',
 }
 
 // POST to an AI route; errors come back as plain words.

@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { AiEmptyError, AiIncompleteError, AiRefusedError, isAiConfigured, openai, type AiClient } from './openai'
 
-export type AiErrorCode = 'ai_unavailable' | 'rate_limited' | 'daily_limit' | 'fair_use' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted'
+export type AiErrorCode = 'ai_unavailable' | 'rate_limited' | 'daily_limit' | 'fair_use' | 'busy' | 'refused' | 'too_long' | 'empty' | 'ai_failed' | 'aborted' | 'tutor_limit'
 export type AiResult<T> = { ok: true; value: T } | { ok: false; error: AiErrorCode }
 
 const STATUS: Record<AiErrorCode, number> = {
-  ai_unavailable: 503, rate_limited: 429, daily_limit: 402, fair_use: 402, busy: 429,
+  ai_unavailable: 503, rate_limited: 429, daily_limit: 402, tutor_limit: 402, fair_use: 402, busy: 429,
   refused: 422, too_long: 413, empty: 422, ai_failed: 502, aborted: 499,
 }
 
