@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const createNote = vi.fn(async (..._a: unknown[]) => ({ id: 'n9' }))
 const createDeck = vi.fn(async (..._a: unknown[]) => ({ id: 'd9' }))
+const deleteDeck = vi.fn(async (..._a: unknown[]) => {})
 const createCards = vi.fn(async (..._a: unknown[]) => [])
 const createTask = vi.fn(async (..._a: unknown[]) => ({ id: 't9' }))
 vi.mock('@/lib/data/notes', () => ({ createNote: (...a: unknown[]) => createNote(...a) }))
-vi.mock('@/lib/data/decks', () => ({ createDeck: (...a: unknown[]) => createDeck(...a) }))
+vi.mock('@/lib/data/decks', () => ({ createDeck: (...a: unknown[]) => createDeck(...a), deleteDeck: (...a: unknown[]) => deleteDeck(...a) }))
 vi.mock('@/lib/data/cards', () => ({ createCards: (...a: unknown[]) => createCards(...a) }))
 vi.mock('@/lib/data/tasks', () => ({ createTask: (...a: unknown[]) => createTask(...a) }))
 const quizInsert = vi.fn()
@@ -14,7 +15,7 @@ import { applyProposal } from '@/lib/tutor/apply'
 import type { Proposal } from '@/lib/ai/tutorTools'
 
 const chat = { course_id: 'c1', note_id: 'n1' }
-beforeEach(() => { createNote.mockClear(); createDeck.mockClear(); createCards.mockClear(); createTask.mockClear(); quizInsert.mockClear() })
+beforeEach(() => { createNote.mockClear(); createDeck.mockClear(); deleteDeck.mockClear(); createCards.mockClear(); createTask.mockClear(); quizInsert.mockClear() })
 const p = <T extends Proposal>(x: T) => x
 
 describe('applyProposal', () => {
@@ -45,5 +46,15 @@ describe('applyProposal', () => {
   it('a failure part-way doesn\'t report success', async () => {
     createCards.mockRejectedValueOnce(new Error('rls'))
     await expect(applyProposal(sb, p({ id: 'p', tool: 'create_flashcards', state: 'pending', args: { deck_id: 'd1', deck_name: null, cards: [{ front: 'Q', back: 'A' }], course_id: null } }), chat)).rejects.toThrow('rls')
+  })
+  it('a new deck whose cards fail to save is removed, so nothing is left half-made', async () => {
+    createCards.mockRejectedValueOnce(new Error('rls'))
+    await expect(applyProposal(sb, p({ id: 'p', tool: 'create_flashcards', state: 'pending', args: { deck_id: null, deck_name: 'Krebs', cards: [{ front: 'Q', back: 'A' }], course_id: null } }), chat)).rejects.toThrow('rls')
+    expect(deleteDeck).toHaveBeenCalledWith(sb, 'd9')
+  })
+  it('an existing deck is never deleted when adding cards to it fails', async () => {
+    createCards.mockRejectedValueOnce(new Error('rls'))
+    await expect(applyProposal(sb, p({ id: 'p', tool: 'create_flashcards', state: 'pending', args: { deck_id: 'd1', deck_name: null, cards: [{ front: 'Q', back: 'A' }], course_id: null } }), chat)).rejects.toThrow('rls')
+    expect(deleteDeck).not.toHaveBeenCalled()
   })
 })

@@ -2,7 +2,7 @@ export type Source = { kind: 'note' | 'lecture' | 'card'; id: string; title: str
 export type Material = Source & { text: string }
 
 // Characters: the attached item, each matched item, everything together, and messages of history kept
-export const TUTOR_LIMITS = { attached: 16_000, match: 2_000, total: 30_000, history: 12 }
+export const TUTOR_LIMITS = { attached: 16_000, match: 2_000, total: 30_000, history: 12, history_chars: 20_000 }
 
 const safe = (s: string) => s.replace(/"/g, "'").slice(0, 200)
 const tag = (m: Material, text: string) => `<material kind="${m.kind}" id="${m.id}" title="${safe(m.title)}">\n${text}\n</material>`
@@ -41,6 +41,14 @@ export function buildContext(o: {
 }
 
 export function buildInput(o: { history: { role: 'user' | 'assistant'; content: string }[]; context: string; message: string }) {
-  const history = o.history.filter(h => h.content.trim()).slice(-TUTOR_LIMITS.history)
+  const recent = o.history.filter(h => h.content.trim()).slice(-TUTOR_LIMITS.history)
+  // Newest first, until the character budget is used: a few very long replies must not blow up the request
+  const history: typeof recent = []
+  let used = 0
+  for (let i = recent.length - 1; i >= 0; i--) {
+    used += recent[i].content.length
+    if (used > TUTOR_LIMITS.history_chars) break
+    history.unshift(recent[i])
+  }
   return [...history, { role: 'user' as const, content: `${o.context}\n\nStudent's message:\n${o.message}` }]
 }

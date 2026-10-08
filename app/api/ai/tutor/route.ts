@@ -83,7 +83,9 @@ export async function POST(request: Request) {
           reply += note; send({ t: 'delta', text: note })
         }
         const messageId = await saveReply(reply, proposals, 'ok')
-        await sb.from('tutor_chats').update({ ...(chat.title === 'New chat' ? { title: message.slice(0, 60) } : { title: chat.title }) }).eq('id', chat.id)
+        // Name the chat only if it still has its default name (a rename made while the reply was written wins); always touch it so it moves to the top
+        if (chat.title === 'New chat') await sb.from('tutor_chats').update({ title: message.slice(0, 60) }).eq('id', chat.id).eq('title', 'New chat')
+        else await sb.from('tutor_chats').update({ updated_at: new Date().toISOString() }).eq('id', chat.id)
         send({ t: 'done', messageId, proposals })
       } catch (e) {
         const error = classifyAiError(e, request.signal)

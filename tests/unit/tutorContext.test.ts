@@ -56,4 +56,16 @@ describe('tutorInstructions', () => {
     expect(tutorInstructions(false)).not.toMatch(/quiz/i)
     expect(tutorInstructions(true)).toMatch(/quiz/i)
   })
+
+describe('buildInput size', () => {
+  it('keeps the newest history that fits the character budget, so long replies cannot blow up the request', () => {
+    const big = 'x'.repeat(30_000)
+    const history = [{ role: 'user' as const, content: 'first' }, { role: 'assistant' as const, content: big }, { role: 'user' as const, content: 'second' }, { role: 'assistant' as const, content: big }]
+    const input = buildInput({ history, context: '', message: 'now' })
+    const total = input.reduce((n, i) => n + i.content.length, 0)
+    expect(total).toBeLessThan(TUTOR_LIMITS.history_chars + 100)
+    expect(input.at(-1)!.content).toContain('now')
+    expect(input.map(i => i.content)).not.toContain('first')
+  })
+})
 })

@@ -30,11 +30,14 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [problem, setProblem] = useState<{ code: string; message: string } | null>(null)
   const [attachedTitle, setAttachedTitle] = useState<string | null>(null)
   const end = useRef<HTMLDivElement>(null)
+  // The newest messages, read by proposal writes (a click's own render can be stale), and a queue so saves run one at a time
+  const latest = useRef<TutorMessage[]>([])
+  const writes = useRef<Promise<void>>(Promise.resolve())
 
   useEffect(() => {
     const sb = supabase()
     Promise.all([getChat(sb, chatId), listMessages(sb, chatId), listCourses(sb)]).then(async ([c, m, cs]) => {
-      setChat(c); setMessages(m); setCourses(cs)
+      setChat(c); latest.current = m; setMessages(m); setCourses(cs)
       const table = c.note_id ? 'notes' : c.lecture_id ? 'lectures' : null
       const id = c.note_id ?? c.lecture_id
       if (table && id) {
@@ -45,32 +48,53 @@ export function ChatView({ chatId }: { chatId: string }) {
   }, [chatId, router])
   useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
 
-  async function reload() { setMessages(await listMessages(supabase(), chatId)) }
+  async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
 
   async function send() {
     const message = text.trim()
     if (!message || live !== null) return
     setProblem(null); setText(''); setLive('')
-    setMessages(ms => [...ms, { id: 'pending', chat_id: chatId, role: 'user', content: message, sources: [], proposals: [], status: 'ok', created_at: '' }])
+    const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '' }]
+    latest.current = shown; setMessages(shown)
     const r = await sendTutorMessage(chatId, message)
-    if (!r.ok) { setProblem({ code: r.error, message: r.message }); setLive(null); await reload(); return }
+    if (!r.ok) {
+      // Refused (limit, speed, offline): keep what was typed so it isn't lost
+      setProblem({ code: r.error, message: r.message }); setText(message); setLive(null); await reload(); return
+    }
+    const cutOff = { code: 'cut_off', message: 'The reply was cut off. Try again.' }
+    let ended = false
     try {
       for await (const l of r.lines) {
         if (l.t === 'delta') setLive(s => (s ?? '') + l.text)
-        else if (l.t === 'error') setProblem({ code: l.error === 'ai_failed' || l.messageId ? 'cut_off' : l.error, message: l.messageId ? 'The reply was cut off. Try again.' : 'Couldn\'t reach the AI. Try again.' })
+        else if (l.t === 'done') ended = true
+        else if (l.t === 'error') { ended = true; setProblem(l.messageId ? cutOff : { code: l.error, message: 'Couldn\'t reach the AI. Try again.' }) }
       }
-    } finally { setLive(null); await reload(); const c = await getChat(supabase(), chatId); setChat(c) }
+      if (!ended) setProblem(cutOff) // the connection closed without finishing
+    } catch { setProblem(cutOff) } finally {
+      setLive(null)
+      try { await reload(); setChat(await getChat(supabase(), chatId)) } catch { /* the next load shows it */ }
+    }
   }
 
-  async function change(messageId: string, proposalId: string, patch: Partial<Proposal>) {
-    const msg = messages.find(m => m.id === messageId)!
-    const proposals = msg.proposals.map(p => (p.id === proposalId ? { ...p, ...patch } as Proposal : p))
-    await saveProposals(supabase(), messageId, proposals)
-    setMessages(ms => ms.map(m => (m.id === messageId ? { ...m, proposals } : m)))
+  // Changes one proposal. Saves run one after another, each from the newest list, so two taps at
+  // once can't write over each other. The card updates at once; a failed save rejects.
+  function change(messageId: string, proposalId: string, patch: Partial<Proposal>): Promise<void> {
+    const run = writes.current.then(async () => {
+      const msg = latest.current.find(m => m.id === messageId)
+      if (!msg) return
+      const proposals = msg.proposals.map(p => (p.id === proposalId ? { ...p, ...patch } as Proposal : p))
+      const next = latest.current.map(m => (m.id === messageId ? { ...m, proposals } : m))
+      latest.current = next; setMessages(next)
+      await saveProposals(supabase(), messageId, proposals)
+    })
+    writes.current = run.catch(() => {})
+    return run
   }
   async function add(messageId: string, edited: Proposal) {
     const done = await applyProposal(supabase(), edited, { course_id: chat!.course_id, note_id: chat!.note_id })
-    await change(messageId, edited.id, { ...edited, state: 'added', ...done } as Partial<Proposal>)
+    // The item exists now: show it as added even if saving that fact fails, so it isn't added twice
+    try { await change(messageId, edited.id, { ...edited, state: 'added', ...done } as Partial<Proposal>) }
+    catch { toast('Added. It may show as new again after a reload.') }
   }
 
   async function rename() {
@@ -112,7 +136,7 @@ export function ChatView({ chatId }: { chatId: string }) {
                 ))}</p>
               )}
               {m.proposals.map(p => (
-                <ProposalCard key={p.id} proposal={p} onAdd={e => add(m.id, e)} onDiscard={() => void change(m.id, p.id, { state: 'discarded' })} />
+                <ProposalCard key={p.id} proposal={p} onAdd={e => add(m.id, e)} onDiscard={() => { change(m.id, p.id, { state: 'discarded' }).catch(() => toast('Couldn\'t save that.')) }} />
               ))}
             </div>
           ))}

@@ -32,7 +32,7 @@ const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
   rpc: (fn: string) => result(fn === 'tutor_find_material' ? matches : null),
   from: (table: string) => {
-    if (table === 'tutor_chats') return { ...result(chat), update: (p: Record<string, unknown>) => { updated.push([table, p]); return { eq: async () => ({ error: null }) } } }
+    if (table === 'tutor_chats') return { ...result(chat), update: (p: Record<string, unknown>) => { updated.push([table, p]); const r: Record<string, unknown> = { eq: () => r, then: (res: (v: unknown) => unknown) => res({ error: null }) }; return r } }
     if (table === 'notes') return result(note)
     if (table === 'courses') return result([{ id: C1, name: 'Biology' }])
     if (table === 'decks') return result([])
@@ -137,5 +137,11 @@ describe('POST /api/ai/tutor', () => {
     await (await call()).text()
     const o = modelInput.mock.calls[0][0] as { input: { content: string }[] }
     expect(o.input.at(-1)!.content.length).toBeLessThan(40_000)
+  })
+  it('does not overwrite a title the student has set, or changed while the reply was written', async () => {
+    chat = { ...chat, title: 'My own name' }
+    await (await call()).text()
+    expect(updated.every(([, patch]) => !('title' in patch))).toBe(true)
+    expect(updated.length).toBeGreaterThan(0) // the chat is still touched, so it moves to the top of the list
   })
 })

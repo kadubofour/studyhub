@@ -74,4 +74,35 @@ describe('ChatView', () => {
     expect(apply).not.toHaveBeenCalled()
     expect(saveProposals).toHaveBeenCalledWith(expect.anything(), 'm2', [expect.objectContaining({ state: 'discarded' })])
   })
+  it('two proposals added at once are both kept (one save must not undo the other)', async () => {
+    const task = (id: string) => ({ id, tool: 'create_task', state: 'pending', args: { title: id, type: 'other', due_at: null, priority: 'normal', course_id: null } })
+    messages = [{ id: 'm2', role: 'assistant', content: 'Here.', sources: [], status: 'ok', proposals: [task('p1'), task('p2')] }]
+    await open()
+    await act(async () => { for (const b of screen.getAllByRole('button', { name: 'Add' })) fireEvent.click(b) })
+    const last = saveProposals.mock.calls.at(-1)![2] as { id: string; state: string }[]
+    expect(last.map(p => [p.id, p.state])).toEqual([['p1', 'added'], ['p2', 'added']])
+  })
+  it('an item that was added but whose state could not be saved shows as added, and is not added twice', async () => {
+    messages = [{ id: 'm2', role: 'assistant', content: 'Here.', sources: [], status: 'ok', proposals: [
+      { id: 'p1', tool: 'create_task', state: 'pending', args: { title: 'Read', type: 'reading', due_at: null, priority: 'normal', course_id: null } }] }]
+    saveProposals.mockRejectedValueOnce(new Error('offline'))
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add' })) })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('link', { name: /Open/ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
+    expect(apply).toHaveBeenCalledTimes(1)
+  })
+  it('a reply that breaks off with an exception says so instead of showing nothing', async () => {
+    send = async () => ({ ok: true, lines: (async function* () { yield { t: 'delta', text: 'NADH ' }; throw new Error('connection lost') })() })
+    await open()
+    await ask('Why?')
+    expect(screen.getByRole('alert').textContent).toMatch(/cut off/i)
+  })
+  it('keeps what you typed when the message is refused', async () => {
+    send = async () => ({ ok: false, error: 'tutor_limit', message: 'x' })
+    await open()
+    await ask('One more?')
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('One more?')
+  })
 })

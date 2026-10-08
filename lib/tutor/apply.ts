@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import { createNote } from '@/lib/data/notes'
-import { createDeck } from '@/lib/data/decks'
+import { createDeck, deleteDeck } from '@/lib/data/decks'
 import { createCards } from '@/lib/data/cards'
 import { createTask } from '@/lib/data/tasks'
 import { must } from '@/lib/data/util'
@@ -17,8 +17,13 @@ export async function applyProposal(
       return { itemId: n.id, itemKind: 'note' }
     }
     case 'create_flashcards': {
+      const created = !p.args.deck_id
       const deckId = p.args.deck_id ?? (await createDeck(sb, { name: p.args.deck_name!, course_id: p.args.course_id ?? chat.course_id })).id
-      await createCards(sb, deckId, p.args.cards)
+      try { await createCards(sb, deckId, p.args.cards) } catch (e) {
+        // All or none: a deck made for these cards doesn't stay behind empty
+        if (created) await deleteDeck(sb, deckId).catch(() => {})
+        throw e
+      }
       return { itemId: deckId, itemKind: 'deck' }
     }
     case 'create_quiz': {
