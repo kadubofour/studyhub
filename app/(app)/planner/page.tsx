@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { QuickAdd } from '@/components/planner/QuickAdd'
+import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
@@ -157,6 +158,7 @@ export default function PlannerPage() {
       {tab === 'tasks' && (
         <div>
           <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
+          <StudyPlanPanel courses={courses} tasks={tasks} />
           {loaded && courses.length === 0 && tasks.length === 0 && (
             <p className="mt-6 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
           )}

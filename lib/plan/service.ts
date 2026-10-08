@@ -17,7 +17,11 @@ export async function listPlans(sb: SupabaseClient): Promise<PlanRow[]> {
 }
 export async function savePlan(sb: SupabaseClient, input: PlanInput, id?: string): Promise<void> {
   if (id) check(await sb.from('study_plans').update({ mode: input.mode, minutes_per_day: input.minutes_per_day, days_off: input.days_off }).eq('id', id))
-  else check(await sb.from('study_plans').insert(input))
+  else {
+    // One plan per course: an old one that has ended is hidden, so it is replaced here
+    check(await sb.from('study_plans').delete().eq('course_id', input.course_id))
+    check(await sb.from('study_plans').insert(input))
+  }
 }
 export async function deletePlan(sb: SupabaseClient, id: string): Promise<void> {
   check(await sb.from('study_plans').delete().eq('id', id))
