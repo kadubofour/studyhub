@@ -34,6 +34,19 @@ export function createLiveTranscriber(o: {
   // After an error (offline, microphone busy) wait before listening again: 1 s, then 2, 4… up to 30 s
   let failures = 0
   let retry: ReturnType<typeof setTimeout> | null = null
+  // Chrome ends a recognition after about a minute (and sometimes just goes quiet without saying
+  // so), so each one is replaced after 45 s. Words not yet final when one ends are kept as a line.
+  let rotate: ReturnType<typeof setTimeout> | null = null
+  let pending = ''
+  const ROTATE_AFTER = 45_000
+  const clearRotate = () => { if (rotate) { clearTimeout(rotate); rotate = null } }
+
+  function flush() {
+    if (!pending) return
+    const start = lineStart ?? round(o.now())
+    o.onLine({ start, end: Math.max(start, round(o.now())), text: pending })
+    pending = ''; lineStart = null; o.onInterim('')
+  }
 
   function listen() {
     retry = null
@@ -57,6 +70,7 @@ export function createLiveTranscriber(o: {
           interim += (interim ? ' ' : '') + text
         }
       }
+      pending = interim
       o.onInterim(interim)
     }
     r.onerror = e => {
@@ -66,11 +80,23 @@ export function createLiveTranscriber(o: {
       else if (e.error !== 'no-speech') { failures++; o.onTrouble?.(e.error) }
     }
     r.onend = () => {
-      if (!running || rec !== r) return
+      if (rec !== r) return
+      clearRotate()
+      if (!running) return
+      flush()
       if (!failures) { attempt(); return }
       later()
     }
     r.start()
+    clearRotate()
+    rotate = setTimeout(() => {
+      rotate = null
+      if (!running || rec !== r) return
+      // stop() lets the browser deliver what it was hearing, then onend restarts
+      try { r.stop() } catch { /* replaced below */ }
+      // If it never says it ended, replace it anyway
+      setTimeout(() => { if (running && rec === r) { flush(); attempt() } }, 2000)
+    }, ROTATE_AFTER)
   }
 
   const later = () => { retry = setTimeout(() => { if (running) attempt() }, Math.min(30_000, 1000 * 2 ** (failures - 1))) }
@@ -83,6 +109,7 @@ export function createLiveTranscriber(o: {
   return {
     start() { if (running) return; running = true; listen() },
     stop() {
+      flush(); clearRotate()
       running = false; lineStart = null; failures = 0
       if (retry) { clearTimeout(retry); retry = null }
       rec?.stop(); o.onInterim('')

@@ -123,3 +123,40 @@ describe('createLiveTranscriber: long recordings', () => {
     } finally { FakeRecognition.prototype.start = orig; vi.useRealTimers() }
   })
 })
+
+describe('createLiveTranscriber: what was said is kept', () => {
+  it('a sentence still being heard when the browser cuts off is saved, not lost', () => {
+    const { t, lines } = setup()
+    t.start()
+    clock = 50
+    made[0].say([['the mitochondria is the', false]])
+    clock = 52
+    made[0].onend?.()
+    expect(lines).toEqual([{ start: 50, end: 52, text: 'the mitochondria is the' }])
+    expect(made).toHaveLength(2)
+  })
+  it('starts a fresh recognition before the browser\'s own one-minute cut-off, so it never goes quiet', () => {
+    vi.useFakeTimers()
+    try {
+      const { t, lines } = setup()
+      t.start()
+      made[0].say([['still talking', false]])
+      vi.advanceTimersByTime(50_000)
+      expect(made).toHaveLength(2)
+      expect(made[1].started).toBe(1)
+      expect(lines.map(l => (l as { text: string }).text)).toEqual(['still talking'])
+      t.stop()
+    } finally { vi.useRealTimers() }
+  })
+  it('replaces a recognition that went dead without saying so', () => {
+    vi.useFakeTimers()
+    try {
+      const { t } = setup()
+      t.start()
+      made[0].stop = function (this: FakeRecognition) { this.stopped++ } // never fires onend
+      vi.advanceTimersByTime(50_000 + 3_000)
+      expect(made).toHaveLength(2)
+      t.stop()
+    } finally { vi.useRealTimers() }
+  })
+})
