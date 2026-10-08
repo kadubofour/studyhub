@@ -10,6 +10,7 @@ import { TranscriptView } from '@/components/lectures/TranscriptView'
 import { supabase } from '@/lib/supabase/client'
 import { deleteLecture, getLecture, partUrls, updateLecture, type Lecture } from '@/lib/data/lectures'
 import { makeAiNote, makeFreeNote } from '@/lib/lectures/lectureNotes'
+import { AskTutorButton } from '@/components/tutor/AskTutorButton'
 import { TranscriptEditor } from '@/components/lectures/TranscriptEditor'
 import { runAccurate } from '@/lib/lectures/accurate'
 import { usePlan } from '@/components/billing/usePlan'
@@ -144,6 +145,7 @@ export default function LecturePage() {
                 {resuming ? `↻ Resume accurate transcript (${done} of ${lecture.parts.length} parts done)` : '↻ Get accurate transcript'}
               </button>
             )}
+            <AskTutorButton target={{ lecture_id: lecture.id }} title={lecture.title} courseId={lecture.course_id} />
             {free && !accurateDone && (
               <span className="self-center rounded-md bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent">✦ Premium</span>
             )}

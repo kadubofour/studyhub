@@ -10,7 +10,7 @@ vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({
     ? { select: () => ({ maybeSingle: async () => ({ data: ent }) }) }
     : t === 'payments'
       ? { select: () => ({ order: () => ({ limit: async () => ({ data: payments }) }) }) }
-      : { select: () => ({ gte: async () => ({ data: [{ cost: 112, at: new Date().toISOString() }] }) }) },
+      : { select: () => ({ gte: async () => ({ data: [{ cost: 112, at: new Date().toISOString(), kind: 'action' }, { cost: 1, at: new Date().toISOString(), kind: 'tutor' }] }) }) },
 }) }))
 import { PlanCard } from '@/components/settings/PlanCard'
 import { endingSoon } from '@/components/billing/EndingBanner'
@@ -33,7 +33,7 @@ describe('PlanCard', () => {
     expect(await screen.findByText('✦ Premium')).toBeTruthy()
     expect(screen.getByText(/until 3 Dec 2026/)).toBeTruthy()
     expect(screen.getByText(/Renews automatically \(Visa •• 4242\)/)).toBeTruthy()
-    expect(screen.getByText('This month: 112 of 400 AI actions')).toBeTruthy()
+    expect(screen.getByText('This month: 113 of 400 AI actions')).toBeTruthy() // 112 AI actions + 1 tutor message: fair use counts both
     expect(screen.getByText(/3 Oct 2026 · 1 month · GHS 50 · MoMo/)).toBeTruthy()
   })
   it('lists a payment of unknown product as a payment being checked', async () => {
@@ -80,5 +80,10 @@ describe('endingSoon', () => {
     expect(endingSoon({ isPremium: true, autoRenew: true, premiumUntil: new Date('2026-10-05T12:00:00Z') }, now)).toBeNull()
     expect(endingSoon({ isPremium: true, autoRenew: false, premiumUntil: new Date('2026-10-20T12:00:00Z') }, now)).toBeNull()
     expect(endingSoon({ isPremium: false, autoRenew: false, premiumUntil: null }, now)).toBeNull()
+  })
+  it('a Free student sees their tutor messages today, apart from their AI actions', async () => {
+    ent = null
+    renderCard()
+    expect(await screen.findByText('Tutor messages today: 1 of 20')).toBeTruthy()
   })
 })

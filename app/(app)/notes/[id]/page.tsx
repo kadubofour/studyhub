@@ -9,6 +9,7 @@ import { RichEditor, insertTable } from '@/components/notes/RichEditor'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
 import { StudyPanel } from '@/components/notes/study/StudyPanel'
+import { AskTutorButton } from '@/components/tutor/AskTutorButton'
 import { FindBar } from '@/components/notes/FindBar'
 import { EquationDialog, type EquationInit } from '@/components/notes/EquationDialog'
 import { ImportDialog } from '@/components/notes/ImportDialog'
@@ -253,7 +254,8 @@ function NoteEditor({ id }: { id: string }) {
         </select>
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
-        <button type="button" className={`btn ml-auto ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦ Study</button>
+        <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} /></span>
+        <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦ Study</button>
         {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>
       <div className={`mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>

@@ -65,6 +65,14 @@ describe('Scan in the app shell', () => {
     expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(1) // sidebar only
   })
 
+  it('has Tutor in the sidebar and the phone tab bar', () => {
+    path = '/home'
+    renderShell()
+    const links = screen.getAllByRole('link', { name: 'Tutor' })
+    expect(links).toHaveLength(2)
+    expect(links[0].getAttribute('href')).toBe('/tutor')
+  })
+
   it('while a lecture is recording, leaving through the sidebar asks first', async () => {
     HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
     HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }

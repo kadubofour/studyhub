@@ -15,18 +15,20 @@ const startOfUtcMonth = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.get
 export async function loadPlan(sb: SupabaseClient, now: Date) {
   const [{ data: ent }, { data: charges }] = await Promise.all([
     sb.from('entitlements').select('premium_until,auto_renew,card_brand,card_last4').maybeSingle(),
-    sb.from('ai_charges').select('cost,at').gte('at', startOfUtcMonth(now).toISOString()),
+    sb.from('ai_charges').select('cost,at,kind').gte('at', startOfUtcMonth(now).toISOString()),
   ])
   const premiumUntil = ent?.premium_until ? new Date(ent.premium_until) : null
   const day = startOfUtcDay(now).getTime()
-  const rows = (charges ?? []) as { cost: number; at: string }[]
+  const rows = (charges ?? []) as { cost: number; at: string; kind?: 'action' | 'tutor' }[]
   const brand = ent?.card_brand ? ent.card_brand[0].toUpperCase() + ent.card_brand.slice(1) : null
   return {
     premiumUntil,
     isPremium: !!premiumUntil && premiumUntil.getTime() > now.getTime(),
     autoRenew: !!ent?.auto_renew,
     cardLabel: brand && ent?.card_last4 ? `${brand} •• ${ent.card_last4}` : null,
-    usedToday: rows.filter(r => new Date(r.at).getTime() >= day).reduce((s, r) => s + r.cost, 0),
+    // The free daily 10 counts AI actions only; tutor messages have their own count
+    usedToday: rows.filter(r => (r.kind ?? 'action') === 'action' && new Date(r.at).getTime() >= day).reduce((s, r) => s + r.cost, 0),
+    tutorToday: rows.filter(r => r.kind === 'tutor' && new Date(r.at).getTime() >= day).length,
     usedThisMonth: rows.reduce((s, r) => s + r.cost, 0),
   }
 }
@@ -35,7 +37,7 @@ export const freeAllowanceText = (usedToday: number) =>
   `${Math.max(0, FREE_DAILY_ACTIONS - usedToday)} of ${FREE_DAILY_ACTIONS} free AI actions left today`
 
 type Plan = Awaited<ReturnType<typeof loadPlan>> & { loading: boolean; billing: boolean }
-const EMPTY = { premiumUntil: null, isPremium: false, autoRenew: false, cardLabel: null, usedToday: 0, usedThisMonth: 0 }
+const EMPTY = { premiumUntil: null, isPremium: false, autoRenew: false, cardLabel: null, usedToday: 0, tutorToday: 0, usedThisMonth: 0 }
 
 // The signed-in student's plan and usage; refreshes after AI use or a plan change
 export function usePlan(): Plan {

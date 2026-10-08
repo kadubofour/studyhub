@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
 import { announcePlanChanged, billingEnabled, usePlan } from '@/components/billing/usePlan'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
-import { FAIR_USE_MONTHLY_ACTIONS, PRODUCTS, formatGhs, type ProductId } from '@/lib/billing/plans'
+import { FAIR_USE_MONTHLY_ACTIONS, FREE_DAILY_TUTOR_MESSAGES, PRODUCTS, formatGhs, type ProductId } from '@/lib/billing/plans'
 
 type Payment = { id: string; product: ProductId | null;amount_minor: number; channel: string; status: string; paid_at: string | null; created_at: string }
 const date = (iso: string, withYear = true) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC' })
@@ -45,6 +45,7 @@ export function PlanCard() {
       ) : (
         <div className="space-y-2 text-sm">
           <p><b>Free</b></p>
+          <p className="text-muted">Tutor messages today: {plan.tutorToday} of {FREE_DAILY_TUTOR_MESSAGES}</p>
           <Link href="/plans" className="btn-primary">✦ Get Premium</Link>
         </div>
       )}
