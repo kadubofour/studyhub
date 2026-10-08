@@ -79,6 +79,6 @@ describe('StudyPanel — cards', () => {
     fireEvent.change(screen.getAllByLabelText('Back')[0], { target: { value: 'Mitochondrial matrix' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save 1 card' })) })
     expect(createDeck).toHaveBeenCalledWith(expect.anything(), { name: 'Krebs cycle' })
-    expect(createCards).toHaveBeenCalledWith(expect.anything(), 'd-new', [{ front: 'Where?', back: 'Mitochondrial matrix' }])
+    expect(createCards).toHaveBeenCalledWith(expect.anything(), 'd-new', [{ front: 'Where?', back: 'Mitochondrial matrix' }], { noteId: 'n1' })
   })
 })

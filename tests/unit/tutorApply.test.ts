@@ -27,7 +27,7 @@ describe('applyProposal', () => {
     const args = { deck_id: null, deck_name: 'Krebs', cards: [{ front: 'Q', back: 'A' }], course_id: null }
     expect(await applyProposal(sb, p({ id: 'p', tool: 'create_flashcards', state: 'pending', args }), chat)).toEqual({ itemId: 'd9', itemKind: 'deck' })
     expect(createDeck).toHaveBeenCalledWith(sb, { name: 'Krebs', course_id: 'c1' })
-    expect(createCards).toHaveBeenCalledWith(sb, 'd9', args.cards)
+    expect(createCards).toHaveBeenCalledWith(sb, 'd9', args.cards, { noteId: 'n1' })
     createDeck.mockClear()
     expect(await applyProposal(sb, p({ id: 'p', tool: 'create_flashcards', state: 'pending', args: { ...args, deck_id: 'd1', deck_name: null } }), chat)).toEqual({ itemId: 'd1', itemKind: 'deck' })
     expect(createDeck).not.toHaveBeenCalled()

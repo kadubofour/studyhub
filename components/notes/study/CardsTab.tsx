@@ -30,7 +30,7 @@ export function CardsTab({ note, prepare }: { note: { id: string; title: string 
     try {
       const sb = supabase()
       const deckId = await resolveDeck(sb, deck)
-      await createCards(sb, deckId, keep)
+      await createCards(sb, deckId, keep, { noteId: note.id })
       toast(`Saved ${keep.length} card${keep.length === 1 ? '' : 's'}.`)
       setCards(null)
     } catch { setError({ code: 'save', message: 'Couldn\'t save the cards. Try again.' }) } finally { setBusy(false) }

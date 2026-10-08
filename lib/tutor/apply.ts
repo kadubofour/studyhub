@@ -19,7 +19,7 @@ export async function applyProposal(
     case 'create_flashcards': {
       const created = !p.args.deck_id
       const deckId = p.args.deck_id ?? (await createDeck(sb, { name: p.args.deck_name!, course_id: p.args.course_id ?? chat.course_id })).id
-      try { await createCards(sb, deckId, p.args.cards) } catch (e) {
+      try { await createCards(sb, deckId, p.args.cards, { noteId: chat.note_id }) } catch (e) {
         // All or none: a deck made for these cards doesn't stay behind empty
         if (created) await deleteDeck(sb, deckId).catch(() => {})
         throw e

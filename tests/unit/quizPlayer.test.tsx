@@ -107,6 +107,6 @@ describe('QuizResults', () => {
     expect(createCards).toHaveBeenCalledWith(expect.anything(), 'd-new', [
       { front: 'It makes glucose.', back: 'False. It breaks it down.' },
       { front: 'Main product?', back: 'NADH. NADH carries electrons.' },
-    ])
+    ], { noteId: 'n1' }) // cards remember the quiz's note
   })
 })

@@ -23,7 +23,7 @@ export function QuizResults({ quiz, attempt, previous, onRetake }: { quiz: Quiz;
     setBusy(true)
     try {
       const sb = supabase()
-      await createCards(sb, await resolveDeck(sb, deck), cards)
+      await createCards(sb, await resolveDeck(sb, deck), cards, { noteId: quiz.note_id })
       toast(`Saved ${cards.length} card${cards.length === 1 ? '' : 's'}.`); setPicking(false)
     } catch { toast('Couldn\'t save the cards.') } finally { setBusy(false) }
   }

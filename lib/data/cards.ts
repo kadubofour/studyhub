@@ -10,9 +10,12 @@ export async function listCards(sb: SupabaseClient, deckId: string): Promise<Car
     .order('created_at').order('id').range(from, to))
 }
 
-export async function createCards(sb: SupabaseClient, deckId: string, cards: { front: string; back: string }[]): Promise<Card[]> {
+export async function createCards(
+  sb: SupabaseClient, deckId: string, cards: { front: string; back: string }[], opts?: { noteId?: string | null },
+): Promise<Card[]> {
   if (!cards.length) return []
-  return must(await sb.from('cards').insert(cards.map(c => ({ ...c, deck_id: deckId }))).select(COLS))
+  const note = opts?.noteId ? { note_id: opts.noteId } : {}
+  return must(await sb.from('cards').insert(cards.map(c => ({ ...c, deck_id: deckId, ...note }))).select(COLS))
 }
 
 export async function updateCard(sb: SupabaseClient, id: string, patch: { front?: string; back?: string }): Promise<void> {
