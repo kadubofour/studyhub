@@ -286,11 +286,6 @@ Create `supabase/migrations/20261016000000_topics.sql`:
 -- U2a: topics per course, links from notes, lectures and decks, the cards' source note, saving a whole
 -- edited topic list at once, and per-topic statuses worked out from the student's own answers.
 
-create function public.owns_topic(tid uuid) returns boolean
-language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.topics t where t.id = tid and t.user_id = auth.uid())
-$$;
-
 create table public.topics (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
@@ -305,6 +300,11 @@ alter table public.topics enable row level security;
 create policy "own rows" on public.topics for all
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()) and public.owns_course(course_id));
+
+create function public.owns_topic(tid uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.topics t where t.id = tid and t.user_id = auth.uid())
+$$;
 
 create function public.topics_limit() returns trigger
 language plpgsql security invoker set search_path = '' as $$
