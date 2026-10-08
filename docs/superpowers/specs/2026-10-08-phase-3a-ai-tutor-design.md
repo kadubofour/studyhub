@@ -29,10 +29,12 @@ material on its own; replies show what they drew on; and when the student asks (
   (jsonb list of `{kind: 'note'|'lecture'|'card', id, title}`), `proposals` (jsonb list, see section 6), `status` (`ok` | `cut_off`), `created_at`.
 - Row-level security on both tables: a student reads and writes only their own rows, and a message's
   chat must be theirs. Deleting a chat deletes its messages.
-- Full-text search: a generated `tsvector` column and GIN index on notes (title and text), lecture
-  transcripts, and flashcards (front and back). Search is always filtered to the signed-in student.
-- Usage: a per-day tutor message count per student, kept next to the existing AI usage and written only
-  with the service role.
+- Full-text search: `tutor_find_material` searches notes (title and text), lecture transcripts and
+  flashcards (front and back), computed at query time (lecture transcripts are jsonb and cannot be a
+  generated column, and one student has few rows). It runs as the student, so it only sees their own.
+  Indexes can be added later without changing anything else.
+- Usage: tutor messages are rows in `ai_charges` with `kind = 'tutor'` (AI actions are `kind = 'action'`),
+  written only with the service role. The Free daily 10 counts actions only; Premium fair use counts both.
 
 ## 4. Pages
 
@@ -48,7 +50,7 @@ material on its own; replies show what they drew on; and when the student asks (
 
 ## 5. How it answers
 
-`POST /api/ai/tutor` takes `{ chatId, message }` and streams the reply.
+`POST /api/ai/tutor` takes `{ chatId, message }` and streams the reply (one JSON object per line).
 
 1. Check the plan limits (section 6). Refuse with a clear error before calling OpenAI if over.
 2. Save the student's message.
