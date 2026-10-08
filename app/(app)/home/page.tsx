@@ -11,6 +11,10 @@ import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProv
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
+import { AiError } from '@/components/ai/AiError'
+import { SessionRow } from '@/components/plan/SessionRow'
+import { usePlans } from '@/components/plan/usePlans'
+import { useWarmup } from '@/components/plan/useWarmup'
 import { countTasksDoneSince, createTask, listOpenTasks, setTaskDone, type NewTask } from '@/lib/data/tasks'
 import { listClasses } from '@/lib/data/classes'
 import { countDueCards } from '@/lib/data/cards'
@@ -37,6 +41,8 @@ export default function HomePage() {
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [due, setDue] = useState(0)
   const [week, setWeek] = useState<Map<string, number>>(new Map())
+  const plans = usePlans()
+  const warmup = useWarmup()
 
   useEffect(() => {
     const sb = supabase()
@@ -54,6 +60,7 @@ export default function HomePage() {
   const todayKey = localDayKey(now, tz)
   const { overdue, today } = bucketTasks(tasks, tz, now)
   const list = [...overdue, ...today]
+  const sessions = (plans.views ?? []).flatMap(v => v.today.map(s => ({ v, s })))
   const upcomingClass = nextClass(classes, tz, now)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
   const hour = Number(formatInTimeZone(now, tz, 'H'))
@@ -131,7 +138,12 @@ export default function HomePage() {
       <section className="grid gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="card">
           <h2 className="section-label">Today</h2>
-          {list.length === 0 && <p className="py-2 text-sm text-muted">Nothing due today. Add something below.</p>}
+          {sessions.map(({ v, s }) => (
+            <SessionRow key={s.id} s={s} course={courseOf(v.courseId)} done={!!s.done_at}
+              onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
+          ))}
+          {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
+          {list.length === 0 && sessions.length === 0 && <p className="py-2 text-sm text-muted">Nothing due today. Add something below.</p>}
           {list.map(t => (
             <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done={doneIds.has(t.id)} onToggle={() => toggle(t)} showType={false} />
           ))}
