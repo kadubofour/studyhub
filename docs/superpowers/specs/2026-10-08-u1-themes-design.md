@@ -52,9 +52,9 @@ six accent colours.
   The values are a starting point: the contrast tests in section 8 decide the final `--muted` and any other
   value that falls short. `--danger`, `--success` and the accent variables are not overridden.
 - Home tile tints: three new variables `--tile-a`, `--tile-b`, `--tile-c`. In Classic all three equal
-  `--raised`, so nothing changes. In Paper light they are `#F6D9C4`, `#F3E6A8`, `#CFE6D6`, and in Paper dark
-  `#4A3223`, `#4A4220`, `#243A2E`. The three Home tiles (tasks today, cards due, next class) use them.
-  Text on a tint uses the normal `--fg`.
+  `--raised`, so nothing changes. In Paper light they are `#F8E4D4`, `#F7EDC4`, `#DDEEE3`, and in Paper dark
+  `#3A2A1F`, `#38331B`, `#1F3027`. The three Home tiles (tasks today, cards due, next class) use them.
+  Text on a tint uses the normal `--fg`. These tints were lightened from the first draft so `--muted` text on them passes 4.5:1.
 - Serif greeting: the Home greeting uses `font-family: var(--font-lora)` when the look is Paper and
   `profile.font` is `sans`; in every other case it uses the app font as today. (Lora is already loaded for
   the Serif font option; it is only fetched when used.)
