@@ -20,7 +20,7 @@ import { SCAN_SAVED } from '@/lib/scan/events'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { setRecording } from '@/lib/lectures/recordingGuard'
 
-const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
+const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true } as Profile
 const renderShell = () => render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
 afterEach(() => cleanup())
 
@@ -71,6 +71,17 @@ describe('Scan in the app shell', () => {
     const links = screen.getAllByRole('link', { name: 'Tutor' })
     expect(links).toHaveLength(2)
     expect(links[0].getAttribute('href')).toBe('/tutor')
+  })
+
+  it('marks the shell with the student\'s look, and shows Classic for an old profile without one', () => {
+    path = '/home'
+    const { container, unmount } = render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(container.querySelector('.app-root')!.getAttribute('data-look')).toBe('paper')
+    unmount()
+    const old = { ...profile } as Record<string, unknown>
+    delete old.look
+    const again = render(<ProfileProvider initial={old as unknown as Profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(again.container.querySelector('.app-root')!.getAttribute('data-look')).toBe('classic')
   })
 
   it('while a lecture is recording, leaving through the sidebar asks first', async () => {

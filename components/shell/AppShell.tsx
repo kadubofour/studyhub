@@ -18,7 +18,7 @@ import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { isRecording } from '@/lib/lectures/recordingGuard'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, FONTS } from '@/lib/appearance'
+import { ACCENTS, FONTS, lookOf } from '@/lib/appearance'
 import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 
 const NAV = [
@@ -78,7 +78,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   } as React.CSSProperties
 
   return (
-    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance}>
+    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={lookOf(profile.look)}>
       {sidebar && (
         <aside className="no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
           <div className="mb-6 flex items-center justify-between px-1">

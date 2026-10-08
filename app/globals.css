@@ -8,12 +8,14 @@
   /* Accent defaults (blue preset) for pages outside the signed-in app */
   --accent: #3B5BDB; --accent-soft: #EEF1FD; --accent-solid: #3B5BDB; --accent-glow: #7C5CFF;
   --app-font: var(--font-inter);
+  --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
 }
 .dark {
   --bg: #121211; --raised: #1a1a19; --surface: #222220; --line: #30302d; --fg: #ededea; --muted: #9a9993;
   --danger: #f07b7b; --danger-soft: #3d1b1b; --success: #4fd1a5;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
   --accent: #8DA2FB; --accent-soft: #1B2550;
+  --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
 }
 
 /* The signed-in app sets --a-* and --app-font from the student's Settings (see AppShell) */
@@ -21,6 +23,21 @@
   --accent: var(--a-text); --accent-soft: var(--a-soft); --accent-solid: var(--a-solid); --accent-glow: var(--a-glow);
 }
 .dark .app-root { --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); }
+
+/* Paper: the same variables, warmer values. Colours here are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
+.app-root[data-look="paper"] {
+  --bg: #F6F0E4; --raised: #FFFBF2; --surface: #EFE7D6; --line: #E2D8C3; --fg: #2A2520; --muted: #6E6455;
+  --shadow: 0 1px 2px rgb(60 45 20 / 0.06), 0 4px 14px rgb(60 45 20 / 0.06);
+  --tile-a: #F8E4D4; --tile-b: #F7EDC4; --tile-c: #DDEEE3;
+}
+.dark .app-root[data-look="paper"] {
+  --bg: #1C1915; --raised: #25211C; --surface: #2E2923; --line: #3A342C; --fg: #EFE8DA; --muted: #A39A8A;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
+  --tile-a: #3A2A1F; --tile-b: #38331B; --tile-c: #1F3027;
+}
+/* Behind the app (overscroll on phones) matches the look */
+body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
+.dark body:has(.app-root[data-look="paper"]) { background: #1C1915; }
 
 @theme inline {
   --color-bg: var(--bg); --color-raised: var(--raised); --color-surface: var(--surface); --color-line: var(--line);
@@ -70,6 +87,9 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .menu-sep { @apply mx-2 my-1 h-px bg-line; }
   .card { @apply rounded-2xl border border-line bg-raised p-4; box-shadow: var(--shadow); }
   .tile { @apply rounded-2xl border border-line bg-raised px-4 py-3; box-shadow: var(--shadow); }
+  .tile-a { background: var(--tile-a); }
+  .tile-b { background: var(--tile-b); }
+  .tile-c { background: var(--tile-c); }
   .tile-label { @apply flex items-center gap-1.5 text-xs text-muted; }
   .tile-value { @apply mt-0.5 text-xl font-medium; }
   .hero { @apply rounded-2xl px-5 py-4 text-white; background: linear-gradient(135deg, var(--accent-solid), var(--accent-glow)); box-shadow: var(--shadow); }
