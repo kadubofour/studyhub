@@ -18,6 +18,8 @@ export const AI_MESSAGES: Record<string, string> = {
   fair_use: 'You\'ve reached fair use for this month.',
   tutor_limit: 'You\'ve used today\'s free tutor messages.',
   cut_off: 'The reply was cut off. Try again.',
+  too_little: 'Add a few more notes or record a lecture in this course first.',
+  nothing_new: 'Everything in this course is already linked to a topic.',
   bad_request: 'That message couldn\'t be sent.',
 }
 
