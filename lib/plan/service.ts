@@ -4,12 +4,12 @@ import type { PlanMode, StoredSession } from './types'
 
 export type PlanRow = {
   id: string; course_id: string; exam_task_id: string; mode: PlanMode; minutes_per_day: number; days_off: number[]
-  exam: { id: string; title: string; due_at: string | null; done_at: string | null }
+  exam: { id: string; title: string; due_at: string | null; done_at: string | null; type?: string; course_id?: string | null }
 }
 export type DayRow = { id: string; plan_id: string; day: string; sessions: StoredSession[] }
 export type PlanInput = { course_id: string; exam_task_id: string; mode: PlanMode; minutes_per_day: number; days_off: number[] }
 
-const PLAN = 'id,course_id,exam_task_id,mode,minutes_per_day,days_off,exam:tasks!inner(id,title,due_at,done_at)'
+const PLAN = 'id,course_id,exam_task_id,mode,minutes_per_day,days_off,exam:tasks!inner(id,title,due_at,done_at,type,course_id)'
 const DAY = 'id,plan_id,day,sessions'
 
 export async function listPlans(sb: SupabaseClient): Promise<PlanRow[]> {
@@ -17,11 +17,8 @@ export async function listPlans(sb: SupabaseClient): Promise<PlanRow[]> {
 }
 export async function savePlan(sb: SupabaseClient, input: PlanInput, id?: string): Promise<void> {
   if (id) check(await sb.from('study_plans').update({ mode: input.mode, minutes_per_day: input.minutes_per_day, days_off: input.days_off }).eq('id', id))
-  else {
-    // One plan per course: an old one that has ended is hidden, so it is replaced here
-    check(await sb.from('study_plans').delete().eq('course_id', input.course_id))
-    check(await sb.from('study_plans').insert(input))
-  }
+  // One plan per course: an old one that has ended is replaced, a live one is never touched (the database refuses)
+  else check(await sb.rpc('create_study_plan', { p_course: input.course_id, p_exam: input.exam_task_id, p_mode: input.mode, p_minutes: input.minutes_per_day, p_days_off: input.days_off }))
 }
 export async function deletePlan(sb: SupabaseClient, id: string): Promise<void> {
   check(await sb.from('study_plans').delete().eq('id', id))

@@ -93,4 +93,21 @@ describe('loadPlans', () => {
     expect(v.upcoming).toEqual([])
     expect(v.today.length).toBeGreaterThan(0)
   })
+  it('the days ahead count today\'s planned sessions as done, so a Learn is not shown twice', async () => {
+    const [v] = await load()
+    const todayStudy = v.today.filter(s => s.kind === 'learn' || s.kind === 'warmup').map(s => s.topic_id)
+    expect(todayStudy).toContain('t1')
+    for (const day of v.schedule) for (const s of day.sessions) {
+      if (todayStudy.includes(s.topicId)) {
+        expect(s.kind, `${day.day} ${s.topicName}`).toBe('revise')
+        expect(day.day >= '2026-10-14', `${day.day} is at least 2 days after today`).toBe(true)
+      }
+    }
+  })
+  it('hides a plan whose exam task is no longer an exam of that course', async () => {
+    plans = [plan({ exam: { id: 'e1', title: 'M', due_at: '2026-10-26T09:00:00Z', done_at: null, type: 'assignment', course_id: 'c1' } })]
+    expect(await load()).toEqual([])
+    plans = [plan({ exam: { id: 'e1', title: 'M', due_at: '2026-10-26T09:00:00Z', done_at: null, type: 'exam', course_id: 'other' } })]
+    expect(await load()).toEqual([])
+  })
 })

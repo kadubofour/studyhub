@@ -12,9 +12,10 @@ const view = (sessions: SessionView[]): PlanView => ({
 let views: PlanView[]
 const saveDaySessions = vi.fn(async (..._a: unknown[]) => {})
 let failing = false
+let loadFails = false
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }) }))
-vi.mock('@/lib/plan/load', () => ({ loadPlans: async () => views }))
+vi.mock('@/lib/plan/load', () => ({ loadPlans: async () => { if (loadFails) throw new Error('offline'); return views } }))
 vi.mock('@/lib/plan/service', () => ({ saveDaySessions: (...a: unknown[]) => (failing ? Promise.reject(new Error('offline')) : saveDaySessions(...a)) }))
 import { usePlans } from '@/components/plan/usePlans'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
@@ -23,7 +24,7 @@ import { ToastProvider } from '@/components/providers/ToastProvider'
 const profile = { id: 'u', display_name: 'Ama', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true } as Profile
 const wrapper = ({ children }: { children: React.ReactNode }) => <ToastProvider><ProfileProvider initial={profile}>{children}</ProfileProvider></ToastProvider>
 const open = async () => { const h = renderHook(() => usePlans(), { wrapper }); await waitFor(() => expect(h.result.current.views).not.toBeNull()); return h }
-beforeEach(() => { views = [view([session('a'), session('b', { topic_id: 't2' })])]; saveDaySessions.mockClear(); failing = false })
+beforeEach(() => { views = [view([session('a'), session('b', { topic_id: 't2' })])]; saveDaySessions.mockClear(); failing = false; loadFails = false })
 afterEach(cleanup)
 
 describe('usePlans', () => {
@@ -67,5 +68,11 @@ describe('usePlans', () => {
     const h = await open()
     await act(async () => { h.result.current.setDone('p1', 'a', true) })
     expect(saveDaySessions).not.toHaveBeenCalled()
+  })
+  it('says so when the plans could not be loaded, instead of looking like there are none', async () => {
+    loadFails = true
+    const h = renderHook(() => usePlans(), { wrapper })
+    await waitFor(() => expect(h.result.current.failed).toBe(true))
+    expect(h.result.current.views).toEqual([])
   })
 })

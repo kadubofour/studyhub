@@ -44,6 +44,14 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
   const courseOf = (id: string) => courses.find(c => c.id === id)
 
   if (!plans.views) return null
+  // If the plans could not be loaded the panel cannot know which courses already have one, so it offers nothing
+  if (plans.failed) return (
+    <section aria-label="Study plan" className="card mt-4 space-y-2">
+      <h2 className="font-semibold">Study plan</h2>
+      <p role="alert" className="text-sm text-danger">Couldn&apos;t load your study plans. Check your connection.</p>
+      <button type="button" className="btn" onClick={plans.reload}>Try again</button>
+    </section>
+  )
   const views = plans.views
   const planned = new Set(views.map(v => v.courseId))
   // The earliest upcoming dated exam of each course that has no plan

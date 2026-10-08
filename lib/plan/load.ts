@@ -27,6 +27,8 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
   const views: PlanView[] = []
   for (const plan of await listPlans(sb)) {
     if (!plan.exam.due_at || plan.exam.done_at) continue
+    // An exam task that has since become something else, or moved course, no longer makes a plan
+    if (plan.exam.type && (plan.exam.type !== 'exam' || plan.exam.course_id !== plan.course_id)) continue
     const examDay = localDayKey(plan.exam.due_at, tz)
     if (examDay <= today) continue
 
@@ -49,10 +51,10 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
 
     const done: DoneSession[] = saved.flatMap(d => d.sessions.filter(s => s.done_at).map(s => ({ topicId: s.topic_id, kind: s.kind, day: d.day })))
     const topics = toPlanTopics(stats, new Set(noteOf.keys()), summariseHistory(done))
-    const settings = { examDay, mode: plan.mode, minutesPerDay: plan.minutes_per_day, daysOff: plan.days_off, topics }
+    const settings = { examDay, mode: plan.mode, minutesPerDay: plan.minutes_per_day, daysOff: plan.days_off }
 
     // Today: the saved list, or plan it now and save it (nothing is saved when there is nothing to do yet)
-    const full = buildPlan({ today, ...settings })
+    const full = buildPlan({ today, ...settings, topics })
     let todayRow = saved.find(d => d.day === today) ?? null
     if (!todayRow) {
       const planned = full.days.find(d => d.day === today)?.sessions ?? []
@@ -62,7 +64,10 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
       names.has(s.topic_id) ? [{ ...s, topicName: names.get(s.topic_id)!, noteId: noteOf.get(s.topic_id) ?? null }] : [])
 
     // The days after today, planned from tomorrow with what is known now
-    const future = tomorrow < examDay ? buildPlan({ today: tomorrow, ...settings }) : null
+    // ...as if everything planned for today gets done (a missed one returns when tomorrow becomes today)
+    const planned: DoneSession[] = (todayRow?.sessions ?? []).map(s => ({ topicId: s.topic_id, kind: s.kind, day: today }))
+    const aheadTopics = toPlanTopics(stats, new Set(noteOf.keys()), summariseHistory([...done, ...planned]))
+    const future = tomorrow < examDay ? buildPlan({ today: tomorrow, ...settings, topics: aheadTopics }) : null
     const schedule = (future?.days ?? []).map(d => ({ day: d.day, sessions: d.sessions.flatMap(s => dress(s) ?? []) }))
 
     const weekAgo = addDaysToKey(today, -7)

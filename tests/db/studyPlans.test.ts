@@ -84,3 +84,49 @@ describe('study plan days', () => {
     expect(((await u.sb.from('study_plan_days').select('sessions').eq('id', row!.id).single()).data!.sessions as { done_at: string }[])[0].done_at).toBe('2026-10-12T10:00:00Z')
   })
 })
+
+describe('plans whose exam changes', () => {
+  it('stay editable after the exam task changes, but cannot be pointed at something that is not an exam', async () => {
+    const u = await newUser()
+    const c = await course(u), e = await exam(u, c)
+    const { data: p } = await plan(u, c, e)
+    await u.sb.from('tasks').update({ type: 'assignment' }).eq('id', e)
+    expect((await u.sb.from('study_plans').update({ mode: 'sprint', minutes_per_day: 30 }).eq('id', p!.id)).error).toBeNull()
+    expect((await u.sb.from('study_plans').update({ exam_task_id: e }).eq('id', p!.id)).error).not.toBeNull()
+  })
+})
+
+describe('create_study_plan', () => {
+  const create = (u: U, courseId: string, examId: string) =>
+    u.sb.rpc('create_study_plan', { p_course: courseId, p_exam: examId, p_mode: 'balanced', p_minutes: 45, p_days_off: [] })
+  it('replaces a plan whose exam is done or has passed', async () => {
+    const u = await newUser()
+    const c = await course(u), e1 = await exam(u, c)
+    const old = (await plan(u, c, e1)).data!.id as string
+    await u.sb.from('study_plan_days').insert({ plan_id: old, day: '2026-10-12', sessions })
+    await u.sb.from('tasks').update({ done_at: new Date().toISOString() }).eq('id', e1)
+    const e2 = await exam(u, c)
+    const { data: fresh, error } = await create(u, c, e2)
+    expect(error).toBeNull()
+    expect((await u.sb.from('study_plans').select('id').eq('course_id', c)).data).toEqual([{ id: fresh }])
+    expect((await u.sb.from('study_plan_days').select('id').eq('plan_id', old)).data).toEqual([])
+    await u.sb.from('tasks').update({ due_at: new Date(Date.now() - 86_400_000).toISOString() }).eq('id', e2)
+    const e3 = await exam(u, c)
+    expect((await create(u, c, e3)).error).toBeNull() // e2 has passed
+  })
+  it('never replaces a live plan, and changes nothing when it refuses', async () => {
+    const u = await newUser()
+    const c = await course(u), e1 = await exam(u, c)
+    const live = (await plan(u, c, e1)).data!.id as string
+    await u.sb.from('study_plan_days').insert({ plan_id: live, day: '2026-10-12', sessions })
+    const { error } = await create(u, c, await exam(u, c))
+    expect(error).not.toBeNull()
+    expect((await u.sb.from('study_plans').select('id').eq('course_id', c)).data).toEqual([{ id: live }])
+    expect((await u.sb.from('study_plan_days').select('id').eq('plan_id', live)).data).toHaveLength(1)
+  })
+  it('is for the student\'s own course and exam', async () => {
+    const u = await newUser(), other = await newUser()
+    const c = await course(u), e = await exam(u, c)
+    expect((await create(other, c, e)).error).not.toBeNull()
+  })
+})

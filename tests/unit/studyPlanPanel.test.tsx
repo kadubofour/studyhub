@@ -6,8 +6,9 @@ import type { Course, Task } from '@/lib/types'
 
 const setDone = vi.fn(), reload = vi.fn(), start = vi.fn()
 let views: PlanView[] | null
+let failed = false
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
-vi.mock('@/components/plan/usePlans', () => ({ usePlans: () => ({ views, reload, setDone }) }))
+vi.mock('@/components/plan/usePlans', () => ({ usePlans: () => ({ views, failed, reload, setDone }) }))
 vi.mock('@/components/plan/useWarmup', () => ({ useWarmup: () => ({ busy: null, error: null, start }) }))
 const savePlan = vi.fn(async (..._a: unknown[]) => {}), deletePlan = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('@/lib/plan/service', () => ({ savePlan: (...a: unknown[]) => savePlan(...a), deletePlan: (...a: unknown[]) => deletePlan(...a) }))
@@ -31,7 +32,7 @@ const open = async (tasks: Task[] = [exam()]) => { await act(async () => { rende
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
-  views = []; setDone.mockClear(); reload.mockClear(); start.mockClear(); savePlan.mockClear(); deletePlan.mockClear()
+  views = []; failed = false; setDone.mockClear(); reload.mockClear(); start.mockClear(); savePlan.mockClear(); deletePlan.mockClear()
 })
 afterEach(cleanup)
 
@@ -118,5 +119,13 @@ describe('Study plan panel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Midterm' }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/Couldn't save the plan/)
+  })
+  it('a failed load is an error with Try again, and offers no new plan (which could replace a live one)', async () => {
+    views = []; failed = true
+    await open()
+    expect(screen.getByRole('alert').textContent).toMatch(/Couldn't load your study plans/)
+    expect(screen.queryByRole('button', { name: /Make a study plan/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(reload).toHaveBeenCalled()
   })
 })

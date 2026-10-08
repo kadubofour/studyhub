@@ -16,11 +16,12 @@ export function usePlans() {
   const tz = profile.timezone
   const [views, setViews] = useState<PlanView[] | null>(null)
   const [version, setVersion] = useState(0)
+  const [failed, setFailed] = useState(false)
   const latest = useRef<PlanView[] | null>(null) // the newest list, so two quick ticks both count
 
   useEffect(() => {
     let live = true
-    loadPlans(supabase(), tz, new Date()).then(v => { if (live) { latest.current = v; setViews(v) } }).catch(() => { if (live) { latest.current = []; setViews([]) } })
+    loadPlans(supabase(), tz, new Date()).then(v => { if (live) { latest.current = v; setFailed(false); setViews(v) } }).catch(() => { if (live) { latest.current = []; setFailed(true); setViews([]) } })
     return () => { live = false }
   }, [tz, version])
 
@@ -42,5 +43,5 @@ export function usePlans() {
       () => saveDaySessions(supabase(), dayId, (latest.current?.find(v => v.plan.id === planId)?.today ?? []).map(stored)),
     )
   }
-  return { views, reload, setDone }
+  return { views, failed, reload, setDone }
 }
