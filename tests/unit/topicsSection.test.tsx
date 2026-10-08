@@ -8,6 +8,7 @@ const stat = (over: Partial<TopicStat>): TopicStat => ({
 })
 let courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name: 'Chemistry', color: '#BA7517' }]
 let stats: TopicStat[] = []
+let loadFails = false
 let links: { topic_id: string; link: { kind: 'note' | 'lecture' | 'deck'; id: string } }[] = []
 let material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] as { id: string; name: string }[] }
 const saveCourseTopics = vi.fn(async (..._a: unknown[]) => {})
@@ -15,7 +16,7 @@ const postAi = vi.fn()
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses }))
 vi.mock('@/lib/data/topics', () => ({
-  listTopicStats: async () => stats, listTopicLinks: async () => links, listCourseMaterial: async () => material,
+  listTopicStats: async () => { if (loadFails) throw new Error('offline'); return stats }, listTopicLinks: async () => links, listCourseMaterial: async () => material,
   saveCourseTopics: (...a: unknown[]) => saveCourseTopics(...a),
 }))
 vi.mock('@/components/ai/aiFetch', async orig => ({ ...(await orig<typeof import('@/components/ai/aiFetch')>()), postAi: (...a: unknown[]) => postAi(...a) }))
@@ -26,7 +27,7 @@ const open = async () => { await act(async () => { render(<ToastProvider><Topics
 beforeEach(() => {
   courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name: 'Chemistry', color: '#BA7517' }]
   stats = []; links = []; material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] }
-  saveCourseTopics.mockClear(); postAi.mockReset()
+  loadFails = false; saveCourseTopics.mockClear(); postAi.mockReset()
 })
 afterEach(cleanup)
 
@@ -125,5 +126,27 @@ describe('Topics section', () => {
     courses = []
     await open()
     expect(screen.getByText(/Add a course/)).toBeTruthy()
+  })
+  it('a failed load is an error with Retry, never an empty course that offers to draft (and so wipe) topics', async () => {
+    stats = [stat({ name: 'Krebs cycle' })]
+    loadFails = true
+    await open()
+    expect(screen.getByRole('alert').textContent).toMatch(/Couldn't load your topics/)
+    expect(screen.queryByRole('button', { name: 'Draft topics' })).toBeNull()
+    loadFails = false
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Try again' })) })
+    expect(screen.getByRole('listitem', { name: 'Krebs cycle' })).toBeTruthy()
+  })
+  it('the course cannot be switched while the AI is drafting, or while there are edits to save', async () => {
+    let finish: (v: unknown) => void = () => {}
+    postAi.mockReturnValue(new Promise(res => { finish = res }))
+    await open()
+    fireEvent.click(screen.getByRole('button', { name: 'Draft topics' }))
+    expect((screen.getByLabelText('Topics course') as HTMLSelectElement).disabled).toBe(true)
+    await act(async () => { finish({ ok: true, value: { topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }] } }) })
+    expect(screen.getByLabelText('Topic 1 name')).toBeTruthy()
+    expect((screen.getByLabelText('Topics course') as HTMLSelectElement).disabled).toBe(true) // still editing
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect((screen.getByLabelText('Topics course') as HTMLSelectElement).disabled).toBe(false)
   })
 })

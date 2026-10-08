@@ -23,7 +23,6 @@ async function load(courseId: string): Promise<Loaded> {
   const [stats, links, material] = await Promise.all([listTopicStats(sb, courseId), listTopicLinks(sb, courseId), listCourseMaterial(sb, courseId)])
   return { stats, links, material }
 }
-const EMPTY: Loaded = { stats: [], links: [], material: { notes: [], lectures: [], decks: [] } }
 
 function StatusChip({ status }: { status: TopicStatus }) {
   const Icon = ICON[status]
@@ -41,6 +40,8 @@ export function TopicsSection() {
   const [saving, setSaving] = useState(false)
   const [problem, setProblem] = useState<{ code: string; message: string } | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     listCourses(supabase()).then(cs => { setCourses(cs); setCourseId(cs[0]?.id ?? null) }).catch(() => setCourses([]))
@@ -48,11 +49,13 @@ export function TopicsSection() {
   useEffect(() => {
     if (!courseId) return
     let live = true
-    load(courseId).then(d => { if (live) setData(d) }).catch(() => { if (live) setData(EMPTY) })
+    load(courseId).then(d => { if (live) setData(d) }).catch(() => { if (live) setLoadFailed(true) })
     return () => { live = false }
-  }, [courseId])
+  }, [courseId, attempt])
 
-  function pickCourse(id: string) { setData(null); setEditing(null); setProblem(null); setSaveError(null); setCourseId(id) }
+  function pickCourse(id: string) { setData(null); setLoadFailed(false); setEditing(null); setProblem(null); setSaveError(null); setCourseId(id) }
+  // A failed load is not an empty course: drafting then would replace the topics that are really there
+  function retry() { setLoadFailed(false); setData(null); setAttempt(a => a + 1) }
 
   async function ask(mode: 'draft' | 'update') {
     if (!courseId || !data) return
@@ -75,6 +78,13 @@ export function TopicsSection() {
 
   if (!courses) return null
   if (!courses.length) return <section aria-label="Topics" className="card mt-4"><h2 className="mb-2 font-semibold">Topics</h2><p className="text-sm text-muted">Add a course in the Planner to organise its notes into topics.</p></section>
+  if (loadFailed) return (
+    <section aria-label="Topics" className="card mt-4 space-y-2">
+      <h2 className="font-semibold">Topics</h2>
+      <p role="alert" className="text-sm text-danger">Couldn&apos;t load your topics. Check your connection.</p>
+      <button type="button" className="btn" onClick={retry}>Try again</button>
+    </section>
+  )
   if (!data) return <section aria-label="Topics" className="card mt-4"><h2 className="mb-2 font-semibold">Topics</h2></section>
 
   const linked = new Set(data.links.map(l => `${l.link.kind}:${l.link.id}`))
@@ -85,7 +95,8 @@ export function TopicsSection() {
     <section aria-label="Topics" className="card mt-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Topics</h2>
-        <select className="input max-w-52" aria-label="Topics course" value={courseId ?? ''} onChange={e => pickCourse(e.target.value)}>
+        {/* Not while drafting, saving or editing: a result for one course must not land in another, and edits must not vanish */}
+        <select className="input max-w-52" aria-label="Topics course" value={courseId ?? ''} disabled={busy || saving || !!editing} onChange={e => pickCourse(e.target.value)}>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>

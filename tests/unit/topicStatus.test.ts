@@ -13,8 +13,8 @@ describe('thresholds', () => {
   it('match the numbers in the SQL', () => {
     const dir = 'supabase/migrations'
     const sql = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort().reverse()
-      .map(f => fs.readFileSync(`${dir}/${f}`, 'utf8').replace(/\r\n/g, '\n')).find(s => /create function public\.topic_stats\(/.test(s))!
-    const def = sql.slice(sql.search(/create function public\.topic_stats\(/))
+      .map(f => fs.readFileSync(`${dir}/${f}`, 'utf8').replace(/\r\n/g, '\n')).find(s => /create (or replace )?function public\.topic_stats\(/.test(s))!
+    const def = sql.slice(sql.search(/create (or replace )?function public\.topic_stats\(/))
     expect(def).toContain(`interval '${WINDOW_DAYS} days'`)
     expect(def).toContain(`>= ${MASTERED_MIN_ANSWERS} and coalesce(g.c30, 0) * 100 >= coalesce(g.a30, 0) * ${MASTERED_PERCENT}`)
     expect(def).toContain(`>= ${WEAK_MIN_ANSWERS} and coalesce(g.c30, 0) * 100 < coalesce(g.a30, 0) * ${WEAK_PERCENT}`)

@@ -196,3 +196,15 @@ describe('topic_stats', () => {
     expect((await stats(u, c))[0].status).toBe('weak')
   })
 })
+
+describe('a topic stays in its course', () => {
+  it('cannot be moved to another course, which would skip the 40-topic and same-course rules', async () => {
+    const u = await newUser()
+    const c1 = await course(u, 'Bio'), c2 = await course(u, 'Chem')
+    const t = await topic(u, c1, 'A')
+    await link(u, t, { note_id: await note(u, c1) })
+    expect((await u.sb.from('topics').update({ course_id: c2 }).eq('id', t)).error).not.toBeNull()
+    expect((await u.sb.from('topics').select('course_id').eq('id', t).single()).data).toEqual({ course_id: c1 })
+    expect((await u.sb.from('topics').update({ name: 'Renamed', position: 3 }).eq('id', t)).error).toBeNull() // other edits still fine
+  })
+})
