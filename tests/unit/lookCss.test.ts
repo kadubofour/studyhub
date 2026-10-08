@@ -37,3 +37,15 @@ describe('globals.css matches LOOKS', () => {
     expect(css).toContain('body:has(.app-root[data-look="paper"])')
   })
 })
+
+describe('printing', () => {
+  it('resets Paper too, so a printed page is black on white whatever the look and theme', () => {
+    const start = css.indexOf('@media print {')
+    const printCss = css.slice(start, css.indexOf('\n}\n', start))
+    expect(printCss).toContain('.app-root[data-look]')
+    expect(printCss).toContain('.dark .app-root[data-look]')
+    for (const t of ['a', 'b', 'c']) expect(printCss).toContain(`--tile-${t}`)
+    expect(printCss).toContain('body:has(.app-root[data-look])')
+    expect(printCss).toContain('.dark body:has(.app-root[data-look])')
+  })
+})

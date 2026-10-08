@@ -1,4 +1,5 @@
 'use client'
+import { useSyncExternalStore } from 'react'
 import { Check } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -11,21 +12,25 @@ import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[]
 const FONT_NAMES = Object.keys(FONTS) as FontName[]
 const LOOK_NAMES = Object.keys(LOOKS) as LookName[]
+const noopSubscribe = () => () => {}
 
 // Accent and font apply instantly (the whole app re-colours / re-fonts) and save in the background
 export function AppearanceCard() {
   const { profile, setProfile } = useProfile()
   const save = useSaver()
   const { resolvedTheme } = useTheme()
-  const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
+  // The server can't know the theme: draw the previews light until the page has hydrated, so both agree
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
+  const mode = mounted && resolvedTheme === 'dark' ? 'dark' : 'light'
   const look = lookOf(profile.look)
 
   function choose(patch: { accent?: AccentName; font?: FontName; look?: LookName }) {
     const before = profile
+    const keys = Object.keys(patch) as (keyof typeof patch)[]
     save(
       () => setProfile(p => ({ ...p, ...patch })),
-      // Roll back only the appearance fields, not changes saved elsewhere meanwhile
-      () => setProfile(p => ({ ...p, accent: before.accent, font: before.font, look: before.look })),
+      // Roll back only the field that failed, not another appearance choice saved meanwhile
+      () => setProfile(p => ({ ...p, ...(Object.fromEntries(keys.map(k => [k, before[k]])) as typeof patch) })),
       () => updateProfile(supabase(), profile.id, patch),
     )
   }
