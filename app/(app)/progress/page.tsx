@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Flame, Trophy, Timer, Brain } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { QuizScores } from '@/components/progress/QuizScores'
+import { TopicsSection } from '@/components/progress/TopicsSection'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listSessionsSince } from '@/lib/data/focus'
@@ -95,6 +96,7 @@ export default function ProgressPage() {
         </div>
       </section>
       <QuizScores />
+      <TopicsSection />
     </div>
   )
 }
