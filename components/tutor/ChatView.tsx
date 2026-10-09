@@ -48,6 +48,8 @@ export function ChatView({ chatId }: { chatId: string }) {
     }).catch(() => router.push('/tutor'))
   }, [chatId, router])
   useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
+  // The message from a Revise button is taken once: drop it from the address so a reload or Back does not fill the box again
+  useEffect(() => { if (ask) router.replace(`/tutor/${chatId}`) }, [ask, chatId, router])
 
   async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
 

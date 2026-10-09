@@ -15,7 +15,7 @@ const apply = vi.fn(async (..._a: unknown[]) => ({ itemId: 'd9', itemKind: 'deck
 vi.mock('@/lib/tutor/apply', () => ({ applyProposal: (...a: unknown[]) => apply(...a) }))
 let send: (chatId: string, message: string) => Promise<unknown>
 vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string) => send(c, m) }))
-const router = { push: vi.fn() } // stable, like Next's own router: a new object each render would reload forever
+const router = { push: vi.fn(), replace: vi.fn() } // stable, like Next's own router: a new object each render would reload forever
 let search = ''
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams(search) }))
 import { ChatView } from '@/components/tutor/ChatView'
@@ -28,7 +28,7 @@ const ask = async (text: string) => {
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: text } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
 }
-beforeEach(() => { search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
+beforeEach(() => { router.replace.mockClear(); search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
 afterEach(cleanup)
 
 describe('ChatView', () => {
@@ -118,5 +118,15 @@ describe('ChatView', () => {
     search = `ask=${'x'.repeat(5000)}`
     await open()
     expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toHaveLength(4000)
+  })
+  it('takes the message from the address once: the address is cleaned so a reload or Back does not fill it again', async () => {
+    search = 'ask=Quiz%20me%20on%20Krebs%20cycle'
+    await open()
+    expect(router.replace).toHaveBeenCalledWith('/tutor/c1')
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('Quiz me on Krebs cycle')
+  })
+  it('leaves the address alone when there is no message in it', async () => {
+    await open()
+    expect(router.replace).not.toHaveBeenCalled()
   })
 })

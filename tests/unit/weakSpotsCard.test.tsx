@@ -70,4 +70,18 @@ describe('WeakSpotsCard', () => {
     expect(screen.getByText('Couldn\'t open the tutor. Try again.')).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Revise Krebs cycle' }) as HTMLButtonElement).disabled).toBe(false)
   })
+  it('while a chat is being made no Revise button works, so a second tap cannot make another', async () => {
+    byCourse = { c1: [stat({ topic_id: 'a', name: 'Alpha', answers_30d: 10, correct_30d: 1 }), stat({ topic_id: 'b', name: 'Beta', answers_30d: 10, correct_30d: 2 })] }
+    let finish: (v: string) => void = () => {}
+    startRevision.mockReturnValueOnce(new Promise<string>(res => { finish = res }))
+    await open()
+    fireEvent.click(screen.getByRole('button', { name: 'Revise Alpha' }))
+    expect((screen.getByRole('button', { name: 'Revise Beta' }) as HTMLButtonElement).disabled).toBe(true)
+    const first = screen.getByRole('button', { name: 'Revise Alpha' }) as HTMLButtonElement
+    expect(first.disabled).toBe(true)
+    expect(first.textContent).toBe('Opening…')
+    await act(async () => { finish('/tutor/chat9?ask=x') })
+    expect(startRevision).toHaveBeenCalledTimes(1)
+    expect(push).toHaveBeenCalledWith('/tutor/chat9?ask=x')
+  })
 })

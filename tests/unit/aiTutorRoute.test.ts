@@ -16,6 +16,7 @@ vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/
 let user: { id: string } | null
 let chat: Record<string, unknown> | null
 let note: Record<string, unknown> | null
+let lecture: Record<string, unknown> | null = null
 let matches: Record<string, unknown>[]
 let history: Record<string, unknown>[]
 let stats: Record<string, unknown>[] = []
@@ -41,6 +42,7 @@ const sb = {
   from: (table: string) => {
     if (table === 'tutor_chats') return { ...result(chat), update: (p: Record<string, unknown>) => { updated.push([table, p]); const r: Record<string, unknown> = { eq: () => r, then: (res: (v: unknown) => unknown) => res({ error: null }) }; return r } }
     if (table === 'notes') return result(note)
+    if (table === 'lectures') return result(lecture)
     if (table === 'courses') return result([{ id: C1, name: 'Biology' }])
     if (table === 'decks') return result([])
     if (table === 'tutor_messages') return {
@@ -63,6 +65,7 @@ beforeEach(() => {
   chat = { id: CHAT, title: 'New chat', course_id: null, note_id: NOTE, lecture_id: null }
   note = { id: NOTE, title: 'Krebs', content_md: 'The Krebs cycle runs in the matrix.' }
   stats = []; statsFail = false; rpcCalls.length = 0
+  lecture = null
   matches = []; history = []; script = [{ type: 'delta', text: 'NADH carries ' }, { type: 'delta', text: 'electrons.' }]
   process.env.OPENAI_API_KEY = 'k'
 })
@@ -190,5 +193,13 @@ describe('POST /api/ai/tutor', () => {
     const out = await lines(await call())
     expect(out.at(-1)).toMatchObject({ t: 'done' })
     expect(modelText()).not.toContain('weak_topics')
+  })
+  it('finds the course through the attached lecture', async () => {
+    chat = { ...chat, note_id: null, lecture_id: '55555555-5555-4555-8555-555555555555' }
+    lecture = { id: '55555555-5555-4555-8555-555555555555', title: 'Week 3', transcript: [{ start: 0, end: 5, text: 'Today we cover the Krebs cycle.' }], course_id: 'c7' }
+    stats = [topicStat()]
+    await (await call()).text()
+    expect(rpcCalls).toContainEqual(['topic_stats', { p_course: 'c7' }])
+    expect(modelText()).toContain('<weak_topics>')
   })
 })

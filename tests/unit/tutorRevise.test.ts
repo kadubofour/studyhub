@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 let links: { topic_id: string; link: { kind: 'note' | 'lecture' | 'deck'; id: string } }[]
 let newest: { id: string }[] | null
+let topicRow: { id: string } | null = { id: 't1' }
 const createChat = vi.fn(async (..._a: unknown[]) => ({ id: 'chat9' }))
 vi.mock('@/lib/data/topics', () => ({ listTopicLinks: async () => links }))
 vi.mock('@/lib/data/tutor', () => ({ createChat: (...a: unknown[]) => createChat(...a) }))
@@ -9,14 +10,16 @@ import { startRevision } from '@/lib/tutor/revise'
 
 const calls: [string, unknown[]][] = []
 const sb = {
-  from: () => {
+  from: (table: string) => {
     const q: Record<string, unknown> = {}
-    for (const k of ['select', 'in', 'order', 'limit']) q[k] = (...a: unknown[]) => { calls.push([k, a]); return q }
+    // only the notes lookups are recorded; the topic check is separate
+    for (const k of ['select', 'in', 'order', 'limit', 'eq']) q[k] = (...a: unknown[]) => { if (table === 'notes') calls.push([k, a]); return q }
+    q.maybeSingle = async () => ({ data: table === 'topics' ? topicRow : null, error: null })
     q.then = (res: (v: unknown) => unknown) => res({ data: newest, error: null })
     return q
   },
 } as never
-beforeEach(() => { links = []; newest = null; calls.length = 0; createChat.mockClear() })
+beforeEach(() => { topicRow = { id: 't1' }; links = []; newest = null; calls.length = 0; createChat.mockClear() })
 
 describe('startRevision', () => {
   it('makes a chat about the topic on its newest linked note, in its course, and returns the address with the message ready', async () => {
@@ -45,5 +48,10 @@ describe('startRevision', () => {
   it('a failure to make the chat is passed on', async () => {
     createChat.mockRejectedValueOnce(new Error('rls'))
     await expect(startRevision(sb, { id: 't1', name: 'A' }, 'c1')).rejects.toThrow('rls')
+  })
+  it('a topic deleted since the card loaded fails, and no chat is made', async () => {
+    topicRow = null
+    await expect(startRevision(sb, { id: 't1', name: 'Gone' }, 'c1')).rejects.toThrow()
+    expect(createChat).not.toHaveBeenCalled()
   })
 })

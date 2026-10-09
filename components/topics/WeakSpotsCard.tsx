@@ -32,9 +32,9 @@ export function WeakSpotsCard({ courses }: { courses: Course[] }) {
 
   async function revise(r: Row) {
     setBusy(r.topic_id)
+    // Stays busy until the page changes, so a second tap (here or on another row) cannot make another chat
     try { router.push(await startRevision(supabase(), { id: r.topic_id, name: r.name }, r.courseId)) }
-    catch { toast('Couldn\'t open the tutor. Try again.') }
-    finally { setBusy(null) }
+    catch { toast('Couldn\'t open the tutor. Try again.'); setBusy(null) }
   }
 
   if (!rows.length) return null
@@ -48,7 +48,7 @@ export function WeakSpotsCard({ courses }: { courses: Course[] }) {
               <div className="flex items-center gap-2"><span className="font-medium">{r.name}</span><CourseTag course={courses.find(c => c.id === r.courseId)} /></div>
               <div className="text-xs text-muted">{evidence(r)}</div>
             </div>
-            <button type="button" className="btn" aria-label={`Revise ${r.name}`} disabled={busy === r.topic_id} onClick={() => { void revise(r) }}>
+            <button type="button" className="btn" aria-label={`Revise ${r.name}`} disabled={busy !== null} onClick={() => { void revise(r) }}>
               {busy === r.topic_id ? 'Opening…' : 'Revise'}
             </button>
           </li>
