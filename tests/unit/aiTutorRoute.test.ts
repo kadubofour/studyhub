@@ -18,6 +18,9 @@ let chat: Record<string, unknown> | null
 let note: Record<string, unknown> | null
 let matches: Record<string, unknown>[]
 let history: Record<string, unknown>[]
+let stats: Record<string, unknown>[] = []
+let statsFail = false
+const rpcCalls: [string, unknown][] = []
 const inserted: [string, Record<string, unknown>][] = []
 const updated: [string, Record<string, unknown>][] = []
 let insertError: object | null = null
@@ -30,7 +33,11 @@ const result = (data: unknown) => {
 }
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
-  rpc: (fn: string) => result(fn === 'tutor_find_material' ? matches : null),
+  rpc: (fn: string, args?: unknown) => {
+    rpcCalls.push([fn, args])
+    if (fn === 'topic_stats') return statsFail ? { then: (res: (v: unknown) => unknown) => res({ data: null, error: { message: 'boom' } }) } : result(stats)
+    return result(fn === 'tutor_find_material' ? matches : null)
+  },
   from: (table: string) => {
     if (table === 'tutor_chats') return { ...result(chat), update: (p: Record<string, unknown>) => { updated.push([table, p]); const r: Record<string, unknown> = { eq: () => r, then: (res: (v: unknown) => unknown) => res({ error: null }) }; return r } }
     if (table === 'notes') return result(note)
@@ -55,6 +62,7 @@ beforeEach(() => {
   user = { id: 'u1' }; reserve = 'ok'; release.mockClear(); modelInput.mockClear(); inserted.length = 0; updated.length = 0; insertError = null
   chat = { id: CHAT, title: 'New chat', course_id: null, note_id: NOTE, lecture_id: null }
   note = { id: NOTE, title: 'Krebs', content_md: 'The Krebs cycle runs in the matrix.' }
+  stats = []; statsFail = false; rpcCalls.length = 0
   matches = []; history = []; script = [{ type: 'delta', text: 'NADH carries ' }, { type: 'delta', text: 'electrons.' }]
   process.env.OPENAI_API_KEY = 'k'
 })
@@ -143,5 +151,44 @@ describe('POST /api/ai/tutor', () => {
     await (await call()).text()
     expect(updated.every(([, patch]) => !('title' in patch))).toBe(true)
     expect(updated.length).toBeGreaterThan(0) // the chat is still touched, so it moves to the top of the list
+  })
+  const topicStat = (over: Record<string, unknown> = {}) => ({
+    topic_id: 't1', name: 'Krebs cycle', position: 1, answers_30d: 12, correct_30d: 8, answers_all: 12, last_practised: new Date().toISOString(),
+    notes: 1, lectures: 0, decks: 0, status: 'weak', ...over,
+  })
+  const modelText = () => (modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content
+
+  it('tells the tutor the weak topics of the chat\'s course', async () => {
+    chat = { ...chat, course_id: 'c1' }
+    stats = [topicStat(), topicStat({ topic_id: 't2', name: 'Glycolysis', status: 'mastered', answers_30d: 10, correct_30d: 10 })]
+    await (await call()).text()
+    expect(rpcCalls).toContainEqual(['topic_stats', { p_course: 'c1' }])
+    expect(modelText()).toContain('<weak_topics>\n- Krebs cycle: 12 answers, 67% right in the last 30 days\n</weak_topics>')
+    expect(modelText()).not.toContain('Glycolysis')
+  })
+  it('includes a topic not practised for a while', async () => {
+    chat = { ...chat, course_id: 'c1' }
+    stats = [topicStat({ name: 'Old topic', status: 'covered', answers_30d: 0, correct_30d: 0, answers_all: 4, last_practised: '2026-01-01T00:00:00Z' })]
+    await (await call()).text()
+    expect(modelText()).toContain('- Old topic: Not practised in the last 30 days')
+  })
+  it('finds the course through the attached note', async () => {
+    note = { id: NOTE, title: 'Krebs', content_md: 'The Krebs cycle runs in the matrix.', course_id: 'c9' }
+    stats = [topicStat()]
+    await (await call()).text()
+    expect(rpcCalls).toContainEqual(['topic_stats', { p_course: 'c9' }])
+    expect(modelText()).toContain('<weak_topics>')
+  })
+  it('does not look anything up for a chat with no course', async () => {
+    await (await call()).text()
+    expect(rpcCalls.some(([fn]) => fn === 'topic_stats')).toBe(false)
+    expect(modelText()).not.toContain('weak_topics')
+  })
+  it('answers as before when the lookup fails', async () => {
+    chat = { ...chat, course_id: 'c1' }
+    statsFail = true
+    const out = await lines(await call())
+    expect(out.at(-1)).toMatchObject({ t: 'done' })
+    expect(modelText()).not.toContain('weak_topics')
   })
 })

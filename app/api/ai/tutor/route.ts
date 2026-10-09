@@ -7,6 +7,8 @@ import { streamTutor } from '@/lib/ai/tutor'
 import { buildContext, buildInput, tutorInstructions, type Material } from '@/lib/ai/tutorContext'
 import { parseToolCall, toolDefinitions, type Proposal } from '@/lib/ai/tutorTools'
 import { transcriptText } from '@/lib/ai/lectureNote'
+import { evidence, weakSpots } from '@/lib/topics/status'
+import type { TopicStat } from '@/lib/topics/types'
 import type { TranscriptLine } from '@/lib/lectures/time'
 
 export const maxDuration = 120
@@ -29,12 +31,14 @@ export async function POST(request: Request) {
   if (!chat) return bad(404, 'not_found')
 
   let attached: Material | null = null
+  // The course this chat is about: its own, else the attached note's or lecture's
+  let courseId = (chat.course_id as string | null) ?? null
   if (chat.note_id) {
-    const { data: n } = await sb.from('notes').select('id,title,content_md').eq('id', chat.note_id).maybeSingle()
-    if (n) attached = { kind: 'note', id: n.id, title: n.title, text: n.content_md }
+    const { data: n } = await sb.from('notes').select('id,title,content_md,course_id').eq('id', chat.note_id).maybeSingle()
+    if (n) { attached = { kind: 'note', id: n.id, title: n.title, text: n.content_md }; courseId ??= (n.course_id as string | null) ?? null }
   } else if (chat.lecture_id) {
-    const { data: l } = await sb.from('lectures').select('id,title,transcript').eq('id', chat.lecture_id).maybeSingle()
-    if (l) attached = { kind: 'lecture', id: l.id, title: l.title, text: transcriptText(l.transcript as TranscriptLine[]) }
+    const { data: l } = await sb.from('lectures').select('id,title,transcript,course_id').eq('id', chat.lecture_id).maybeSingle()
+    if (l) { attached = { kind: 'lecture', id: l.id, title: l.title, text: transcriptText(l.transcript as TranscriptLine[]) }; courseId ??= (l.course_id as string | null) ?? null }
   }
   const [{ data: found }, { data: courses }, { data: decks }, { data: past }] = await Promise.all([
     sb.rpc('tutor_find_material', { p_query: message, p_limit: 5 }),
@@ -44,7 +48,15 @@ export async function POST(request: Request) {
   ])
   const matches = ((found ?? []) as { kind: Material['kind']; id: string; title: string; snippet: string }[])
     .map(m => ({ kind: m.kind, id: m.id, title: m.title, text: m.snippet }))
-  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [] })
+  // The course's weak and stale topics, so the tutor can offer help when a question touches one; never fatal
+  let weak: { name: string; detail: string }[] = []
+  if (courseId) {
+    try {
+      const { data, error } = await sb.rpc('topic_stats', { p_course: courseId })
+      if (!error && Array.isArray(data)) weak = weakSpots(data as TopicStat[], new Date()).map(s => ({ name: s.name, detail: evidence(s) }))
+    } catch { /* the tutor works without it */ }
+  }
+  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak })
   const history = ((past ?? []) as { role: 'user' | 'assistant'; content: string }[]).reverse()
   const toolCtx = { noteId: (chat.note_id as string | null) ?? null, courseIds: (courses ?? []).map(c => c.id as string), deckIds: (decks ?? []).map(d => d.id as string) }
 
