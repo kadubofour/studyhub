@@ -16,7 +16,8 @@ vi.mock('@/lib/tutor/apply', () => ({ applyProposal: (...a: unknown[]) => apply(
 let send: (chatId: string, message: string) => Promise<unknown>
 vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string) => send(c, m) }))
 const router = { push: vi.fn() } // stable, like Next's own router: a new object each render would reload forever
-vi.mock('next/navigation', () => ({ useRouter: () => router }))
+let search = ''
+vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams(search) }))
 import { ChatView } from '@/components/tutor/ChatView'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -27,7 +28,7 @@ const ask = async (text: string) => {
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: text } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
 }
-beforeEach(() => { messages = []; saveProposals.mockClear(); apply.mockClear() })
+beforeEach(() => { search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
 afterEach(cleanup)
 
 describe('ChatView', () => {
@@ -104,5 +105,18 @@ describe('ChatView', () => {
     await open()
     await ask('One more?')
     expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('One more?')
+  })
+  it('starts with the message from the address in the box, and does not send it', async () => {
+    search = 'ask=Quiz%20me%20on%20Krebs%20cycle'
+    send = vi.fn()
+    await open()
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('Quiz me on Krebs cycle')
+    expect(send).not.toHaveBeenCalled()
+    expect(screen.getByText(/Ask anything/)).toBeTruthy() // no conversation started
+  })
+  it('cuts a very long message from the address to the 4,000-character limit', async () => {
+    search = `ask=${'x'.repeat(5000)}`
+    await open()
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toHaveLength(4000)
   })
 })

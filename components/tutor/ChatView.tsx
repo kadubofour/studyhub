@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
@@ -20,12 +20,13 @@ const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string
 
 export function ChatView({ chatId }: { chatId: string }) {
   const router = useRouter()
+  const ask = useSearchParams().get('ask')
   const confirm = useConfirm()
   const toast = useToast()
   const [chat, setChat] = useState<TutorChat | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [messages, setMessages] = useState<TutorMessage[]>([])
-  const [text, setText] = useState('')
+  const [text, setText] = useState(() => (ask ?? '').slice(0, 4000)) // a Revise button leaves the message ready; it is only sent when the student presses Send
   const [live, setLive] = useState<string | null>(null) // the reply being written; null when none
   const [problem, setProblem] = useState<{ code: string; message: string } | null>(null)
   const [attachedTitle, setAttachedTitle] = useState<string | null>(null)
