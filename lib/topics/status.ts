@@ -20,7 +20,7 @@ export function evidence(s: TopicStat): string {
 }
 
 // Weak topics worst first, then covered topics not practised for a while (oldest first)
-export function weakSpots(rows: TopicStat[], now: Date): TopicStat[] {
+export function weakSpots<T extends TopicStat>(rows: T[], now: Date): T[] {
   const weak = rows.filter(r => r.status === 'weak')
     .sort((a, b) => (percent(a) ?? 0) - (percent(b) ?? 0) || b.answers_30d - a.answers_30d)
   const cutoff = now.getTime() - STALE_DAYS * 86_400_000

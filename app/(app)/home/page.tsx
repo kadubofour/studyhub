@@ -11,6 +11,7 @@ import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProv
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
+import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
@@ -134,6 +135,8 @@ export default function HomePage() {
           </div>
         </Link>
       </section>
+
+      <WeakSpotsCard courses={courses} />
 
       <section className="grid gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="card">
