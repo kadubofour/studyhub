@@ -6,11 +6,12 @@ import { Trash2 } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
+import { Switch } from '@/components/ui/Switch'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
-import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatCourse, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
+import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatCourse, setChatGuided, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
 import type { Proposal } from '@/lib/ai/tutorTools'
@@ -53,10 +54,10 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
 
-  async function send() {
-    const message = text.trim()
+  async function send(override?: string) {
+    const message = (override ?? text).trim()
     if (!message || live !== null) return
-    setProblem(null); setText(''); setLive('')
+    setProblem(null); if (override === undefined) setText(''); setLive('')
     const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '' }]
     latest.current = shown; setMessages(shown)
     const r = await sendTutorMessage(chatId, message)
@@ -100,6 +101,12 @@ export function ChatView({ chatId }: { chatId: string }) {
     catch { toast('Added. It may show as new again after a reload.') }
   }
 
+  async function toggleGuided(on: boolean) {
+    setChat(c => c && { ...c, guided: on })
+    try { await setChatGuided(supabase(), chatId, on) }
+    catch { setChat(c => c && { ...c, guided: !on }); toast('Couldn\'t change guided mode.') }
+  }
+
   async function rename() {
     const title = window.prompt('Chat name', chat!.title)?.trim()
     if (!title) return
@@ -120,6 +127,11 @@ export function ChatView({ chatId }: { chatId: string }) {
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <span className="flex items-center gap-2 text-sm">
+          <span id="guided-label">Guided</span>
+          <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
+          <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
+        </span>
         <button type="button" className="btn" onClick={rename}>Rename</button>
         <button type="button" className="btn-ghost text-danger" aria-label="Delete chat" onClick={remove}><Trash2 size={15} aria-hidden /></button>
       </div>
@@ -148,6 +160,12 @@ export function ChatView({ chatId }: { chatId: string }) {
       </div>
 
       {problem && <AiError code={problem.code} message={problem.message} />}
+      {chat.guided && messages.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn" disabled={live !== null} onClick={() => { void send('Give me a hint.') }}>Give me a hint</button>
+          <button type="button" className="btn" disabled={live !== null} onClick={() => { void send('Show me the answer.') }}>Show the answer</button>
+        </div>
+      )}
       <form className="sticky bottom-0 flex gap-2 bg-bg pb-3 pt-1" onSubmit={e => { e.preventDefault(); void send() }}>
         <textarea className="input min-h-11 flex-1" rows={2} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
           onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }} />

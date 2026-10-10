@@ -2,13 +2,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 
-const chat = { id: 'c1', title: 'Krebs', course_id: null, note_id: 'n1', lecture_id: null, created_at: '', updated_at: '' }
+const chat = { id: 'c1', title: 'Krebs', course_id: null, note_id: 'n1', lecture_id: null, guided: false, created_at: '', updated_at: '' }
+let guided = false
+let guidedFails = false
+const setChatGuided = vi.fn(async (..._a: unknown[]) => {})
 let messages: Record<string, unknown>[] = []
 const saveProposals = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'n1', title: 'Krebs cycle' } }) }) }) }) }) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [] }))
 vi.mock('@/lib/data/tutor', () => ({
-  getChat: async () => chat, listMessages: async () => messages, renameChat: vi.fn(), setChatCourse: vi.fn(), deleteChat: vi.fn(),
+  getChat: async () => ({ ...chat, guided }), setChatGuided: (...a: unknown[]) => (guidedFails ? Promise.reject(new Error('offline')) : setChatGuided(...a)), listMessages: async () => messages, renameChat: vi.fn(), setChatCourse: vi.fn(), deleteChat: vi.fn(),
   saveProposals: (...a: unknown[]) => saveProposals(...a),
 }))
 const apply = vi.fn(async (..._a: unknown[]) => ({ itemId: 'd9', itemKind: 'deck' }))
@@ -28,7 +31,7 @@ const ask = async (text: string) => {
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: text } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
 }
-beforeEach(() => { router.replace.mockClear(); search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
+beforeEach(() => { guided = false; guidedFails = false; setChatGuided.mockClear(); router.replace.mockClear(); search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
 afterEach(cleanup)
 
 describe('ChatView', () => {
@@ -128,5 +131,51 @@ describe('ChatView', () => {
   it('leaves the address alone when there is no message in it', async () => {
     await open()
     expect(router.replace).not.toHaveBeenCalled()
+  })
+  it('shows the Guided switch off for a normal chat, and turning it on saves it', async () => {
+    await open()
+    const sw = screen.getByRole('switch', { name: 'Guided' })
+    expect(sw.getAttribute('aria-checked')).toBe('false')
+    await act(async () => { fireEvent.click(sw) })
+    expect(screen.getByRole('switch', { name: 'Guided' }).getAttribute('aria-checked')).toBe('true')
+    expect(setChatGuided).toHaveBeenCalledWith(expect.anything(), 'c1', true)
+  })
+  it('goes back and says so when guided mode cannot be saved', async () => {
+    guidedFails = true
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('switch', { name: 'Guided' })) })
+    expect(screen.getByRole('switch', { name: 'Guided' }).getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByText('Couldn\'t change guided mode.')).toBeTruthy()
+  })
+  it('a guided chat starts with the switch on', async () => {
+    guided = true
+    await open()
+    expect(screen.getByRole('switch', { name: 'Guided' }).getAttribute('aria-checked')).toBe('true')
+  })
+  it('the hint and answer buttons show only in a guided chat that has messages', async () => {
+    messages = [{ id: 'm1', role: 'user', content: 'Why?', sources: [], proposals: [], status: 'ok' }]
+    await open()
+    expect(screen.queryByRole('button', { name: 'Give me a hint' })).toBeNull() // not guided
+    cleanup()
+    guided = true; messages = []
+    await open()
+    expect(screen.queryByRole('button', { name: 'Give me a hint' })).toBeNull() // no messages yet
+    cleanup()
+    messages = [{ id: 'm1', role: 'user', content: 'Why?', sources: [], proposals: [], status: 'ok' }]
+    await open()
+    expect(screen.getByRole('button', { name: 'Give me a hint' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Show the answer' })).toBeTruthy()
+  })
+  it('the buttons send their message at once and leave a half-typed one alone', async () => {
+    guided = true
+    messages = [{ id: 'm1', role: 'user', content: 'Why?', sources: [], proposals: [], status: 'ok' }]
+    send = vi.fn(async () => ({ ok: true, lines: lines([{ t: 'done', proposals: [] }]) })) as never
+    await open()
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'my half-typed question' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Give me a hint' })) })
+    expect(send).toHaveBeenCalledWith('c1', 'Give me a hint.')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Show the answer' })) })
+    expect(send).toHaveBeenCalledWith('c1', 'Show me the answer.')
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('my half-typed question')
   })
 })
