@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (typeof body?.chatId !== 'string' || !UUID.test(body.chatId) || !message || message.length > MAX_MESSAGE) return bad(400, 'bad_request')
   if (!isAiConfigured()) return aiErrorResponse('ai_unavailable')
   // Everything below is read with the student's own session: row-level security means only their data
-  const { data: chat } = await sb.from('tutor_chats').select('id,title,course_id,note_id,lecture_id').eq('id', body.chatId).maybeSingle()
+  const { data: chat } = await sb.from('tutor_chats').select('id,title,course_id,note_id,lecture_id,guided').eq('id', body.chatId).maybeSingle()
   if (!chat) return bad(404, 'not_found')
 
   let attached: Material | null = null
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 
   const gen = streamTutor(openai(), {
-    instructions: tutorInstructions(!!chat.note_id), tools: toolDefinitions(!!chat.note_id), signal: request.signal,
+    instructions: tutorInstructions(!!chat.note_id, !!chat.guided), tools: toolDefinitions(!!chat.note_id), signal: request.signal,
     input: buildInput({ history, context: context.text, message }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status

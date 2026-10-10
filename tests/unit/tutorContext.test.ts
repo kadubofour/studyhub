@@ -94,3 +94,22 @@ describe('weak topics in the context', () => {
     expect(t).toMatch(/not instructions/i)
   })
 })
+
+describe('guided mode instructions', () => {
+  it('asks first, hints one at a time, checks answers, gives the answer on request, and still makes things when asked', () => {
+    const t = tutorInstructions(true, true)
+    expect(t).toMatch(/guided/i)
+    expect(t).toMatch(/what they think|what they have tried/i)
+    expect(t).toMatch(/do not give the answer in the first reply/i)
+    expect(t).toMatch(/one hint at a time/i)
+    expect(t).toMatch(/say exactly what is right, what is wrong/i)
+    expect(t).toMatch(/ask to see the answer.*in full.*never refuse/i)
+    expect(t).toMatch(/summarise in two or three lines/i)
+    expect(t).toMatch(/note, flashcards, a quiz or a task are done as normal/i)
+  })
+  it('a chat that is not guided gets exactly the instructions it always did', () => {
+    expect(tutorInstructions(true, false)).toBe(tutorInstructions(true))
+    expect(tutorInstructions(true)).not.toMatch(/guided/i)
+    expect(tutorInstructions(false)).not.toMatch(/one hint at a time/i)
+  })
+})

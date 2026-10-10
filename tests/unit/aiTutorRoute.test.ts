@@ -202,4 +202,14 @@ describe('POST /api/ai/tutor', () => {
     expect(rpcCalls).toContainEqual(['topic_stats', { p_course: 'c7' }])
     expect(modelText()).toContain('<weak_topics>')
   })
+  const instructions = () => (modelInput.mock.calls[0][0] as { instructions: string }).instructions
+  it('gives a guided chat the guided instructions, and any other chat the normal ones', async () => {
+    chat = { ...chat, guided: true }
+    await (await call()).text()
+    expect(instructions()).toMatch(/one hint at a time/i)
+    modelInput.mockClear()
+    chat = { ...chat, guided: false }
+    await (await call()).text()
+    expect(instructions()).not.toMatch(/one hint at a time/i)
+  })
 })

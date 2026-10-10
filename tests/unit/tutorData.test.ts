@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createChat, findChat, saveProposals } from '@/lib/data/tutor'
+import { createChat, findChat, saveProposals, setChatGuided } from '@/lib/data/tutor'
 
 const q = (result: object) => {
   const calls: [string, unknown[]][] = []
@@ -30,5 +30,11 @@ describe('tutor data', () => {
     await saveProposals(sbOf(b), 'm1', [])
     expect(calls).toContainEqual(['update', [{ proposals: [] }]])
     expect(calls).toContainEqual(['eq', ['id', 'm1']])
+  })
+  it('switches guided mode on a chat', async () => {
+    const { b, calls } = q({ error: null })
+    await setChatGuided(sbOf(b), 'c1', true)
+    expect(calls).toContainEqual(['update', [{ guided: true }]])
+    expect(calls).toContainEqual(['eq', ['id', 'c1']])
   })
 })

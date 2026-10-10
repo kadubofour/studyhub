@@ -131,3 +131,15 @@ describe('tutor_check: Free 20 a day, Premium counts toward fair use', () => {
     expect(results.filter(r => r === 'rate_limited')).toHaveLength(2)
   })
 })
+
+describe('guided chats', () => {
+  it('start off, can be switched by their owner, and not by anyone else', async () => {
+    const u = await newUser(), other = await newUser()
+    const { data: c } = await chat(u)
+    expect((await u.sb.from('tutor_chats').select('guided').eq('id', c!.id).single()).data).toEqual({ guided: false })
+    expect((await u.sb.from('tutor_chats').update({ guided: true }).eq('id', c!.id)).error).toBeNull()
+    expect((await u.sb.from('tutor_chats').select('guided').eq('id', c!.id).single()).data).toEqual({ guided: true })
+    await other.sb.from('tutor_chats').update({ guided: false }).eq('id', c!.id)
+    expect((await u.sb.from('tutor_chats').select('guided').eq('id', c!.id).single()).data).toEqual({ guided: true })
+  })
+})

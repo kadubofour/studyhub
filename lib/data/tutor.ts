@@ -3,11 +3,11 @@ import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Source } from '@/lib/ai/tutorContext'
 import { check, must } from './util'
 
-export type TutorChat = { id: string; title: string; course_id: string | null; note_id: string | null; lecture_id: string | null; created_at: string; updated_at: string }
+export type TutorChat = { id: string; title: string; course_id: string | null; note_id: string | null; lecture_id: string | null; guided: boolean; created_at: string; updated_at: string }
 export type TutorMessage = {
   id: string; chat_id: string; role: 'user' | 'assistant'; content: string; sources: Source[]; proposals: Proposal[]; status: 'ok' | 'cut_off'; created_at: string
 }
-const CHAT = 'id,title,course_id,note_id,lecture_id,created_at,updated_at'
+const CHAT = 'id,title,course_id,note_id,lecture_id,guided,created_at,updated_at'
 const MESSAGE = 'id,chat_id,role,content,sources,proposals,status,created_at'
 
 export async function listChats(sb: SupabaseClient): Promise<TutorChat[]> {
@@ -23,6 +23,9 @@ export async function createChat(sb: SupabaseClient, input: { title?: string; co
 export async function findChat(sb: SupabaseClient, target: { note_id: string } | { lecture_id: string }): Promise<TutorChat | null> {
   const [column, value] = Object.entries(target)[0]
   return must(await sb.from('tutor_chats').select(CHAT).eq(column, value).order('updated_at', { ascending: false }).limit(1).maybeSingle())
+}
+export async function setChatGuided(sb: SupabaseClient, id: string, guided: boolean): Promise<void> {
+  check(await sb.from('tutor_chats').update({ guided }).eq('id', id))
 }
 export async function renameChat(sb: SupabaseClient, id: string, title: string): Promise<void> {
   check(await sb.from('tutor_chats').update({ title }).eq('id', id))
