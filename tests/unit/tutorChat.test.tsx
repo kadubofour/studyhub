@@ -178,4 +178,37 @@ describe('ChatView', () => {
     expect(send).toHaveBeenCalledWith('c1', 'Show me the answer.')
     expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('my half-typed question')
   })
+  it('a refused hint or answer request leaves the typed draft alone', async () => {
+    guided = true
+    messages = [{ id: 'm1', role: 'user', content: 'Why?', sources: [], proposals: [], status: 'ok' }]
+    send = vi.fn(async () => ({ ok: false, error: 'tutor_limit', message: 'x' })) as never
+    await open()
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'my half-typed question' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Give me a hint' })) })
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('my half-typed question')
+    expect(screen.getByText(/free tutor messages/)).toBeTruthy()
+  })
+  it('the buttons are off while a reply is being written', async () => {
+    guided = true
+    messages = [{ id: 'm1', role: 'user', content: 'Why?', sources: [], proposals: [], status: 'ok' }]
+    let finish: () => void = () => {}
+    const held = new Promise<void>(res => { finish = res })
+    send = (async () => ({ ok: true, lines: (async function* () { yield { t: 'delta', text: 'Thinking it ' }; await held; yield { t: 'done', proposals: [] } })() })) as never
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Give me a hint' })) })
+    expect((screen.getByRole('button', { name: 'Give me a hint' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Show the answer' }) as HTMLButtonElement).disabled).toBe(true)
+    await act(async () => { finish() })
+    expect((screen.getByRole('button', { name: 'Give me a hint' }) as HTMLButtonElement).disabled).toBe(false)
+  })
+  it('the chat refreshed after a reply does not flip a Guided switch the student just changed', async () => {
+    guided = false // what the database still says when the refresh reads it
+    send = (async () => ({ ok: true, lines: lines([{ t: 'delta', text: 'ok' }, { t: 'done', proposals: [] }]) })) as never
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('switch', { name: 'Guided' })) })
+    expect(screen.getByRole('switch', { name: 'Guided' }).getAttribute('aria-checked')).toBe('true')
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Where?' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
+    expect(screen.getByRole('switch', { name: 'Guided' }).getAttribute('aria-checked')).toBe('true')
+  })
 })

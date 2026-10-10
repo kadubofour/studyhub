@@ -63,7 +63,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     const r = await sendTutorMessage(chatId, message)
     if (!r.ok) {
       // Refused (limit, speed, offline): keep what was typed so it isn't lost
-      setProblem({ code: r.error, message: r.message }); setText(message); setLive(null); await reload(); return
+      setProblem({ code: r.error, message: r.message }); if (override === undefined) setText(message); setLive(null); await reload(); return
     }
     const cutOff = { code: 'cut_off', message: 'The reply was cut off. Try again.' }
     let ended = false
@@ -76,7 +76,7 @@ export function ChatView({ chatId }: { chatId: string }) {
       if (!ended) setProblem(cutOff) // the connection closed without finishing
     } catch { setProblem(cutOff) } finally {
       setLive(null)
-      try { await reload(); setChat(await getChat(supabase(), chatId)) } catch { /* the next load shows it */ }
+      try { await reload(); const fresh = await getChat(supabase(), chatId); setChat(c => (c ? { ...fresh, guided: c.guided } : fresh)) } catch { /* the next load shows it */ }
     }
   }
 
