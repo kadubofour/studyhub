@@ -37,16 +37,21 @@ export function ChatView({ chatId }: { chatId: string }) {
   const writes = useRef<Promise<void>>(Promise.resolve())
 
   useEffect(() => {
+    // Only the newest load counts: in development the effect runs twice, and the older answer arriving after the
+    // student flipped Guided would flip it back (and a chat opened, left and opened again must not mix with the first)
+    let live = true
     const sb = supabase()
     Promise.all([getChat(sb, chatId), listMessages(sb, chatId), listCourses(sb)]).then(async ([c, m, cs]) => {
+      if (!live) return
       setChat(c); latest.current = m; setMessages(m); setCourses(cs)
       const table = c.note_id ? 'notes' : c.lecture_id ? 'lectures' : null
       const id = c.note_id ?? c.lecture_id
       if (table && id) {
         const { data } = await sb.from(table).select('id,title').eq('id', id).maybeSingle()
-        setAttachedTitle((data as { title?: string } | null)?.title ?? null)
+        if (live) setAttachedTitle((data as { title?: string } | null)?.title ?? null)
       }
-    }).catch(() => router.push('/tutor'))
+    }).catch(() => { if (live) router.push('/tutor') })
+    return () => { live = false }
   }, [chatId, router])
   useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
   // The message from a Revise button is taken once: drop it from the address so a reload or Back does not fill the box again

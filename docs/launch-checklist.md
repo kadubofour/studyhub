@@ -4,7 +4,7 @@ Work top to bottom. Items marked **you** need your accounts; the code side is do
 
 ## 1. Database (Supabase)
 - [ ] **you** Create the production project (pick the region closest to your students) and note its URL, anon key and service_role key.
-- [ ] **you** Link and push every migration: `npx supabase link --project-ref <ref>`, then `npx supabase db push`. There are 30 migrations (the newest: activity, games, topic resources and its video columns, activity newest-first). Answer yes when it lists them.
+- [ ] **you** Link and push every migration: `npx supabase link --project-ref <ref>`, then `npx supabase db push`. There are 29 migrations (the newest: activity, games, topic resources and its video columns, activity newest-first). Answer yes when it lists them.
 - [ ] **you** Authentication, URL configuration: Site URL = your production address; add `https://<your-domain>/auth/callback` to Redirect URLs.
 - [ ] **you** Authentication, email: keep "Confirm email" on, and set up **custom SMTP** (Resend, Brevo, SendGrid or similar). The built-in sender is limited to a few emails an hour and is for testing only; sign-up confirmations and password resets will fail for real users without this. Edit the email templates so they say Studyhub.
 - [ ] **you** Authentication, providers: the Log in page has "Continue with Google". Either set up Google (Google Cloud OAuth client; redirect URI shown in Supabase) or remove the button before launch.

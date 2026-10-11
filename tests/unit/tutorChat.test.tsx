@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { StrictMode } from 'react'
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 
 const chat = { id: 'c1', title: 'Krebs', course_id: null, note_id: 'n1', lecture_id: null, guided: false, created_at: '', updated_at: '' }
 let guided = false
+let getChatImpl: (() => Promise<unknown>) | null = null
 let guidedFails = false
 const setChatGuided = vi.fn(async (..._a: unknown[]) => {})
 let messages: Record<string, unknown>[] = []
@@ -11,7 +13,7 @@ const saveProposals = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'n1', title: 'Krebs cycle' } }) }) }) }) }) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [] }))
 vi.mock('@/lib/data/tutor', () => ({
-  getChat: async () => ({ ...chat, guided }), setChatGuided: (...a: unknown[]) => (guidedFails ? Promise.reject(new Error('offline')) : setChatGuided(...a)), listMessages: async () => messages, renameChat: vi.fn(), setChatCourse: vi.fn(), deleteChat: vi.fn(),
+  getChat: () => (getChatImpl ? getChatImpl() : Promise.resolve({ ...chat, guided })), setChatGuided: (...a: unknown[]) => (guidedFails ? Promise.reject(new Error('offline')) : setChatGuided(...a)), listMessages: async () => messages, renameChat: vi.fn(), setChatCourse: vi.fn(), deleteChat: vi.fn(),
   saveProposals: (...a: unknown[]) => saveProposals(...a),
 }))
 const apply = vi.fn(async (..._a: unknown[]) => ({ itemId: 'd9', itemKind: 'deck' }))
@@ -31,7 +33,7 @@ const ask = async (text: string) => {
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: text } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
 }
-beforeEach(() => { guided = false; guidedFails = false; setChatGuided.mockClear(); router.replace.mockClear(); search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
+beforeEach(() => { getChatImpl = null; guided = false; guidedFails = false; setChatGuided.mockClear(); router.replace.mockClear(); search = ''; messages = []; saveProposals.mockClear(); apply.mockClear() })
 afterEach(cleanup)
 
 describe('ChatView', () => {
@@ -210,5 +212,16 @@ describe('ChatView', () => {
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Where?' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
     expect(screen.getByRole('switch', { name: 'Guided' }).getAttribute('aria-checked')).toBe('true')
+  })
+  it('uses only the newest load, so an older answer arriving late cannot overwrite what the student did', async () => {
+    const resolvers: ((c: unknown) => void)[] = []
+    getChatImpl = () => new Promise(res => { resolvers.push(res) })
+    await act(async () => { render(<StrictMode><ToastProvider><ConfirmProvider><ChatView chatId="c1" /></ConfirmProvider></ToastProvider></StrictMode>) })
+    expect(resolvers.length).toBeGreaterThanOrEqual(2) // strict mode runs the load twice
+    // the newer one answers first, then the older one limps in with other data
+    await act(async () => { resolvers[resolvers.length - 1]({ ...chat, title: 'Newest answer' }) })
+    await act(async () => { resolvers[0]({ ...chat, title: 'Old answer' }) })
+    expect(screen.getByRole('heading', { name: 'Newest answer' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Old answer' })).toBeNull()
   })
 })
