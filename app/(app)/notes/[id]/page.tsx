@@ -12,7 +12,7 @@ import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
 import { FindBar } from '@/components/notes/FindBar'
 import { EquationDialog, type EquationInit } from '@/components/notes/EquationDialog'
-import { UploadDialog } from '@/components/notes/UploadDialog'
+import { requestUpload } from '@/lib/scan/events'
 import { findMatches, findKey, wrap, highlightInElement, clearElementHighlights } from '@/components/notes/findInNote'
 import type { EditMath } from '@/components/notes/extensions'
 import { autoWrapMath } from '@/components/notes/autoMath'
@@ -65,7 +65,6 @@ function NoteEditor({ id }: { id: string }) {
   const [reading, setReading] = useState(false)
   const [fullWidth, setFullWidth] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
   // An upload can send the student here with a study tab ready (?study=cards); the parameter is used once
   const studyParam = useSearchParams().get('study')
   const wanted = (['summary', 'cards', 'quiz'] as const).find(t => t === studyParam)
@@ -203,7 +202,7 @@ function NoteEditor({ id }: { id: string }) {
         notifyList(); router.push(`/notes/${n.id}`)
       } catch { toast('Couldn\'t create a note.') }
     },
-    importNote: () => setImportOpen(true),
+    importNote: requestUpload,
     exportWord: async () => {
       try { if (!await exportNotesToWord([id])) toast('There is nothing to export.') } catch { toast('Couldn\'t create the Word document.') }
     },
@@ -298,7 +297,6 @@ function NoteEditor({ id }: { id: string }) {
       {equation && (
         <EquationDialog key={equation.seq} open initial={equation.initial} onClose={() => setEquation(null)} onSave={saveEquation} />
       )}
-      <UploadDialog open={importOpen} onClose={() => setImportOpen(false)} courses={courses} onImported={notifyList} />
     </div>
   )
 }

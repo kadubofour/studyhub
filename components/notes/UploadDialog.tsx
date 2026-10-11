@@ -9,6 +9,7 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
 import { fileKind } from '@/lib/import/fileKind'
+import { requestScan } from '@/lib/scan/events'
 import type { Course } from '@/lib/types'
 import { LimitPrompt } from '@/components/billing/LimitPrompt'
 
@@ -50,8 +51,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
     setError(null)
     const kind = fileKind(file)
     if (!kind) { setError('Choose a PDF, Word, PowerPoint or text file.'); return }
-    if (kind === 'image' && onScan) { close(); onScan(); return } // photos are read by Scan
-    if (kind === 'image') { setError('Photos are read by Scan. Open Scan from the sidebar.'); return }
+    if (kind === 'image') { close(); (onScan ?? requestScan)(); return } // photos are read by Scan
     if (kind === 'audio') { setStage('recording'); return }
     const gen = ++generation.current
     const controller = new AbortController()

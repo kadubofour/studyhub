@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { UploadMaterial } from '@/components/notes/UploadMaterial'
-import { announceScanSaved } from '@/lib/scan/events'
+import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
 import type { ScanTarget } from '@/lib/ai/scan'
 import { useTheme } from 'next-themes'
 import { OfflineBanner } from './OfflineBanner'
@@ -64,6 +64,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
+  useOpenScan(() => setScanning(true))
+  useOpenUpload(() => setUploading(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const dark = mounted && resolvedTheme === 'dark'

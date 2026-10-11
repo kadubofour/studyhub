@@ -101,6 +101,14 @@ describe('UploadDialog', () => {
     expect(onScan).toHaveBeenCalledTimes(1)
     expect(document.querySelector('dialog')?.hasAttribute('open')).toBe(false)
   })
+  it('asks the app to open Scan when no hand-off is given, so a photo works from any page', async () => {
+    const heard = vi.fn()
+    window.addEventListener('studyhub:open-scan', heard)
+    render(<ProfileProvider initial={profile}><ToastProvider><UploadDialog open onClose={() => {}} courses={[]} /></ToastProvider></ProfileProvider>)
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('board.jpg')] } }) })
+    expect(heard).toHaveBeenCalledTimes(1)
+    window.removeEventListener('studyhub:open-scan', heard)
+  })
   it('points a recording to Lectures', async () => {
     await upload(file('talk.mp3'))
     expect(screen.getByText(/recorded or uploaded in Lectures/)).toBeTruthy()

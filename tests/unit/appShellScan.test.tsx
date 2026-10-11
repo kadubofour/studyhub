@@ -85,6 +85,23 @@ describe('Scan in the app shell', () => {
     expect(screen.getByRole('heading', { name: 'Upload material' })).toBeTruthy()
   })
 
+  it('opens Upload when another part of the app asks for it, such as the Notes page', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+    path = '/notes'
+    renderShell()
+    await act(async () => { window.dispatchEvent(new Event('studyhub:open-upload')) })
+    expect(document.querySelector('dialog[open]')?.textContent).toContain('Upload material')
+  })
+
+  it('opens Scan when another part of the app asks for it', async () => {
+    path = '/notes'
+    renderShell()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await act(async () => { window.dispatchEvent(new Event('studyhub:open-scan')) })
+    expect(screen.getByRole('dialog').textContent).toContain('scan note')
+  })
+
   it('has Tutor in the sidebar and the phone tab bar', () => {
     path = '/home'
     renderShell()
