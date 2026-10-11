@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
 import { PlanCard } from '@/components/settings/PlanCard'
 import { StorageCard } from '@/components/settings/StorageCard'
+import Link from 'next/link'
+import { DataCard } from '@/components/settings/DataCard'
 import { Switch } from '@/components/ui/Switch'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -128,6 +130,8 @@ export default function SettingsPage() {
         <button className="btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button>
       </div>
       </form>
+      <DataCard />
+      <p className="flex gap-4 text-xs text-muted"><Link href="/terms" className="hover:text-fg">Terms</Link><Link href="/privacy" className="hover:text-fg">Privacy</Link></p>
     </div>
   )
 }

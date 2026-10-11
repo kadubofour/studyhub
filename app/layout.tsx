@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes'
 import { Inter, Nunito, Lora, Atkinson_Hyperlegible, JetBrains_Mono } from 'next/font/google'
 import 'katex/dist/katex.min.css'
 import './globals.css'
+import { siteUrl } from '@/lib/site'
 
 // The five fonts students can pick in Settings (lib/appearance.ts). Only Inter, the default, is preloaded.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
@@ -11,7 +12,13 @@ const lora = Lora({ subsets: ['latin'], variable: '--font-lora', display: 'swap'
 const atkinson = Atkinson_Hyperlegible({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-atkinson', display: 'swap', preload: false })
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap', preload: false })
 
-export const metadata: Metadata = { title: 'Studyhub', description: 'A calm study hub for students' }
+const description = 'A calm study hub for students: planner, notes, flashcards, lectures and an AI tutor that works from your own material.'
+export const metadata: Metadata = {
+  metadataBase: siteUrl(),
+  title: { default: 'Studyhub', template: '%s · Studyhub' },
+  description,
+  openGraph: { title: 'Studyhub', description, type: 'website', siteName: 'Studyhub' },
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

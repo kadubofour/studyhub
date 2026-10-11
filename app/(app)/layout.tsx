@@ -8,6 +8,10 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { AppShell } from '@/components/shell/AppShell'
 import { FocusProvider } from '@/components/providers/FocusProvider'
 import type { Profile } from '@/lib/types'
+import type { Metadata } from 'next'
+
+// A student's own pages are never for search engines
+export const metadata: Metadata = { robots: { index: false, follow: false } }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const sb = await createServerSupabase()

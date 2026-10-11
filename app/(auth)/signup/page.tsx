@@ -80,8 +80,9 @@ function SignupForm() {
         <PasswordField label="Password" required minLength={8} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} />
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         <button disabled={busy} className="btn-primary w-full">{busy ? 'Creating…' : 'Create account'}</button>
+        <p className="text-center text-xs text-muted">By creating an account you agree to the <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>.</p>
       </form>
-      <p className="text-sm text-muted">Already have an account? <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-accent">Log in</Link></p>
+      <p className="text-sm text-muted">Already have an account? <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-accent underline underline-offset-2">Log in</Link></p>
     </div>
   )
 }

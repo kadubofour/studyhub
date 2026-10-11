@@ -276,6 +276,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
             </select>
           </label>
         )}
+        {choice === 'live' && <p className="pl-6 text-xs text-muted">Made by your browser&apos;s speech service (Google in Chrome, Apple in Safari), so the audio goes there while you record.</p>}
         {!deps.Recognition && <p className="pl-6 text-xs text-muted">This browser can&apos;t do live transcripts. Try Chrome, Edge or Safari, or choose Accurate.</p>}
         <label className="flex items-center gap-2"><input type="radio" name="choice" checked={choice === 'accurate'} onChange={() => setChoice('accurate')} />Accurate, after recording</label>
         <label className="flex items-center gap-2"><input type="radio" name="choice" checked={choice === 'none'} onChange={() => setChoice('none')} />None</label>

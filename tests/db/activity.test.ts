@@ -76,4 +76,9 @@ describe('activity_by_day', () => {
     const { error } = await u.sb.rpc('activity_by_day', { p_tz: 'Not/AZone' })
     expect(error).not.toBeNull()
   })
+  it('lists the newest day first, so a long history is cut at its oldest days', async () => {
+    const u = await newUser()
+    await u.sb.from('tasks').insert([{ title: 'a', done_at: '2026-03-08T10:00:00Z' }, { title: 'b', done_at: '2026-03-12T10:00:00Z' }, { title: 'c', done_at: '2026-03-10T10:00:00Z' }])
+    expect((await rows(u)).map(r => r.day)).toEqual(['2026-03-12', '2026-03-10', '2026-03-08'])
+  })
 })

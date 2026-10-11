@@ -45,9 +45,9 @@ export function CourseBar({ courses, selected, onSelect, onChange }: {
     } catch { toast('Couldn\'t delete the course.') }
   }
 
-  // Course filters: a coloured square + name; the active one gets a tinted background in its colour
+  // Course filters: a coloured square + name; the active one gets a tinted background in its colour (the text stays the normal colour, which is always readable)
   const chip = (active: boolean) => `inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition ${active ? 'border-transparent font-medium' : 'border-line bg-raised hover:bg-surface'}`
-  const tint = (color: string, active: boolean) => (active ? { background: `color-mix(in srgb, ${color} 16%, transparent)`, color } : undefined)
+  const tint = (color: string, active: boolean) => (active ? { background: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined)
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-1.5">
