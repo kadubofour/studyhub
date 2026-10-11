@@ -12,7 +12,6 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
-import { DailyGoalsCard } from '@/components/xp/DailyGoalsCard'
 import { useXp } from '@/components/xp/useXp'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
@@ -139,8 +138,6 @@ export default function HomePage() {
           </div>
         </Link>
       </section>
-
-      {xp && <DailyGoalsCard xp={xp} />}
 
       <WeakSpotsCard courses={courses} />
 
