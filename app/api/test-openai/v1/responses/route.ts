@@ -66,6 +66,20 @@ export async function POST(request: Request) {
   if (JSON.stringify(body).includes('fallback')) {
     return Response.json({ error: { message: 'Fake: this file cannot be read.', type: 'invalid_request_error' } }, { status: 400 })
   }
+  // Web search (resources): a message whose citations are a video and an article
+  if (((body as { tools?: { type?: string }[] }).tools ?? []).some(t => t.type === 'web_search')) {
+    const cite = (url: string, title: string) => ({ type: 'url_citation', url, title, start_index: 0, end_index: 1 })
+    return Response.json({
+      id: 'resp_fake', object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed', model: body.model ?? 'fake', incomplete_details: null, error: null,
+      output: [
+        { type: 'web_search_call', id: 'ws_fake', status: 'completed' },
+        { id: 'msg_fake', type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: 'Found two.', annotations: [
+          cite('https://www.youtube.com/watch?v=krebs101', 'The Krebs cycle explained'), cite('https://www.khanacademy.org/science/biology/krebs', 'Krebs cycle on Khan Academy'),
+        ] }] },
+      ],
+      usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } },
+    })
+  }
   if ((body as { stream?: boolean }).stream) return tutorStream(body as { input?: unknown })
   const name = body.text?.format?.name
   const text = name === 'topics' ? JSON.stringify(cannedTopics(body)) : name ? JSON.stringify(CANNED[name] ?? {}) : '# Fake note\n\nConverted by the fake AI.'

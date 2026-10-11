@@ -20,6 +20,14 @@ describe('fake OpenAI (E2E only)', () => {
     const res = await call({ input: [{ role: 'user', content: [{ type: 'input_file', filename: 'cells-fallback.pdf', file_data: 'x' }] }] })
     expect(res.status).toBe(400)
   })
+  it('answers a web search request with cited links', async () => {
+    process.env.E2E_FAKE_AI = '1'
+    const res = await call({ model: 'gpt-6-luna', tools: [{ type: 'web_search' }], input: 'Find material' })
+    const body = await res.json() as { output: { type: string; content?: { annotations: { type: string; url: string }[] }[] }[] }
+    const urls = body.output.filter(o => o.type === 'message').flatMap(o => o.content!.flatMap(c => c.annotations)).map(a => a.url)
+    expect(urls.length).toBeGreaterThanOrEqual(2)
+    expect(urls.some(u => u.includes('youtube.com'))).toBe(true)
+  })
   it('streams a canned tutor reply as server-sent events when asked to', async () => {
     process.env.E2E_FAKE_AI = '1'
     const res = await call({ stream: true, input: [{ role: 'user', content: 'Why is it in the matrix?' }] })
