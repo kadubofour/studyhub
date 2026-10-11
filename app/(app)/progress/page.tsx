@@ -4,6 +4,8 @@ import { Flame, Trophy, Timer, Brain } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { QuizScores } from '@/components/progress/QuizScores'
 import { TopicsSection } from '@/components/progress/TopicsSection'
+import { XpCard } from '@/components/xp/XpCard'
+import { useXp } from '@/components/xp/useXp'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listSessionsSince } from '@/lib/data/focus'
@@ -31,6 +33,7 @@ export default function ProgressPage() {
   const tz = profile.timezone
   const [sessions, setSessions] = useState<FocusSession[] | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
+  const { xp } = useXp()
 
   useEffect(() => {
     const sb = supabase()
@@ -67,6 +70,7 @@ export default function ProgressPage() {
         <Stat icon={Timer} color="var(--accent)" label="Focus this week" value={fmtMin(thisWeek)} />
         <Stat icon={Brain} color="#1D9E75" label="Retention (30 days)" value={ret === null ? '—' : `${Math.round(ret * 100)}%`} />
       </div>
+      {xp && <XpCard xp={xp} />}
       <section className="card mb-4">
         <h2 className="mb-2 text-sm font-medium">Focus, last 12 weeks</h2>
         <div className="flex gap-[3px] overflow-x-auto" role="img" aria-label="Daily focus time heatmap for the last 12 weeks">
