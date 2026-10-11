@@ -8,7 +8,7 @@ import type { Course } from '@/lib/types'
 // The upload dialog for any page: it fetches the student's courses when it is opened
 // The notes list is told when a note was made
 const NOTES_CHANGED = 'studyhub:notes-changed'
-export function UploadMaterial({ open, onClose, onScan }: { open: boolean; onClose: () => void; onScan: () => void }) {
+export function UploadMaterial({ open, onClose, onScan }: { open: boolean; onClose: () => void; onScan: (files: File[]) => void }) {
   const [courses, setCourses] = useState<Course[]>([])
   useEffect(() => {
     if (!open) return

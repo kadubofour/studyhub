@@ -9,8 +9,8 @@ vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/components/scan/ScanDialog', () => ({
-  ScanDialog: (p: { initialTarget: string; onSaved?: () => void; onClose: () => void }) => (
-    <div role="dialog">scan {p.initialTarget}<button onClick={p.onSaved}>saved</button><button onClick={p.onClose}>close</button></div>
+  ScanDialog: (p: { initialTarget: string; initialFiles?: File[]; onSaved?: () => void; onClose: () => void }) => (
+    <div role="dialog">scan {p.initialTarget} files {p.initialFiles?.length ?? 0}<button onClick={p.onSaved}>saved</button><button onClick={p.onClose}>close</button></div>
   ),
 }))
 
@@ -100,6 +100,17 @@ describe('Scan in the app shell', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     await act(async () => { window.dispatchEvent(new Event('studyhub:open-scan')) })
     expect(screen.getByRole('dialog').textContent).toContain('scan note')
+  })
+
+  it('opens Scan with the photos it was asked to read, and without them the next time', async () => {
+    path = '/notes'
+    renderShell()
+    const photo = new File(['x'], 'board.jpg', { type: 'image/jpeg' })
+    await act(async () => { window.dispatchEvent(new CustomEvent('studyhub:open-scan', { detail: [photo] })) })
+    expect(screen.getByRole('dialog').textContent).toContain('files 1')
+    fireEvent.click(screen.getByRole('button', { name: 'close' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Scan' })[0])
+    expect(screen.getByRole('dialog').textContent).toContain('files 0')
   })
 
   it('has Tutor in the sidebar and the phone tab bar', () => {

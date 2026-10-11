@@ -51,10 +51,11 @@ test('a photo is handed to Scan and a recording to Lectures', async ({ page, isM
   await page.getByLabel('File to upload').setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer: Buffer.from('not really a png') })
   void isMobile
   await expect(page.getByRole('heading', { name: 'Scan pages' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '✦ Scan 1 page' })).toBeVisible() // the photo came with it
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Upload' }).first().click()
   await page.getByLabel('File to upload').setInputFiles({ name: 'talk.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('x') })
-  await expect(page.getByText(/recorded or uploaded in Lectures/)).toBeVisible()
+  await expect(page.getByText(/can.t be uploaded yet/)).toBeVisible()
   await page.getByRole('button', { name: 'Go to Lectures' }).click()
   await expect(page).toHaveURL(/\/lectures$/)
 })
@@ -67,4 +68,5 @@ test('Upload in the sidebar opens the dialog from any page, and a photo goes to 
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   await page.getByLabel('File to upload').setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer: Buffer.from('not really a png') })
   await expect(page.getByRole('heading', { name: 'Scan pages' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '✦ Scan 1 page' })).toBeVisible()
 })

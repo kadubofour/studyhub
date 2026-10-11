@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
 import { fileKind } from '@/lib/import/fileKind'
 import { requestScan } from '@/lib/scan/events'
+import { isRecording } from '@/lib/lectures/recordingGuard'
+import { useConfirm } from '@/components/providers/ConfirmProvider'
 import type { Course } from '@/lib/types'
 import { LimitPrompt } from '@/components/billing/LimitPrompt'
 
@@ -20,10 +22,11 @@ const NEXT: [Next, string][] = [['', 'Open the note'], ['summary', 'Open with Su
 
 // Upload a PDF, Word, PowerPoint or text file and review it before it becomes a note. Photos go to Scan, recordings to Lectures.
 export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
-  open: boolean; onClose: () => void; courses: Course[]; onImported?: () => void; onScan?: () => void
+  open: boolean; onClose: () => void; courses: Course[]; onImported?: () => void; onScan?: (files: File[]) => void
 }) {
   const router = useRouter()
   const toast = useToast()
+  const confirm = useConfirm()
   const { profile } = useProfile()
   const input = useRef<HTMLInputElement>(null)
   const [stage, setStage] = useState<'pick' | 'working' | 'review' | 'recording'>('pick')
@@ -50,8 +53,12 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
   async function pick(file: File) {
     setError(null)
     const kind = fileKind(file)
-    if (!kind) { setError('Choose a PDF, Word, PowerPoint or text file.'); return }
-    if (kind === 'image') { close(); (onScan ?? requestScan)(); return } // photos are read by Scan
+    if (!kind) {
+      const old = /\.(doc|ppt)$/i.exec(file.name)?.[1]
+      setError(old ? `Old .${old} files can't be read. Open it and save it as .${old}x first.` : 'Choose a PDF, Word, PowerPoint or text file, or a JPEG, PNG or WebP photo.')
+      return
+    }
+    if (kind === 'image') { close(); (onScan ?? requestScan)([file]); return } // photos are read by Scan, with the photo
     if (kind === 'audio') { setStage('recording'); return }
     const gen = ++generation.current
     const controller = new AbortController()
@@ -68,6 +75,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
         const { pptxToNote } = await import('@/lib/import/pptxToNote')
         result = await pptxToNote(await file.arrayBuffer(), file.name)
       } else if (kind === 'text') {
+        setWorking('Reading your file…')
         const { textToNote } = await import('@/lib/import/textToNote')
         result = textToNote(await file.arrayBuffer(), file.name)
       } else {
@@ -85,10 +93,20 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
     }
   }
 
+  // Leaving this page stops a lecture that is recording, so the student is asked first, as with the sidebar links
+  async function mayLeave(): Promise<boolean> {
+    if (!isRecording()) return true
+    return confirm({
+      title: 'Stop recording?', confirmLabel: 'Leave', danger: true,
+      body: 'Leaving this page stops the recording. What was recorded is kept on this device; save it from Lectures.',
+    })
+  }
+
   async function save() {
     if (!draft || savingRef.current) return
     savingRef.current = true; setSaving(true)
     try {
+      if (!await mayLeave()) return
       const n = await createNote(supabase(), { title: draft.title.trim() || 'Imported note', content_md: draft.content_md, course_id: courseId || null })
       onImported?.()
       close()
@@ -112,17 +130,17 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
           </button>
           <input ref={input} type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.wav,.webm,.ogg,.mp4,.mov,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,image/*,audio/*,video/*"
             className="sr-only" aria-label="File to upload" onChange={e => { const f = e.target.files?.[0]; if (f) void pick(f) }} />
-          <p className="text-xs text-muted">Photos of notes or slides go through Scan. Recordings are recorded or uploaded in Lectures.</p>
+          <p className="text-xs text-muted">Photos of notes or slides go through Scan. Recordings are made in Lectures.</p>
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end"><button type="button" className="btn" onClick={close}>Cancel</button></div>
         </div>
       )}
       {stage === 'recording' && (
         <div className="space-y-3">
-          <p className="text-sm">Audio and video are recorded or uploaded in Lectures, where they are transcribed and can become a note.</p>
+          <p className="text-sm">Audio and video files can&apos;t be uploaded yet. Lectures records live and transcribes as you go, and the transcript can become a note.</p>
           <div className="flex justify-end gap-2">
             <button type="button" className="btn" onClick={reset}>Choose another</button>
-            <button type="button" className="btn-primary" onClick={() => { close(); router.push('/lectures') }}>Go to Lectures</button>
+            <button type="button" className="btn-primary" onClick={() => { void mayLeave().then(ok => { if (ok) { close(); router.push('/lectures') } }) }}>Go to Lectures</button>
           </div>
         </div>
       )}

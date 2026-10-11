@@ -64,7 +64,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
-  useOpenScan(() => setScanning(true))
+  const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
+  useOpenScan(files => { setScanFiles(files); setScanning(true) })
   useOpenUpload(() => setUploading(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
@@ -123,7 +124,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                       className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
                       <Upload size={17} aria-hidden />Upload
                     </button>
-                    <button type="button" onClick={() => setScanning(true)}
+                    <button type="button" onClick={() => { setScanFiles(undefined); setScanning(true) }}
                       className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
                       <ScanLine size={17} aria-hidden />Scan
                     </button>
@@ -168,8 +169,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           ))}
         </nav>
       )}
-      <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={() => setScanning(true)} />
-      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
+      <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
+      {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>
   )
 }

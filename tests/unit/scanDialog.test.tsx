@@ -47,6 +47,19 @@ const pageTexts = () => within(screen.getByRole('list', { name: 'Pages' })).getA
 const scanButton = (n: number) => screen.getByRole('button', { name: `✦ Scan ${n} page${n === 1 ? '' : 's'}` })
 
 describe('ScanDialog', () => {
+  it('starts with the photos it was given, so they are not picked twice', async () => {
+    await act(async () => {
+      render(<ProfileProvider initial={profile}><ToastProvider><ScanDialog open onClose={vi.fn()} initialTarget="note" initialFiles={[photo('board.jpg')]} /></ToastProvider></ProfileProvider>)
+    })
+    expect(pageTexts()[0]).toContain('board.jpg')
+    expect(scanButton(1)).toBeTruthy()
+  })
+  it('says so when a handed-over file is not something Scan can read', async () => {
+    await act(async () => {
+      render(<ProfileProvider initial={profile}><ToastProvider><ScanDialog open onClose={vi.fn()} initialTarget="note" initialFiles={[new File(['x'], 'pic.gif', { type: 'image/gif' })]} /></ToastProvider></ProfileProvider>)
+    })
+    expect(screen.getByRole('alert').textContent).toContain('JPEG, PNG or WebP')
+  })
   it('adds photos as numbered pages that can be reordered and removed', async () => {
     await openDialog()
     await add(photo('a.jpg'), photo('b.jpg'), photo('c.jpg'))
