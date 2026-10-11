@@ -53,6 +53,15 @@ describe('buildSpeed', () => {
       expect(same).toHaveLength(1)
     }
   })
+  it('never offers another card with the same front as a wrong answer', () => {
+    const cs: GCard[] = [{ id: 'a', front: 'Synonym of happy', back: 'glad' }, { id: 'b', front: 'synonym of happy ', back: 'joyful' }, ...cards(4)]
+    for (let seed = 1; seed <= 30; seed++) {
+      for (const q of buildSpeed(cs, seeded(seed))) {
+        if (q.card.id === 'a') expect(q.options).not.toContain('joyful')
+        if (q.card.id === 'b') expect(q.options).not.toContain('glad')
+      }
+    }
+  })
   it('skips a card when the deck cannot supply three different wrong answers', () => {
     const cs: GCard[] = [{ id: 'a', front: 'a', back: 'x' }, { id: 'b', front: 'b', back: 'x' }, { id: 'c', front: 'c', back: 'x' }, { id: 'd', front: 'd', back: 'y' }]
     expect(buildSpeed(cs, seeded())).toEqual([])

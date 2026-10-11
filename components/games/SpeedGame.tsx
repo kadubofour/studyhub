@@ -27,20 +27,20 @@ export function SpeedGame({ questions, onDone }: Props) {
   return (
     <div>
       <p className="mb-2 text-sm text-muted">Question {i + 1} of {questions.length}</p>
-      <div className="card mb-3"><CardFace text={q.card.front} /></div>
+      <div key={i} tabIndex={-1} autoFocus className="card mb-3 outline-none"><CardFace text={q.card.front} /></div>
       <div className="space-y-2">
         {q.options.map(o => (
-          <button key={o} type="button" disabled={picked !== null} aria-label={o} className={`card w-full text-left ${picked === o ? 'border-accent' : ''}`} onClick={() => pick(o)}>
+          <button key={o} type="button" disabled={picked !== null} className={`card w-full text-left ${picked === o ? 'border-accent' : ''}`} onClick={() => pick(o)}>
             <CardFace text={o} />
           </button>
         ))}
       </div>
-      {picked !== null && (
-        <div className="mt-3" role="status">
-          {right ? <p className="text-sm font-medium text-success">Correct.</p> : <><p className="text-sm font-medium text-danger">Not quite. The answer is:</p><CardFace text={q.answer} /></>}
-          <button type="button" className="btn-primary mt-2" onClick={next}>{last ? 'See results' : 'Next'}</button>
+      <div className="mt-3">
+        <div role="status">
+          {picked !== null && (right ? <p className="text-sm font-medium text-success">Correct.</p> : <><p className="text-sm font-medium text-danger">Not quite. The answer is:</p><CardFace text={q.answer} /></>)}
         </div>
-      )}
+        {picked !== null && <button type="button" autoFocus className="btn-primary mt-2" onClick={next}>{last ? 'See results' : 'Next'}</button>}
+      </div>
     </div>
   )
 }

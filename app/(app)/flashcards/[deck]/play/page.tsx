@@ -61,7 +61,7 @@ export default function PlayPage() {
       {round && !result && round.game === 'speed' && <SpeedGame key={plays} questions={round.questions} onDone={finish} />}
       {result && (
         <div className="card text-center" role="status">
-          <h2 className="text-lg font-medium">Score {result.score} / {result.total}</h2>
+          <h2 tabIndex={-1} autoFocus className="text-lg font-medium outline-none">Score {result.score} / {result.total}</h2>
           <p className="mt-1 text-sm text-muted">Games do not change your card schedule.</p>
           {saveFailed && <p className="mt-2 text-sm text-danger">Could not save this play.</p>}
           <div className="mt-3 flex justify-center gap-2">

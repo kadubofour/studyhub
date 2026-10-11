@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
 import { SpeedGame } from '@/components/games/SpeedGame'
 import type { Question } from '@/lib/games/build'
 
@@ -25,6 +25,17 @@ describe('SpeedGame', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Wrong a1' }))
     expect(screen.getByText('Not quite. The answer is:')).toBeTruthy()
     expect(screen.getAllByText('Right 1').length).toBeGreaterThan(0)
+  })
+  it('keeps one status area and moves focus to Next after an answer, and to the new question after Next', () => {
+    render(<SpeedGame questions={[q(1), q(2)]} onDone={() => {}} />)
+    const status = screen.getByRole('status')
+    fireEvent.click(screen.getByRole('button', { name: 'Right 1' }))
+    expect(screen.getByRole('status')).toBe(status)
+    expect(within(status).getByText('Correct.')).toBeTruthy()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(status.textContent).toBe('')
+    expect(document.activeElement?.textContent).toContain('Front 2')
   })
   it('only moves on after an answer, and finishes with the score', () => {
     const onDone = vi.fn()

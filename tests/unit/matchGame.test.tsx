@@ -25,6 +25,14 @@ describe('MatchGame', () => {
     expect(t.disabled).toBe(true)
     expect(t.textContent).toContain('Matched')
   })
+  it('announces a right pair by its term and moves focus to the next free term', () => {
+    render(<MatchGame cards={cards} onDone={() => {}} />)
+    pick(1, 1)
+    expect(screen.getByRole('status').textContent).toBe('Matched: Term 1')
+    const active = document.activeElement as HTMLButtonElement
+    expect(within(fronts()).getAllByRole('button')).toContain(active)
+    expect(active.disabled).toBe(false)
+  })
   it('says Not a match for a wrong pair and lets the student try again', () => {
     render(<MatchGame cards={cards} onDone={() => {}} />)
     pick(1, 2)

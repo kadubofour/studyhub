@@ -33,7 +33,7 @@ export function buildSpeed(cards: GCard[], rng: Rng = Math.random): Question[] {
     const wrong: string[] = []
     for (const o of shuffle(cards, rng)) {
       if (wrong.length === 3) break
-      if (seen.has(norm(o.back))) continue
+      if (seen.has(norm(o.back)) || norm(o.front) === norm(card.front)) continue // a card with the same front may be a right answer too
       seen.add(norm(o.back)); wrong.push(o.back)
     }
     if (wrong.length < 3) continue
