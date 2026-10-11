@@ -26,11 +26,13 @@ export function DataCard({ now = () => new Date() }: { now?: () => Date }) {
     try {
       const data = await exportMyData(supabase(), now())
       const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+      // The link is put on the page for the click (iOS Safari ignores a loose one) and the file is kept a moment, while the browser reads it
       const a = document.createElement('a')
       a.href = url
       a.download = `studyhub-data-${now().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(url) }, 1000)
       setNote({ kind: 'ok', text: 'Your data was downloaded.' })
     } catch (e) {
       setNote({ kind: 'error', text: e instanceof Error ? e.message : 'Could not download your data. Try again.' })
@@ -44,7 +46,7 @@ export function DataCard({ now = () => new Date() }: { now?: () => Date }) {
       const res = await fetch('/api/account/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: WORD }) })
       if (res.ok) { router.replace('/'); router.refresh(); return }
       const body = await res.json().catch(() => ({})) as { error?: string }
-      setDeleteError(MESSAGE[body.error ?? ''] ?? 'Could not finish deleting. Your account is still active; try again.')
+      setDeleteError(MESSAGE[body.error ?? ''] ?? 'Could not finish deleting your account. Some files may already be gone. Try again, and if it keeps failing, contact support.')
     } catch {
       setDeleteError('Could not finish deleting. Your account is still active; try again.')
     }
@@ -68,7 +70,7 @@ export function DataCard({ now = () => new Date() }: { now?: () => Date }) {
       </div>
       <Dialog open={asking} onClose={close} title="Delete your account?">
         <div className="space-y-3">
-          <p className="text-sm">This can&apos;t be undone. Your notes, flashcards, tasks, quizzes, lectures, chats and progress will be gone for good. Download your data first if you want a copy.</p>
+          <p className="text-sm">This can&apos;t be undone. Your notes, flashcards, tasks, quizzes, lectures, chats and progress will be gone for good, and any Premium time you have paid for is lost. Download your data first if you want a copy.</p>
           <label className="field"><span>Type DELETE to confirm</span>
             <input value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off" />
           </label>

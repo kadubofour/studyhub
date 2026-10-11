@@ -17,14 +17,16 @@ beforeAll(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 let blobs: Blob[]
-let clicked: { download: string; href: string }[]
+let clicked: { download: string; href: string; attached: boolean }[]
+let revoked: number
 beforeEach(() => {
   exportFails = false; exportMyData.mockClear(); fetchMock.mockReset(); replace.mockClear(); refresh.mockClear()
   blobs = []; clicked = []
   vi.stubGlobal('fetch', fetchMock)
   URL.createObjectURL = (b: Blob | MediaSource) => { blobs.push(b as Blob); return 'blob:x' }
-  URL.revokeObjectURL = () => {}
-  HTMLAnchorElement.prototype.click = function () { clicked.push({ download: this.download, href: this.href }) }
+  revoked = 0
+  URL.revokeObjectURL = () => { revoked++ }
+  HTMLAnchorElement.prototype.click = function () { clicked.push({ download: this.download, href: this.href, attached: document.body.contains(this) }) }
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
@@ -33,7 +35,11 @@ describe('DataCard — download', () => {
     render(<DataCard now={() => new Date('2026-10-11T10:00:00Z')} />)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Download my data' })) })
     expect(exportMyData).toHaveBeenCalledTimes(1)
-    expect(clicked).toEqual([{ download: 'studyhub-data-2026-10-11.json', href: 'blob:x' }])
+    expect(clicked).toEqual([{ download: 'studyhub-data-2026-10-11.json', href: 'blob:x', attached: true }]) // attached to the page: iOS Safari ignores a loose link
+    expect(revoked).toBe(0) // not yet: the browser may still be reading it
+    await act(async () => { await new Promise(r => setTimeout(r, 1100)) })
+    expect(revoked).toBe(1)
+    expect(document.querySelector('a[download]')).toBeNull()
     expect(JSON.parse(await blobs[0].text()).data.notes).toEqual([{ id: 'n1' }])
     expect(screen.getByRole('status').textContent).toContain('downloaded')
   })
@@ -58,8 +64,9 @@ describe('DataCard — delete', () => {
   const typeWord = (v: string) => fireEvent.change(screen.getByLabelText('Type DELETE to confirm'), { target: { value: v } })
   const confirmBtn = () => screen.getByRole('button', { name: 'Delete everything' }) as HTMLButtonElement
 
-  it('explains what goes, and waits for the exact word', async () => {
+  it('explains what goes, including paid time left, and waits for the exact word', async () => {
     await openDelete()
+    expect(screen.getByText(/Premium time you have paid for is lost/)).toBeTruthy()
     expect(screen.getByText(/can.t be undone/)).toBeTruthy()
     expect(confirmBtn().disabled).toBe(true)
     typeWord('delete')
@@ -80,7 +87,8 @@ describe('DataCard — delete', () => {
     await openDelete()
     typeWord('DELETE')
     await act(async () => { fireEvent.click(confirmBtn()) })
-    expect(screen.getByRole('alert').textContent).toContain('still active')
+    expect(screen.getByRole('alert').textContent).toContain('Could not finish deleting')
+    expect(screen.getByRole('alert').textContent).toContain('files may already be gone')
     expect(replace).not.toHaveBeenCalled()
   })
   it('says deletion is unavailable when the server cannot do it', async () => {

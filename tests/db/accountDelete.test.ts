@@ -21,6 +21,17 @@ describe('deleting a sign-in', () => {
     await other.sb.from('notes').insert({ title: 'Theirs', content_md: 'y' })
 
     const admin = adminClient()
+    // Rows the app itself writes with the service key: plan, payment, AI and transcription usage
+    for (const [table, row] of [
+      ['entitlements', { user_id: u.id }],
+      ['payments', { user_id: u.id, reference: `ref-${u.id}`, amount_minor: 1000, currency: 'GHS', channel: 'card', status: 'success', months: 1 }],
+      ['ai_charges', { user_id: u.id, cost: 1 }],
+      ['ai_requests', { user_id: u.id }],
+      ['transcription_usage', { user_id: u.id, seconds: 30 }],
+    ] as const) {
+      const { error: e } = await admin.from(table).insert(row)
+      expect(e, `could not set up a ${table} row`).toBeNull()
+    }
     const { error } = await admin.auth.admin.deleteUser(u.id)
     expect(error).toBeNull()
 

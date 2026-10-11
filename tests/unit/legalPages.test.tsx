@@ -18,6 +18,16 @@ describe('Privacy page', () => {
     expect(screen.getByText(/download/i)).toBeTruthy()
     expect(screen.getAllByText(/delete/i).length).toBeGreaterThan(0)
   })
+  it('is honest about live transcription, Google sign-in, who can read the data, and what the cookies are', () => {
+    render(<PrivacyPage />)
+    expect(screen.getByText(/speech recognition/i)).toBeTruthy()
+    expect(screen.getAllByText(/Continue with Google/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/only your signed-in account can read it/)).toBeNull()
+    expect(screen.getByText(/the people who run Studyhub can read/i)).toBeTruthy()
+    expect(screen.queryByText(/only the cookies that keep you signed in/i)).toBeNull()
+    expect(screen.getByText(/cookies and browser storage/i)).toBeTruthy()
+    expect(screen.getByText(/backups/i)).toBeTruthy()
+  })
   it('says no advertising or tracking cookies are used', () => {
     render(<PrivacyPage />)
     expect(screen.getAllByText(/no advertising/i).length).toBeGreaterThan(0)
@@ -43,6 +53,10 @@ describe('Terms page', () => {
     render(<TermsPage />)
     expect(screen.getByRole('heading', { level: 1, name: 'Terms' })).toBeTruthy()
     for (const re of [/your content/i, /AI can be wrong|AI answers can be wrong/i, /Premium/, /turn off renewal/i, /school/i]) expect(screen.getAllByText(re).length, String(re)).toBeGreaterThan(0)
+  })
+  it('says deleting the account forfeits paid time left', () => {
+    render(<TermsPage />)
+    expect(screen.getByText(/Premium time you have paid for is lost/)).toBeTruthy()
   })
   it('links to the privacy page', () => {
     render(<TermsPage />)

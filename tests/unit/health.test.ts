@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 let result: { error: { message: string } | null }
 let throws = false
-const createClient = vi.fn((..._a: unknown[]) => ({ from: () => ({ select: () => ({ limit: async () => { if (throws) throw new Error('network'); return result } }) }) }))
+let signal: AbortSignal | undefined
+const createClient = vi.fn((..._a: unknown[]) => ({ from: () => ({ select: (_c: string, o?: unknown) => { void o; return ({ limit: () => ({ abortSignal: async (s: AbortSignal) => { signal = s; if (throws) throw new Error('network'); return result } }) }) } }) }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: (...a: unknown[]) => createClient(...a) }))
 import { GET } from '@/app/api/health/route'
 
@@ -27,6 +28,10 @@ describe('GET /api/health', () => {
     const res = await GET()
     expect(res.status).toBe(503)
     expect(JSON.stringify(await res.json())).not.toMatch(/key|url|http/i)
+  })
+  it('gives up after a few seconds, so a hung database is a 503 and not a hung monitor', async () => {
+    await GET()
+    expect(signal).toBeInstanceOf(AbortSignal)
   })
   it('is never cached, so a monitor sees the truth', async () => {
     expect((await GET()).headers.get('cache-control')).toContain('no-store')

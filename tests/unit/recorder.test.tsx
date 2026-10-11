@@ -74,6 +74,13 @@ describe('Recorder', () => {
     expect((screen.getByLabelText('None') as HTMLInputElement).checked).toBe(true)
   })
 
+  it('says the free live transcript is made by the speech service of the browser, so the audio goes to its vendor', async () => {
+    await renderRecorder({ Recognition: FakeRecognition })
+    expect(screen.getByText(/your browser.s speech service/i)).toBeTruthy()
+    fireEvent.click(screen.getByLabelText(/Accurate, after recording/))
+    expect(screen.queryByText(/your browser.s speech service/i)).toBeNull()
+  })
+
   it('choosing Accurate on Free shows that it\'s a Premium feature', async () => {
     await renderRecorder()
     fireEvent.click(screen.getByLabelText(/Accurate, after recording/))

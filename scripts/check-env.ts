@@ -14,7 +14,7 @@ const REQUIRED: [string, string][] = [
 // What each optional group needs, and what the student loses without it
 const FEATURES: { name: string; needs: string[]; effect: string }[] = [
   { name: 'AI features', needs: ['OPENAI_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY'], effect: 'summaries, flashcards, quizzes, Scan, PDF structuring, the tutor, topics and resources are unavailable (the server needs the service key to count AI use)' },
-  { name: 'Payments (Premium)', needs: ['PAYSTACK_SECRET_KEY', 'PAYSTACK_PLAN_MONTHLY', 'PAYSTACK_PLAN_YEARLY', 'SUPABASE_SERVICE_ROLE_KEY'], effect: 'the upgrade screens are hidden and nobody can buy Premium' },
+  { name: 'Payments (Premium)', needs: ['PAYSTACK_SECRET_KEY', 'PAYSTACK_PLAN_MONTHLY', 'PAYSTACK_PLAN_YEARLY', 'SUPABASE_SERVICE_ROLE_KEY'], effect: 'Premium cannot be bought (without the plan codes checkout cannot start)' },
   { name: 'Account deletion', needs: ['SUPABASE_SERVICE_ROLE_KEY'], effect: 'students cannot delete their account from Settings' },
   { name: 'YouTube videos', needs: ['YOUTUBE_API_KEY'], effect: 'topic videos come from the web search instead of YouTube, with no channel or length' },
   { name: 'Contact address on the legal pages', needs: ['NEXT_PUBLIC_SUPPORT_EMAIL'], effect: 'the Terms and Privacy pages show no way to reach you' },
@@ -25,13 +25,18 @@ const TEST_ONLY = ['E2E_FAKE_AI', 'E2E_FAKE_PAYSTACK', 'OPENAI_BASE_URL', 'PAYST
 export function checkEnv(env: Env, mode: 'production' | 'development' = 'production'): EnvReport {
   const set = (n: string) => !!env[n]?.trim()
   const errors = REQUIRED.filter(([n]) => !set(n)).map(([name, why]) => ({ name, why }))
+  const site = env.NEXT_PUBLIC_SITE_URL?.trim()
+  let siteOk = true
+  if (site) { try { siteOk = ['http:', 'https:'].includes(new URL(site).protocol) } catch { siteOk = false } }
+  if (site && !siteOk) errors.push({ name: 'NEXT_PUBLIC_SITE_URL', why: 'it must be a full address such as https://studyhub.app; as written, link previews and sign-in links would use localhost' })
   const features = FEATURES.map(f => {
     const missing = f.needs.filter(n => !set(n))
     return { name: f.name, on: missing.length === 0, missing, effect: f.effect }
   })
   const warnings: string[] = []
   if (mode === 'production') {
-    if (set('NEXT_PUBLIC_SITE_URL') && /localhost|127\.0\.0\.1/.test(env.NEXT_PUBLIC_SITE_URL!)) warnings.push('NEXT_PUBLIC_SITE_URL points at this computer; confirmation emails would link to localhost.')
+    if (set('NEXT_PUBLIC_SITE_URL') && siteOk && /localhost|127\.0\.0\.1/.test(env.NEXT_PUBLIC_SITE_URL!)) warnings.push('NEXT_PUBLIC_SITE_URL points at this computer; confirmation emails would link to localhost.')
+    else if (set('NEXT_PUBLIC_SITE_URL') && siteOk && env.NEXT_PUBLIC_SITE_URL!.trim().startsWith('http:')) warnings.push('NEXT_PUBLIC_SITE_URL should start with https:// in production.')
     if (set('PAYSTACK_SECRET_KEY') && env.PAYSTACK_SECRET_KEY!.startsWith('sk_test_')) warnings.push('PAYSTACK_SECRET_KEY is a test key; real payments will not work.')
   }
   if (set('SUPABASE_SERVICE_ROLE_KEY') && env.SUPABASE_SERVICE_ROLE_KEY === env.NEXT_PUBLIC_SUPABASE_ANON_KEY) warnings.push('SUPABASE_SERVICE_ROLE_KEY is the same as the public key; it should be the secret service_role key.')

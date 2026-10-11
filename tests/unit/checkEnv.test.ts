@@ -37,6 +37,12 @@ describe('checkEnv', () => {
     expect(checkEnv({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'http://localhost:3000' }, 'production').warnings.join(' ')).toMatch(/NEXT_PUBLIC_SITE_URL/)
     expect(checkEnv({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'http://localhost:3000' }, 'development').warnings).toEqual([])
   })
+  it('fails when the site address is not a web address, and in production wants https', () => {
+    expect(checkEnv({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'studyhub.app' }, 'production').errors.map(e => e.name)).toEqual(['NEXT_PUBLIC_SITE_URL'])
+    expect(checkEnv({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'ftp://studyhub.app' }, 'production').errors.map(e => e.name)).toEqual(['NEXT_PUBLIC_SITE_URL'])
+    expect(checkEnv({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'http://studyhub.app' }, 'production').warnings.join(' ')).toMatch(/https/)
+    expect(checkEnv({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'http://localhost:3000' }, 'development').errors).toEqual([])
+  })
   it('warns when the service key is the same as the public key, and when a payment key is a test key in production', () => {
     expect(checkEnv({ ...GOOD, SUPABASE_SERVICE_ROLE_KEY: 'anon-key' }, 'production').warnings.join(' ')).toMatch(/SERVICE_ROLE/)
     expect(checkEnv({ ...GOOD, PAYSTACK_SECRET_KEY: 'sk_test_x' }, 'production').warnings.join(' ')).toMatch(/test key/)

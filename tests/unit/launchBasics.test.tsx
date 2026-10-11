@@ -25,6 +25,7 @@ describe('error pages', () => {
     render(<ErrorPage error={new Error('boom')} retry={retry} />)
     expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeTruthy()
     expect(screen.queryByText('boom')).toBeNull() // the technical message is for the log, not the student
+    expect(screen.getByText(/Most of your work saves as you go/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(retry).toHaveBeenCalledTimes(1)
     expect(console.error).toHaveBeenCalled()

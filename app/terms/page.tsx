@@ -28,7 +28,7 @@ export default function TermsPage() {
       </section>
       <section>
         <h2>Leaving</h2>
-        <p>You can download your data and delete your account in <strong>Settings</strong> at any time. We may suspend an account that breaks these terms or harms others.</p>
+        <p>You can download your data and delete your account in <strong>Settings</strong> at any time. Deleting the account is final, and any Premium time you have paid for is lost with no refund for the rest of it. We may suspend an account that breaks these terms or harms others.</p>
       </section>
       <section>
         <h2>No guarantees</h2>
