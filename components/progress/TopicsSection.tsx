@@ -4,6 +4,7 @@ import { AlertTriangle, Circle, CircleCheck, CircleDot } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { postAi } from '@/components/ai/aiFetch'
 import { TopicEditor } from '@/components/progress/TopicEditor'
+import { TopicResources } from '@/components/progress/TopicResources'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
@@ -128,6 +129,7 @@ export function TopicsSection() {
                 <StatusChip status={s.status} />
                 <span className="basis-full text-xs text-muted">{evidence(s)}</span>
                 <span className="basis-full text-xs text-muted">{plural(s.notes, 'note')}, {plural(s.lectures, 'lecture')}, {plural(s.decks, 'deck')}</span>
+                <TopicResources topicId={s.topic_id} topicName={s.name} />
               </li>
             ))}
           </ul>
