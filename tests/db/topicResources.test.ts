@@ -24,6 +24,15 @@ describe('topic_resources', () => {
       expect((await add(u, t, bad)).error, JSON.stringify(bad).slice(0, 60)).not.toBeNull()
     }
   })
+  it('keeps the channel and length of a video, and checks them', async () => {
+    const u = await newUser(), t = await topic(u)
+    expect((await add(u, t, { channel: 'Bio Channel', duration_seconds: 600 })).error).toBeNull()
+    expect((await u.sb.from('topic_resources').select('channel,duration_seconds')).data).toEqual([{ channel: 'Bio Channel', duration_seconds: 600 }])
+    for (const bad of [{ channel: 'a'.repeat(101) }, { duration_seconds: -1 }, { duration_seconds: 200000 }]) {
+      expect((await add(u, t, { url: 'https://x.test/' + Math.random(), ...bad })).error, JSON.stringify(bad).slice(0, 40)).not.toBeNull()
+    }
+    expect((await add(u, t, { url: 'https://x.test/plain' })).error).toBeNull() // an article has neither
+  })
   it('keeps one copy of an address per topic', async () => {
     const u = await newUser(), t = await topic(u)
     expect((await add(u, t)).error).toBeNull()

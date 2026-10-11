@@ -1,4 +1,4 @@
-export type Found = { url: string; title: string; kind: 'video' | 'article' }
+export type Found = { url: string; title: string; kind: 'video' | 'article'; channel?: string; seconds?: number }
 
 export const MAX_FOUND = 6
 const MAX_URL = 500

@@ -28,6 +28,12 @@ describe('fake OpenAI (E2E only)', () => {
     expect(urls.length).toBeGreaterThanOrEqual(2)
     expect(urls.some(u => u.includes('youtube.com'))).toBe(true)
   })
+  it('picks the videos it was shown, by id', async () => {
+    process.env.E2E_FAKE_AI = '1'
+    const res = await call({ model: 'm', text: { format: { name: 'video_picks' } }, input: [{ role: 'user', content: '<video id="abc12" channel="c">t</video>' + String.fromCharCode(10) + '<video id="def34" channel="c">t</video>' }] })
+    const body = await res.json() as { output: { content: { text: string }[] }[] }
+    expect(JSON.parse(body.output[0].content[0].text)).toEqual({ ids: ['abc12', 'def34'] })
+  })
   it('streams a canned tutor reply as server-sent events when asked to', async () => {
     process.env.E2E_FAKE_AI = '1'
     const res = await call({ stream: true, input: [{ role: 'user', content: 'Why is it in the matrix?' }] })

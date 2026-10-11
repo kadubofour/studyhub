@@ -15,6 +15,7 @@ export default defineConfig({
     timeout: 180_000,
     env: {
       E2E_FAKE_AI: '1', OPENAI_API_KEY: 'e2e-fake', OPENAI_BASE_URL: `http://localhost:${PORT}/api/test-openai/v1`,
+      YOUTUBE_API_KEY: 'e2e-yt', YOUTUBE_API_BASE: `http://localhost:${PORT}/api/test-youtube/v3`,
       E2E_FAKE_PAYSTACK: '1', PAYSTACK_SECRET_KEY: 'sk_test_e2e', PAYSTACK_BASE_URL: `http://localhost:${PORT}/api/test-paystack`,
       PAYSTACK_PLAN_MONTHLY: 'PLN_e2e_monthly', PAYSTACK_PLAN_YEARLY: 'PLN_e2e_yearly', // billing UI turns on from these keys
       NEXT_PUBLIC_LECTURE_PART_SECONDS: '3', // lecture parts of 3 s, so a short recording has several

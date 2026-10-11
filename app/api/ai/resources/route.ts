@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 import { RESOURCES_COST, findResources } from '@/lib/ai/resources'
+import { searchVideos } from '@/lib/youtube'
 
 export const maxDuration = 120
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -19,8 +20,12 @@ export async function POST(request: Request) {
   if (!topic) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const course = (topic.courses as unknown as { name?: string } | null)?.name ?? ''
 
+  // Videos come from YouTube when a key is set; otherwise from the web search
+  const key = process.env.YOUTUBE_API_KEY
+  const search = key ? (q: string) => searchVideos(q, { key, base: process.env.YOUTUBE_API_BASE, signal: request.signal }) : undefined
+
   const result = await runAiAction(
-    client => findResources(client, { topic: topic.name as string, course }, request.signal).then(resources => ({ resources })),
+    client => findResources(client, { topic: topic.name as string, course }, request.signal, search).then(resources => ({ resources })),
     { userId: user.id, cost: RESOURCES_COST, signal: request.signal },
   )
   return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)

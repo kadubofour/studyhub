@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   }
   if ((body as { stream?: boolean }).stream) return tutorStream(body as { input?: unknown })
   const name = body.text?.format?.name
-  const text = name === 'topics' ? JSON.stringify(cannedTopics(body)) : name ? JSON.stringify(CANNED[name] ?? {}) : '# Fake note\n\nConverted by the fake AI.'
+  const text = name === 'video_picks' ? JSON.stringify({ ids: [...new Set([...JSON.stringify(body.input ?? '').matchAll(/<video id=\\?"([\w-]+)/g)].map(m => m[1]))] }) : name === 'topics' ? JSON.stringify(cannedTopics(body)) : name ? JSON.stringify(CANNED[name] ?? {}) : '# Fake note\n\nConverted by the fake AI.'
   return Response.json({
     id: 'resp_fake', object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed',
     model: body.model ?? 'fake', incomplete_details: null, error: null,
