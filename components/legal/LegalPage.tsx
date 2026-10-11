@@ -17,8 +17,8 @@ export function LegalPage({ title, children }: { title: 'Terms' | 'Privacy'; chi
       </header>
       <h1 className="text-3xl font-semibold">{title}</h1>
       <p className="mt-1 text-sm text-muted">Last updated {LEGAL_UPDATED}</p>
-      <div className="mt-6 space-y-6 text-[15px] leading-relaxed [&_h2]:mb-1.5 [&_h2]:text-lg [&_h2]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1">{children}</div>
-      {email && <p className="mt-8 border-t border-line pt-4 text-sm">Questions? Write to <a className="text-accent" href={`mailto:${email}`}>{email}</a>.</p>}
+      <div className="mt-6 space-y-6 text-[15px] leading-relaxed [&_h2]:mb-1.5 [&_h2]:text-lg [&_h2]:font-semibold [&_a]:underline [&_a]:underline-offset-2 [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1">{children}</div>
+      {email && <p className="mt-8 border-t border-line pt-4 text-sm">Questions? Write to <a className="text-accent underline underline-offset-2" href={`mailto:${email}`}>{email}</a>.</p>}
     </main>
   )
 }
