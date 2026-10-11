@@ -12,7 +12,7 @@ import { StudyPanel } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
 import { FindBar } from '@/components/notes/FindBar'
 import { EquationDialog, type EquationInit } from '@/components/notes/EquationDialog'
-import { ImportDialog } from '@/components/notes/ImportDialog'
+import { UploadDialog } from '@/components/notes/UploadDialog'
 import { findMatches, findKey, wrap, highlightInElement, clearElementHighlights } from '@/components/notes/findInNote'
 import type { EditMath } from '@/components/notes/extensions'
 import { autoWrapMath } from '@/components/notes/autoMath'
@@ -293,7 +293,7 @@ function NoteEditor({ id }: { id: string }) {
       {equation && (
         <EquationDialog key={equation.seq} open initial={equation.initial} onClose={() => setEquation(null)} onSave={saveEquation} />
       )}
-      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} courses={courses} onImported={notifyList} />
+      <UploadDialog open={importOpen} onClose={() => setImportOpen(false)} courses={courses} onImported={notifyList} />
     </div>
   )
 }

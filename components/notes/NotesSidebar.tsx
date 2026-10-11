@@ -7,7 +7,7 @@ import { useScanSaved } from '@/lib/scan/events'
 import { formatDistanceToNow } from 'date-fns'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ExportMenu } from '@/components/notes/ExportMenu'
-import { ImportDialog } from '@/components/notes/ImportDialog'
+import { UploadDialog } from '@/components/notes/UploadDialog'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
@@ -181,7 +181,7 @@ export function NotesSidebar() {
       </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
-      <ImportDialog open={importing} onClose={() => setImporting(false)} courses={courses} onImported={() => setVersion(v => v + 1)} />
+      <UploadDialog open={importing} onClose={() => setImporting(false)} courses={courses} onImported={() => setVersion(v => v + 1)} />
     </div>
   )
 }
