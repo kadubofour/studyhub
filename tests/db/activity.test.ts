@@ -44,7 +44,7 @@ describe('activity_by_day', () => {
       { chat_id: chat, role: 'assistant', content: 'hello', created_at: '2026-03-10T08:00:01Z' },
     ])
     await u.sb.from('lectures').insert({ title: 'L', duration_seconds: 60, mime: 'audio/webm', recorded_at: '2026-03-10T07:00:00Z' })
-    expect(on(await rows(u), '2026-03-10')).toEqual({ day: '2026-03-10', reviews: 0, quizzes: 1, focus_minutes: 35, tasks_done: 1, plan_sessions: 0, tutor_messages: 1, lectures: 1 })
+    expect(on(await rows(u), '2026-03-10')).toEqual({ day: '2026-03-10', reviews: 0, quizzes: 1, focus_minutes: 35, tasks_done: 1, plan_sessions: 0, tutor_messages: 1, lectures: 1, games: 0 })
   })
   it('counts study plan sessions on the day they were ticked', async () => {
     const u = await newUser()

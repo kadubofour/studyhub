@@ -1,7 +1,7 @@
 import { addDaysToKey, type DayKey } from '@/lib/dates'
 
 // What the student did on one local day (from activity_by_day)
-export type ActivityDay = { day: DayKey; reviews: number; quizzes: number; focus_minutes: number; tasks_done: number; plan_sessions: number; tutor_messages: number; lectures: number }
+export type ActivityDay = { day: DayKey; reviews: number; quizzes: number; focus_minutes: number; tasks_done: number; plan_sessions: number; tutor_messages: number; lectures: number; games: number }
 
 // XP per unit and how many units a day can pay for. A focus unit is 5 minutes.
 const RULES = {
@@ -12,6 +12,7 @@ const RULES = {
   plans: { xp: 8, cap: 8 },
   tutor: { xp: 2, cap: 10 },
   lectures: { xp: 15, cap: 2 },
+  games: { xp: 8, cap: 3 },
 }
 const BONUS = 20
 const LEVEL_STEP = 50
@@ -29,7 +30,7 @@ const allMet = (a: ActivityDay) => GOALS.every(g => goalValue(a)[g.key] >= g.tar
 
 export function dayXp(a: ActivityDay): number {
   const xp = paid(a.reviews, RULES.reviews) + paid(a.quizzes, RULES.quizzes) + paid(Math.floor(a.focus_minutes / 5), RULES.focus)
-    + paid(a.tasks_done, RULES.tasks) + paid(a.plan_sessions, RULES.plans) + paid(a.tutor_messages, RULES.tutor) + paid(a.lectures, RULES.lectures)
+    + paid(a.tasks_done, RULES.tasks) + paid(a.plan_sessions, RULES.plans) + paid(a.tutor_messages, RULES.tutor) + paid(a.lectures, RULES.lectures) + paid(a.games, RULES.games)
   return xp + (allMet(a) ? BONUS : 0)
 }
 
