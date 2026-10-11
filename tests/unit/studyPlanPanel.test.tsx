@@ -37,6 +37,10 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Study plan panel', () => {
+  it('waits until a new exam is saved before offering a plan for it', async () => {
+    await open([exam({ id: 'temp-123' })])
+    expect(screen.queryByRole('button', { name: /Make a study plan/ })).toBeNull()
+  })
   it('offers to make a plan for an upcoming exam, and saves it', async () => {
     await open()
     fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Midterm' }))

@@ -57,7 +57,7 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
   // The earliest upcoming dated exam of each course that has no plan
   const offers = courses.flatMap(c => {
     if (planned.has(c.id)) return []
-    const next = tasks.filter(t => t.type === 'exam' && t.course_id === c.id && t.due_at && new Date(t.due_at).getTime() > now && !t.done_at)
+    const next = tasks.filter(t => t.type === 'exam' && !t.id.startsWith('temp-') && t.course_id === c.id && t.due_at && new Date(t.due_at).getTime() > now && !t.done_at)
       .sort((a, b) => a.due_at!.localeCompare(b.due_at!))[0]
     return next ? [next] : []
   })
