@@ -26,8 +26,8 @@ const release = (p?: ScanPage) => { if (p?.preview) URL.revokeObjectURL(p.previe
 
 // Scan: add pages → reading → review, then save. The result type is preset by where Scan was
 // opened and can be changed. Nothing is saved until the student presses Save in the review.
-export function ScanDialog({ open, onClose, initialTarget, onSaved }: {
-  open: boolean; onClose: () => void; initialTarget: ScanTarget; onSaved?: () => void
+export function ScanDialog({ open, onClose, initialTarget, onSaved, initialFiles }: {
+  open: boolean; onClose: () => void; initialTarget: ScanTarget; onSaved?: () => void; initialFiles?: File[]
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -49,6 +49,13 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved }: {
   const n = pageCount(pages)
 
   useEffect(() => { if (open) listCourses(supabase()).then(setCourses).catch(() => {}) }, [open])
+  // Photos picked in Upload arrive with the dialog, so the student does not pick them again
+  useEffect(() => {
+    if (!open || !initialFiles?.length) return
+    let live = true
+    addFiles([], initialFiles, countPdfPagesInBrowser).then(r => { if (live) { setPages(r.pages); setProblem(r.error ? { code: 'pages', message: r.error } : null) } })
+    return () => { live = false }
+  }, [open, initialFiles])
 
   function close() {
     abort.current?.abort()

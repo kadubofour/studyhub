@@ -26,7 +26,7 @@ describe('NoteMenuBar', () => {
     const a = setup()
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'File' })) })
     const menu = screen.getByRole('menu', { name: 'File' })
-    for (const name of ['New note', 'Import…', 'Export as Word', 'Export as PDF', 'Delete note']) {
+    for (const name of ['New note', 'Upload…', 'Export as Word', 'Export as PDF', 'Delete note']) {
       expect(menu.querySelector(`[role="menuitem"]`) && screen.getByRole('menuitem', { name })).toBeTruthy()
     }
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Export as Word' })) })

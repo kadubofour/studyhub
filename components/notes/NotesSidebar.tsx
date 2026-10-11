@@ -7,7 +7,7 @@ import { useScanSaved } from '@/lib/scan/events'
 import { formatDistanceToNow } from 'date-fns'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ExportMenu } from '@/components/notes/ExportMenu'
-import { ImportDialog } from '@/components/notes/ImportDialog'
+import { requestUpload } from '@/lib/scan/events'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
@@ -31,7 +31,6 @@ export function NotesSidebar() {
   const [version, setVersion] = useState(0)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
-  const [importing, setImporting] = useState(false)
   // Scan (in the app's sidebar) saved a note: refresh the list
   useScanSaved(() => setVersion(v => v + 1))
   const confirm = useConfirm()
@@ -116,7 +115,7 @@ export function NotesSidebar() {
             </>
           ) : (
             <>
-              <button className="btn" onClick={() => setImporting(true)}><Upload size={14} aria-hidden />Import</button>
+              <button className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
               {!empty && <button className="btn" onClick={() => setSelecting(true)}><CheckSquare size={14} aria-hidden />Select</button>}
               {!empty && <ExportMenu label="Export all" fileName="Studyhub notes" />}
               <button className="btn-primary" onClick={create}><Plus size={14} aria-hidden />Note</button>
@@ -141,7 +140,7 @@ export function NotesSidebar() {
           <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"><NotebookPen size={22} aria-hidden /></span>
           <p className="max-w-sm text-sm text-muted">Write lecture notes, summaries and formulas, or import a Word document or PDF.</p>
           <div className="flex gap-2">
-            <button className="btn" onClick={() => setImporting(true)}><Upload size={14} aria-hidden />Import</button>
+            <button className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
             <button className="btn-primary" onClick={create}>Write your first note</button>
           </div>
         </div>
@@ -181,7 +180,6 @@ export function NotesSidebar() {
       </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
-      <ImportDialog open={importing} onClose={() => setImporting(false)} courses={courses} onImported={() => setVersion(v => v + 1)} />
     </div>
   )
 }

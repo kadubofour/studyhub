@@ -6,15 +6,16 @@ import { CardsTab } from './CardsTab'
 import { QuizTab } from './QuizTab'
 import { freeAllowanceText, usePlan } from '@/components/billing/usePlan'
 
-type Tab = 'summary' | 'cards' | 'quiz'
+export type StudyTab = 'summary' | 'cards' | 'quiz'
+type Tab = StudyTab
 const TABS: [Tab, string][] = [['summary', 'Summary'], ['cards', 'Cards'], ['quiz', 'Quiz']]
 
 // Beside the note on wide screens, a sheet from the bottom on phones
-export function StudyPanel({ note, onClose, prepare, applyContent }: {
+export function StudyPanel({ note, onClose, prepare, applyContent, initialTab = 'summary' }: {
   note: { id: string; title: string; content_md: string }
-  onClose: () => void; prepare: () => Promise<void>; applyContent: (update: (current: string) => string) => void
+  onClose: () => void; prepare: () => Promise<void>; applyContent: (update: (current: string) => string) => void; initialTab?: StudyTab
 }) {
-  const [tab, setTab] = useState<Tab>('summary')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const plan = usePlan()
   return (
     <aside aria-label="Study" className="no-print fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto rounded-t-2xl border border-line bg-raised p-4 shadow-lg md:inset-x-auto md:bottom-0 md:right-0 md:top-[49px] md:max-h-none md:w-[360px] md:rounded-none md:border-y-0 md:border-r-0">

@@ -6,6 +6,32 @@ import { useEffect, useRef } from 'react'
 export const SCAN_SAVED = 'studyhub:scan-saved'
 export const announceScanSaved = () => { window.dispatchEvent(new Event(SCAN_SAVED)) }
 
+// Any page can ask the app to open Scan (the Upload dialog does, for a photo)
+export const OPEN_SCAN = 'studyhub:open-scan'
+export const requestScan = (files?: File[]) => { window.dispatchEvent(new CustomEvent(OPEN_SCAN, { detail: files })) }
+export function useOpenScan(open: (files?: File[]) => void) {
+  const latest = useRef(open)
+  useEffect(() => { latest.current = open })
+  useEffect(() => {
+    const heard = (e: Event) => latest.current((e as CustomEvent<File[] | undefined>).detail)
+    window.addEventListener(OPEN_SCAN, heard)
+    return () => window.removeEventListener(OPEN_SCAN, heard)
+  }, [])
+}
+
+// Same for Upload: any page can ask the app to open the upload dialog
+export const OPEN_UPLOAD = 'studyhub:open-upload'
+export const requestUpload = () => { window.dispatchEvent(new Event(OPEN_UPLOAD)) }
+export function useOpenUpload(open: () => void) {
+  const latest = useRef(open)
+  useEffect(() => { latest.current = open })
+  useEffect(() => {
+    const heard = () => latest.current()
+    window.addEventListener(OPEN_UPLOAD, heard)
+    return () => window.removeEventListener(OPEN_UPLOAD, heard)
+  }, [])
+}
+
 export function useScanSaved(reload: () => void) {
   const latest = useRef(reload)
   useEffect(() => { latest.current = reload })

@@ -9,8 +9,8 @@ vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/components/scan/ScanDialog', () => ({
-  ScanDialog: (p: { initialTarget: string; onSaved?: () => void; onClose: () => void }) => (
-    <div role="dialog">scan {p.initialTarget}<button onClick={p.onSaved}>saved</button><button onClick={p.onClose}>close</button></div>
+  ScanDialog: (p: { initialTarget: string; initialFiles?: File[]; onSaved?: () => void; onClose: () => void }) => (
+    <div role="dialog">scan {p.initialTarget} files {p.initialFiles?.length ?? 0}<button onClick={p.onSaved}>saved</button><button onClick={p.onClose}>close</button></div>
   ),
 }))
 
@@ -72,7 +72,45 @@ describe('Scan in the app shell', () => {
     const names = (g: HTMLElement) => [...g.querySelectorAll('a, button')].map(x => x.textContent)
     expect(side.querySelector('a')!.textContent).toBe('Home')
     expect(names(within(side).getByRole('group', { name: 'Plan' }))).toEqual(['Planner', 'Focus', 'Progress'])
-    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Notes', 'Lectures', 'Flashcards', 'Tutor', 'Scan'])
+    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Notes', 'Lectures', 'Flashcards', 'Tutor', 'Upload', 'Scan'])
+  })
+
+  it('has an Upload button in the sidebar that opens the upload dialog from any page', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+    path = '/flashcards'
+    renderShell()
+    expect(document.querySelector('dialog[open]')).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Upload' })) })
+    expect(screen.getByRole('heading', { name: 'Upload material' })).toBeTruthy()
+  })
+
+  it('opens Upload when another part of the app asks for it, such as the Notes page', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+    path = '/notes'
+    renderShell()
+    await act(async () => { window.dispatchEvent(new Event('studyhub:open-upload')) })
+    expect(document.querySelector('dialog[open]')?.textContent).toContain('Upload material')
+  })
+
+  it('opens Scan when another part of the app asks for it', async () => {
+    path = '/notes'
+    renderShell()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await act(async () => { window.dispatchEvent(new Event('studyhub:open-scan')) })
+    expect(screen.getByRole('dialog').textContent).toContain('scan note')
+  })
+
+  it('opens Scan with the photos it was asked to read, and without them the next time', async () => {
+    path = '/notes'
+    renderShell()
+    const photo = new File(['x'], 'board.jpg', { type: 'image/jpeg' })
+    await act(async () => { window.dispatchEvent(new CustomEvent('studyhub:open-scan', { detail: [photo] })) })
+    expect(screen.getByRole('dialog').textContent).toContain('files 1')
+    fireEvent.click(screen.getByRole('button', { name: 'close' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Scan' })[0])
+    expect(screen.getByRole('dialog').textContent).toContain('files 0')
   })
 
   it('has Tutor in the sidebar and the phone tab bar', () => {

@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
-  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare,
+  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload,
 } from 'lucide-react'
 import { ScanDialog } from '@/components/scan/ScanDialog'
-import { announceScanSaved } from '@/lib/scan/events'
+import { UploadMaterial } from '@/components/notes/UploadMaterial'
+import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
 import type { ScanTarget } from '@/lib/ai/scan'
 import { useTheme } from 'next-themes'
 import { OfflineBanner } from './OfflineBanner'
@@ -62,6 +63,10 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const { profile, setProfile } = useProfile()
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
   const [scanning, setScanning] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
+  useOpenScan(files => { setScanFiles(files); setScanning(true) })
+  useOpenUpload(() => setUploading(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const dark = mounted && resolvedTheme === 'dark'
@@ -114,10 +119,16 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 <p id={`nav-${g.label}`} className="section-label !mb-1 px-2.5">{g.label}</p>
                 {g.items.map(link)}
                 {g.scan && (
-                  <button type="button" onClick={() => setScanning(true)}
-                    className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
-                    <ScanLine size={17} aria-hidden />Scan
-                  </button>
+                  <>
+                    <button type="button" onClick={() => setUploading(true)}
+                      className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                      <Upload size={17} aria-hidden />Upload
+                    </button>
+                    <button type="button" onClick={() => { setScanFiles(undefined); setScanning(true) }}
+                      className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                      <ScanLine size={17} aria-hidden />Scan
+                    </button>
+                  </>
                 )}
               </div>
             ))}
@@ -158,7 +169,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           ))}
         </nav>
       )}
-      {scanning && <ScanDialog open onClose={() => setScanning(false)} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
+      <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
+      {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>
   )
 }
