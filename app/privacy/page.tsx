@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { LegalPage } from '@/components/legal/LegalPage'
 
-export const metadata: Metadata = { title: 'Privacy · Studyhub', description: 'What Studyhub keeps, who else handles it, and how to take it out or delete it.' }
+export const metadata: Metadata = { title: 'Privacy', description: 'What Studyhub keeps, who else handles it, and how to take it out or delete it.' }
 
 export default function PrivacyPage() {
   return (

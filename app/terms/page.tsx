@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { LegalPage } from '@/components/legal/LegalPage'
 
-export const metadata: Metadata = { title: 'Terms · Studyhub', description: 'The rules for using Studyhub.' }
+export const metadata: Metadata = { title: 'Terms', description: 'The rules for using Studyhub.' }
 
 export default function TermsPage() {
   return (

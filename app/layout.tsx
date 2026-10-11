@@ -11,7 +11,13 @@ const lora = Lora({ subsets: ['latin'], variable: '--font-lora', display: 'swap'
 const atkinson = Atkinson_Hyperlegible({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-atkinson', display: 'swap', preload: false })
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap', preload: false })
 
-export const metadata: Metadata = { title: 'Studyhub', description: 'A calm study hub for students' }
+const description = 'A calm study hub for students: planner, notes, flashcards, lectures and an AI tutor that works from your own material.'
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  title: { default: 'Studyhub', template: '%s · Studyhub' },
+  description,
+  openGraph: { title: 'Studyhub', description, type: 'website', siteName: 'Studyhub' },
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
