@@ -107,10 +107,46 @@ describe('TopicResources', () => {
     await click('Find resources')
     expect(screen.getByRole('alert').textContent).toContain('Could not save')
   })
-  it('says so when the saved links could not be loaded', async () => {
+  it('says so when the saved links could not be loaded, shows no empty-list claim, and lets the student retry', async () => {
     loadFails = true
     await open()
     expect(screen.getByRole('alert').textContent).toContain('Could not load')
+    expect(screen.queryByText('No links yet.')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Find resources' })).toBeNull()
+    loadFails = false
+    saved = [row(yt)]
+    await click('Try again')
+    expect(screen.getByText('Krebs cycle explained')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+  it('tells the student how many links were added, in a status area that stays on the page', async () => {
+    await open()
+    const status = screen.getByRole('status')
+    await click('Find resources')
+    expect(screen.getByRole('status')).toBe(status)
+    expect(status.textContent).toBe('Added 2 links.')
+  })
+  it('says when a search found nothing new, and does not save', async () => {
+    saved = [row(yt, 1), row(kh, 2)]
+    await open()
+    await click('Find more')
+    expect(screen.getByRole('status').textContent).toBe('No new links this time.')
+    expect(saveResources).not.toHaveBeenCalled()
+  })
+  it('treats the same page written differently as already saved', async () => {
+    saved = [row({ url: 'https://www.khanacademy.org/krebs/', title: 'Krebs on Khan', kind: 'article' })]
+    post = { ok: true, value: { resources: [{ url: 'https://khanacademy.org/krebs', title: 'Krebs on Khan', kind: 'article' }] } }
+    await open()
+    await click('Find more')
+    expect(saveResources).not.toHaveBeenCalled()
+  })
+  it('keeps keyboard focus on the list after a link is removed', async () => {
+    saved = [row(yt, 1), row(kh, 2)]
+    await open()
+    await click('Remove Krebs cycle explained')
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove Krebs on Khan' }))
+    await click('Remove Krebs on Khan')
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Resources for Krebs cycle' }))
   })
   it('does not search when the topic already has 20 links', async () => {
     saved = many(20)

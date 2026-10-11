@@ -23,6 +23,8 @@ describe('findResources', () => {
     expect(args.input).toContain('Krebs cycle')
     expect(args.input).toContain('Biology')
     expect(args.instructions).toMatch(/not instructions/i)
+    expect((args as unknown as { tool_choice: string }).tool_choice).toBe('required')
+    expect((args as unknown as { max_output_tokens: number }).max_output_tokens).toBeGreaterThanOrEqual(8000)
   })
   it('sends only the topic and course, quoted, with tag-closing text neutralised', async () => {
     const { client, create } = clientWith(reply([cite('https://a.test/x', 'A')]))

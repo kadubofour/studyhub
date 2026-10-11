@@ -18,9 +18,10 @@ create policy "own rows" on public.topic_resources for all
 create function public.topic_resources_limit() returns trigger
 language plpgsql security invoker set search_path = '' as $$
 begin
-  if (select count(*) from public.topic_resources r where r.topic_id = new.topic_id) >= 20 then
+  perform 1 from public.topics where id = new.topic_id for update; -- two tabs adding at once take turns
+  if (select count(*) from public.topic_resources r where r.topic_id = new.topic_id and r.id <> new.id) >= 20 then
     raise exception 'A topic can keep at most 20 links' using errcode = '23514';
   end if;
   return new;
 end $$;
-create trigger topic_resources_limit before insert on public.topic_resources for each row execute function public.topic_resources_limit();
+create trigger topic_resources_limit before insert or update of topic_id on public.topic_resources for each row execute function public.topic_resources_limit();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cleanResources, kindOf, MAX_FOUND } from '@/lib/resources/clean'
+import { cleanResources, identityOf, kindOf, MAX_FOUND } from '@/lib/resources/clean'
 
 const c = (url: string, title = 'A title') => ({ url, title })
 
@@ -45,6 +45,18 @@ describe('cleanResources', () => {
     expect(out[0].title).toBe('site.test')
     expect(out[1].title).toBe('Krebs cycle')
     expect(out[2].title).toHaveLength(200)
+  })
+  it('stores a tidy address: trimmed, without tracking parameters or a fragment', () => {
+    const out = cleanResources([c('  https://example.org/a?utm_source=openai&si=abc&id=7#top ' + String.fromCharCode(10))])
+    expect(out[0].url).toBe('https://example.org/a?id=7')
+  })
+  it('gives the same identity to the same page written differently', () => {
+    expect(identityOf('https://www.x.org/a/')).toBe(identityOf('https://x.org/a?utm_source=y'))
+    expect(identityOf('https://x.org/a?id=1')).not.toBe(identityOf('https://x.org/a?id=2'))
+    expect(identityOf('nonsense')).toBeNull()
+  })
+  it('does not merge pages that differ by a parameter that merely starts like a tracking one', () => {
+    expect(cleanResources([c('https://x.test/p?ref_id=1'), c('https://x.test/p?ref_id=2')])).toHaveLength(2)
   })
   it('drops addresses that are too long for the database', () => {
     expect(cleanResources([c('https://x.test/' + 'a'.repeat(500))])).toEqual([])

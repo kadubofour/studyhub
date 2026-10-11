@@ -3,7 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { aiErrorResponse, runAiAction } from '@/lib/ai/run'
 import { RESOURCES_COST, findResources } from '@/lib/ai/resources'
 
-export const maxDuration = 60
+export const maxDuration = 120
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // POST { topicId } → { resources: [{ url, title, kind }] }. Searches the web for the student's own topic;

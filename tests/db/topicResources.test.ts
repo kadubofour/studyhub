@@ -35,6 +35,14 @@ describe('topic_resources', () => {
     expect((await u.sb.from('topic_resources').insert(rows)).error).toBeNull()
     expect((await add(u, t, { url: 'https://x.test/21' })).error).not.toBeNull()
   })
+  it('does not let a link be moved into a topic that is already full', async () => {
+    const u = await newUser()
+    const full = await topic(u), other = await topic(u)
+    await u.sb.from('topic_resources').insert(Array.from({ length: 20 }, (_, i) => ({ topic_id: full, url: `https://x.test/${i}`, title: `T${i}`, kind: 'article' })))
+    await add(u, other, { url: 'https://x.test/moved' })
+    const moved = await u.sb.from('topic_resources').update({ topic_id: full }).eq('url', 'https://x.test/moved')
+    expect(moved.error).not.toBeNull()
+  })
   it('goes with its topic', async () => {
     const u = await newUser(), t = await topic(u)
     await add(u, t)
