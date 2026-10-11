@@ -5,7 +5,7 @@ import { DailyGoalsCard } from '@/components/xp/DailyGoalsCard'
 import { summarize, type ActivityDay } from '@/lib/xp/rules'
 
 const day = (over: Partial<ActivityDay> = {}): ActivityDay =>
-  ({ day: '2026-03-10', reviews: 0, quizzes: 0, focus_minutes: 0, tasks_done: 0, plan_sessions: 0, tutor_messages: 0, lectures: 0, ...over })
+  ({ day: '2026-03-10', reviews: 0, quizzes: 0, focus_minutes: 0, tasks_done: 0, plan_sessions: 0, tutor_messages: 0, lectures: 0, games: 0, ...over })
 const show = (d: Partial<ActivityDay>[]) => render(<DailyGoalsCard xp={summarize(d.map(x => day(x)), '2026-03-10')} />)
 afterEach(cleanup)
 

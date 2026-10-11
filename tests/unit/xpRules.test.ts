@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { dayXp, levelInfo, summarize, GOALS, type ActivityDay } from '@/lib/xp/rules'
 
 const day = (d: string, over: Partial<ActivityDay> = {}): ActivityDay =>
-  ({ day: d, reviews: 0, quizzes: 0, focus_minutes: 0, tasks_done: 0, plan_sessions: 0, tutor_messages: 0, lectures: 0, ...over })
+  ({ day: d, reviews: 0, quizzes: 0, focus_minutes: 0, tasks_done: 0, plan_sessions: 0, tutor_messages: 0, lectures: 0, games: 0, ...over })
 
 describe('dayXp', () => {
   it('pays each kind at its rate', () => {
@@ -13,6 +13,7 @@ describe('dayXp', () => {
     expect(dayXp(day('d', { plan_sessions: 2 }))).toBe(16)
     expect(dayXp(day('d', { tutor_messages: 4 }))).toBe(8)
     expect(dayXp(day('d', { lectures: 1 }))).toBe(15)
+    expect(dayXp(day('d', { games: 2 }))).toBe(16)
   })
   it('stops paying past each daily cap', () => {
     expect(dayXp(day('d', { reviews: 500 }))).toBe(50)
@@ -22,6 +23,7 @@ describe('dayXp', () => {
     expect(dayXp(day('d', { plan_sessions: 99 }))).toBe(64)
     expect(dayXp(day('d', { tutor_messages: 99 }))).toBe(20)
     expect(dayXp(day('d', { lectures: 9 }))).toBe(30)
+    expect(dayXp(day('d', { games: 9 }))).toBe(24)
   })
   it('adds the bonus only when all three goals are met', () => {
     expect(dayXp(day('d', { reviews: 10, focus_minutes: 25, quizzes: 1 }))).toBe(10 + 5 + 10 + 20)
@@ -82,6 +84,9 @@ describe('summarize', () => {
     expect(s.streak).toBe(1)
     expect(s.best).toBe(3)
     expect(summarize([day('2026-03-05', { reviews: 1 })], today).streak).toBe(0)
+  })
+  it('counts a day with only a game as active for the streak', () => {
+    expect(summarize([day('2026-03-09', { games: 1 })], today).streak).toBe(1)
   })
   it('ignores days with no points when counting the streak', () => {
     expect(summarize([day('2026-03-09', { focus_minutes: 4 })], today).streak).toBe(0)

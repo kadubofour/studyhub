@@ -5,7 +5,7 @@ import { XpCard } from '@/components/xp/XpCard'
 import { summarize, type ActivityDay } from '@/lib/xp/rules'
 
 const day = (d: string, over: Partial<ActivityDay> = {}): ActivityDay =>
-  ({ day: d, reviews: 0, quizzes: 0, focus_minutes: 0, tasks_done: 0, plan_sessions: 0, tutor_messages: 0, lectures: 0, ...over })
+  ({ day: d, reviews: 0, quizzes: 0, focus_minutes: 0, tasks_done: 0, plan_sessions: 0, tutor_messages: 0, lectures: 0, games: 0, ...over })
 afterEach(cleanup)
 
 describe('XpCard', () => {
