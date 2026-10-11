@@ -6,6 +6,7 @@ const createDeck = vi.fn(async (_sb: unknown, input: { name: string }) => ({ id:
 const createCards = vi.fn(async () => [])
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({ from: () => ({ select: () => ({ maybeSingle: async () => ({ data: null }), gte: async () => ({ data: [] }) }) }) }) }))
 vi.mock('@/lib/data/decks', () => ({ listDecksWithDue: async () => [{ id: 'd1', name: 'Biology', course_id: null, due: 0, total: 3 }], createDeck: (...a: [unknown, { name: string }]) => createDeck(...a) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/data/cards', () => ({ createCards: (...a: unknown[]) => createCards(...(a as [])) }))
 
 import { StudyPanel } from '@/components/notes/study/StudyPanel'
@@ -26,6 +27,18 @@ const setup = (over: Partial<{ content_md: string }> = {}) => {
   render(<ToastProvider><StudyPanel note={{ ...note, ...over }} onClose={() => {}} prepare={prepare} applyContent={applyContent} /></ToastProvider>)
   return { prepare, applyContent }
 }
+
+describe('StudyPanel — first tab', () => {
+  it('opens on the Summary tab unless told another', () => {
+    setup()
+    expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true')
+  })
+  it.each([['cards', 'Cards'], ['quiz', 'Quiz'], ['summary', 'Summary']] as const)('opens on the %s tab when asked', (initialTab, label) => {
+    const prepare = vi.fn(async () => {})
+    render(<ToastProvider><StudyPanel note={note} onClose={() => {}} prepare={prepare} applyContent={vi.fn()} initialTab={initialTab} /></ToastProvider>)
+    expect(screen.getByRole('tab', { name: label }).getAttribute('aria-selected')).toBe('true')
+  })
+})
 
 describe('StudyPanel — summary', () => {
   it('saves pending edits first, then puts the summary at the top of the note', async () => {

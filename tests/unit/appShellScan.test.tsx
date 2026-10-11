@@ -72,7 +72,17 @@ describe('Scan in the app shell', () => {
     const names = (g: HTMLElement) => [...g.querySelectorAll('a, button')].map(x => x.textContent)
     expect(side.querySelector('a')!.textContent).toBe('Home')
     expect(names(within(side).getByRole('group', { name: 'Plan' }))).toEqual(['Planner', 'Focus', 'Progress'])
-    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Notes', 'Lectures', 'Flashcards', 'Tutor', 'Scan'])
+    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Notes', 'Lectures', 'Flashcards', 'Tutor', 'Upload', 'Scan'])
+  })
+
+  it('has an Upload button in the sidebar that opens the upload dialog from any page', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+    path = '/flashcards'
+    renderShell()
+    expect(document.querySelector('dialog[open]')).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Upload' })) })
+    expect(screen.getByRole('heading', { name: 'Upload material' })).toBeTruthy()
   })
 
   it('has Tutor in the sidebar and the phone tab bar', () => {

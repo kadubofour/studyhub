@@ -37,7 +37,7 @@ export function NoteMenuBar({ actions: a, mode, reading, fullWidth, autoMath }: 
   const menus: { name: string; items: Entry[] }[] = [
     { name: 'File', items: [
       { kind: 'item', label: 'New note', icon: FilePlus2, run: a.newNote },
-      { kind: 'item', label: 'Import…', icon: FileUp, run: a.importNote },
+      { kind: 'item', label: 'Upload…', icon: FileUp, run: a.importNote },
       { kind: 'sep' },
       { kind: 'item', label: 'Export as Word', icon: FileText, run: a.exportWord },
       { kind: 'item', label: 'Export as PDF', icon: FileType2, run: a.exportPdf },

@@ -116,7 +116,7 @@ export function NotesSidebar() {
             </>
           ) : (
             <>
-              <button className="btn" onClick={() => setImporting(true)}><Upload size={14} aria-hidden />Import</button>
+              <button className="btn" onClick={() => setImporting(true)}><Upload size={14} aria-hidden />Upload</button>
               {!empty && <button className="btn" onClick={() => setSelecting(true)}><CheckSquare size={14} aria-hidden />Select</button>}
               {!empty && <ExportMenu label="Export all" fileName="Studyhub notes" />}
               <button className="btn-primary" onClick={create}><Plus size={14} aria-hidden />Note</button>
@@ -141,7 +141,7 @@ export function NotesSidebar() {
           <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"><NotebookPen size={22} aria-hidden /></span>
           <p className="max-w-sm text-sm text-muted">Write lecture notes, summaries and formulas, or import a Word document or PDF.</p>
           <div className="flex gap-2">
-            <button className="btn" onClick={() => setImporting(true)}><Upload size={14} aria-hidden />Import</button>
+            <button className="btn" onClick={() => setImporting(true)}><Upload size={14} aria-hidden />Upload</button>
             <button className="btn-primary" onClick={create}>Write your first note</button>
           </div>
         </div>
