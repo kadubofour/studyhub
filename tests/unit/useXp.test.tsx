@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, cleanup } from '@testing-library/react'
+import { renderHook, waitFor, cleanup, act } from '@testing-library/react'
 
 let rows: unknown[] = []
 let fails = false
@@ -25,6 +25,18 @@ describe('useXp', () => {
     fails = true
     const { result } = renderHook(() => useXp())
     await waitFor(() => expect(seen).toHaveLength(1))
+    await act(async () => {})
     expect(result.current.xp).toBeNull()
+  })
+  it('goes back to empty when a later reload fails, and reloads when the key changes', async () => {
+    const { result, rerender } = renderHook(({ k }) => useXp(k), { initialProps: { k: 0 } })
+    await waitFor(() => expect(result.current.xp).not.toBeNull())
+    fails = true
+    await act(async () => { result.current.reload() })
+    await waitFor(() => expect(result.current.xp).toBeNull())
+    fails = false
+    rerender({ k: 25 })
+    await waitFor(() => expect(result.current.xp).not.toBeNull())
+    expect(seen).toHaveLength(3)
   })
 })

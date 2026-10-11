@@ -44,9 +44,9 @@ export default function HomePage() {
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [due, setDue] = useState(0)
   const [week, setWeek] = useState<Map<string, number>>(new Map())
-  const plans = usePlans()
+  const { xp, reload: reloadXp } = useXp(focus.todayMinutes)
+  const plans = usePlans(reloadXp)
   const warmup = useWarmup()
-  const { xp, reload: reloadXp } = useXp()
 
   useEffect(() => {
     const sb = supabase()

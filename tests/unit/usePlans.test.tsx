@@ -43,6 +43,14 @@ describe('usePlans', () => {
       { id: 'b', topic_id: 't2', kind: 'learn', minutes: 25, done_at: null },
     ])
   })
+  it('tells the caller once a tick is saved', async () => {
+    const onSaved = vi.fn()
+    const h = renderHook(() => usePlans(onSaved), { wrapper })
+    await waitFor(() => expect(h.result.current.views).not.toBeNull())
+    expect(onSaved).not.toHaveBeenCalled()
+    await act(async () => { h.result.current.setDone('p1', 'a', true) })
+    expect(onSaved).toHaveBeenCalledTimes(1)
+  })
   it('unticking clears it', async () => {
     views = [view([session('a', { done_at: '2026-10-12T10:00:00Z' })])]
     const h = await open()

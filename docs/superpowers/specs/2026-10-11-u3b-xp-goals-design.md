@@ -26,7 +26,7 @@ ticked, today's XP, the level and the streak; Progress shows the level, total XP
 
 New migration `20261019000000_activity.sql`: `activity_by_day(p_tz text)` (security invoker, so only the
 student's own rows): one row per local day that has any activity, with the day and these counts: `reviews`,
-`quiz_attempts` (finished), `focus_minutes`, `tasks_done`, `plan_sessions` (sessions ticked in study plan
+`quizzes` (finished attempts), `focus_minutes`, `tasks_done`, `plan_sessions` (sessions ticked in study plan
 days, by the day they were ticked), `tutor_messages` (the student's own), `lectures` (recorded). Days come from
 each record's own timestamp converted to `p_tz`.
 
