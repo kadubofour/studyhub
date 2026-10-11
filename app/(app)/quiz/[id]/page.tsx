@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -16,12 +16,16 @@ export default function QuizPage() {
   const [attempt, setAttempt] = useState<QuizAttempt | null>(null)
   const [previous, setPrevious] = useState<QuizAttempt | null>(null)
 
+  // Strict mode runs the effect twice; both runs share one load so only one attempt is ever started
+  const boot = useRef<{ id: string; run: Promise<{ q: Quiz; a: QuizAttempt }> } | null>(null)
   useEffect(() => {
+    let live = true
     const sb = supabase()
-    getQuiz(sb, id).then(async q => {
-      setQuiz(q)
-      setAttempt((await getOpenAttempt(sb, q.id)) ?? (await startAttempt(sb, q))) // resume or start
-    }).catch(() => router.replace('/notes'))
+    if (boot.current?.id !== id) {
+      boot.current = { id, run: getQuiz(sb, id).then(async q => ({ q, a: (await getOpenAttempt(sb, q.id)) ?? (await startAttempt(sb, q)) })) } // resume or start
+    }
+    boot.current.run.then(({ q, a }) => { if (live) { setQuiz(q); setAttempt(a) } }).catch(() => { if (live) router.replace('/notes') })
+    return () => { live = false }
   }, [id, router])
 
   async function finished(a: QuizAttempt) {
