@@ -1,0 +1,45 @@
+import { test, expect } from '@playwright/test'
+import { noteWithText, signUp } from './helpers'
+
+test('a new student starts at level 1; ticking a task and finishing a quiz earn XP on Home and Progress', async ({ page }) => {
+  await signUp(page)
+  await expect(page.getByText('Level 1 · 0 XP')).toBeVisible()
+  const goals = page.getByRole('list', { name: 'Daily goals' })
+  await expect(goals.getByText('Review 10 cards')).toBeVisible()
+  await expect(page.getByText('+0 XP today')).toBeVisible()
+
+  await page.getByLabel('Add a task').fill('Read chapter 4')
+  await page.getByLabel('Add a task').press('Enter')
+  await page.getByLabel('Mark Read chapter 4 done').check()
+  await expect(page.getByText('Level 1 · 5 XP')).toBeVisible()
+  await expect(page.getByText('+5 XP today')).toBeVisible()
+
+  await noteWithText(page)
+  await page.getByRole('button', { name: '✦ Study' }).click()
+  const study = page.getByRole('complementary', { name: 'Study' })
+  await study.getByRole('tab', { name: 'Quiz' }).click()
+  await study.getByRole('button', { name: '✦ New quiz' }).click()
+  await expect(page).toHaveURL(/\/quiz\/[0-9a-f-]{36}$/)
+  await page.getByRole('button', { name: 'Mitochondrial matrix' }).click()
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await page.getByRole('button', { name: 'True' }).click()
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await page.getByLabel('Your answer').fill('nadh')
+  await page.getByRole('button', { name: 'Check' }).click()
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await page.getByLabel('Your answer').fill('acetyl coenzyme A')
+  await page.getByRole('button', { name: 'Check' }).click()
+  await page.getByRole('button', { name: 'See results' }).click()
+  await expect(page.getByText('3 / 4')).toBeVisible()
+
+  await page.goto('/home')
+  const quizGoal = page.getByRole('listitem').filter({ hasText: 'Finish a quiz' })
+  await expect(quizGoal.getByText('Done')).toBeVisible()
+  await expect(page.getByText('Level 1 · 15 XP')).toBeVisible()
+
+  await page.goto('/progress')
+  const xp = page.locator('section', { has: page.getByRole('heading', { name: 'XP', exact: true }) })
+  await expect(xp.getByText('Level 1')).toBeVisible()
+  await expect(xp.getByText('15 XP', { exact: true })).toBeVisible()
+  await expect(xp.getByText('15 of 50 XP to level 2')).toBeVisible()
+})

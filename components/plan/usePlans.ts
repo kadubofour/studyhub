@@ -10,7 +10,7 @@ import type { StoredSession } from '@/lib/plan/types'
 const stored = (s: SessionView): StoredSession => ({ id: s.id, topic_id: s.topic_id, kind: s.kind, minutes: s.minutes, done_at: s.done_at })
 
 // The student's active study plans with today's sessions. Ticking a session saves the day's list straight away.
-export function usePlans() {
+export function usePlans(onSaved?: () => void) {
   const { profile } = useProfile()
   const save = useSaver()
   const tz = profile.timezone
@@ -40,7 +40,7 @@ export function usePlans() {
     save(
       () => set(stamp),
       () => set(before.done_at),
-      () => saveDaySessions(supabase(), dayId, (latest.current?.find(v => v.plan.id === planId)?.today ?? []).map(stored)),
+      async () => { await saveDaySessions(supabase(), dayId, (latest.current?.find(v => v.plan.id === planId)?.today ?? []).map(stored)); onSaved?.() },
     )
   }
   return { views, failed, reload, setDone }
