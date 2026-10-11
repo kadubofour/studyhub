@@ -12,6 +12,8 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
+import { DailyGoalsCard } from '@/components/xp/DailyGoalsCard'
+import { useXp } from '@/components/xp/useXp'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
@@ -44,6 +46,7 @@ export default function HomePage() {
   const [week, setWeek] = useState<Map<string, number>>(new Map())
   const plans = usePlans()
   const warmup = useWarmup()
+  const { xp, reload: reloadXp } = useXp()
 
   useEffect(() => {
     const sb = supabase()
@@ -77,7 +80,7 @@ export default function HomePage() {
     const wasDone = doneIds.has(t.id)
     // Explicit values (not a flip) so a late rollback or Retry can't leave UI and DB disagreeing
     const setDone = (done: boolean) => (s: Set<string>) => { const n = new Set(s); if (done) n.add(t.id); else n.delete(t.id); return n }
-    save(() => setDoneIds(setDone(!wasDone)), () => setDoneIds(setDone(wasDone)), () => setTaskDone(supabase(), t.id, !wasDone))
+    save(() => setDoneIds(setDone(!wasDone)), () => setDoneIds(setDone(wasDone)), async () => { await setTaskDone(supabase(), t.id, !wasDone); reloadXp() })
   }
 
   function add(input: NewTask) {
@@ -117,6 +120,7 @@ export default function HomePage() {
           </div>
           <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
         </div>
+        {xp && <p className="mt-2 text-sm opacity-90">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -135,6 +139,8 @@ export default function HomePage() {
           </div>
         </Link>
       </section>
+
+      {xp && <DailyGoalsCard xp={xp} />}
 
       <WeakSpotsCard courses={courses} />
 
