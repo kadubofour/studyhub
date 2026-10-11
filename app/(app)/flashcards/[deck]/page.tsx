@@ -82,6 +82,9 @@ export default function DeckPage() {
     <div>
       <PageHeader title={deck?.name ?? 'Deck'} actions={<>
         {due > 0 && <Link href={`/review?deck=${deckId}`} className="btn-primary">Review {due}</Link>}
+        {cards.length >= 4
+          ? <><Link href={`/flashcards/${deckId}/play?game=match`} className="btn">Match</Link><Link href={`/flashcards/${deckId}/play?game=speed`} className="btn">Speed round</Link></>
+          : <span className="self-center text-xs text-muted">Add 4 cards to play games</span>}
         <button className="btn-ghost text-danger" onClick={removeDeck}>Delete deck</button>
       </>} />
       <form onSubmit={add} className="card mb-4 grid gap-2 sm:grid-cols-2"
