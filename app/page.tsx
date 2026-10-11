@@ -36,6 +36,10 @@ export default function Landing() {
           </div>
         ))}
       </div>
+      <footer className="mx-auto mt-14 flex max-w-4xl justify-center gap-4 text-xs text-muted">
+        <Link href="/terms" className="hover:text-fg">Terms</Link>
+        <Link href="/privacy" className="hover:text-fg">Privacy</Link>
+      </footer>
     </main>
   )
 }

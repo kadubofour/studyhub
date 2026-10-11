@@ -23,6 +23,15 @@ async function fillSignup() {
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create account' })) })
 }
 
+describe('sign-up page', () => {
+  it('says that making an account means agreeing to the terms and privacy notice, with links', () => {
+    render(<SignupPage />)
+    expect(screen.getByText(/By creating an account you agree/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Terms' }).getAttribute('href')).toBe('/terms')
+    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe('/privacy')
+  })
+})
+
 describe('sign-up with email confirmation on', () => {
   it('asks the student to check their email, with a link back through the callback to onboarding', async () => {
     signUp.mockResolvedValue({ data: { user: { id: 'u' }, session: null }, error: null })
