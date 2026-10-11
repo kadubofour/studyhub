@@ -6,8 +6,9 @@ const adminRpc = vi.fn(async (...a: unknown[]) => ({ data: a[0] === 'ai_check' ?
 vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => ({ rpc: adminRpc }) }))
 let user: { id: string } | null
 let topic: object | null
-const q = (data: unknown) => { const o: Record<string, unknown> = {}; for (const k of ['select', 'eq']) o[k] = () => o; o.maybeSingle = async () => ({ data, error: null }); return o }
-const sb = { auth: { getUser: async () => ({ data: { user } }) }, from: () => q(topic) }
+const q = (data: unknown) => { const o: Record<string, unknown> = {}; for (const k of ['select', 'eq']) o[k] = () => o; o.maybeSingle = async () => ({ data, error: null }); o.then = (res: (v: unknown) => unknown) => res({ data, error: null }); return o }
+let savedUrls: { url: string }[] = []
+const sb = { auth: { getUser: async () => ({ data: { user } }) }, from: (t: string) => q(t === 'topic_resources' ? savedUrls : topic) }
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: async () => sb }))
 const create = vi.fn()
 vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/ai/openai')>()), openai: () => ({ responses: { create, parse: (...a: unknown[]) => parse(...a) } }) }))
@@ -20,11 +21,12 @@ const call = (body: object = { topicId: TOPIC }) => POST(new Request('http://x',
 const fns = () => adminRpc.mock.calls.map(c => c[0])
 const cited = (...urls: string[]) => ({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: 'x', annotations: urls.map(url => ({ type: 'url_citation', url, title: url })) }] }] })
 beforeEach(() => {
+  savedUrls = []; 
   user = { id: 'u1' }; topic = { id: TOPIC, name: 'Krebs cycle', courses: { name: 'Biology' } }; check = 'ok'
   adminRpc.mockClear(); create.mockReset(); searchVideos.mockClear(); parse.mockClear(); process.env.OPENAI_API_KEY = 'k'
   create.mockResolvedValue(cited('https://youtu.be/x', 'https://a.test/b'))
 })
-afterEach(() => { delete process.env.OPENAI_API_KEY; delete process.env.YOUTUBE_API_KEY; delete process.env.YOUTUBE_API_BASE })
+afterEach(() => { delete process.env.OPENAI_API_KEY; delete process.env.YOUTUBE_API_KEY; delete process.env.YOUTUBE_API_BASE; delete process.env.E2E_FAKE_AI })
 
 describe('POST /api/ai/resources', () => {
   it('returns the cited links and charges one action', async () => {
@@ -34,13 +36,27 @@ describe('POST /api/ai/resources', () => {
     expect(adminRpc).toHaveBeenCalledWith('ai_check', { p_user: 'u1', p_cost: 1 })
   })
   it('searches YouTube too when a key is set, with the key and base, and returns the AI-picked video', async () => {
-    process.env.YOUTUBE_API_KEY = 'yt-key'; process.env.YOUTUBE_API_BASE = 'https://yt.test/v3'
+    process.env.YOUTUBE_API_KEY = 'yt-key'; process.env.YOUTUBE_API_BASE = 'https://yt.test/v3'; process.env.E2E_FAKE_AI = '1'
     const res = await call()
     const body = await res.json() as { resources: { title: string; channel?: string }[] }
     expect(searchVideos).toHaveBeenCalledTimes(1)
     expect(searchVideos.mock.calls[0][0]).toBe('Krebs cycle Biology')
     expect(searchVideos.mock.calls[0][1]).toMatchObject({ key: 'yt-key', base: 'https://yt.test/v3' })
     expect(body.resources[0]).toMatchObject({ title: 'Krebs on YouTube', channel: 'Bio Chan' })
+  })
+  it('ignores a custom YouTube address outside E2E, so the key can not be sent elsewhere', async () => {
+    process.env.YOUTUBE_API_KEY = 'yt-key'; process.env.YOUTUBE_API_BASE = 'https://evil.test/v3'
+    await call()
+    expect((searchVideos.mock.calls[0][1] as { base?: string }).base).toBeUndefined()
+  })
+  it('does not offer videos the topic already has', async () => {
+    process.env.YOUTUBE_API_KEY = 'yt-key'
+    savedUrls = [{ url: 'https://youtu.be/yt1abcdefgh' }, { url: 'https://www.youtube.com/watch?v=yt1' }, { url: 'https://a.test/x' }]
+    searchVideos.mockResolvedValueOnce([{ id: 'yt1abcdefgh', title: 'Saved already', channel: 'C', seconds: 600, views: 1 }, { id: 'new11111111', title: 'Fresh one', channel: 'C', seconds: 600, views: 1 }])
+    parse.mockResolvedValueOnce({ status: 'completed', output: [], output_parsed: { ids: ['yt1abcdefgh', 'new11111111'] } })
+    const body = await (await call()).json() as { resources: { title: string }[] }
+    expect(body.resources.map(r => r.title)).toContain('Fresh one')
+    expect(body.resources.map(r => r.title)).not.toContain('Saved already')
   })
   it('does not call YouTube without a key', async () => {
     await call()
