@@ -21,18 +21,25 @@ import { updateProfile } from '@/lib/data/profile'
 import { ACCENTS, FONTS, lookOf } from '@/lib/appearance'
 import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 
-const NAV = [
-  { href: '/home', label: 'Home', icon: Home },
-  { href: '/planner', label: 'Planner', icon: CalendarDays },
-  { href: '/flashcards', label: 'Flashcards', icon: Layers },
-  { href: '/focus', label: 'Focus', icon: Timer },
-  { href: '/notes', label: 'Notes', icon: NotebookPen },
-  { href: '/lectures', label: 'Lectures', icon: Mic },
-  { href: '/tutor', label: 'Tutor', icon: MessagesSquare },
-  { href: '/progress', label: 'Progress', icon: BarChart3 },
+const HOME = { href: '/home', label: 'Home', icon: Home }
+// The sidebar groups what the student does: planning their time, and studying
+const GROUPS = [
+  { label: 'Plan', items: [
+    { href: '/planner', label: 'Planner', icon: CalendarDays },
+    { href: '/focus', label: 'Focus', icon: Timer },
+    { href: '/progress', label: 'Progress', icon: BarChart3 },
+  ] },
+  { label: 'Study', scan: true, items: [
+    { href: '/notes', label: 'Notes', icon: NotebookPen },
+    { href: '/lectures', label: 'Lectures', icon: Mic },
+    { href: '/flashcards', label: 'Flashcards', icon: Layers },
+    { href: '/tutor', label: 'Tutor', icon: MessagesSquare },
+  ] },
 ]
+const ALL = [HOME, ...GROUPS.flatMap(g => g.items)]
 // Phones: recording happens there, so Lectures takes Focus's place (Focus stays on Home)
-const MOBILE = NAV.filter(n => ['/home', '/planner', '/flashcards', '/notes', '/lectures', '/tutor'].includes(n.href))
+const MOBILE_ORDER = ['/home', '/planner', '/flashcards', '/notes', '/lectures', '/tutor']
+const MOBILE = MOBILE_ORDER.map(h => ALL.find(n => n.href === h)!)
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
 const scanTargetFor = (path: string): ScanTarget =>
@@ -71,6 +78,13 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }
   const active = (href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review'))
 
+  const link = ({ href, label, icon: Icon }: { href: string; label: string; icon: typeof Home }) => (
+    <Link key={href} href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
+      className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition ${active(href) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+      <Icon size={17} aria-hidden />{label}
+    </Link>
+  )
+
   const a = ACCENTS[profile.accent] ?? ACCENTS.blue
   const appearance = {
     '--a-solid': a.solid, '--a-text': a.text, '--a-text-dark': a.textDark, '--a-soft': a.soft,
@@ -93,17 +107,20 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
               <PanelLeftClose size={16} aria-hidden />
             </button>
           </div>
-          <nav className="flex flex-col gap-0.5">
-            {NAV.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
-                className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition ${active(href) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
-                <Icon size={17} aria-hidden />{label}
-              </Link>
+          <nav className="flex flex-col gap-4">
+            {link(HOME)}
+            {GROUPS.map(g => (
+              <div key={g.label} role="group" aria-labelledby={`nav-${g.label}`} className="flex flex-col gap-0.5">
+                <p id={`nav-${g.label}`} className="section-label !mb-1 px-2.5">{g.label}</p>
+                {g.items.map(link)}
+                {g.scan && (
+                  <button type="button" onClick={() => setScanning(true)}
+                    className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                    <ScanLine size={17} aria-hidden />Scan
+                  </button>
+                )}
+              </div>
             ))}
-            <button type="button" onClick={() => setScanning(true)}
-              className="mt-2 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
-              <ScanLine size={17} aria-hidden />Scan
-            </button>
           </nav>
           <div className="mt-auto flex flex-col gap-0.5">
             <button className="btn-ghost" onClick={toggleTheme}>

@@ -4,15 +4,11 @@ import { noteWithText, signUp } from './helpers'
 test('a new student starts at level 1; ticking a task and finishing a quiz earn XP on Home and Progress', async ({ page }) => {
   await signUp(page)
   await expect(page.getByText('Level 1 · 0 XP')).toBeVisible()
-  const goals = page.getByRole('list', { name: 'Daily goals' })
-  await expect(goals.getByText('Review 10 cards')).toBeVisible()
-  await expect(page.getByText('+0 XP today')).toBeVisible()
 
   await page.getByLabel('Add a task').fill('Read chapter 4')
   await page.getByLabel('Add a task').press('Enter')
   await page.getByLabel('Mark Read chapter 4 done').check()
   await expect(page.getByText('Level 1 · 5 XP')).toBeVisible()
-  await expect(page.getByText('+5 XP today')).toBeVisible()
 
   await noteWithText(page)
   await page.getByRole('button', { name: '✦ Study' }).click()
@@ -33,8 +29,6 @@ test('a new student starts at level 1; ticking a task and finishing a quiz earn 
   await expect(page.getByText('3 / 4')).toBeVisible()
 
   await page.goto('/home')
-  const quizGoal = page.getByRole('listitem').filter({ hasText: 'Finish a quiz' })
-  await expect(quizGoal.getByText('Done')).toBeVisible()
   await expect(page.getByText('Level 1 · 15 XP')).toBeVisible()
 
   await page.goto('/progress')

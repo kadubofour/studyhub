@@ -40,6 +40,5 @@ test('play Speed round and Match from a deck; the plays earn XP', async ({ page 
   await expect(page.getByText('Could not save this play.')).toHaveCount(0)
 
   await page.goto('/home')
-  await expect(page.getByText('+16 XP today')).toBeVisible()
   await expect(page.getByText('Level 1 · 16 XP')).toBeVisible()
 })

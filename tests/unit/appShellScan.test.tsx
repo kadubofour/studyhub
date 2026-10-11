@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 
 let path = '/planner'
@@ -63,6 +63,16 @@ describe('Scan in the app shell', () => {
     const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
     expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
     expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(1) // sidebar only
+  })
+
+  it('groups the sidebar: Home on its own, then Plan and Study, with Scan inside Study', () => {
+    path = '/home'
+    renderShell()
+    const side = screen.getAllByRole('navigation')[0]
+    const names = (g: HTMLElement) => [...g.querySelectorAll('a, button')].map(x => x.textContent)
+    expect(side.querySelector('a')!.textContent).toBe('Home')
+    expect(names(within(side).getByRole('group', { name: 'Plan' }))).toEqual(['Planner', 'Focus', 'Progress'])
+    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Notes', 'Lectures', 'Flashcards', 'Tutor', 'Scan'])
   })
 
   it('has Tutor in the sidebar and the phone tab bar', () => {
