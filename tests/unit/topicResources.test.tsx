@@ -2,8 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react'
 
-type Found = { url: string; title: string; kind: 'video' | 'article' }
-type R = Found & { id: string; topic_id: string }
+type Found = { url: string; title: string; kind: 'video' | 'article'; channel?: string; seconds?: number }
+type R = Found & { id: string; topic_id: string; channel?: string | null; duration_seconds?: number | null }
 let saved: R[]
 let post: { ok: true; value: { resources: Found[] } } | { ok: false; error: string; message: string }
 let loadFails = false
@@ -26,7 +26,7 @@ import { TopicResources } from '@/components/progress/TopicResources'
 
 const yt: Found = { url: 'https://www.youtube.com/watch?v=1', title: 'Krebs cycle explained', kind: 'video' }
 const kh: Found = { url: 'https://www.khanacademy.org/krebs', title: 'Krebs on Khan', kind: 'article' }
-const row = (f: Found, i = 1): R => ({ id: `r${i}`, topic_id: 't1', ...f })
+const row = (f: Found, i = 1): R => ({ id: `r${i}`, topic_id: 't1', channel: null, duration_seconds: null, ...f } as R)
 const many = (n: number): R[] => Array.from({ length: n }, (_, i) => row({ url: `https://x.test/${i}`, title: `T${i}`, kind: 'article' }, i))
 const open = async () => {
   await act(async () => { render(<TopicResources topicId="t1" topicName="Krebs cycle" />) })
@@ -64,6 +64,12 @@ describe('TopicResources', () => {
     expect(within(items[0]).getByText('youtube.com')).toBeTruthy()
     expect(within(items[1]).getByText('Article')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Find more' })).toBeTruthy()
+  })
+  it('shows the channel and length of a video', async () => {
+    saved = [{ ...row(yt), channel: 'Bio Channel', duration_seconds: 750 }]
+    await open()
+    expect(screen.getByText('Bio Channel')).toBeTruthy()
+    expect(screen.getByText('13 min')).toBeTruthy()
   })
   it('opens links in a new tab without handing over the opener', async () => {
     saved = [row(yt)]

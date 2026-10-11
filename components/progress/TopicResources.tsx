@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase/client'
 import { MAX_SAVED, listResources, removeResource, saveResources, type Resource } from '@/lib/data/resources'
 import { identityOf } from '@/lib/resources/clean'
 
-type Found = { url: string; title: string; kind: 'video' | 'article' }
+type Found = { url: string; title: string; kind: 'video' | 'article'; channel?: string; seconds?: number }
 const isWeb = (url: string) => /^https?:\/\//i.test(url)
 const siteOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, '') } catch { return '' } }
 const plural = (n: number) => `${n} link${n === 1 ? '' : 's'}`
@@ -98,7 +98,7 @@ export function TopicResources({ topicId, topicName }: { topicId: string; topicN
                     {i.kind === 'video' ? <PlayCircle size={15} className="mt-0.5 shrink-0 text-accent" aria-hidden /> : <FileText size={15} className="mt-0.5 shrink-0 text-muted" aria-hidden />}
                     <span className="min-w-0 flex-1">
                       {isWeb(i.url) ? <a href={i.url} target="_blank" rel="noopener noreferrer" className="break-words text-accent underline-offset-2 hover:underline">{i.title}</a> : <span className="break-words">{i.title}</span>}
-                      <span className="block text-xs text-muted"><span className="font-medium">{i.kind === 'video' ? 'Video' : 'Article'}</span> · <span>{siteOf(i.url)}</span></span>
+                      <span className="block text-xs text-muted"><span className="font-medium">{i.kind === 'video' ? 'Video' : 'Article'}</span> · <span>{siteOf(i.url)}</span>{i.channel && <> · <span>{i.channel}</span></>}{i.duration_seconds ? <> · <span>{Math.max(1, Math.round(i.duration_seconds / 60))} min</span></> : null}</span>
                     </span>
                     <button type="button" data-remove className="btn-ghost px-1" aria-label={`Remove ${i.title}`} onClick={() => { void remove(i, n) }}><X size={14} aria-hidden /></button>
                   </li>

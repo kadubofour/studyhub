@@ -32,19 +32,23 @@ test('find resources for a topic, keep them across a reload, and remove one', as
   await topics.getByRole('button', { name: 'Resources for Krebs cycle' }).click()
   await expect(topics.getByText('No links yet.')).toBeVisible()
   await topics.getByRole('button', { name: 'Find resources' }).click()
-  const video = topics.getByRole('link', { name: 'The Krebs cycle explained' })
+  const video = topics.getByRole('link', { name: 'Krebs cycle: full explanation' })
   await expect(video).toBeVisible()
   await expect(video).toHaveAttribute('target', '_blank')
+  await expect(topics.getByText('Bio Explained')).toBeVisible()
+  await expect(topics.getByText('12 min')).toBeVisible()
   await expect(topics.getByRole('link', { name: 'Krebs cycle on Khan Academy' })).toBeVisible()
+  await expect(topics.getByRole('link', { name: 'Krebs cycle in 60 seconds' })).toHaveCount(0) // too short for the video filter
+  await expect(topics.getByRole('link', { name: 'The Krebs cycle explained' })).toHaveCount(0) // the web search video is replaced
 
   await page.reload()
   await page.getByRole('region', { name: 'Topics' }).getByRole('button', { name: 'Resources for Krebs cycle' }).click()
-  await expect(page.getByRole('link', { name: 'The Krebs cycle explained' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Krebs cycle: full explanation' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Remove The Krebs cycle explained' }).click()
-  await expect(page.getByRole('link', { name: 'The Krebs cycle explained' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Remove Krebs cycle: full explanation' }).click()
+  await expect(page.getByRole('link', { name: 'Krebs cycle: full explanation' })).toHaveCount(0)
   await page.reload()
   await page.getByRole('region', { name: 'Topics' }).getByRole('button', { name: 'Resources for Krebs cycle' }).click()
   await expect(page.getByRole('link', { name: 'Krebs cycle on Khan Academy' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'The Krebs cycle explained' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Krebs cycle: full explanation' })).toHaveCount(0)
 })
