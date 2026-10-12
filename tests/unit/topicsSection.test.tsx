@@ -32,6 +32,10 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Topics section', () => {
+  it('links to the chosen course page', async () => {
+    await open()
+    expect(screen.getByRole('link', { name: 'Open course page' }).getAttribute('href')).toBe('/courses/c1')
+  })
   it('a course with no topics offers to draft them', async () => {
     await open()
     expect(screen.getByRole('button', { name: 'Draft topics' })).toBeTruthy()

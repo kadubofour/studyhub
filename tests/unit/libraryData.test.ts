@@ -45,6 +45,7 @@ describe('loadLibrary', () => {
     const by = Object.fromEntries(items.map(i => [`${i.kind}:${i.id}`, i]))
     expect(by['note:n1']).toMatchObject({ title: 'Krebs', course_id: 'bio', href: '/notes/n1', at: '2026-10-10T10:00:00Z' })
     expect(by['deck:d1']).toMatchObject({ title: 'Cells', course_id: null, href: '/flashcards/d1', meta: '3 cards · 2 due', at: '2026-10-09T10:00:00Z' })
+    expect(by['deck:d1'].due).toBe(2)
     expect(by['lecture:l1']).toMatchObject({ href: '/lectures/l1', meta: '45 min' })
     expect(by['chat:c1']).toMatchObject({ title: 'Matrix?', href: '/tutor/c1', at: '2026-10-06T11:00:00Z' })
     expect(items).toHaveLength(5)

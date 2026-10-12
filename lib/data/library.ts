@@ -21,7 +21,7 @@ export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<Librar
     ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, at: n.updated_at, meta: '', href: `/notes/${n.id}` })),
     ...decks.map(d => ({
       kind: 'deck' as const, id: d.id, title: d.name, course_id: d.course_id, at: d.created_at ?? '',
-      meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,
+      due: d.due, meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,
     })),
     ...lectures.map(l => ({ kind: 'lecture' as const, id: l.id, title: l.title, course_id: l.course_id, at: l.recorded_at, meta: `${Math.round(l.duration_seconds / 60)} min`, href: `/lectures/${l.id}` })),
     // A quiz follows its note; one whose note is gone has nowhere to belong and is left out
