@@ -133,11 +133,11 @@ describe('Profile page: what the student has done', () => {
     expect(within(tiles).getByText('Streak')).toBeTruthy() // what came from XP still shows
     expect(within(tiles).queryByText('Notes')).toBeNull()
   })
-  it('links each course to its place in the Library', async () => {
+  it('links each course to its course page', async () => {
     await open()
     const courses = screen.getByRole('list', { name: 'Your courses' })
-    expect(within(courses).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/library?course=bio')
-    expect(within(courses).getByRole('link', { name: 'Spanish' }).getAttribute('href')).toBe('/library?course=lang')
+    expect(within(courses).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/courses/bio')
+    expect(within(courses).getByRole('link', { name: 'Spanish' }).getAttribute('href')).toBe('/courses/lang')
   })
 })
 

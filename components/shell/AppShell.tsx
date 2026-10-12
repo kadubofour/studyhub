@@ -1,5 +1,5 @@
 'use client'
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -23,6 +23,9 @@ import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { ACCENTS, FONTS } from '@/lib/appearance'
 import { useLook } from '@/components/providers/useLook'
+import { useCoursesChanged } from '@/lib/course/events'
+import { listCourses } from '@/lib/data/courses'
+import type { Course } from '@/lib/types'
 import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 
 const HOME = { href: '/home', label: 'Home', icon: Home }
@@ -67,6 +70,15 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const { profile, setProfile } = useProfile()
   const look = useLook()
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
+  // The student's courses, one tap from anywhere; read again whenever one is added, renamed or deleted
+  const [courses, setCourses] = useState<Course[]>([])
+  const [coursesVersion, setCoursesVersion] = useState(0)
+  useCoursesChanged(() => setCoursesVersion(v => v + 1))
+  useEffect(() => {
+    let live = true
+    listCourses(supabase()).then(c => { if (live) setCourses(c) }).catch(() => {})
+    return () => { live = false }
+  }, [coursesVersion])
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
@@ -117,7 +129,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
               <PanelLeftClose size={16} aria-hidden />
             </button>
           </div>
-          <nav className="flex flex-col gap-4">
+          <nav className="flex min-h-0 flex-col gap-4 overflow-y-auto">
             {link(HOME)}
             {GROUPS.map(g => (
               <div key={g.label} role="group" aria-labelledby={`nav-${g.label}`} className="flex flex-col gap-0.5">
@@ -137,6 +149,17 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 )}
               </div>
             ))}
+            {courses.length > 0 && (
+              <div role="group" aria-labelledby="nav-Courses" className="flex flex-col gap-0.5">
+                <Link id="nav-Courses" href="/courses" onClick={e => guard(e, '/courses')} className="section-label !mb-1 px-2.5 hover:text-fg">Courses</Link>
+                {courses.map(c => (
+                  <Link key={c.id} href={`/courses/${c.id}`} onClick={e => guard(e, `/courses/${c.id}`)} aria-current={active(`/courses/${c.id}`) ? 'page' : undefined}
+                    className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm transition ${active(`/courses/${c.id}`) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                    <span aria-hidden className="size-2.5 shrink-0 rounded-[3px]" style={{ background: c.color }} /><span className="truncate">{c.name}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </nav>
           <div className="mt-auto flex flex-col gap-0.5">
             <Link href="/profile" onClick={e => guard(e, '/profile')} aria-current={active('/profile') ? 'page' : undefined}

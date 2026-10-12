@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine, FolderOpen, User } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -115,6 +115,7 @@ export default function HomePage() {
             <h1 className="mt-0.5 text-2xl font-semibold" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
           <div className="flex gap-1 md:hidden">
+            <Link href="/courses" aria-label="Courses" className="rounded-lg p-1.5 hover:bg-white/15"><BookOpen size={17} aria-hidden /></Link>
             <Link href="/library" aria-label="Library" className="rounded-lg p-1.5 hover:bg-white/15"><FolderOpen size={17} aria-hidden /></Link>
             <Link href="/profile" aria-label="Profile" className="rounded-lg p-1.5 hover:bg-white/15"><User size={17} aria-hidden /></Link>
             <Link href="/progress" aria-label="Progress" className="rounded-lg p-1.5 hover:bg-white/15"><BarChart3 size={17} aria-hidden /></Link>

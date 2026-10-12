@@ -171,7 +171,7 @@ export default function ProfilePage() {
           <ul aria-label="Your courses" className="flex flex-wrap gap-2">
             {courses.map(c => (
               <li key={c.id}>
-                <Link href={`/library?course=${c.id}`} className="inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-1.5 text-sm hover:bg-surface">
+                <Link href={`/courses/${c.id}`} className="inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-1.5 text-sm hover:bg-surface">
                   <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: c.color }} />{c.name}
                 </Link>
               </li>

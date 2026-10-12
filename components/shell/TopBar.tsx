@@ -17,7 +17,7 @@ import { useProgressChanged } from '@/lib/xp/events'
 
 const PAGES: [string, string][] = [
   ['/home', 'Home'], ['/planner', 'Planner'], ['/focus', 'Focus'], ['/progress', 'Progress'], ['/notes', 'Notes'], ['/lectures', 'Lectures'],
-  ['/flashcards', 'Flashcards'], ['/review', 'Review'], ['/tutor', 'Tutor'], ['/settings', 'Settings'], ['/plans', 'Plans'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses', 'Course'],
+  ['/flashcards', 'Flashcards'], ['/review', 'Review'], ['/tutor', 'Tutor'], ['/settings', 'Settings'], ['/plans', 'Plans'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses', 'Courses'],
 ]
 const pageName = (path: string) => PAGES.find(([p]) => path === p || path.startsWith(p + '/'))?.[1]
 const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium'
