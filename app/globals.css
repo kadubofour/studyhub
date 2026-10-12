@@ -51,15 +51,19 @@
 }
 /* The app sidebar (only that: the Study panel in a note is an aside too) is always the darker shade: charcoal on the light page,
    near-black on the dark one. Its own tokens re-colour everything inside it. */
-.app-root[data-look="classic"] .app-sidebar,
+/* Classic's sidebar is Classic's own warm neutral (the same family as its text colour #1F1F1D), so it sits in the theme instead of adding a blue. */
+.app-root[data-look="classic"] .app-sidebar {
+  background: #1F1F1D; --fg: #ECEBE8; --muted: #A8A7A1; --line: #3A3A37; --surface: #2A2A28; --raised: #353533;
+  --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --tile-a: #2A2A28; --tile-b: #2A2A28; --tile-c: #2A2A28;
+  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
+}
 .dark .app-root[data-look="paper"] .app-sidebar,
+.dark .app-root[data-look="classic"] .app-sidebar { background: #0D0D0C; --line: #262624; --surface: #1A1A19; --raised: #242422; }
 .app-root[data-look="vivid"] .app-sidebar {
   background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
   --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
   --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
 }
-.dark .app-root[data-look="classic"] .app-sidebar,
-.dark .app-root[data-look="paper"] .app-sidebar,
 .dark .app-root[data-look="vivid"] .app-sidebar { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #25252D; }
 /* Playful: thick outlines, flat colour, buttons that press down */
 .app-root[data-look="playful"] {

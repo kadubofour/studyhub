@@ -53,5 +53,5 @@ test('scan a timetable into tasks and classes, matching and creating courses', a
   await dialog.getByRole('button', { name: 'Save 3 items' }).click()
   await expect(page.getByText('Added 1 task and 2 classes.')).toBeVisible()
   await expect(page.getByText('Cell biology essay')).toBeVisible()
-  await expect(page.getByText('Chemistry').first()).toBeVisible()
+  await expect(page.getByRole('main').getByText('Chemistry').first()).toBeVisible()
 })

@@ -75,6 +75,27 @@ describe('Classic is the calm version of Vivid', () => {
     expect(css).toContain('.app-root[data-look="classic"] .app-sidebar')
     expect(css).toContain('.dark .app-root[data-look="classic"] .app-sidebar')
   })
+  describe('its sidebar takes the hue of Classic (warm neutral), not Vivid blue-grey', () => {
+    const light = block('.app-root[data-look="classic"] .app-sidebar')
+    const dark = block('.dark .app-root[data-look="classic"] .app-sidebar')
+    // the dark rule only changes some tokens; the rest are inherited from the light rule
+    const hex = (b: string, t: string) => (value(b, t) ?? value(light, t))!.toUpperCase()
+    // Classic's own fg is #1F1F1D: the sidebar background is that same neutral
+    it('is darker than the page in both modes and is a neutral, not a blue', () => {
+      for (const [b, page] of [[light, LOOKS.classic.light.bg], [dark, LOOKS.classic.dark.bg]] as const) {
+        expect(contrastRatio(hex(b, 'background'), '#000000')).toBeLessThan(contrastRatio(page, '#000000'))
+        const [r, g, bl] = [1, 3, 5].map(i => parseInt(hex(b, 'background').slice(i, i + 2), 16))
+        expect(bl - r, 'blue minus red').toBeLessThanOrEqual(2) // no blue tint
+        expect(r - bl, 'red minus blue').toBeLessThanOrEqual(6) // at most a warm hint
+      }
+    })
+    it.each([['light', light], ['dark', dark]] as const)('its text is readable on it (%s)', (_m, b) => {
+      for (const token of ['--fg', '--muted', '--danger', '--success']) expect(contrastRatio(hex(b, token), hex(b, 'background')), token).toBeGreaterThanOrEqual(4.5)
+    })
+    it('Paper in dark mode shares the dark one', () => {
+      expect(css).toContain('.dark .app-root[data-look="paper"] .app-sidebar,')
+    })
+  })
   it('has the rounded shapes and pill buttons, in the components layer', () => {
     const layer = css.slice(css.indexOf('/* Vivid shapes'), css.indexOf('.prose-note h1 {'))
     for (const sel of ['.card', '.tile', '.btn', 'input.input', '.hero']) expect(layer, sel).toContain(`.app-root[data-look="classic"] ${sel}`)

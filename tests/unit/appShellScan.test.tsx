@@ -9,6 +9,8 @@ vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({
 let theme = 'light'
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: theme, setTheme: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
+let courseList: { id: string; name: string; color: string }[] = []
+vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courseList }))
 vi.mock('@/components/shell/TopBar', () => ({ TopBar: (p: { sidebarHidden?: boolean }) => <header aria-label="Today at a glance">top bar {p.sidebarHidden ? 'sidebar hidden' : 'sidebar shown'}</header> }))
 vi.mock('@/components/scan/ScanDialog', () => ({
   ScanDialog: (p: { initialTarget: string; initialFiles?: File[]; onSaved?: () => void; onClose: () => void }) => (
@@ -19,6 +21,7 @@ vi.mock('@/components/scan/ScanDialog', () => ({
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { AppShell } from '@/components/shell/AppShell'
 import { SCAN_SAVED } from '@/lib/scan/events'
+import { announceCoursesChanged } from '@/lib/course/events'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { setRecording } from '@/lib/lectures/recordingGuard'
 
@@ -140,6 +143,35 @@ describe('Scan in the app shell', () => {
     dark.unmount(); theme = 'light'
     const light = render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
     expect(light.container.querySelector('.app-root')!.getAttribute('data-look')).toBe('paper')
+  })
+
+  it('lists the courses in the sidebar as links to their pages, and reads them again when they change', async () => {
+    path = '/home'
+    courseList = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }]
+    await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })
+    const group = screen.getByRole('group', { name: 'Courses' })
+    expect(within(group).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/courses/bio')
+    courseList = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }, { id: 'chem', name: 'Chemistry', color: '#BA7517' }]
+    await act(async () => { announceCoursesChanged() })
+    expect(within(screen.getByRole('group', { name: 'Courses' })).getByRole('link', { name: 'Chemistry' }).getAttribute('href')).toBe('/courses/chem')
+  })
+  it('marks the course being viewed', async () => {
+    path = '/courses/bio'
+    courseList = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }]
+    await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })
+    expect(within(screen.getByRole('group', { name: 'Courses' })).getByRole('link', { name: 'Biology' }).getAttribute('aria-current')).toBe('page')
+  })
+  it('marks Courses itself when the courses page is open', async () => {
+    path = '/courses'
+    courseList = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }]
+    await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })
+    const group = screen.getByRole('group', { name: 'Courses' })
+    expect(within(group).getByRole('link', { name: 'Courses' }).getAttribute('aria-current')).toBe('page')
+  })
+  it('has no Courses group before there is a course', async () => {
+    path = '/home'; courseList = []
+    await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })
+    expect(screen.queryByRole('group', { name: 'Courses' })).toBeNull()
   })
 
   it('marks the sidebar so the Vivid styles reach it and nothing else, and tells the top bar when the sidebar is hidden', () => {

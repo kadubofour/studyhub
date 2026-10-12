@@ -65,6 +65,6 @@ test('Classic has the dark sidebar and the top bar, like Vivid', async ({ page, 
   await expect(page.getByRole('banner', { name: 'Today at a glance' })).toBeVisible()
   if (!isMobile) {
     const side = await page.locator('.app-sidebar').evaluate(el => getComputedStyle(el).backgroundColor)
-    expect(side).toBe('rgb(31, 33, 39)') // #1F2127
+    expect(side).toBe('rgb(31, 31, 29)') // #1F1F1D, Classic's own neutral
   }
 })

@@ -229,7 +229,7 @@ function NoteEditor({ id }: { id: string }) {
     setMode: m => changeView(() => { setMode(m); setReading(false) }),
     toggleReading: () => changeView(() => setReading(r => !r)),
     toggleFullWidth: () => setFullWidth(w => !w),
-    // Same switch as Settings > Turn typed maths into equations
+    // Same switch as Profile > Preferences > Turn typed maths into equations
     toggleAutoMath: async () => {
       const on = !profile.auto_math
       setProfile(p => ({ ...p, auto_math: on }))

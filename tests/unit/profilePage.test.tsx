@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 import type { XpSummary } from '@/lib/xp/rules'
-import type { Stats } from '@/lib/profile/badges'
+import type { Stats } from '@/lib/profile/stats'
 
 const STATS: Stats = { notes: 12, decks: 3, cards: 80, lectures: 2, lecture_minutes: 95, quizzes_done: 5, focus_minutes: 330, reviews: 140, games: 1, tutor_messages: 4, courses: 2 }
 const base = { id: 'u1', display_name: 'Ama Mensah', school: 'University of Ghana', programme: 'Biology', avatar_color: '#3B5BDB', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'vivid', auto_math: true, onboarded: true } as Profile
@@ -64,15 +64,32 @@ describe('Profile page: who the student is', () => {
   })
 })
 
+describe('Profile page: preferences', () => {
+  it('holds the focus and time zone settings that used to be in Settings, without a second Name field', async () => {
+    await open()
+    expect(screen.getByRole('heading', { name: 'Preferences' })).toBeTruthy()
+    expect(screen.getByLabelText('Focus length (min)')).toBeTruthy()
+    expect(screen.getByLabelText('Time zone')).toBeTruthy()
+    expect(screen.queryAllByLabelText('Name')).toHaveLength(0) // Edit profile is closed, and the card has no Name
+  })
+})
+
+describe('Profile page: no badges', () => {
+  it('has no badges section', async () => {
+    await open()
+    expect(screen.queryByRole('list', { name: 'Badges' })).toBeNull()
+    expect(screen.queryByText(/badges earned/)).toBeNull()
+  })
+})
+
 describe('Profile page: when XP cannot be read', () => {
-  it('still shows the totals that were read, and does not show badges that need XP as locked', async () => {
+  it('still shows the totals that were read', async () => {
     xp = null
     await open()
     const tiles = screen.getByRole('list', { name: 'Study totals' })
     expect(within(tiles).getByText('Notes').closest('li')!.textContent).toContain('12')
     expect(within(tiles).queryByText('Level')).toBeNull()
     expect(within(tiles).queryByText('Streak')).toBeNull()
-    expect(screen.queryByRole('list', { name: 'Badges' })).toBeNull()
   })
 })
 
@@ -101,41 +118,11 @@ describe('Profile page: what the student has done', () => {
     expect(ring.textContent).toBe('2')
     expect(ring.getAttribute('aria-hidden')).toBe('true')
   })
-  it('lists earned badges first, then the locked ones nearest to done', async () => {
-    await open()
-    const labels = within(screen.getByRole('list', { name: 'Badges' })).getAllByRole('listitem').map(li => li.querySelector('[data-badge-label]')!.textContent)
-    expect(labels.slice(0, 8)).toEqual(['First note', 'Note-taker', 'Card collector', 'Reviewer', 'First lecture', 'Quiz ace', '3-day streak', '7-day streak'])
-    expect(labels.slice(8)).toEqual(['Deep focus', 'Level 5', 'Player', 'Curious'])
-  })
-  it('draws each badge as a medal whose ring fills with progress, full when earned', async () => {
-    await open()
-    const arcs = (name: string) => within(screen.getByRole('list', { name: 'Badges' })).getByText(name).closest('li')!.querySelector('circle[data-arc]') as SVGCircleElement
-    const full = arcs('Note-taker')
-    expect(Number(full.getAttribute('stroke-dashoffset'))).toBe(0)
-    const half = arcs('Deep focus') // 5 of 10 hours
-    expect(Number(half.getAttribute('stroke-dashoffset'))).toBeCloseTo(Number(half.getAttribute('stroke-dasharray')) / 2, 1)
-  })
   it('shows the progress to the next level in words', async () => {
     await open()
     const bar = screen.getByRole('progressbar', { name: 'Progress to level 3' })
     expect(bar.getAttribute('aria-valuetext')).toBe('70 of 150 XP')
     expect(screen.getByText('120 XP in all')).toBeTruthy()
-  })
-  it('shows which badges are earned and the progress on the rest', async () => {
-    await open()
-    expect(screen.getByText('8 of 12 badges earned')).toBeTruthy() // first note, note-taker, card collector, reviewer, first lecture, quiz ace, and both streaks
-  })
-  it('says a badge is earned or locked in words, with how far along it is', async () => {
-    await open()
-    const badges = screen.getByRole('list', { name: 'Badges' })
-    const note = within(badges).getByText('Note-taker').closest('li')!
-    expect(note.textContent).toContain('Earned')
-    const cards = within(badges).getByText('Card collector').closest('li')!
-    expect(cards.textContent).toContain('Earned')
-    const curious = within(badges).getByText('Curious').closest('li')!
-    expect(curious.textContent).toContain('Locked')
-    expect(curious.textContent).toContain('4 / 20')
-    expect(curious.textContent).toContain('Ask the tutor 20 times')
   })
   it('keeps going when the totals cannot be loaded', async () => {
     statsFail = true
@@ -146,11 +133,11 @@ describe('Profile page: what the student has done', () => {
     expect(within(tiles).getByText('Streak')).toBeTruthy() // what came from XP still shows
     expect(within(tiles).queryByText('Notes')).toBeNull()
   })
-  it('links each course to its place in the Library', async () => {
+  it('links each course to its course page', async () => {
     await open()
     const courses = screen.getByRole('list', { name: 'Your courses' })
-    expect(within(courses).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/library?course=bio')
-    expect(within(courses).getByRole('link', { name: 'Spanish' }).getAttribute('href')).toBe('/library?course=lang')
+    expect(within(courses).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/courses/bio')
+    expect(within(courses).getByRole('link', { name: 'Spanish' }).getAttribute('href')).toBe('/courses/lang')
   })
 })
 

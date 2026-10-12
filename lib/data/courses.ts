@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Course } from '../types'
+import { announceCoursesChanged, announceTimetableChanged } from '@/lib/course/events'
 import { check, must } from './util'
 
 const COLS = 'id,name,color'
@@ -9,11 +10,14 @@ export async function listCourses(sb: SupabaseClient): Promise<Course[]> {
 }
 
 export async function createCourse(sb: SupabaseClient, input: { name: string; color: string }): Promise<Course> {
-  return must(await sb.from('courses').insert(input).select(COLS).single())
+  const course = must(await sb.from('courses').insert(input).select(COLS).single()) as Course
+  announceCoursesChanged()
+  return course
 }
 
 export async function updateCourse(sb: SupabaseClient, id: string, patch: Partial<Omit<Course, 'id'>>): Promise<void> {
   check(await sb.from('courses').update(patch).eq('id', id))
+  announceCoursesChanged()
 }
 
 export async function deleteCourse(sb: SupabaseClient, id: string, opts: { deleteContents: boolean }): Promise<void> {
@@ -24,4 +28,6 @@ export async function deleteCourse(sb: SupabaseClient, id: string, opts: { delet
   }
   // tasks/notes/decks: ON DELETE SET NULL; classes: ON DELETE CASCADE
   check(await sb.from('courses').delete().eq('id', id))
+  announceCoursesChanged()
+  announceTimetableChanged() // its classes went with it
 }

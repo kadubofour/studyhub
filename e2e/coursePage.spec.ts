@@ -49,3 +49,29 @@ test('Course page: asking the tutor opens a chat in the course', async ({ page }
   await page.getByRole('button', { name: 'Ask the tutor' }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
 })
+
+test('Course page: one tap from the sidebar on a computer, and from Courses on a phone', async ({ page, isMobile }) => {
+  await signUp(page)
+  if (isMobile) {
+    await page.getByRole('link', { name: 'Courses' }).first().click() // the Home banner icon
+    await expect(page).toHaveURL(/\/courses$/)
+    await page.getByRole('list', { name: 'Your courses' }).getByRole('link', { name: /Biology/ }).click()
+  } else {
+    await page.getByRole('group', { name: 'Courses' }).getByRole('link', { name: 'Biology' }).click()
+  }
+  await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 })
+  await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()
+})
+
+test('Preferences are on the Profile page now, and Settings keeps Sign out', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/profile')
+  await page.getByLabel('Focus length (min)').fill('30')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Settings saved')).toBeVisible()
+  await page.reload()
+  await expect(page.getByLabel('Focus length (min)')).toHaveValue('30')
+  await page.goto('/settings')
+  await expect(page.getByLabel('Focus length (min)')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+})

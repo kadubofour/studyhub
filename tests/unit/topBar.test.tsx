@@ -4,6 +4,7 @@ import { render, screen, fireEvent, cleanup, act, within } from '@testing-librar
 import { createTimer, startTimer, pauseTimer } from '@/lib/timer'
 import { forgetXp } from '@/lib/xp/celebrate'
 import { announceProgressChanged } from '@/lib/xp/events'
+import { announceCoursesChanged, announceTimetableChanged } from '@/lib/course/events'
 import type { XpSummary } from '@/lib/xp/rules'
 
 const MIN = 60_000
@@ -17,6 +18,11 @@ let countCalls = 0
 let dueFails = false
 vi.mock('next/navigation', () => ({ usePathname: () => path }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
+let classes: { course_id: string; day_of_week: number; start_time: string; end_time: string }[] = []
+vi.mock('@/lib/data/classes', () => ({ listClasses: async () => classes }))
+let courseName = 'Biology'
+vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'bio', name: courseName, color: '#000000' }] }))
+vi.mock('@/components/providers/ProfileProvider', () => ({ useProfile: () => ({ profile: { timezone: 'UTC' } }) }))
 vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => { countCalls++; if (dueFails) throw new Error('offline'); return due } }))
 vi.mock('@/components/providers/FocusProvider', async orig => ({ ...(await orig<typeof import('@/components/providers/FocusProvider')>()), useFocus: () => ({ timer, now, toggle, todayMinutes: 0 }) }))
 let xpKey: unknown
@@ -49,7 +55,18 @@ describe('TopBar keeping up', () => {
     xp = summary({ streak: 4 })
     await open()
     const bar = screen.getByRole('banner')
-    for (const text of ['12', '12 cards due', '4d', '4-day streak', 'Lv 2', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
+    for (const text of ['12', '12 cards due', 'Lv 2', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
+  })
+  it('keeps the streak short: the flame and the number, with the words only for screen readers', async () => {
+    xp = summary({ streak: 4 })
+    await open()
+    const chip = screen.getByLabelText('4-day streak')
+    expect(chip.textContent).toBe('4')
+  })
+  it('names the streak for screen readers as an image, since a plain span cannot be named', async () => {
+    xp = summary({ streak: 4 })
+    await open()
+    expect(screen.getByRole('img', { name: '4-day streak' })).toBeTruthy()
   })
   it('shows the cheer first in the strip, so it does not push the other chips about', async () => {
     xp = summary({ total: 120 })
@@ -131,7 +148,7 @@ describe('TopBar', () => {
     expect(within(bar).getByText('Planner')).toBeTruthy()
   })
   it('names the page for each section, and nothing for an unknown one', async () => {
-    for (const [p, name] of [['/home', 'Home'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses/c1', 'Course'], ['/flashcards/d1', 'Flashcards'], ['/review', 'Review'], ['/progress', 'Progress'], ['/tutor/c1', 'Tutor']] as const) {
+    for (const [p, name] of [['/home', 'Home'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses/c1', 'Courses'], ['/courses', 'Courses'], ['/flashcards/d1', 'Flashcards'], ['/review', 'Review'], ['/progress', 'Progress'], ['/tutor/c1', 'Tutor']] as const) {
       path = p
       await open()
       expect(within(screen.getByRole('banner')).getByText(name), p).toBeTruthy()
@@ -213,15 +230,56 @@ describe('TopBar', () => {
     it('shows the streak only when there is one', async () => {
       xp = summary({ streak: 0 })
       await open()
-      expect(screen.queryByText(/-day streak/)).toBeNull()
+      expect(screen.queryByLabelText(/-day streak/)).toBeNull()
       cleanup()
       xp = summary({ streak: 4 })
       await open()
-      expect(screen.getByText('4-day streak')).toBeTruthy()
+      expect(screen.getByLabelText('4-day streak')).toBeTruthy()
       cleanup()
       xp = summary({ streak: 1 })
       await open()
-      expect(screen.getByText('1-day streak')).toBeTruthy()
+      expect(screen.getByLabelText('1-day streak')).toBeTruthy()
     })
+  })
+})
+
+describe('TopBar class period', () => {
+  // Thursday 2026-10-01 10:00 UTC (day_of_week 4)
+  const slot = (start: string, end: string) => ({ course_id: 'bio', day_of_week: 4, start_time: start, end_time: end })
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-01T10:00:00Z')); classes = [] })
+  afterEach(() => { vi.useRealTimers(); classes = [] })
+  it('says which class is on now and links to the planner', async () => {
+    classes = [slot('09:30:00', '10:30:00')]
+    await open()
+    const chip = screen.getByRole('link', { name: 'Biology · till 10:30' })
+    expect(chip.getAttribute('href')).toBe('/planner')
+  })
+  it('says the next class today', async () => {
+    classes = [slot('14:00:00', '15:00:00')]
+    await open()
+    expect(screen.getByRole('link', { name: 'Biology · 14:00' })).toBeTruthy()
+  })
+  it('reads the timetable again when a class is added, so the chip is not stale', async () => {
+    await open()
+    expect(screen.queryByRole('link', { name: /Biology/ })).toBeNull()
+    classes = [slot('14:00:00', '15:00:00')]
+    await act(async () => { announceTimetableChanged() })
+    expect(screen.getByRole('link', { name: 'Biology · 14:00' })).toBeTruthy()
+  })
+  it('shows a renamed course, and drops classes of a deleted one', async () => {
+    classes = [slot('14:00:00', '15:00:00')]
+    await open()
+    courseName = 'Bio 101'
+    await act(async () => { announceCoursesChanged() })
+    expect(screen.getByRole('link', { name: 'Bio 101 · 14:00' })).toBeTruthy()
+    classes = []
+    await act(async () => { announceCoursesChanged() })
+    expect(screen.queryByRole('link', { name: /Bio/ })).toBeNull()
+    courseName = 'Biology'
+  })
+  it('has no chip when there is no class left today', async () => {
+    classes = [slot('08:00:00', '09:00:00')]
+    await open()
+    expect(screen.queryByRole('link', { name: /Biology/ })).toBeNull()
   })
 })

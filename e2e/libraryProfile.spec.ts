@@ -53,8 +53,6 @@ test('Profile: shows who and how far, and the school, programme and colour can b
   await expect(page.getByText('Free plan')).toBeVisible()
   const totals = page.getByRole('list', { name: 'Study totals' })
   await expect(totals.getByText('Notes').locator('xpath=ancestor::li')).toContainText('1')
-  await expect(page.getByText('1 of 12 badges earned')).toBeVisible() // the first note
-  await expect(page.getByRole('list', { name: 'Badges' }).getByText('First note').locator('xpath=ancestor::li')).toContainText('Earned')
 
   await page.getByRole('button', { name: 'Edit profile' }).click()
   await page.getByLabel('School').fill('KNUST')

@@ -65,7 +65,7 @@ const AutoMath = Extension.create<{ enabled: (() => boolean) | null }, { enabled
     return [new InputRule({
       find: /(?:^|\s)(\S+)\s$/,
       handler: ({ state, range, match }) => {
-        if (!enabled()) return null // switched off in Settings
+        if (!enabled()) return null // switched off in Preferences on the Profile page
         const token = mathToken(match[1])
         const type = state.schema.nodes.inlineMath
         if (!token || !type) return null
