@@ -115,6 +115,17 @@ describe('TimeGrid', () => {
     fireEvent.click(slot)
     expect(props.onSlotClick).toHaveBeenCalledWith('2026-10-15', 10)
   })
+  it('the weekly timetable names days, not dates: no date numbers and no filled circle', () => {
+    render(<TimeGrid {...base({ showStrip: false, showNow: false })} />)
+    const mon = within(screen.getByRole('group', { name: 'Monday 12 October' }))
+    expect(mon.getByText('MON')).toBeTruthy()
+    expect(mon.queryByText('12')).toBeNull()
+  })
+  it('keeps the time and place of a class in full-strength text, which stays readable on the course tint', () => {
+    render(<TimeGrid {...base({ classes: [cls('a', 'bio', 1, '09:00:00', '10:00:00')] })} />)
+    const when = screen.getByText(/09:00–10:00/)
+    expect(when.className).not.toContain('text-muted')
+  })
   it('can leave out the all-day strip and the time line, for the weekly timetable', () => {
     const items: Record<string, DayItem[]> = { '2026-10-13': [{ kind: 'task', id: 't1', title: 'Midterm', type: 'exam', priority: 'normal', courseId: 'bio' }] }
     render(<TimeGrid {...base({ itemsByDay: items, showStrip: false, showNow: false })} />)
@@ -165,11 +176,12 @@ describe('MonthGrid', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Friday 2 October' }))
     expect(p.onDayClick).toHaveBeenCalledWith('2026-10-02')
   })
-  it('shows three things a day and counts the rest', () => {
+  it('shows two things a day and counts the rest, so the count always fits the cell', () => {
     const p = setup({ itemsByDay: { '2026-10-02': [item('1', 'One'), item('2', 'Two'), item('3', 'Three'), item('4', 'Four'), item('5', 'Five')] } })
     expect(screen.getByRole('button', { name: /One/ })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Four/ })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '2 more on Friday 2 October' }))
+    expect(screen.getByRole('button', { name: /Two/ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Three/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '3 more on Friday 2 October' }))
     expect(p.onDayClick).toHaveBeenCalledWith('2026-10-02')
   })
   it('shows classes on their weekday, before the tasks', () => {

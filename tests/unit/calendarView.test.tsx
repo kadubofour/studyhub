@@ -50,6 +50,11 @@ describe('CalendarView', () => {
     expect(within(screen.getByRole('group', { name: 'Tuesday 13 October' })).getByRole('button', { name: /Biology/ })).toBeTruthy()
     expect(within(screen.getByRole('group', { name: 'Wednesday 14 October' })).getByRole('button', { name: /Essay/ })).toBeTruthy()
   })
+  it('shows a study session in full-strength text, so it stays readable on its tint', () => {
+    views = [{ plan: { id: 'p1' }, courseId: 'bio', today: [], schedule: [{ day: '2026-10-15', sessions: [{ topicId: 't', topicName: 'Glycolysis', kind: 'learn', minutes: 30, noteId: null }] }] } as unknown as PlanView]
+    setup()
+    expect(screen.getByText('Learn: Glycolysis').closest('div')!.className).not.toContain('text-muted')
+  })
   it('shows study sessions in the strip of their day', () => {
     views = [{ plan: { id: 'p1' }, courseId: 'bio', today: [], schedule: [{ day: '2026-10-15', sessions: [{ topicId: 't', topicName: 'Glycolysis', kind: 'learn', minutes: 30, noteId: null }] }] } as unknown as PlanView]
     setup()

@@ -180,7 +180,7 @@ export default function PlannerPage() {
       </div>
 
       {tab === 'tasks' && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:has-[aside:empty]:grid-cols-1">
         <div className="min-w-0">
           <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
           <div role="group" aria-label="Task type" className="mb-1 flex flex-wrap gap-1.5">

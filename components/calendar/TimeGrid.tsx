@@ -45,8 +45,8 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
 
   return (
     <div ref={scroller} tabIndex={0} role="region" aria-label={showStrip ? 'Schedule' : 'Weekly timetable'}
-      className="no-scrollbar overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 19rem)', minHeight: 380 }}>
-      <div className="flex min-h-full" style={{ minWidth: keys.length > 1 ? 560 : undefined }}>
+      className="no-scrollbar overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 19rem)', minHeight: HEADER_H + stripH + minHours }}>
+      <div className="flex min-h-full">
         <div className="flex w-14 shrink-0 flex-col" aria-hidden>
           <div className="sticky top-0 z-20 border-b border-line bg-raised" style={{ height: HEADER_H }} />
           {showStrip && <div className="sticky z-10 flex items-center justify-end border-b border-line bg-raised pr-2 text-[10px] text-muted" style={{ height: stripH, top: HEADER_H }}>all-day</div>}
@@ -64,7 +64,7 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
             <div key={k} role="group" aria-label={longDay(k)} data-day={k} data-today={today ? 'true' : undefined} className="relative flex min-w-0 flex-1 flex-col border-l border-line">
               <div className="sticky top-0 z-20 flex flex-col items-center justify-center gap-0.5 border-b border-line bg-raised" style={{ height: HEADER_H }}>
                 <span className={`text-[11px] font-medium tracking-wide ${today ? 'text-accent' : 'text-muted'}`}>{DAYS[dow].slice(0, 3).toUpperCase()}</span>
-                <span className={`flex size-8 items-center justify-center rounded-full text-lg leading-none ${today ? 'bg-accent-solid font-semibold text-white' : ''}`}>{n}</span>
+                {showStrip && <span className={`flex size-8 items-center justify-center rounded-full text-lg leading-none ${today ? 'bg-accent-solid font-semibold text-white' : ''}`}>{n}</span>}
               </div>
               {showStrip && (
                 <div className="sticky z-10 space-y-1 border-b border-line bg-raised p-1" style={{ height: stripH, top: HEADER_H }}>
@@ -88,12 +88,12 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
                       className="absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left text-[11px] leading-tight text-fg"
                       style={{ top: `${top}%`, height: `${h}%`, minHeight: 18, left: `calc(${(lane / count) * 100}% + 2px)`, width: `calc(${100 / count}% - 4px)`, borderLeftColor: color, background: tint(color, 20) }}>
                       <span className="block font-semibold">{course?.name ?? 'Class'}</span>
-                      <span className="block text-muted">{c.start_time.slice(0, 5)}–{c.end_time.slice(0, 5)}{c.location ? ` · ${c.location}` : ''}</span>
+                      <span className="block">{c.start_time.slice(0, 5)}–{c.end_time.slice(0, 5)}{c.location ? ` · ${c.location}` : ''}</span>
                     </button>
                   )
                 })}
                 {today && fraction !== null && (
-                  <div data-testid="now-line" aria-hidden className="pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-danger" style={{ top: `${fraction * 100}%` }}>
+                  <div data-testid="now-line" aria-hidden className="pointer-events-none absolute inset-x-0 z-[5] h-0.5 bg-danger" style={{ top: `${fraction * 100}%` }}>
                     <span className="absolute -left-1 -top-[3px] size-2 rounded-full bg-danger" />
                   </div>
                 )}

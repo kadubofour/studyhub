@@ -4,7 +4,7 @@ import type { DayItem } from '@/lib/calendar/events'
 import { weekdayOfKey, type DayKey } from '@/lib/dates'
 import type { ClassSlot, Course } from '@/lib/types'
 
-const SHOWN = 3
+const SHOWN = 2 // what a cell always has room for, with its "+N more"
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const HEAD = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -20,10 +20,10 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
   const rows = keys.length / 7
   return (
     <div tabIndex={0} role="region" aria-label="Month" className="no-scrollbar flex flex-col overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 19rem)', minHeight: Math.max(380, rows * 84 + 32) }}>
-      <div className="grid min-w-[560px] shrink-0 grid-cols-7 border-b border-line text-center text-[11px] font-medium tracking-wide text-muted" aria-hidden>
+      <div className="grid shrink-0 grid-cols-7 border-b border-line text-center text-[11px] font-medium tracking-wide text-muted" aria-hidden>
         {HEAD.map(h => <span key={h} className="py-2">{h}</span>)}
       </div>
-      <div className="grid min-w-[560px] flex-1 grid-cols-7" style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
+      <div className="grid flex-1 grid-cols-7" style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
         {keys.map((k, i) => {
           const outside = k.slice(0, 7) !== month
           const dow = weekdayOfKey(k)
@@ -31,7 +31,7 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
             ...classes.filter(c => c.day_of_week === dow).sort((a, b) => a.start_time.localeCompare(b.start_time)).map(c => ({
               id: `c-${c.id}`,
               node: (
-                <button type="button" onClick={() => onClassClick(c)} className="flex w-full items-center gap-1 truncate rounded-md px-1.5 py-px text-left text-[11px] text-white" style={{ background: courseOf(c.course_id)?.color ?? '#888780' }}>
+                <button type="button" onClick={() => onClassClick(c)} className="flex w-full items-center gap-1 truncate rounded-md px-1.5 py-px text-left text-[11px] leading-4 text-white" style={{ background: courseOf(c.course_id)?.color ?? '#888780' }}>
                   <span className="shrink-0 opacity-90">{c.start_time.slice(0, 5)}</span><span className="truncate">{courseOf(c.course_id)?.name ?? 'Class'}</span>
                 </button>
               ),
@@ -42,12 +42,12 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
           return (
             <div key={k} data-day={k} className={`min-w-0 space-y-0.5 overflow-hidden border-line p-1 ${i >= 7 ? 'border-t' : ''} ${i % 7 !== 0 ? 'border-l' : ''} ${outside ? 'bg-surface/50' : ''}`}>
               <button type="button" aria-label={longDay(k)} aria-current={k === todayKey ? 'date' : undefined} data-outside={outside ? 'true' : undefined} onClick={() => onDayClick(k)}
-                className={`flex size-6 items-center justify-center rounded-full text-xs hover:bg-surface ${k === todayKey ? 'bg-accent-solid font-semibold text-white hover:bg-accent-solid' : outside ? 'text-muted' : ''}`}>
+                className={`flex size-5 items-center justify-center rounded-full text-xs hover:bg-surface ${k === todayKey ? 'bg-accent-solid font-semibold text-white hover:bg-accent-solid' : outside ? 'text-muted' : ''}`}>
                 {Number(k.slice(8))}
               </button>
               {entries.slice(0, SHOWN).map(e => <div key={e.id}>{e.node}</div>)}
               {hidden > 0 && (
-                <button type="button" aria-label={`${hidden} more on ${longDay(k)}`} onClick={() => onDayClick(k)} className="px-1.5 text-[11px] text-muted hover:text-fg">+{hidden} more</button>
+                <button type="button" aria-label={`${hidden} more on ${longDay(k)}`} onClick={() => onDayClick(k)} className="px-1.5 text-[11px] leading-4 text-muted hover:text-fg">+{hidden} more</button>
               )}
             </div>
           )

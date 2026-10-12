@@ -28,7 +28,7 @@ type Props = {
   onDeleteTask: (task: Task) => void
 }
 
-// The planner's calendar: Day, Week or Month with a mini month, an Add menu, classes, deadlines and study sessions
+// The Week tab: Day, Week or Month with classes, deadlines and study sessions, and buttons to add a task, an exam or a class
 export function CalendarView({ classes, courses, tasks, tz, empty, courseId = null, onSaveClass, onDeleteClass, onAddTask, onEditTask, onDoneTask, onDeleteTask }: Props) {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {

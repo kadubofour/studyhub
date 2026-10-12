@@ -66,9 +66,9 @@ export default function ProfilePage() {
   }
 
   const sub = [profile.programme, profile.school].filter(Boolean).join(' · ')
-  const tiles: [string, string, 'a' | 'b' | 'c'][] = [
-    ...(xp ? [['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
-    ...(stats ? [['Focus time', fmtMinutes(stats.focus_minutes), 'c'], ['Notes', String(stats.notes), 'b'], ['Flashcards', String(stats.cards), 'a'], ['Lectures', String(stats.lectures), 'c'], ['Quizzes finished', String(stats.quizzes_done), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
+  const tiles: [string, string][] = [
+    ...(xp ? [['Streak', days(xp.streak)], ['Best streak', days(xp.best)]] as [string, string][] : []),
+    ...(stats ? [['Focus time', fmtMinutes(stats.focus_minutes)], ['Notes', String(stats.notes)], ['Flashcards', String(stats.cards)], ['Lectures', String(stats.lectures)], ['Quizzes finished', String(stats.quizzes_done)]] as [string, string][] : []),
   ]
 
   return (

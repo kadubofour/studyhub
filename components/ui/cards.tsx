@@ -37,7 +37,7 @@ export function IndexCard({ color, title, eyebrow, value, sub, href, valueColor 
 export function SplitCard({ color, icon: Icon, value, title, sub, href }: { color: string; icon: LucideIcon; value: React.ReactNode; title: string; sub?: React.ReactNode; href?: string }) {
   return wrap(href, 'flex overflow-hidden rounded-2xl border border-line bg-raised transition hover:bg-surface', colorVar(color), (
     <>
-      <span data-block className="flex w-16 shrink-0 flex-col items-center justify-center gap-0.5 bg-[color-mix(in_srgb,var(--c)_68%,black)] py-3 text-white">
+      <span data-block aria-hidden="true" className="flex w-16 shrink-0 flex-col items-center justify-center gap-0.5 bg-[color-mix(in_srgb,var(--c)_68%,black)] py-3 text-white">
         <Icon size={18} aria-hidden="true" /><span className="text-xl font-medium leading-none">{value}</span>
       </span>
       <span className="min-w-0 flex-1 px-3.5 py-3">

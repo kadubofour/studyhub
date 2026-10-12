@@ -39,7 +39,7 @@ describe('IndexCard (B)', () => {
 describe('SplitCard (D)', () => {
   it('puts the figure and icon in a coloured block and the words beside it', () => {
     const { container } = render(<SplitCard color="#1D9E75" icon={Flame} value="7" title="Biology" sub="2 notes · 1 deck" href="/courses/bio" />)
-    const link = screen.getByRole('link', { name: /Biology/ })
+    const link = screen.getByRole('link', { name: /^Biology/ }) // the count in the block is decoration, so the name starts with the course
     expect(link.getAttribute('href')).toBe('/courses/bio')
     expect(within(link).getByText('7')).toBeTruthy()
     expect(within(link).getByText('2 notes · 1 deck')).toBeTruthy()
