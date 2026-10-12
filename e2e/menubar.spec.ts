@@ -182,8 +182,8 @@ test('automatic maths can be switched off from the View menu', async ({ page }) 
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('my x^2 stays ')
   await expect(page.locator('.ProseMirror .katex')).toHaveCount(0)
-  // and it is remembered: Settings shows it off
-  await page.goto('/settings')
+  // and it is remembered: Profile shows it off
+  await page.goto('/profile')
   await expect(page.getByRole('switch', { name: /Turn typed maths into equations/ })).toHaveAttribute('aria-checked', 'false')
 })
 
