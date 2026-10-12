@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarToolbar, type AddKind } from './CalendarToolbar'
+import { CAL_BTN, CAL_BTN_PRIMARY } from './buttons'
 import { MonthGrid } from './MonthGrid'
 import { TimeGrid } from './TimeGrid'
 import { ClassDialog } from '@/components/planner/ClassDialog'
@@ -89,8 +90,8 @@ export function CalendarView({ classes, courses, tasks, tz, empty, courseId = nu
             <h3 className="text-sm font-semibold">Nothing planned yet</h3>
             <p className="text-sm text-muted">Add an exam and we will plan study time for it, or add your classes.</p>
           </div>
-          <button type="button" className="btn-primary" onClick={() => add('exam')}>Add an exam</button>
-          <button type="button" className="btn" onClick={() => add('class')}>Add a class</button>
+          <button type="button" className={CAL_BTN_PRIMARY} onClick={() => add('exam')}>Add an exam</button>
+          <button type="button" className={CAL_BTN} onClick={() => add('class')}>Add a class</button>
         </section>
       )}
       {view === 'month'

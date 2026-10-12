@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { TimeGrid } from './TimeGrid'
+import { CAL_BTN_SOFT } from './buttons'
 import { ClassDialog } from '@/components/planner/ClassDialog'
 import { localDayKey, weekKeysFor } from '@/lib/dates'
 import type { ClassSlot, Course } from '@/lib/types'
@@ -20,7 +21,7 @@ export function TimetableView({ classes, courses, tz, onSaveClass, onDeleteClass
     <div>
       {noCourse
         ? <p className="mb-3 text-sm text-muted">Add a course first, then add its classes here.</p>
-        : <button type="button" className="btn mb-3" onClick={() => setDialog({})}>Add class</button>}
+        : <button type="button" className={`${CAL_BTN_SOFT} mb-3`} onClick={() => setDialog({})}>Add class</button>}
       <TimeGrid keys={weekKeysFor(todayKey)} todayKey={todayKey} now={now} tz={tz} classes={classes} courses={courses} itemsByDay={{}}
         showStrip={false} showNow={false}
         onClassClick={c => { if (!c.id.startsWith('temp-')) setDialog(c) }} onItemClick={() => {}}

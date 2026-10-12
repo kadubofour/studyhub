@@ -180,7 +180,8 @@ export default function PlannerPage() {
       </div>
 
       {tab === 'tasks' && (
-        <div className="max-w-4xl">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="min-w-0">
           <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
           <div role="group" aria-label="Task type" className="mb-1 flex flex-wrap gap-1.5">
             {TYPE_CHIPS.map(c => (
@@ -190,7 +191,6 @@ export default function PlannerPage() {
               </button>
             ))}
           </div>
-          <StudyPlanPanel courses={courses} tasks={tasks} />
           {loaded && courses.length === 0 && tasks.length === 0 && (
             <p className="mt-6 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
           )}
@@ -198,18 +198,22 @@ export default function PlannerPage() {
           {group('Today', buckets.today, 'text-fg')}
           {group('Upcoming', buckets.upcoming)}
           {group('No date', buckets.noDate)}
-          {visibleDone.length > 0 && (
-            <section aria-label="Done" className="mt-6">
-              <button type="button" aria-expanded={showDone} onClick={() => setShowDone(s => !s)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-fg">
-                {showDone ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}Done ({visibleDone.length})
-              </button>
-              {showDone && (
-                <div className="mt-1">
-                  {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
-                </div>
-              )}
-            </section>
-          )}
+        </div>
+        <aside aria-label="Study plan and finished tasks" className="min-w-0 space-y-4 empty:hidden [&>section]:!mt-0">
+          <StudyPlanPanel courses={courses} tasks={tasks} />
+        {visibleDone.length > 0 && (
+          <section aria-label="Done" className="card">
+            <button type="button" aria-expanded={showDone} onClick={() => setShowDone(s => !s)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-fg">
+              {showDone ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}Done ({visibleDone.length})
+            </button>
+            {showDone && (
+              <div className="mt-1">
+                {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
+              </div>
+            )}
+          </section>
+        )}
+        </aside>
         </div>
       )}
       {tab === 'week' && (
