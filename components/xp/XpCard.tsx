@@ -4,12 +4,13 @@ import type { XpSummary } from '@/lib/xp/rules'
 const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
 
 // Progress: level, total XP, streaks and the last 14 days
-export function XpCard({ xp }: { xp: XpSummary }) {
+// `bare`: no card of its own, for sitting inside another card
+export function XpCard({ xp, bare = false }: { xp: XpSummary; bare?: boolean }) {
   const { level } = xp
   const max = Math.max(1, ...xp.last14.map(d => d.xp))
   const alt = `XP per day, last 14 days. ${xp.last14.map(d => `${d.day}: ${d.xp} XP`).join('; ')}`
   return (
-    <section className="card mb-4">
+    <section className={bare ? '' : 'card mb-4'}>
       <h2 className="mb-2 text-sm font-medium">XP</h2>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex items-center gap-2"><Zap size={16} className="text-accent" aria-hidden /><span className="text-lg font-semibold">Level {level.level}</span><span className="text-sm text-muted">{xp.total} XP</span></div>

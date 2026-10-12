@@ -30,10 +30,12 @@
   --shadow: 0 1px 2px rgb(60 45 20 / 0.06), 0 4px 14px rgb(60 45 20 / 0.06);
   --tile-a: #F8E4D4; --tile-b: #F7EDC4; --tile-c: #DDEEE3;
 }
+/* Paper is for light mode only: in dark mode the app shows Classic (components/providers/useLook.ts). These are Classic's dark values, so
+   nothing cream shows in the moment before the page knows the theme. */
 .dark .app-root[data-look="paper"] {
-  --bg: #1C1915; --raised: #25211C; --surface: #2E2923; --line: #3A342C; --fg: #EFE8DA; --muted: #A39A8A;
+  --bg: #121211; --raised: #1a1a19; --surface: #222220; --line: #30302d; --fg: #ededea; --muted: #9a9993;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
-  --tile-a: #3A2A1F; --tile-b: #38331B; --tile-c: #1F3027;
+  --tile-a: #1a1a19; --tile-b: #1a1a19; --tile-c: #1a1a19;
 }
 /* Vivid: bold colour on a light neutral page, big type, soft large corners, a darker sidebar and a top bar.
    Colours are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
@@ -49,11 +51,13 @@
 }
 /* The app sidebar (only that: the Study panel in a note is an aside too) is always the darker shade: charcoal on the light page,
    near-black on the dark one. Its own tokens re-colour everything inside it. */
+.app-root[data-look="classic"] .app-sidebar,
 .app-root[data-look="vivid"] .app-sidebar {
   background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
   --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
   --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
 }
+.dark .app-root[data-look="classic"] .app-sidebar,
 .dark .app-root[data-look="vivid"] .app-sidebar { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #25252D; }
 /* Playful: thick outlines, flat colour, buttons that press down */
 .app-root[data-look="playful"] {
@@ -68,7 +72,7 @@
 }
 /* Behind the app (overscroll on phones) matches the look */
 body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
-.dark body:has(.app-root[data-look="paper"]) { background: #1C1915; }
+.dark body:has(.app-root[data-look="paper"]) { background: #121211; }
 body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
 .dark body:has(.app-root[data-look="vivid"]) { background: #18181C; }
 body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
@@ -147,6 +151,21 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; }
 .app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] input.input { padding-inline: 1rem; }
 .app-root[data-look="vivid"] .field textarea, .app-root[data-look="vivid"] textarea.input { border-radius: 1.25rem; }
+
+/* Classic shapes: Vivid's rounded cards, pill buttons and bigger hero, kept calm: plain tiles, quiet labels, no glow under buttons. */
+.app-root[data-look="classic"] .card, .app-root[data-look="classic"] .tile { border-radius: 1.25rem; }
+.app-root[data-look="classic"] .card { padding: 1.25rem; }
+.app-root[data-look="classic"] .tile { padding: 1rem 1.25rem; }
+.app-root[data-look="classic"] .tile-label { font-size: .8125rem; font-weight: 500; }
+.app-root[data-look="classic"] .tile-value { font-size: 1.625rem; font-weight: 600; line-height: 1.15; }
+.app-root[data-look="classic"] .section-label { color: var(--muted); font-weight: 600; letter-spacing: .06em; }
+.app-root[data-look="classic"] .hero { border-radius: 1.5rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
+.app-root[data-look="classic"] .hero h1 { font-size: 1.75rem; line-height: 1.15; }
+.app-root[data-look="classic"] .btn, .app-root[data-look="classic"] .btn-primary, .app-root[data-look="classic"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
+.app-root[data-look="classic"] .field input, .app-root[data-look="classic"] .field select,
+.app-root[data-look="classic"] input.input, .app-root[data-look="classic"] select.input { border-radius: 9999px; }
+.app-root[data-look="classic"] .field input, .app-root[data-look="classic"] input.input { padding-inline: 1rem; }
+.app-root[data-look="classic"] .field textarea, .app-root[data-look="classic"] textarea.input { border-radius: 1.25rem; }
 
 /* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
 .app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }

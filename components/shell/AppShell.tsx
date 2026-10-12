@@ -21,7 +21,8 @@ import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { isRecording } from '@/lib/lectures/recordingGuard'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, FONTS, lookOf } from '@/lib/appearance'
+import { ACCENTS, FONTS } from '@/lib/appearance'
+import { useLook } from '@/components/providers/useLook'
 import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 
 const HOME = { href: '/home', label: 'Home', icon: Home }
@@ -64,6 +65,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }
   const { resolvedTheme, setTheme } = useTheme()
   const { profile, setProfile } = useProfile()
+  const look = useLook()
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -100,7 +102,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   } as React.CSSProperties
 
   return (
-    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={lookOf(profile.look)}>
+    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={look}>
       {sidebar && (
         <aside className="app-sidebar no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
           <div className="mb-6 flex items-center justify-between px-1">
@@ -152,7 +154,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       )}
       <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-16 md:pb-0'}`}>
         <OfflineBanner />
-        {lookOf(profile.look) === 'vivid' && !immersive && <TopBar sidebarHidden={!sidebar} />}
+        {(look === 'vivid' || look === 'classic') && !immersive && <TopBar sidebarHidden={!sidebar} />}
         {!sidebar && !immersive && (
           <button className="no-print btn-ghost fixed left-3 top-3 z-30 hidden md:inline-flex" onClick={() => setCollapsed(false)}
             aria-label="Show sidebar" title="Show sidebar">

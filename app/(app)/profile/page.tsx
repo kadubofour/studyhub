@@ -133,21 +133,10 @@ export default function ProfilePage() {
       <section aria-labelledby="totals-title" className="space-y-3">
         <h2 id="totals-title" className="text-base font-semibold">Your study so far</h2>
         {statsFailed && <p role="alert" className="text-sm text-danger">Could not load your study totals. Check your connection.</p>}
-        {tiles.length > 0 && (
-          <ul aria-label="Study totals" className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {tiles.map(([label, value, tone]) => (
-              <li key={label} className={`tile tile-${tone} flex items-center gap-3`}>
-                {(() => { const Icon = TILE_ICON[label] ?? Star; return <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-raised"><Icon size={22} className="text-accent" aria-hidden="true" /></span> })()}
-                <div className="min-w-0">
-                  <div className="truncate text-2xl font-semibold leading-tight">{value}</div>
-                  <div className="text-xs leading-tight">{label}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        {(tiles.length > 0 || xp) && (
+        <div className="card space-y-5">
         {xp && (
-          <div className="card flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <div data-testid="level-ring" aria-hidden="true" className="relative flex size-20 shrink-0 items-center justify-center text-3xl font-semibold">
               <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0 -rotate-90">
                 <circle cx="40" cy="40" r="35" fill="none" stroke="var(--surface)" strokeWidth="7" />
@@ -164,6 +153,21 @@ export default function ProfilePage() {
               <p className="mt-1 text-xs text-muted">{xp.level.toNext} XP to level {xp.level.level + 1}</p>
             </div>
           </div>
+        )}
+        {tiles.length > 0 && (
+          <ul aria-label="Study totals" className={`grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4 ${xp ? 'border-t border-line pt-5' : ''}`}>
+            {tiles.map(([label, value, tone]) => (
+              <li key={label} className="flex items-center gap-3">
+                {(() => { const Icon = TILE_ICON[label] ?? Star; return <span aria-hidden="true" className={`tile-${tone} flex size-11 shrink-0 items-center justify-center rounded-2xl border border-line`}><Icon size={22} className="text-accent" aria-hidden="true" /></span> })()}
+                <div className="min-w-0">
+                  <div className="truncate text-2xl font-semibold leading-tight">{value}</div>
+                  <div className="text-xs leading-tight text-muted">{label}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        </div>
         )}
       </section>
 

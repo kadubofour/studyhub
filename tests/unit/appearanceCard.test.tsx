@@ -21,6 +21,23 @@ const open = (p: Profile = base) => render(<ToastProvider><ProfileProvider initi
 beforeEach(() => { impl = null; resolved = 'light'; failing = false; updateProfile.mockReset().mockResolvedValue({}) })
 afterEach(cleanup)
 
+describe('Paper is light mode only', () => {
+  it('is not offered in dark mode, and a student on Paper sees Classic selected without losing Paper', () => {
+    resolved = 'dark'
+    open({ ...base, look: 'paper' })
+    expect(screen.queryByRole('radio', { name: 'Paper look' })).toBeNull()
+    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByTestId('look').textContent).toBe('paper')
+    expect(screen.getByText(/Paper is for light mode/)).toBeTruthy()
+  })
+  it('keyboard moving skips Paper in dark mode', async () => {
+    resolved = 'dark'
+    open()
+    await act(async () => { fireEvent.keyDown(screen.getByRole('radio', { name: 'Classic look' }), { key: 'ArrowRight' }) })
+    expect(screen.getByTestId('look').textContent).toBe('vivid')
+  })
+})
+
 describe('Look picker', () => {
   it('shows Classic and Paper and marks the current one', () => {
     open()

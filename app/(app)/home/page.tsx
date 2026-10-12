@@ -11,6 +11,7 @@ import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProv
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
+import { useLook } from '@/components/providers/useLook'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
 import { GoalRing } from '@/components/home/GoalRing'
@@ -75,7 +76,8 @@ export default function HomePage() {
   const focusPct = Math.min(100, Math.round((focus.todayMinutes / goal) * 100))
   const running = focus.timer.startedAt !== null
   // Vivid and Playful show the goal as a ring with chips for level, XP and streak
-  const bold = profile.look === 'vivid' || profile.look === 'playful'
+  const look = useLook()
+  const bold = look !== 'paper'
   const weekKeys = weekKeysFor(todayKey)
   const maxWeek = Math.max(goal, ...weekKeys.map(k => week.get(k) ?? 0), 1)
 
@@ -110,7 +112,7 @@ export default function HomePage() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMM d')}</p>
-            <h1 className="mt-0.5 text-2xl font-semibold" style={{ fontFamily: greetingFont(profile.look, profile.font) }}>{greeting(hour)}{name}</h1>
+            <h1 className="mt-0.5 text-2xl font-semibold" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
           <div className="flex gap-1 md:hidden">
             <Link href="/library" aria-label="Library" className="rounded-lg p-1.5 hover:bg-white/15"><FolderOpen size={17} aria-hidden /></Link>
@@ -122,7 +124,7 @@ export default function HomePage() {
         {bold ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
-            {xp && profile.look === 'playful' && ( // Vivid shows these in the top bar
+            {xp && look === 'playful' && ( // Vivid shows these in the top bar
               <div className="flex flex-wrap gap-2 text-sm font-medium">
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
                 <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>

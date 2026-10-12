@@ -15,14 +15,14 @@ const KEYS = ['bg', 'raised', 'surface', 'line', 'fg', 'muted'] as const
 describe('globals.css matches LOOKS', () => {
   it.each([
     ['classic', 'light', ':root'], ['classic', 'dark', '.dark'],
-    ['paper', 'light', '.app-root[data-look="paper"]'], ['paper', 'dark', '.dark .app-root[data-look="paper"]'],
+    ['paper', 'light', '.app-root[data-look="paper"]'], ['paper', 'dark', '.dark .app-root[data-look="paper"]'], // dark Paper is Classic dark: before the page knows the theme there is no cream flash
     ['vivid', 'light', '.app-root[data-look="vivid"]'], ['vivid', 'dark', '.dark .app-root[data-look="vivid"]'],
     ['playful', 'light', '.app-root[data-look="playful"]'], ['playful', 'dark', '.dark .app-root[data-look="playful"]'],
   ] as const)('%s %s colours', (look, mode, selector) => {
     const b = block(selector)
     for (const k of KEYS) expect(value(b, `--${k}`), `${look} ${mode} --${k}`).toBe(LOOKS[look][mode][k].toLowerCase())
   })
-  it.each(['paper', 'vivid', 'playful'] as const)('%s tile tints match, in light and dark', look => {
+  it.each(['vivid', 'playful'] as const)('%s tile tints match, in light and dark', look => {
     for (const [mode, selector] of [['light', `.app-root[data-look="${look}"]`], ['dark', `.dark .app-root[data-look="${look}"]`]] as const) {
       const b = block(selector)
       ;(['a', 'b', 'c'] as const).forEach((t, i) => expect(value(b, `--tile-${t}`), `${look} ${mode} tile ${t}`).toBe(LOOKS[look][mode].tiles[i].toLowerCase()))
@@ -37,6 +37,10 @@ describe('globals.css matches LOOKS', () => {
       const b = block(selector)
       for (const t of ['a', 'b', 'c']) expect(value(b, `--tile-${t}`), `${selector} --tile-${t}`).toBe('var(--raised)')
     }
+  })
+  it('Paper light tile tints match', () => {
+    const b = block('.app-root[data-look="paper"]')
+    ;(['a', 'b', 'c'] as const).forEach((t, i) => expect(value(b, `--tile-${t}`)).toBe(LOOKS.paper.light.tiles[i].toLowerCase()))
   })
   it('defines the tile classes and a matching page background behind Paper', () => {
     for (const t of ['a', 'b', 'c']) expect(css).toContain(`.tile-${t} { background: var(--tile-${t}); }`)
@@ -63,6 +67,22 @@ describe('Vivid sidebar', () => {
     expect(css).not.toMatch(/data-look="vivid"\] aside\s*[{,]/)
     expect(css).not.toMatch(/data-look="playful"\] aside\s*[{,]/)
     expect(light).toContain('color-scheme: dark')
+  })
+})
+
+describe('Classic is the calm version of Vivid', () => {
+  it('has the dark sidebar too, in both modes', () => {
+    expect(css).toContain('.app-root[data-look="classic"] .app-sidebar')
+    expect(css).toContain('.dark .app-root[data-look="classic"] .app-sidebar')
+  })
+  it('has the rounded shapes and pill buttons, in the components layer', () => {
+    const layer = css.slice(css.indexOf('/* Vivid shapes'), css.indexOf('.prose-note h1 {'))
+    for (const sel of ['.card', '.tile', '.btn', 'input.input', '.hero']) expect(layer, sel).toContain(`.app-root[data-look="classic"] ${sel}`)
+  })
+  it('stays calm: plain tiles, no glow under the main button, quieter section labels', () => {
+    const layer = css.slice(css.indexOf('/* Classic shapes'), css.indexOf('/* Playful shapes'))
+    expect(layer).not.toContain('color-mix')
+    expect(layer).toMatch(/\.section-label \{ color: var\(--muted\)/)
   })
 })
 

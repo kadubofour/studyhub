@@ -114,12 +114,15 @@ describe('Scan in the app shell', () => {
     expect(screen.getByRole('dialog').textContent).toContain('files 0')
   })
 
-  it('shows the top bar in the Vivid look only, and not on a full-screen page', () => {
+  it('shows the top bar in Classic and Vivid, not in Paper, and not on a full-screen page', () => {
     path = '/home'
     const vivid = render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
     expect(screen.getByRole('banner', { name: 'Today at a glance' })).toBeTruthy()
     vivid.unmount()
-    render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    const classic = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(screen.getByRole('banner', { name: 'Today at a glance' })).toBeTruthy()
+    classic.unmount()
+    render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
     expect(screen.queryByRole('banner', { name: 'Today at a glance' })).toBeNull()
     cleanup()
     path = '/notes/abc'
