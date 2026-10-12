@@ -1,28 +1,35 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
 import { TaskRow } from '@/components/planner/TaskRow'
+import { TaskDialog } from '@/components/planner/TaskDialog'
+import { CalendarView } from '@/components/calendar/CalendarView'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
-import { createTask, deleteTask, listOpenTasks, setTaskDone, type NewTask } from '@/lib/data/tasks'
-import { WeekGrid } from '@/components/planner/WeekGrid'
-import { ClassDialog } from '@/components/planner/ClassDialog'
+import { createTask, deleteTask, listOpenTasks, listRecentlyDone, setTaskDone, updateTask, type NewTask } from '@/lib/data/tasks'
 import { createClass, deleteClass, listClasses, updateClass } from '@/lib/data/classes'
-import { bucketTasks, localDayKey, weekKeysFor } from '@/lib/dates'
-import type { ClassSlot, Course, Task } from '@/lib/types'
+import { bucketTasks } from '@/lib/dates'
+import type { ClassSlot, Course, Task, TaskType } from '@/lib/types'
 import { useScanSaved } from '@/lib/scan/events'
 
-type Tab = 'tasks' | 'week' | 'timetable'
+type Tab = 'tasks' | 'calendar'
+type TypeFilter = 'all' | TaskType
+const TYPE_CHIPS: { id: TypeFilter; label: string }[] = [
+  { id: 'all', label: 'All' }, { id: 'other', label: 'Tasks' }, { id: 'assignment', label: 'Assignments' }, { id: 'exam', label: 'Exams' }, { id: 'reading', label: 'Readings' },
+]
+const DONE_DAYS = 7
 
 // Everything the planner shows; loaded at first and again after a scan adds items
 const loadPlanner = () => {
   const sb = supabase()
-  return Promise.all([listCourses(sb), listOpenTasks(sb), listClasses(sb)])
+  const since = new Date(Date.now() - DONE_DAYS * 86_400_000)
+  return Promise.all([listCourses(sb), listOpenTasks(sb), listClasses(sb), listRecentlyDone(sb, since).catch(() => [] as Task[])])
 }
 
 export default function PlannerPage() {
@@ -33,42 +40,41 @@ export default function PlannerPage() {
   const [tab, setTab] = useState<Tab>('tasks')
   const [courses, setCourses] = useState<Course[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [done, setDone] = useState<Task[]>([])
+  const [showDone, setShowDone] = useState(false)
   const [filter, setFilter] = useState<string | null>(null)
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [loaded, setLoaded] = useState(false)
   const [classes, setClasses] = useState<ClassSlot[]>([])
-  const [dialog, setDialog] = useState<Partial<ClassSlot> | null>(null)
+  const [editing, setEditing] = useState<Task | null>(null)
   // Scan (in the app's sidebar) saved tasks or classes: show them
-  useScanSaved(() => { loadPlanner().then(([c, t, cl]) => { setCourses(c); setTasks(t); setClasses(cl) }).catch(() => {}) })
+  useScanSaved(() => { loadPlanner().then(([c, t, cl, d]) => { setCourses(c); setTasks(t); setClasses(cl); setDone(d) }).catch(() => {}) })
 
   useEffect(() => {
-    loadPlanner().then(([c, t, cl]) => {
+    loadPlanner().then(([c, t, cl, d]) => {
       setCourses(c); setClasses(cl); setLoaded(true)
       // Keep tasks added while this was loading: the list fetched before they existed lacks them
       setTasks(current => [...t, ...current.filter(x => !t.some(y => y.id === x.id))])
+      setDone(current => [...current, ...d.filter(x => !current.some(y => y.id === x.id))])
     })
   }, [])
 
   const now = new Date()
-  const visible = useMemo(() => tasks.filter(t => !filter || t.course_id === filter), [tasks, filter])
+  const byCourse = useMemo(() => tasks.filter(t => !filter || t.course_id === filter), [tasks, filter])
+  const visible = useMemo(() => byCourse.filter(t => typeFilter === 'all' || t.type === typeFilter), [byCourse, typeFilter])
   const buckets = bucketTasks(visible, tz, now)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
-
-  const todayKey = localDayKey(now, tz)
-  const weekKeys = weekKeysFor(todayKey)
+  const countOf = (id: TypeFilter) => (id === 'all' ? byCourse.length : byCourse.filter(t => t.type === id).length)
+  const visibleDone = done.filter(t => !filter || t.course_id === filter)
   const visibleClasses = classes.filter(c => !filter || c.course_id === filter)
-  const deadlines = visible
-    .filter(t => t.due_at && weekKeys.includes(localDayKey(t.due_at, tz)))
-    .map(t => ({ id: t.id, title: t.title, dayKey: localDayKey(t.due_at!, tz), color: courseOf(t.course_id)?.color }))
 
-  function saveClass(input: Omit<ClassSlot, 'id'>) {
-    const editing = dialog?.id
-    setDialog(null)
-    if (editing) {
-      const before = classes.find(c => c.id === editing)!
+  function saveClass(input: Omit<ClassSlot, 'id'>, editingId?: string) {
+    if (editingId) {
+      const before = classes.find(c => c.id === editingId)!
       save(
-        () => setClasses(cs => cs.map(c => (c.id === editing ? { ...c, ...input } : c))),
-        () => setClasses(cs => cs.map(c => (c.id === editing ? before : c))),
-        () => updateClass(supabase(), editing, input),
+        () => setClasses(cs => cs.map(c => (c.id === editingId ? { ...c, ...input } : c))),
+        () => setClasses(cs => cs.map(c => (c.id === editingId ? before : c))),
+        () => updateClass(supabase(), editingId, input),
       )
     } else {
       const temp = { ...input, id: `temp-${crypto.randomUUID()}` }
@@ -82,7 +88,6 @@ export default function PlannerPage() {
 
   function removeClass(id: string) {
     const before = classes.find(c => c.id === id)!
-    setDialog(null)
     save(
       () => setClasses(cs => cs.filter(c => c.id !== id)),
       () => setClasses(cs => [...cs, before]),
@@ -93,7 +98,7 @@ export default function PlannerPage() {
   function add(input: NewTask) {
     const temp: Task = {
       id: `temp-${crypto.randomUUID()}`, course_id: input.course_id ?? null, title: input.title, type: input.type ?? 'other',
-      due_at: input.due_at ?? null, priority: 'normal', done_at: null, created_at: new Date().toISOString(),
+      due_at: input.due_at ?? null, priority: input.priority ?? 'normal', done_at: null, created_at: new Date().toISOString(),
     }
     save(
       () => setTasks(ts => [...ts, temp]),
@@ -102,28 +107,42 @@ export default function PlannerPage() {
     )
   }
 
-  function toggle(task: Task) {
+  function edit(id: string, patch: NewTask) {
+    const before = tasks.find(t => t.id === id)
+    if (!before || id.startsWith('temp-')) return
+    const change = { title: patch.title, type: patch.type ?? before.type, course_id: patch.course_id ?? null, due_at: patch.due_at ?? null, priority: patch.priority ?? before.priority }
     save(
-      () => setTasks(ts => ts.filter(t => t.id !== task.id)),
-      () => setTasks(ts => [...ts, task]),
+      () => setTasks(ts => ts.map(t => (t.id === id ? { ...t, ...change } : t))),
+      () => setTasks(ts => ts.map(t => (t.id === id ? before : t))),
+      () => updateTask(supabase(), id, patch),
+    )
+  }
+
+  // Ticking moves a task into Done at once; Undo (and unticking it there) puts it back
+  function finish(task: Task) {
+    const finished = { ...task, done_at: new Date().toISOString() }
+    save(
+      () => { setTasks(ts => ts.filter(t => t.id !== task.id)); setDone(ds => [finished, ...ds.filter(d => d.id !== task.id)]) },
+      () => { setTasks(ts => (ts.some(t => t.id === task.id) ? ts : [...ts, task])); setDone(ds => ds.filter(d => d.id !== task.id)) },
       async () => {
         await setTaskDone(supabase(), task.id, true)
-        toast('Marked done', { label: 'Undo', onClick: () => undoDone(task) })
+        toast('Marked done', { label: 'Undo', onClick: () => reopen(finished) })
       },
     )
   }
 
-  function undoDone(task: Task) {
+  function reopen(task: Task) {
+    const reopened = { ...task, done_at: null }
     save(
-      () => setTasks(ts => (ts.some(t => t.id === task.id) ? ts : [...ts, task])),
-      () => setTasks(ts => ts.filter(t => t.id !== task.id)),
+      () => { setTasks(ts => (ts.some(t => t.id === task.id) ? ts : [...ts, reopened])); setDone(ds => ds.filter(d => d.id !== task.id)) },
+      () => { setTasks(ts => ts.filter(t => t.id !== task.id)); setDone(ds => (ds.some(d => d.id === task.id) ? ds : [task, ...ds])) },
       () => setTaskDone(supabase(), task.id, false),
     )
   }
 
   function remove(task: Task) {
     save(
-      () => setTasks(ts => ts.filter(t => t.id !== task.id)),
+      () => { setTasks(ts => ts.filter(t => t.id !== task.id)); setDone(ds => ds.filter(d => d.id !== task.id)) },
       () => setTasks(ts => [...ts, task]),
       () => deleteTask(supabase(), task.id),
     )
@@ -133,7 +152,7 @@ export default function PlannerPage() {
     <section className="mt-4">
       <h2 className={`mb-1 text-xs font-medium ${color}`}>{label}</h2>
       {list.map(t => (
-        <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} onToggle={() => toggle(t)} onDelete={() => remove(t)} />
+        <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} onToggle={() => finish(t)} onDelete={() => remove(t)} onEdit={() => setEditing(t)} />
       ))}
     </section>
   )
@@ -146,8 +165,8 @@ export default function PlannerPage() {
         listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks
         listClasses(supabase()).then(setClasses)
       }} />
-      <div role="tablist" className="mb-2 flex gap-1">
-        {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
+      <div role="tablist" className="mb-3 flex gap-1">
+        {(['tasks', 'calendar'] as Tab[]).map(t => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
             className={`rounded-lg px-3 py-1 text-sm ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
             {t[0].toUpperCase() + t.slice(1)}
@@ -158,6 +177,14 @@ export default function PlannerPage() {
       {tab === 'tasks' && (
         <div>
           <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
+          <div role="group" aria-label="Task type" className="mb-1 flex flex-wrap gap-1.5">
+            {TYPE_CHIPS.map(c => (
+              <button key={c.id} type="button" aria-pressed={typeFilter === c.id} onClick={() => setTypeFilter(c.id)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${typeFilter === c.id ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
+                {c.label} <span className="text-muted">{countOf(c.id)}</span>
+              </button>
+            ))}
+          </div>
           <StudyPlanPanel courses={courses} tasks={tasks} />
           {loaded && courses.length === 0 && tasks.length === 0 && (
             <p className="mt-6 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
@@ -166,23 +193,29 @@ export default function PlannerPage() {
           {group('Today', buckets.today, 'text-fg')}
           {group('Upcoming', buckets.upcoming)}
           {group('No date', buckets.noDate)}
+          {visibleDone.length > 0 && (
+            <section aria-label="Done" className="mt-6">
+              <button type="button" aria-expanded={showDone} onClick={() => setShowDone(s => !s)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-fg">
+                {showDone ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}Done ({visibleDone.length})
+              </button>
+              {showDone && (
+                <div className="mt-1">
+                  {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
+                </div>
+              )}
+            </section>
+          )}
         </div>
       )}
-      {tab === 'week' && (
-        <WeekGrid weekKeys={weekKeys} todayKey={todayKey} classes={visibleClasses} courses={courses} deadlines={deadlines} />
+      {tab === 'calendar' && (
+        <CalendarView classes={visibleClasses} courses={courses} tasks={byCourse} tz={tz}
+          empty={loaded && classes.length === 0 && tasks.length === 0}
+          onSaveClass={saveClass} onDeleteClass={removeClass} onAddTask={add} onEditTask={edit} onDoneTask={finish} onDeleteTask={remove} />
       )}
-      {tab === 'timetable' && (
-        <div>
-          {courses.length === 0
-            ? <p className="text-sm text-muted">Add a course first, then add its classes here.</p>
-            : <button className="btn mb-3" onClick={() => setDialog({})}>Add class</button>}
-          <WeekGrid weekKeys={weekKeys} todayKey={todayKey} classes={visibleClasses} courses={courses} deadlines={[]}
-            onClassClick={c => setDialog(c)}
-            onEmptyClick={(dow, h) => { if (courses.length) setDialog({ day_of_week: dow, start_time: `${String(h).padStart(2, '0')}:00`, end_time: `${String(h + 1).padStart(2, '0')}:00` }) }} />
-          <ClassDialog open={dialog !== null} initial={dialog} courses={courses} onClose={() => setDialog(null)}
-            onSave={saveClass} onDelete={dialog?.id ? () => removeClass(dialog.id!) : undefined} />
-        </div>
-      )}
+      <TaskDialog open={editing !== null} initial={editing} courses={courses} tz={tz} onClose={() => setEditing(null)}
+        onSave={input => { const id = editing!.id; setEditing(null); edit(id, input) }}
+        onDone={() => { const t = editing!; setEditing(null); finish(t) }}
+        onDelete={() => { const t = editing!; setEditing(null); remove(t) }} />
     </div>
   )
 }

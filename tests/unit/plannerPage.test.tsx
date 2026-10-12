@@ -10,7 +10,7 @@ vi.mock('@/lib/data/classes', () => ({ listClasses: async () => [], createClass:
 vi.mock('@/lib/data/tasks', () => ({
   listOpenTasks: () => new Promise<Task[]>(r => { finishLoad = r }),
   createTask: async (...a: unknown[]) => ({ id: 'real-1', course_id: null, type: 'other', priority: 'normal', done_at: null, created_at: '', due_at: null, ...(a[1] as object) }),
-  setTaskDone: vi.fn(), deleteTask: vi.fn(),
+  listRecentlyDone: async () => [], updateTask: vi.fn(), setTaskDone: vi.fn(), deleteTask: vi.fn(),
 }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }))
 
