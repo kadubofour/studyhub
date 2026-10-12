@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Course } from '../types'
-import { announceCoursesChanged } from '@/lib/course/events'
+import { announceCoursesChanged, announceTimetableChanged } from '@/lib/course/events'
 import { check, must } from './util'
 
 const COLS = 'id,name,color'
@@ -29,4 +29,5 @@ export async function deleteCourse(sb: SupabaseClient, id: string, opts: { delet
   // tasks/notes/decks: ON DELETE SET NULL; classes: ON DELETE CASCADE
   check(await sb.from('courses').delete().eq('id', id))
   announceCoursesChanged()
+  announceTimetableChanged() // its classes went with it
 }

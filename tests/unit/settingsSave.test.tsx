@@ -65,6 +65,20 @@ describe('Settings save', () => {
   })
 })
 
+describe('Preferences follow the theme toggled elsewhere', () => {
+  it('shows the theme chosen with the sidebar button, so saving System afterwards really saves it', async () => {
+    function Toggle() { const { setProfile } = useProfile(); return <button onClick={() => setProfile(p => ({ ...p, theme: 'dark' }))}>sidebar dark</button> }
+    render(<ProfileProvider initial={base}><ToastProvider><PreferencesCard /><Toggle /></ToastProvider></ProfileProvider>)
+    const select = screen.getByLabelText('Theme') as HTMLSelectElement
+    expect(select.value).toBe('system')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'sidebar dark' })) })
+    expect(select.value).toBe('dark')
+    fireEvent.change(select, { target: { value: 'system' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save changes' })) })
+    expect(lastPatch).toEqual({ theme: 'system' })
+  })
+})
+
 describe('Settings page', () => {
   it('no longer holds the profile and focus form, which lives on the profile page, and keeps Sign out', () => {
     render(<ProfileProvider initial={base}><ToastProvider><SettingsPage /></ToastProvider></ProfileProvider>)
@@ -72,5 +86,6 @@ describe('Settings page', () => {
     expect(screen.queryByText('Profile and focus')).toBeNull()
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy()
     expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
+    expect(screen.getByText(/light or dark mode/i)).toBeTruthy()
   })
 })

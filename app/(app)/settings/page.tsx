@@ -29,7 +29,7 @@ export default function SettingsPage() {
       <PlanCard />
       <StorageCard />
       <AppearanceCard />
-      <p className="text-sm text-muted">Time zone, focus lengths and note settings are on your <Link href="/profile" className="text-accent underline">profile</Link>.</p>
+      <p className="text-sm text-muted">Light or dark mode, time zone, focus lengths and note settings are on your <Link href="/profile" className="text-accent underline">profile</Link>.</p>
       <DataCard />
       <div className="flex items-center justify-between gap-4">
         <p className="flex gap-4 text-xs text-muted"><Link href="/terms" className="hover:text-fg">Terms</Link><Link href="/privacy" className="hover:text-fg">Privacy</Link></p>

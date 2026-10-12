@@ -161,6 +161,13 @@ describe('Scan in the app shell', () => {
     await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })
     expect(within(screen.getByRole('group', { name: 'Courses' })).getByRole('link', { name: 'Biology' }).getAttribute('aria-current')).toBe('page')
   })
+  it('marks Courses itself when the courses page is open', async () => {
+    path = '/courses'
+    courseList = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }]
+    await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })
+    const group = screen.getByRole('group', { name: 'Courses' })
+    expect(within(group).getByRole('link', { name: 'Courses' }).getAttribute('aria-current')).toBe('page')
+  })
   it('has no Courses group before there is a course', async () => {
     path = '/home'; courseList = []
     await act(async () => { render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>) })

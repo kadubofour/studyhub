@@ -60,7 +60,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   /** Clicking an equation opens it for editing. Must only call stable setters: it is read once. */
   onEditMath?: EditMath
   onInsertEquation?: () => void
-  /** Settings > Turn typed maths into equations */
+  /** Profile > Preferences > Turn typed maths into equations */
   autoMath?: boolean
 }) {
   const toast = useToast()

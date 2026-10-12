@@ -21,6 +21,13 @@ export function PreferencesCard() {
   const [initial, setInitial] = useState(profile)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The theme can also be changed with the sidebar's Dark mode button: follow it, so Save never compares against a stale choice
+  const [seenTheme, setSeenTheme] = useState(profile.theme)
+  if (profile.theme !== seenTheme) {
+    setSeenTheme(profile.theme)
+    setForm(f => ({ ...f, theme: profile.theme }))
+    setInitial(i => ({ ...i, theme: profile.theme }))
+  }
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => { setForm(f => ({ ...f, [k]: v })); setError(null) }
 
   // The full zone list comes from the browser, so render it only after hydration (server lists can differ),

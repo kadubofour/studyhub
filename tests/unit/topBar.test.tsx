@@ -4,6 +4,7 @@ import { render, screen, fireEvent, cleanup, act, within } from '@testing-librar
 import { createTimer, startTimer, pauseTimer } from '@/lib/timer'
 import { forgetXp } from '@/lib/xp/celebrate'
 import { announceProgressChanged } from '@/lib/xp/events'
+import { announceCoursesChanged, announceTimetableChanged } from '@/lib/course/events'
 import type { XpSummary } from '@/lib/xp/rules'
 
 const MIN = 60_000
@@ -19,7 +20,8 @@ vi.mock('next/navigation', () => ({ usePathname: () => path }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 let classes: { course_id: string; day_of_week: number; start_time: string; end_time: string }[] = []
 vi.mock('@/lib/data/classes', () => ({ listClasses: async () => classes }))
-vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'bio', name: 'Biology', color: '#000000' }] }))
+let courseName = 'Biology'
+vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'bio', name: courseName, color: '#000000' }] }))
 vi.mock('@/components/providers/ProfileProvider', () => ({ useProfile: () => ({ profile: { timezone: 'UTC' } }) }))
 vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => { countCalls++; if (dueFails) throw new Error('offline'); return due } }))
 vi.mock('@/components/providers/FocusProvider', async orig => ({ ...(await orig<typeof import('@/components/providers/FocusProvider')>()), useFocus: () => ({ timer, now, toggle, todayMinutes: 0 }) }))
@@ -60,6 +62,11 @@ describe('TopBar keeping up', () => {
     await open()
     const chip = screen.getByLabelText('4-day streak')
     expect(chip.textContent).toBe('4')
+  })
+  it('names the streak for screen readers as an image, since a plain span cannot be named', async () => {
+    xp = summary({ streak: 4 })
+    await open()
+    expect(screen.getByRole('img', { name: '4-day streak' })).toBeTruthy()
   })
   it('shows the cheer first in the strip, so it does not push the other chips about', async () => {
     xp = summary({ total: 120 })
@@ -251,6 +258,24 @@ describe('TopBar class period', () => {
     classes = [slot('14:00:00', '15:00:00')]
     await open()
     expect(screen.getByRole('link', { name: 'Biology · 14:00' })).toBeTruthy()
+  })
+  it('reads the timetable again when a class is added, so the chip is not stale', async () => {
+    await open()
+    expect(screen.queryByRole('link', { name: /Biology/ })).toBeNull()
+    classes = [slot('14:00:00', '15:00:00')]
+    await act(async () => { announceTimetableChanged() })
+    expect(screen.getByRole('link', { name: 'Biology · 14:00' })).toBeTruthy()
+  })
+  it('shows a renamed course, and drops classes of a deleted one', async () => {
+    classes = [slot('14:00:00', '15:00:00')]
+    await open()
+    courseName = 'Bio 101'
+    await act(async () => { announceCoursesChanged() })
+    expect(screen.getByRole('link', { name: 'Bio 101 · 14:00' })).toBeTruthy()
+    classes = []
+    await act(async () => { announceCoursesChanged() })
+    expect(screen.queryByRole('link', { name: /Bio/ })).toBeNull()
+    courseName = 'Biology'
   })
   it('has no chip when there is no class left today', async () => {
     classes = [slot('08:00:00', '09:00:00')]

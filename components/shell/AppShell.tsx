@@ -129,7 +129,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
               <PanelLeftClose size={16} aria-hidden />
             </button>
           </div>
-          <nav className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+          <nav className="-mx-1 flex min-h-0 flex-col gap-4 overflow-y-auto px-1">
             {link(HOME)}
             {GROUPS.map(g => (
               <div key={g.label} role="group" aria-labelledby={`nav-${g.label}`} className="flex flex-col gap-0.5">
@@ -151,7 +151,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             ))}
             {courses.length > 0 && (
               <div role="group" aria-labelledby="nav-Courses" className="flex flex-col gap-0.5">
-                <Link id="nav-Courses" href="/courses" onClick={e => guard(e, '/courses')} className="section-label !mb-1 px-2.5 hover:text-fg">Courses</Link>
+                <Link id="nav-Courses" href="/courses" onClick={e => guard(e, '/courses')} aria-current={path === '/courses' ? 'page' : undefined} className="section-label !mb-0 px-2.5 py-1.5 hover:underline">Courses</Link>
                 {courses.map(c => (
                   <Link key={c.id} href={`/courses/${c.id}`} onClick={e => guard(e, `/courses/${c.id}`)} aria-current={active(`/courses/${c.id}`) ? 'page' : undefined}
                     className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm transition ${active(`/courses/${c.id}`) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>

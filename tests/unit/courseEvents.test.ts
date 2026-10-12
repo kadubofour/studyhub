@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { COURSES_CHANGED } from '@/lib/course/events'
+import { COURSES_CHANGED, TIMETABLE_CHANGED } from '@/lib/course/events'
+import { createClass, deleteClass, updateClass } from '@/lib/data/classes'
 import { createCourse, deleteCourse, updateCourse } from '@/lib/data/courses'
 
 const heard = vi.fn()
@@ -26,5 +27,26 @@ describe('the sidebar hears about course changes once they are saved', () => {
     await expect(updateCourse(sb(bad), 'c', { name: 'x' })).rejects.toBeTruthy()
     await expect(deleteCourse(sb(bad), 'c', { deleteContents: false })).rejects.toBeTruthy()
     expect(heard).not.toHaveBeenCalled()
+  })
+})
+
+describe('the top bar hears about timetable changes once they are saved', () => {
+  const heardTimetable = vi.fn()
+  beforeEach(() => { heardTimetable.mockClear(); window.addEventListener(TIMETABLE_CHANGED, heardTimetable) })
+  afterEach(() => { window.removeEventListener(TIMETABLE_CHANGED, heardTimetable) })
+  const slot = { course_id: 'c', day_of_week: 1, start_time: '09:00', end_time: '10:00', location: null, kind: 'lecture' as const }
+  it('a new, changed or removed class', async () => {
+    await createClass(sb(ok), slot); await updateClass(sb(ok), 'x', { location: 'B2' }); await deleteClass(sb(ok), 'x')
+    expect(heardTimetable).toHaveBeenCalledTimes(3)
+  })
+  it('nothing when the save failed', async () => {
+    await expect(createClass(sb(bad), slot)).rejects.toBeTruthy()
+    await expect(updateClass(sb(bad), 'x', { location: 'B2' })).rejects.toBeTruthy()
+    await expect(deleteClass(sb(bad), 'x')).rejects.toBeTruthy()
+    expect(heardTimetable).not.toHaveBeenCalled()
+  })
+  it('a deleted course takes its classes with it, so that is announced too', async () => {
+    await deleteCourse(sb(ok), 'c', { deleteContents: false })
+    expect(heardTimetable).toHaveBeenCalledTimes(1)
   })
 })

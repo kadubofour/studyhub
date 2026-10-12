@@ -14,6 +14,7 @@ import { classChip } from '@/lib/timetable'
 import { remainingMs } from '@/lib/timer'
 import { celebrate, rememberXp, seenXp, type Burst, type Snapshot } from '@/lib/xp/celebrate'
 import { useProgressChanged } from '@/lib/xp/events'
+import { useCoursesChanged, useTimetableChanged } from '@/lib/course/events'
 
 const PAGES: [string, string][] = [
   ['/home', 'Home'], ['/planner', 'Planner'], ['/focus', 'Focus'], ['/progress', 'Progress'], ['/notes', 'Notes'], ['/lectures', 'Lectures'],
@@ -57,12 +58,16 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
   const { profile } = useProfile()
   const [timetable, setTimetable] = useState<{ classes: Awaited<ReturnType<typeof listClasses>>; courses: Awaited<ReturnType<typeof listCourses>> } | null>(null)
   const [clock30, setClock30] = useState(() => Date.now())
+  // Read again when a class or course is added, renamed or deleted, so the chip is never stale
+  const [timetableVersion, setTimetableVersion] = useState(0)
+  useCoursesChanged(() => setTimetableVersion(v => v + 1))
+  useTimetableChanged(() => setTimetableVersion(v => v + 1))
   useEffect(() => {
     let live = true
     Promise.all([listClasses(supabase()), listCourses(supabase())]).then(([classes, courses]) => { if (live) setTimetable({ classes, courses }) }).catch(() => {})
     const tick = setInterval(() => setClock30(Date.now()), 30_000)
     return () => { live = false; clearInterval(tick) }
-  }, [])
+  }, [timetableVersion])
   const period = timetable ? classChip(timetable.classes, timetable.courses, profile.timezone, new Date(clock30)) : null
 
   const running = timer.startedAt !== null
@@ -100,12 +105,12 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
         <span role="status" aria-live="polite" className="sr-only">
           {burst ? (burst.levelUp ? `Level up! You reached level ${burst.levelUp} (+${burst.gained} XP)` : `+${burst.gained} XP`) : ''}
         </span>
-        {xp && xp.streak > 0 && <span aria-label={`${xp.streak}-day streak`} className={`${chip} tile-c text-fg`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
+        {xp && xp.streak > 0 && <span role="img" aria-label={`${xp.streak}-day streak`} className={`${chip} tile-c text-fg`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
         {xp && (
           <span className={`${chip} bg-surface text-fg`}>
             <Zap size={15} className="text-accent" aria-hidden /><span className="sm:hidden">Lv {xp.level.level}</span><span className="hidden sm:inline">Level {xp.level.level}</span>
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
-              className="block h-1.5 w-10 overflow-hidden rounded-full bg-line sm:w-14">
+              className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-line sm:block">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
             </span>
           </span>

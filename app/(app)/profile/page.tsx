@@ -167,7 +167,7 @@ export default function ProfilePage() {
 
       <section aria-labelledby="courses-title" className="space-y-2">
         <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>
-        {courses.length === 0 ? <p className="text-sm text-muted">No courses yet. Add one from the Library.</p> : (
+        {courses.length === 0 ? <p className="text-sm text-muted">No courses yet. Add one in the Planner.</p> : (
           <ul aria-label="Your courses" className="flex flex-wrap gap-2">
             {courses.map(c => (
               <li key={c.id}>

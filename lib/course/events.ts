@@ -14,3 +14,17 @@ export function useCoursesChanged(react: () => void) {
     return () => window.removeEventListener(COURSES_CHANGED, heard)
   }, [])
 }
+
+// A class added, changed or removed (or a course deleted, which takes its classes) says so once it is saved, so the top bar's class chip reads again
+export const TIMETABLE_CHANGED = 'studyhub:timetable-changed'
+export const announceTimetableChanged = () => { if (typeof window !== 'undefined') window.dispatchEvent(new Event(TIMETABLE_CHANGED)) }
+
+export function useTimetableChanged(react: () => void) {
+  const latest = useRef(react)
+  useEffect(() => { latest.current = react })
+  useEffect(() => {
+    const heard = () => latest.current()
+    window.addEventListener(TIMETABLE_CHANGED, heard)
+    return () => window.removeEventListener(TIMETABLE_CHANGED, heard)
+  }, [])
+}
