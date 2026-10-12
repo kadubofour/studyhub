@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { BADGES, earnedCount, evaluate, type Stats } from '@/lib/profile/badges'
+import { BADGES, earnedCount, evaluate, inDisplayOrder, type Stats } from '@/lib/profile/badges'
 
 const ZERO: Stats = { notes: 0, decks: 0, cards: 0, lectures: 0, lecture_minutes: 0, quizzes_done: 0, focus_minutes: 0, reviews: 0, games: 0, tutor_messages: 0, courses: 0 }
 const ctx = (over: Partial<Stats> = {}, extra: { bestStreak?: number; level?: number } = {}) => ({ stats: { ...ZERO, ...over }, bestStreak: extra.bestStreak ?? 0, level: extra.level ?? 1 })
@@ -42,6 +42,19 @@ describe('badges', () => {
     const how = Object.fromEntries(BADGES.map(b => [b.id, b.how]))
     expect(how['reviewer']).toBe('Do 100 card reviews')
     expect(how['quiz-ace']).toBe('Finish 5 quiz attempts')
+  })
+  it('lists the earned ones first, then the locked ones closest to done, keeping the usual order for a tie', () => {
+    const order = inDisplayOrder(evaluate(ctx({ notes: 1, focus_minutes: 300, games: 1, tutor_messages: 4 }, { level: 2 }))).map(b => b.id)
+    expect(order.slice(0, 1)).toEqual(['first-note'])
+    // locked: deep-focus 5/10, level-5 2/5, note-taker 1/10, player 1/5 and curious 4/20 (0.2 each, player first), ...
+    expect(order.slice(1, 5)).toEqual(['deep-focus', 'level-5', 'player', 'curious'])
+    expect(order).toHaveLength(12)
+  })
+  it('does not change the list it was given', () => {
+    const states = evaluate(ctx({ notes: 1 }))
+    const copy = states.map(b => b.id)
+    inDisplayOrder(states)
+    expect(states.map(b => b.id)).toEqual(copy)
   })
   it('counts how many are earned', () => {
     expect(earnedCount(evaluate(ctx({ notes: 10, lectures: 1 })))).toBe(3) // first note, note-taker, first lecture
