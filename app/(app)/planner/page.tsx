@@ -8,6 +8,7 @@ import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { TaskDialog } from '@/components/planner/TaskDialog'
 import { CalendarView } from '@/components/calendar/CalendarView'
+import { TimetableView } from '@/components/calendar/TimetableView'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -18,7 +19,7 @@ import { bucketTasks } from '@/lib/dates'
 import type { ClassSlot, Course, Task, TaskType } from '@/lib/types'
 import { useScanSaved } from '@/lib/scan/events'
 
-type Tab = 'tasks' | 'calendar'
+type Tab = 'tasks' | 'week' | 'timetable'
 type TypeFilter = 'all' | TaskType
 const TYPE_CHIPS: { id: TypeFilter; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'other', label: 'Tasks' }, { id: 'assignment', label: 'Assignments' }, { id: 'exam', label: 'Exams' }, { id: 'reading', label: 'Readings' },
@@ -170,7 +171,7 @@ export default function PlannerPage() {
         listClasses(supabase()).then(setClasses)
       }} />
       <div role="tablist" className="mb-3 flex gap-1">
-        {(['tasks', 'calendar'] as Tab[]).map(t => (
+        {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
             className={`rounded-lg px-3 py-1 text-sm ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
             {t[0].toUpperCase() + t.slice(1)}
@@ -179,7 +180,7 @@ export default function PlannerPage() {
       </div>
 
       {tab === 'tasks' && (
-        <div>
+        <div className="max-w-4xl">
           <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
           <div role="group" aria-label="Task type" className="mb-1 flex flex-wrap gap-1.5">
             {TYPE_CHIPS.map(c => (
@@ -211,11 +212,12 @@ export default function PlannerPage() {
           )}
         </div>
       )}
-      {tab === 'calendar' && (
+      {tab === 'week' && (
         <CalendarView classes={visibleClasses} courses={courses} tasks={byCourse} tz={tz} courseId={filter}
           empty={loaded && classes.length === 0 && tasks.length === 0}
           onSaveClass={saveClass} onDeleteClass={removeClass} onAddTask={add} onEditTask={edit} onDoneTask={finish} onDeleteTask={remove} />
       )}
+      {tab === 'timetable' && <TimetableView classes={visibleClasses} courses={courses} tz={tz} onSaveClass={saveClass} onDeleteClass={removeClass} />}
       <TaskDialog open={editing !== null} initial={editing} courses={courses} tz={tz} onClose={() => setEditing(null)}
         onSave={input => { const id = editing!.id; setEditing(null); edit(id, input) }}
         onDone={() => { const t = editing!; setEditing(null); finish(t) }}

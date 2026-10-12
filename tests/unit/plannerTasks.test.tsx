@@ -35,32 +35,40 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Planner tabs', () => {
-  it('has Tasks and Calendar, and the calendar replaces the old Week and Timetable tabs', async () => {
+  it('keeps the Tasks, Week and Timetable tabs', async () => {
     await load()
-    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Tasks', 'Calendar'])
-    await click(screen.getByRole('tab', { name: 'Calendar' }))
+    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Tasks', 'Week', 'Timetable'])
+    await click(screen.getByRole('tab', { name: 'Week' }))
     expect(screen.getByRole('button', { name: 'Today' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Week' }).getAttribute('aria-pressed')).toBe('true')
   })
-  it('shows the first-exam invitation on a calendar with nothing yet', async () => {
+  it('says nothing is planned yet on an empty week', async () => {
     await load()
-    await click(screen.getByRole('tab', { name: 'Calendar' }))
-    expect(screen.getByText('Add your first exam')).toBeTruthy()
+    await click(screen.getByRole('tab', { name: 'Week' }))
+    expect(screen.getByText('Nothing planned yet')).toBeTruthy()
   })
   it('does not, once there is a task', async () => {
     open = [task('t1', 'Essay')]
     await load()
-    await click(screen.getByRole('tab', { name: 'Calendar' }))
-    expect(screen.queryByText('Add your first exam')).toBeNull()
+    await click(screen.getByRole('tab', { name: 'Week' }))
+    expect(screen.queryByText('Nothing planned yet')).toBeNull()
   })
-  it('adding an exam on the calendar saves a task of type exam', async () => {
+  it('adding an exam on the week saves a task of type exam', async () => {
     await load()
-    await click(screen.getByRole('tab', { name: 'Calendar' }))
-    await click(screen.getByRole('button', { name: 'Add' }))
-    await click(screen.getByRole('menuitem', { name: 'Exam date' }))
+    await click(screen.getByRole('tab', { name: 'Week' }))
+    await click(screen.getByRole('button', { name: 'Add exam' }))
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Finals' } })
     await click(screen.getByRole('button', { name: 'Save' }))
     expect(createTask).toHaveBeenCalledWith({}, expect.objectContaining({ title: 'Finals', type: 'exam' }))
+  })
+})
+
+describe('Timetable tab', () => {
+  it('shows the weekly classes only and adds one from a button', async () => {
+    await load()
+    await click(screen.getByRole('tab', { name: 'Timetable' }))
+    expect(screen.getByRole('button', { name: 'Add class' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Day' })).toBeNull() // no date navigation: it repeats every week
   })
 })
 

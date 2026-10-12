@@ -18,12 +18,12 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
   const month = anchor.slice(0, 7)
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-raised">
+    <div tabIndex={0} role="region" aria-label="Month" className="overflow-auto" style={{ minHeight: 420 }}>
       <div className="min-w-[640px]">
-        <div className="grid grid-cols-7 border-b border-line text-center text-[11px] tracking-wide text-muted" aria-hidden>
+        <div className="grid grid-cols-7 gap-1 pb-1 text-center text-xs font-medium text-muted" aria-hidden>
           {HEAD.map(h => <span key={h} className="py-1.5">{h}</span>)}
         </div>
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7 gap-1">
           {keys.map(k => {
             const outside = k.slice(0, 7) !== month
             const dow = weekdayOfKey(k)
@@ -40,7 +40,7 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
             ]
             const hidden = entries.length - SHOWN
             return (
-              <div key={k} data-day={k} className={`min-h-28 space-y-0.5 border-b border-r border-line p-1 ${outside ? 'bg-surface/40' : ''}`}>
+              <div key={k} data-day={k} className={`min-h-32 space-y-0.5 rounded-lg p-1 ${outside ? 'bg-surface/50' : 'bg-surface'}`}>
                 <button type="button" aria-label={longDay(k)} aria-current={k === todayKey ? 'date' : undefined} data-outside={outside ? 'true' : undefined} onClick={() => onDayClick(k)}
                   className={`flex size-6 items-center justify-center rounded-full text-xs hover:bg-surface ${k === todayKey ? 'bg-fg font-semibold text-bg hover:bg-fg' : outside ? 'text-muted' : ''}`}>
                   {Number(k.slice(8))}

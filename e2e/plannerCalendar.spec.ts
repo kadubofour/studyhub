@@ -4,38 +4,33 @@ import { signUp } from './helpers'
 
 const openCalendar = async (page: Page) => {
   await page.goto('/planner')
-  await page.getByRole('tab', { name: 'Calendar' }).click()
+  await page.getByRole('tab', { name: 'Week' }).click()
   await expect(page.getByRole('button', { name: 'Today' })).toBeVisible()
 }
 
-test('Calendar: add an exam, see it in the week and the month, and it is still there after a reload', async ({ page }) => {
+test('Week: add an exam, see it in the week and the month, and it is still there after a reload', async ({ page }) => {
   await signUp(page)
   await openCalendar(page)
-  await expect(page.getByText('Add your first exam')).toBeVisible()
+  await expect(page.getByText('Nothing planned yet')).toBeVisible()
   await page.getByRole('button', { name: 'Add an exam' }).click()
   await page.getByLabel('Title').fill('Finals')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.getByText('Add your first exam')).toHaveCount(0)
+  await expect(page.getByText('Nothing planned yet')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Finals/ })).toBeVisible()
 
   await page.getByRole('button', { name: 'Month', exact: true }).click()
   await expect(page.getByRole('button', { name: /Finals/ })).toBeVisible()
 
   await page.reload()
-  await page.getByRole('tab', { name: 'Calendar' }).click()
+  await page.getByRole('tab', { name: 'Week' }).click()
   await expect(page.getByRole('button', { name: /Finals/ })).toBeVisible()
 })
 
-test('Calendar: add a class (from an empty hour on a computer), and click the class to delete it', async ({ page, isMobile }) => {
+test('Week: add a class (from an empty hour on a computer), and click the class to delete it', async ({ page, isMobile }) => {
   await signUp(page)
   await openCalendar(page)
-  if (isMobile) {
-    // the first-exam invitation covers the middle of a small screen, so use the Add menu there
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Class' }).click()
-  } else {
-    await page.getByTestId('slot-10').first().click()
-  }
+  if (isMobile) await page.getByRole('button', { name: 'Add a class' }).click()
+  else await page.getByTestId('slot-14').first().click()
   await expect(page.getByRole('heading', { name: 'Add class' })).toBeVisible()
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   const block = page.getByRole('button', { name: /^Biology \d/ })
@@ -45,7 +40,7 @@ test('Calendar: add a class (from an empty hour on a computer), and click the cl
   await expect(page.getByRole('button', { name: /^Biology \d/ })).toHaveCount(0)
 })
 
-test('Calendar: moving around and the mini month', async ({ page, isMobile }) => {
+test('Week: moving around, and the Day view', async ({ page }) => {
   await signUp(page)
   await openCalendar(page)
   const title = page.getByRole('heading', { level: 2 }).filter({ hasText: /\d{4}$/ }).first()
@@ -56,7 +51,6 @@ test('Calendar: moving around and the mini month', async ({ page, isMobile }) =>
   expect(await title.textContent()).toBe(first)
   await page.getByRole('button', { name: 'Day', exact: true }).click()
   await expect(page.getByRole('group', { name: /\d+ \w+$/ })).toHaveCount(1)
-  if (!isMobile) await expect(page.getByRole('complementary', { name: 'Month' })).toBeVisible()
 })
 
 test('Tasks: a ! makes it high priority, a task can be edited, finished into Done and brought back', async ({ page }) => {
@@ -109,7 +103,7 @@ test('Sidebar Upload and Scan are solid and darker, with no dashed outline', asy
 })
 
 for (const scheme of ['light', 'dark'] as const) {
-  test(`the calendar and task list have no serious accessibility problems (${scheme})`, async ({ page }) => {
+  test(`the planner tabs have no serious accessibility problems (${scheme})`, async ({ page }) => {
     test.setTimeout(90_000)
     await page.emulateMedia({ colorScheme: scheme })
     await signUp(page)
@@ -123,13 +117,15 @@ for (const scheme of ['light', 'dark'] as const) {
       for (const v of r.violations.filter(x => x.impact === 'serious' || x.impact === 'critical')) found.push(`${label}: ${v.id} ${v.nodes[0].target.join(' ')}`)
     }
     await check('tasks')
-    await page.getByRole('tab', { name: 'Calendar' }).click()
-    await check('calendar week')
+    await page.getByRole('tab', { name: 'Week' }).click()
+    await check('week')
     await page.getByRole('button', { name: 'Month', exact: true }).click()
-    await check('calendar month')
-    await page.getByRole('button', { name: 'Add' }).click()
-    await page.getByRole('menuitem', { name: 'Exam date' }).click()
+    await check('month')
+    await page.getByRole('button', { name: 'Add exam' }).click()
     await check('exam dialog')
+    await page.keyboard.press('Escape')
+    await page.getByRole('tab', { name: 'Timetable' }).click()
+    await check('timetable')
     expect(found).toEqual([])
   })
 }

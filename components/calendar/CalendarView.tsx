@@ -1,8 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { GraduationCap } from 'lucide-react'
 import { CalendarToolbar, type AddKind } from './CalendarToolbar'
-import { MiniMonth } from './MiniMonth'
 import { MonthGrid } from './MonthGrid'
 import { TimeGrid } from './TimeGrid'
 import { ClassDialog } from '@/components/planner/ClassDialog'
@@ -85,31 +83,26 @@ export function CalendarView({ classes, courses, tasks, tz, empty, courseId = nu
       <CalendarToolbar title={rangeTitle(view, anchor)} view={view} onView={setView} onToday={() => setAnchor(todayKey)}
         onPrev={() => setAnchor(a => shiftAnchor(view, a, -1))} onNext={() => setAnchor(a => shiftAnchor(view, a, 1))} onAdd={add} />
       <p role="status" className="mb-2 min-h-0 text-sm text-muted empty:hidden">{notice}</p>
-      <div className="flex items-start gap-4">
-        <aside aria-label="Month" className="hidden shrink-0 lg:block"><MiniMonth anchor={anchor} todayKey={todayKey} rangeKeys={keys} onPick={k => setAnchor(k)} /></aside>
-        <div className="relative min-w-0 flex-1">
-          {view === 'month'
-            ? <MonthGrid keys={keys} anchor={anchor} todayKey={todayKey} classes={classes} courses={courses} itemsByDay={itemsByDay}
-                onDayClick={k => { setAnchor(k); setView('day') }} onItemClick={openItem} onClassClick={openClass} />
-            : <TimeGrid keys={keys} todayKey={todayKey} now={now} tz={tz} classes={classes} courses={courses} itemsByDay={itemsByDay}
-                onClassClick={openClass} onItemClick={openItem}
-                onSlotClick={(k, h) => {
-                  if (courses.length === 0) { setNotice('Add a course first, then add its classes.'); return }
-                  setNotice(null)
-                  setClassDialog({ day_of_week: weekdayOfKey(k), start_time: `${pad(h)}:00`, end_time: h >= 23 ? '23:59' : `${pad(h + 1)}:00` })
-                }} />}
-          {empty && (
-            <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center p-4">
-              <div className="pointer-events-auto flex max-w-xs flex-col items-center gap-2 rounded-2xl border border-line bg-raised/95 p-6 text-center shadow-lg backdrop-blur">
-                <GraduationCap size={26} className="text-accent" aria-hidden />
-                <h3 className="text-base font-semibold">Add your first exam</h3>
-                <p className="text-sm text-muted">Tell us when your exam is and what it covers. We will plan study time for it.</p>
-                <button type="button" className="btn-primary mt-1" onClick={() => add('exam')}>Add an exam</button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {empty && (
+        <section aria-label="Nothing planned yet" className="mb-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface px-4 py-3">
+          <div className="mr-auto">
+            <h3 className="text-sm font-semibold">Nothing planned yet</h3>
+            <p className="text-sm text-muted">Add an exam and we will plan study time for it, or add your classes.</p>
+          </div>
+          <button type="button" className="btn-primary" onClick={() => add('exam')}>Add an exam</button>
+          <button type="button" className="btn" onClick={() => add('class')}>Add a class</button>
+        </section>
+      )}
+      {view === 'month'
+        ? <MonthGrid keys={keys} anchor={anchor} todayKey={todayKey} classes={classes} courses={courses} itemsByDay={itemsByDay}
+            onDayClick={k => { setAnchor(k); setView('day') }} onItemClick={openItem} onClassClick={openClass} />
+        : <TimeGrid keys={keys} todayKey={todayKey} now={now} tz={tz} classes={classes} courses={courses} itemsByDay={itemsByDay}
+            onClassClick={openClass} onItemClick={openItem}
+            onSlotClick={(k, h) => {
+              if (courses.length === 0) { setNotice('Add a course first, then add its classes.'); return }
+              setNotice(null)
+              setClassDialog({ day_of_week: weekdayOfKey(k), start_time: `${pad(h)}:00`, end_time: h >= 23 ? '23:59' : `${pad(h + 1)}:00` })
+            }} />}
 
       <ClassDialog open={classDialog !== null} initial={classDialog} courses={courses} onClose={() => setClassDialog(null)}
         onSave={input => { const id = classDialog?.id; setClassDialog(null); onSaveClass(input, id) }}

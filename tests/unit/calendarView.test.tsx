@@ -55,40 +55,30 @@ describe('CalendarView', () => {
     setup()
     expect(within(screen.getByRole('group', { name: 'Thursday 15 October' })).getByText('Learn: Glycolysis')).toBeTruthy()
   })
-  it('the mini month moves the calendar to the day picked', () => {
-    setup()
-    fireEvent.click(screen.getByRole('button', { name: 'Friday 23 October 2026' }))
-    expect(screen.getByText('Oct 19 – 25, 2026')).toBeTruthy()
-  })
-
   describe('adding', () => {
-    it('Add > Exam date opens an exam dialog and saves it', () => {
+    it('Add exam opens an exam dialog and saves it', () => {
       const h = setup()
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Exam date' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add exam' }))
       expect(screen.getByRole('heading', { name: 'Add exam' })).toBeTruthy()
       fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Finals' } })
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       expect(h.onAddTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Finals', type: 'exam', due_at: '2026-10-12T23:59:59.000Z' }))
     })
-    it('Add > Task opens a plain task dialog', () => {
+    it('Add task opens a plain task dialog', () => {
       setup()
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Task' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
       expect(screen.getByRole('heading', { name: 'Add task' })).toBeTruthy()
     })
-    it('Add > Class opens the class dialog', () => {
+    it('Add class opens the class dialog', () => {
       const h = setup()
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Class' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add class' }))
       expect(screen.getByRole('heading', { name: 'Add class' })).toBeTruthy()
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       expect(h.onSaveClass).toHaveBeenCalledWith(expect.objectContaining({ course_id: 'bio' }), undefined)
     })
-    it('with no course yet, Add > Class says to add a course first instead of opening a dialog', () => {
+    it('with no course yet, Add class says to add a course first instead of opening a dialog', () => {
       setup({ courses: [] })
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Class' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add class' }))
       expect(screen.queryByRole('heading', { name: 'Add class' })).toBeNull()
       expect(screen.getByRole('status').textContent).toMatch(/add a course first/i)
     })
@@ -159,9 +149,10 @@ describe('CalendarView', () => {
   })
 
   describe('when there is nothing yet', () => {
-    it('invites the student to add their first exam', () => {
+    it('says so and offers an exam or a class, without covering the grid', () => {
       const h = setup({ empty: true, classes: [], tasks: [] })
-      expect(screen.getByText('Add your first exam')).toBeTruthy()
+      expect(screen.getByText('Nothing planned yet')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Add a class' })).toBeTruthy()
       fireEvent.click(screen.getByRole('button', { name: 'Add an exam' }))
       expect(screen.getByRole('heading', { name: 'Add exam' })).toBeTruthy()
       fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Midterm' } })
@@ -170,7 +161,7 @@ describe('CalendarView', () => {
     })
     it('says nothing when there is something', () => {
       setup()
-      expect(screen.queryByText('Add your first exam')).toBeNull()
+      expect(screen.queryByText('Nothing planned yet')).toBeNull()
     })
   })
   it('keeps the time line moving: a minute later it is read again', async () => {
