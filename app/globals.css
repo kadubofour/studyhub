@@ -84,6 +84,10 @@ body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
 body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
 .dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
 
+/* A scrollable area without its scrollbar: it still scrolls (wheel, touch, keyboard) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 @theme inline {
   --color-bg: var(--bg); --color-raised: var(--raised); --color-surface: var(--surface); --color-line: var(--line);
   --color-fg: var(--fg); --color-muted: var(--muted); --color-accent: var(--accent); --color-accent-solid: var(--accent-solid);

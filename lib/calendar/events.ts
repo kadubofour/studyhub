@@ -3,11 +3,11 @@ import type { Priority, Task, TaskType } from '@/lib/types'
 
 const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
-// How far down the hour grid the current time is, in px; nothing when it is outside the hours shown
-export function nowOffsetPx(now: Date, tz: string, startH: number, endH: number, pxPerH: number): number | null {
+// How far down the hours shown the current time is, from 0 (top) to 1 (bottom); nothing when it is outside them
+export function nowFraction(now: Date, tz: string, startH: number, endH: number): number | null {
   const minutes = toMin(localTimeHHMM(now, tz))
   if (minutes < startH * 60 || minutes >= endH * 60) return null
-  return ((minutes - startH * 60) / 60) * pxPerH
+  return (minutes - startH * 60) / ((endH - startH) * 60)
 }
 
 // Side-by-side lanes for classes that overlap in one day: each class's lane and how many lanes its stretch of the day needs

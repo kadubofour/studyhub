@@ -65,7 +65,7 @@ describe('TimeGrid', () => {
   it('draws a line at the current time in today only', () => {
     render(<TimeGrid {...base()} />)
     const line = screen.getByTestId('now-line')
-    expect(line.style.top).toBe(`${3.5 * 56}px`) // 10:30 is 3.5 hours after 07:00
+    expect(parseFloat(line.style.top)).toBeCloseTo((3.5 / 14) * 100, 2) // 10:30 is 3.5 of the 14 hours shown, as a share of the grid
     expect(within(screen.getByRole('group', { name: 'Monday 12 October' })).getByTestId('now-line')).toBe(line)
   })
   it('has no line when the time is outside the hours shown, or today is not in view', () => {
@@ -79,9 +79,9 @@ describe('TimeGrid', () => {
     const props = base({ classes: [cls('a', 'bio', 1, '09:00:00', '10:00:00')] })
     render(<TimeGrid {...props} />)
     const block = screen.getByRole('button', { name: /Biology/ })
-    expect(block.style.top).toBe(`${2 * 56}px`)
-    expect(block.style.height).toBe(`${56 - 2}px`)
-    expect(block.style.background).toContain('rgb(29, 158, 117)')
+    expect(parseFloat(block.style.top)).toBeCloseTo((2 / 14) * 100, 2)
+    expect(parseFloat(block.style.height)).toBeCloseTo((1 / 14) * 100, 2)
+    expect(block.style.borderLeftColor).toBe('rgb(29, 158, 117)') // a bar in the course colour, like Apple and Android
     fireEvent.click(block)
     expect(props.onClassClick).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }))
   })
@@ -121,11 +121,21 @@ describe('TimeGrid', () => {
     expect(screen.queryByText('Midterm')).toBeNull()
     expect(screen.queryByTestId('now-line')).toBeNull()
   })
-  it('names each day like the old week grid did, Mon 12, with today in the accent', () => {
+  it('heads each day like a phone calendar: the weekday small, the date big, today in a filled circle', () => {
     render(<TimeGrid {...base()} />)
-    const head = within(screen.getByRole('group', { name: 'Monday 12 October' })).getByText('Mon 12')
-    expect(head.className).toContain('text-accent')
-    expect(within(screen.getByRole('group', { name: 'Tuesday 13 October' })).getByText('Tue 13').className).not.toContain('text-accent')
+    const mon = within(screen.getByRole('group', { name: 'Monday 12 October' }))
+    expect(mon.getByText('MON')).toBeTruthy()
+    expect(mon.getByText('12').className).toContain('bg-accent-solid')
+    expect(within(screen.getByRole('group', { name: 'Tuesday 13 October' })).getByText('13').className).not.toContain('bg-accent-solid')
+  })
+  it('stretches the hours to the screen and hides the scrollbar, though it can still scroll on a very short screen', () => {
+    render(<TimeGrid {...base()} />)
+    const region = screen.getByRole('region', { name: 'Schedule' })
+    expect(region.className).toContain('no-scrollbar')
+  })
+  it('labels the all-day row', () => {
+    render(<TimeGrid {...base()} />)
+    expect(screen.getByText('all-day')).toBeTruthy()
   })
   it('widens the hours for an early or late class', () => {
     const { unmount } = render(<TimeGrid {...base()} />)

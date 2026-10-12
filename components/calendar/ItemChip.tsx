@@ -1,13 +1,15 @@
 'use client'
 import { BookOpen, Flag, GraduationCap } from 'lucide-react'
+import { tint } from './TimeGrid'
 import type { DayItem } from '@/lib/calendar/events'
 import type { Course } from '@/lib/types'
 
-// A deadline or study session in a day, drawn as before: a dashed outline in the course colour with a flag. Tasks open for editing.
+// A deadline or study session, drawn like an all-day event on a phone calendar: a soft tint of the course colour with a colour bar. Tasks open for editing.
 export function ItemChip({ item, course, onClick, compact = false }: { item: DayItem; course?: Course; onClick?: () => void; compact?: boolean }) {
   const exam = item.kind === 'task' && item.type === 'exam'
-  const cls = `flex w-full items-center gap-1 truncate rounded border border-dashed bg-bg px-1.5 text-left ${compact ? 'py-px text-[11px]' : 'py-0.5 text-xs'} ${exam ? 'font-semibold' : ''} ${item.kind === 'session' ? 'text-muted' : ''}`
-  const style = { borderColor: course?.color ?? 'var(--line)' }
+  const color = course?.color ?? '#888780'
+  const cls = `flex w-full items-center gap-1 truncate rounded-md border-l-[3px] px-1.5 text-left text-fg ${compact ? 'py-px text-[11px]' : 'py-0.5 text-xs'} ${exam ? 'font-semibold' : ''} ${item.kind === 'session' ? 'text-muted' : ''}`
+  const style = { borderLeftColor: color, background: tint(color, 22) }
   const Icon = exam ? GraduationCap : item.kind === 'session' ? BookOpen : Flag
   const inner = (
     <>
@@ -17,7 +19,7 @@ export function ItemChip({ item, course, onClick, compact = false }: { item: Day
     </>
   )
   if (item.kind === 'task' && onClick) {
-    return <button type="button" onClick={onClick} data-exam={exam ? 'true' : undefined} className={`${cls} hover:bg-surface`} style={style}>{inner}</button>
+    return <button type="button" onClick={onClick} data-exam={exam ? 'true' : undefined} className={`${cls} hover:brightness-95`} style={style}>{inner}</button>
   }
   return <div className={cls} style={style} data-exam={exam ? 'true' : undefined}>{inner}</div>
 }

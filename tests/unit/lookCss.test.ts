@@ -131,6 +131,14 @@ describe('look shapes sit below utilities', () => {
   })
 })
 
+describe('no-scrollbar', () => {
+  it('hides the scrollbar in every browser while leaving the area scrollable', () => {
+    expect(css).toContain('.no-scrollbar')
+    expect(css).toMatch(/\.no-scrollbar \{[^}]*scrollbar-width: none/)
+    expect(css).toMatch(/\.no-scrollbar::-webkit-scrollbar \{[^}]*display: none/)
+  })
+})
+
 describe('printing', () => {
   it('resets Paper too, so a printed page is black on white whatever the look and theme', () => {
     const start = css.indexOf('@media print {')

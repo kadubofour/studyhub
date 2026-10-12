@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import { classLanes, dayItems, nowOffsetPx } from '@/lib/calendar/events'
+import { classLanes, dayItems, nowFraction } from '@/lib/calendar/events'
 import type { Task } from '@/lib/types'
 
-describe('nowOffsetPx', () => {
+describe('nowFraction', () => {
   const tz = 'Africa/Accra' // UTC+0
-  it('is how far down the grid the current time is', () => {
-    expect(nowOffsetPx(new Date('2026-10-12T10:30:00Z'), tz, 7, 21, 40)).toBe(3.5 * 40)
+  it('is how far down the hours the current time is, from 0 to 1', () => {
+    expect(nowFraction(new Date('2026-10-12T10:30:00Z'), tz, 7, 21)).toBeCloseTo(3.5 / 14, 10)
   })
-  it('is nothing before the grid starts or after it ends', () => {
-    expect(nowOffsetPx(new Date('2026-10-12T05:00:00Z'), tz, 7, 21, 40)).toBeNull()
-    expect(nowOffsetPx(new Date('2026-10-12T21:30:00Z'), tz, 7, 21, 40)).toBeNull()
+  it('is nothing before the hours start or after they end', () => {
+    expect(nowFraction(new Date('2026-10-12T05:00:00Z'), tz, 7, 21)).toBeNull()
+    expect(nowFraction(new Date('2026-10-12T21:30:00Z'), tz, 7, 21)).toBeNull()
   })
   it('uses the student time zone, not the machine one', () => {
-    expect(nowOffsetPx(new Date('2026-10-12T10:00:00Z'), 'America/New_York', 0, 24, 40)).toBe(6 * 40) // 06:00 in New York
+    expect(nowFraction(new Date('2026-10-12T10:00:00Z'), 'America/New_York', 0, 24)).toBeCloseTo(6 / 24, 10) // 06:00 in New York
   })
 })
 
