@@ -73,7 +73,7 @@ describe('Scan in the app shell', () => {
     const names = (g: HTMLElement) => [...g.querySelectorAll('a, button')].map(x => x.textContent)
     expect(side.querySelector('a')!.textContent).toBe('Home')
     expect(names(within(side).getByRole('group', { name: 'Plan' }))).toEqual(['Planner', 'Focus', 'Progress'])
-    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Notes', 'Lectures', 'Flashcards', 'Tutor', 'Upload', 'Scan'])
+    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Library', 'Notes', 'Lectures', 'Flashcards', 'Tutor', 'Upload', 'Scan'])
   })
 
   it('has an Upload button in the sidebar that opens the upload dialog from any page', async () => {
@@ -135,6 +135,29 @@ describe('Scan in the app shell', () => {
     shown.unmount()
     render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell initialCollapsed><p>page</p></AppShell></ProfileProvider>)
     expect(screen.getByRole('banner', { name: 'Today at a glance' }).textContent).toContain('sidebar hidden')
+  })
+
+  it('has the name and avatar of the student at the bottom of the sidebar, linking to the profile', () => {
+    path = '/home'
+    render(<ProfileProvider initial={{ ...profile, display_name: 'Ama Mensah', avatar_color: '#BE185D' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    const link = screen.getByRole('link', { name: 'Ama Mensah' })
+    expect(link.getAttribute('href')).toBe('/profile')
+    expect(link.querySelector('[data-testid="avatar"]')!.textContent).toBe('AM')
+  })
+  it('says Your profile when the student has no name yet', () => {
+    path = '/home'
+    renderShell()
+    expect(screen.getByRole('link', { name: 'Your profile' }).getAttribute('href')).toBe('/profile')
+  })
+  it('marks the profile link as the current page on the profile page', () => {
+    path = '/profile'
+    renderShell()
+    expect(screen.getByRole('link', { name: 'Your profile' }).getAttribute('aria-current')).toBe('page')
+  })
+  it('has Library first in the Study group, linking to /library', () => {
+    path = '/home'
+    renderShell()
+    expect(screen.getAllByRole('link', { name: 'Library' })[0].getAttribute('href')).toBe('/library')
   })
 
   it('has Tutor in the sidebar and the phone tab bar', () => {

@@ -12,7 +12,7 @@ async function problems(page: Page, label: string) {
 const settle = async (page: Page) => { await page.waitForLoadState('networkidle') }
 
 const PUBLIC = ['/', '/login', '/signup', '/terms', '/privacy']
-const APP = ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/tutor', '/lectures']
+const APP = ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/tutor', '/lectures', '/library', '/profile']
 
 for (const scheme of ['light', 'dark'] as const) {
   test(`public pages have no serious accessibility problems (${scheme})`, async ({ page }) => {
@@ -43,7 +43,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('radio', { name: `${look} look` }).click()
       await expect(page.locator('.app-root')).toHaveAttribute('data-look', look.toLowerCase())
       const found: string[] = []
-      for (const path of ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings']) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} ${look} ${path}`)) }
+      for (const path of ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/library', '/profile']) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} ${look} ${path}`)) }
       expect(found).toEqual([])
     })
   }
