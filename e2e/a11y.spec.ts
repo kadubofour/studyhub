@@ -40,6 +40,7 @@ for (const scheme of ['light', 'dark'] as const) {
   })
 
   for (const look of ['Paper', 'Vivid', 'Playful'] as const) {
+    if (scheme === 'dark' && look === 'Paper') continue // Paper is for light mode only
     test(`the app pages have no serious accessibility problems (${scheme}, ${look})`, async ({ page }) => {
       test.setTimeout(150_000)
       await page.emulateMedia({ colorScheme: scheme })

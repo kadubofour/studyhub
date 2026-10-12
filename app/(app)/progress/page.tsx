@@ -21,7 +21,7 @@ const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `
 
 function Stat({ label, value, icon: Icon, color }: { label: string; value: string; icon: typeof Flame; color: string }) {
   return (
-    <div className="tile">
+    <div>
       <div className="tile-label"><Icon size={14} style={{ color }} aria-hidden />{label}</div>
       <div className="tile-value">{value}</div>
     </div>
@@ -64,13 +64,15 @@ export default function ProgressPage() {
   return (
     <div>
       <PageHeader title="Progress" />
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="card mb-4 space-y-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
         <Stat icon={Flame} color="#D85A30" label="Current streak" value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`} />
         <Stat icon={Trophy} color="#BA7517" label="Best streak" value={`${streak.best} ${streak.best === 1 ? 'day' : 'days'}`} />
         <Stat icon={Timer} color="var(--accent)" label="Focus this week" value={fmtMin(thisWeek)} />
         <Stat icon={Brain} color="#1D9E75" label="Retention (30 days)" value={ret === null ? '—' : `${Math.round(ret * 100)}%`} />
       </div>
-      {xp && <XpCard xp={xp} />}
+      {xp && <div className="border-t border-line pt-4"><XpCard xp={xp} bare /></div>}
+      </div>
       <section className="card mb-4">
         <h2 className="mb-2 text-sm font-medium">Focus, last 12 weeks</h2>
         <div className="flex gap-[3px] overflow-x-auto" role="img" aria-label="Daily focus time heatmap for the last 12 weeks">

@@ -44,11 +44,27 @@ test('Paper on Home: tinted tiles and a serif greeting, until another font is ch
   expect(await greeting.evaluate(el => getComputedStyle(el).fontFamily)).not.toContain('Lora')
 })
 
-test('Paper in dark mode uses the Paper dark colours', async ({ page }) => {
-  await page.emulateMedia({ colorScheme: 'dark' })
+test('Paper is for light mode only: in dark mode it is not offered and the app shows Classic', async ({ page }) => {
   await signUp(page)
   await page.goto('/settings')
   await page.getByRole('radio', { name: 'Paper look' }).click()
   await expect(root(page)).toHaveAttribute('data-look', 'paper')
-  expect(await bg(page)).toBe('rgb(28, 25, 21)') // #1C1915
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(root(page)).toHaveAttribute('data-look', 'classic')
+  expect(await bg(page)).toBe('rgb(18, 18, 17)') // #121211
+  await expect(page.getByRole('radio', { name: 'Paper look' })).toHaveCount(0)
+  await page.emulateMedia({ colorScheme: 'light' }) // the choice was kept
+  await expect(root(page)).toHaveAttribute('data-look', 'paper')
+})
+
+test('Classic has the dark sidebar and the top bar, like Vivid', async ({ page, isMobile }) => {
+  await signUp(page)
+  await page.goto('/settings')
+  await page.getByRole('radio', { name: 'Classic look' }).click()
+  await expect(root(page)).toHaveAttribute('data-look', 'classic')
+  await expect(page.getByRole('banner', { name: 'Today at a glance' })).toBeVisible()
+  if (!isMobile) {
+    const side = await page.locator('.app-sidebar').evaluate(el => getComputedStyle(el).backgroundColor)
+    expect(side).toBe('rgb(31, 33, 39)') // #1F2127
+  }
 })

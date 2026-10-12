@@ -6,12 +6,11 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { useSaver } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, FONTS, LOOKS, lookOf, type AccentName, type FontName, type LookName } from '@/lib/appearance'
+import { ACCENTS, FONTS, LOOKS, effectiveLook, lookChoices, type AccentName, type FontName, type LookName } from '@/lib/appearance'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
 const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[]
 const FONT_NAMES = Object.keys(FONTS) as FontName[]
-const LOOK_NAMES = Object.keys(LOOKS) as LookName[]
 const noopSubscribe = () => () => {}
 
 // Accent and font apply instantly (the whole app re-colours / re-fonts) and save in the background
@@ -22,9 +21,11 @@ export function AppearanceCard() {
   // The server can't know the theme: draw the previews light until the page has hydrated, so both agree
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const mode = mounted && resolvedTheme === 'dark' ? 'dark' : 'light'
-  const look = lookOf(profile.look)
+  const look = effectiveLook(profile.look, mode) // Paper shows as Classic in dark mode
+  const LOOK_NAMES = lookChoices(mode)
 
   function choose(patch: { accent?: AccentName; font?: FontName; look?: LookName }) {
+    if (Object.keys(patch).length === 1 && patch.look === look) return // e.g. Classic shown for a saved Paper in dark mode: keep the saved choice
     const before = profile
     const keys = Object.keys(patch) as (keyof typeof patch)[]
     save(
@@ -65,6 +66,7 @@ export function AppearanceCard() {
             )
           })}
         </div>
+        {mode === 'dark' && <p className="mt-2 text-xs text-muted">Paper is for light mode. Switch to light mode to use it{profile.look === 'paper' ? ' (your choice is kept)' : ''}.</p>}
       </div>
       <div>
         <div className="mb-2 text-sm text-muted">Accent colour</div>

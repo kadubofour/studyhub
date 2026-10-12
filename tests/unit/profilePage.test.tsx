@@ -81,7 +81,7 @@ describe('Profile page: what the student has done', () => {
     await open()
     const tiles = screen.getByRole('list', { name: 'Study totals' })
     const t = (label: string) => within(tiles).getByText(label).closest('li')!.textContent
-    expect(t('Level')).toContain('2')
+    expect(within(tiles).queryByText('Level')).toBeNull() // the ring above already says it
     expect(t('Streak')).toContain('3 days')
     expect(t('Best streak')).toContain('8 days')
     expect(t('Focus time')).toContain('5h 30m')
@@ -143,7 +143,7 @@ describe('Profile page: what the student has done', () => {
     expect(screen.getByRole('alert').textContent).toContain('Could not load your study totals')
     expect(screen.getByRole('heading', { level: 1, name: 'Ama Mensah' })).toBeTruthy()
     const tiles = screen.getByRole('list', { name: 'Study totals' })
-    expect(within(tiles).getByText('Level')).toBeTruthy() // what came from XP still shows
+    expect(within(tiles).getByText('Streak')).toBeTruthy() // what came from XP still shows
     expect(within(tiles).queryByText('Notes')).toBeNull()
   })
   it('links each course to its place in the Library', async () => {

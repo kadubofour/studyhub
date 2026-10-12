@@ -31,14 +31,15 @@ export type ModeColors = { bg: string; raised: string; surface: string; line: st
 
 export const LOOKS = {
   classic: {
-    label: 'Classic', blurb: 'The look you know',
+    label: 'Classic', blurb: 'Calm and minimal, dark sidebar',
     light: { bg: '#fbfbfa', raised: '#ffffff', surface: '#f3f3f0', line: '#e6e5e0', fg: '#1f1f1d', muted: '#6b6a65', tiles: ['#ffffff', '#ffffff', '#ffffff'] },
     dark: { bg: '#121211', raised: '#1a1a19', surface: '#222220', line: '#30302d', fg: '#ededea', muted: '#9a9993', tiles: ['#1a1a19', '#1a1a19', '#1a1a19'] },
   },
   paper: {
     label: 'Paper', blurb: 'Warm cream, softer edges',
     light: { bg: '#F6F0E4', raised: '#FFFBF2', surface: '#EFE7D6', line: '#E2D8C3', fg: '#2A2520', muted: '#6E6455', tiles: ['#F8E4D4', '#F7EDC4', '#DDEEE3'] },
-    dark: { bg: '#1C1915', raised: '#25211C', surface: '#2E2923', line: '#3A342C', fg: '#EFE8DA', muted: '#A39A8A', tiles: ['#3A2A1F', '#38331B', '#1F3027'] },
+    // Paper is for light mode only: in dark mode it is Classic (see effectiveLook), so these are Classic's dark colours
+    dark: { bg: '#121211', raised: '#1a1a19', surface: '#222220', line: '#30302d', fg: '#ededea', muted: '#9a9993', tiles: ['#1a1a19', '#1a1a19', '#1a1a19'] },
   },
   vivid: {
     label: 'Vivid', blurb: 'Bold colour, dark sidebar, top bar',
@@ -56,6 +57,15 @@ export type LookName = keyof typeof LOOKS
 export const isLook = (v: unknown): v is LookName => typeof v === 'string' && v in LOOKS
 // An old cached profile, or a look this version doesn't know, shows Classic
 export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'classic')
+
+// Paper only looks right on light: in dark mode it shows as Classic (the student's choice is kept for when they go back to light)
+export const effectiveLook = (look: unknown, resolvedTheme: string | undefined): LookName => {
+  const l = lookOf(look)
+  return l === 'paper' && resolvedTheme === 'dark' ? 'classic' : l
+}
+// The looks offered in Settings for the current theme
+export const lookChoices = (resolvedTheme: string | undefined): LookName[] =>
+  (Object.keys(LOOKS) as LookName[]).filter(l => !(l === 'paper' && resolvedTheme === 'dark'))
 
 // Paper's serif greeting only while the student is on the default Sans font: their font choice wins
 export const greetingFont = (look: unknown, font: unknown): string | undefined =>

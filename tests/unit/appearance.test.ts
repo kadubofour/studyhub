@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ACCENTS, FONTS, LOOKS, contrastRatio, greetingFont, isAccent, isFont, isLook, lookOf } from '@/lib/appearance'
+import { ACCENTS, FONTS, LOOKS, contrastRatio, effectiveLook, greetingFont, isAccent, isFont, isLook, lookChoices, lookOf } from '@/lib/appearance'
 
 describe('accent presets', () => {
   it('offers the six agreed colours', () => {
@@ -64,6 +64,17 @@ describe('looks', () => {
       for (const bg of [look.light.bg, look.light.raised]) expect(contrastRatio(a.text, bg), `${name} ${accent} light on ${bg}`).toBeGreaterThanOrEqual(4.5)
       for (const bg of [look.dark.bg, look.dark.raised]) expect(contrastRatio(a.textDark, bg), `${name} ${accent} dark on ${bg}`).toBeGreaterThanOrEqual(4.5)
     }
+  })
+  it('Paper is for light mode only: in dark mode it shows as Classic, and is not offered', () => {
+    expect(effectiveLook('paper', 'dark')).toBe('classic')
+    expect(effectiveLook('paper', 'light')).toBe('paper')
+    expect(effectiveLook('paper', undefined)).toBe('paper')
+    for (const l of ['classic', 'vivid', 'playful']) expect(effectiveLook(l, 'dark')).toBe(l)
+    expect(lookChoices('dark')).toEqual(['classic', 'vivid', 'playful'])
+    expect(lookChoices('light')).toEqual(['classic', 'paper', 'vivid', 'playful'])
+  })
+  it('Paper dark colours are Classic dark, so nothing cream shows in dark mode', () => {
+    expect(LOOKS.paper.dark).toEqual(LOOKS.classic.dark)
   })
   it('the serif greeting is only for Paper while the font is the default Sans', () => {
     expect(greetingFont('paper', 'sans')).toBe('var(--font-lora)')

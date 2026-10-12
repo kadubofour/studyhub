@@ -3,7 +3,7 @@ const STROKE = 9
 const R = (SIZE - STROKE) / 2
 const C = 2 * Math.PI * R
 
-// The daily focus goal as a ring (Vivid and Playful). The amount is also given in words.
+// The daily focus goal as a ring (every look but Paper). The amount is also given in words.
 export function GoalRing({ percent, label }: { percent: number; label: string }) {
   const pct = Math.min(100, Math.max(0, Math.round(percent)))
   return (
