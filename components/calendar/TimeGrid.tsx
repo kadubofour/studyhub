@@ -45,7 +45,7 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
 
   return (
     <div ref={scroller} tabIndex={0} role="region" aria-label={showStrip ? 'Schedule' : 'Weekly timetable'}
-      className="no-scrollbar overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 19rem)', minHeight: HEADER_H + stripH + minHours }}>
+      className="no-scrollbar overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 12rem)', minHeight: HEADER_H + stripH + minHours }}>
       <div className="flex min-h-full">
         <div className="flex w-14 shrink-0 flex-col" aria-hidden>
           <div className="sticky top-0 z-20 border-b border-line bg-raised" style={{ height: HEADER_H }} />

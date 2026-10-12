@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import { Flame } from 'lucide-react'
-import { IndexCard, SplitCard, StatStrip, TintTile } from '@/components/ui/cards'
+import { SplitCard, StatStrip, TintTile } from '@/components/ui/cards'
 
 afterEach(cleanup)
 const colorOf = (el: Element) => (el as HTMLElement).style.getPropertyValue('--c')
@@ -18,21 +18,6 @@ describe('TintTile (A)', () => {
   it('is a link when it has somewhere to go', () => {
     render(<TintTile color="#D4537E" icon={Flame} label="Cards due" href="/review">23</TintTile>)
     expect(screen.getByRole('link', { name: /Cards due/ }).getAttribute('href')).toBe('/review')
-  })
-})
-
-describe('IndexCard (B)', () => {
-  it('has a coloured rule on top, a title, a figure and a line under it', () => {
-    const { container } = render(<IndexCard color="#BA7517" title="Cell biology" eyebrow={<span>Biology</span>} value="12" sub="due now" />)
-    expect(screen.getByText('Cell biology')).toBeTruthy()
-    expect(screen.getByText('Biology')).toBeTruthy()
-    expect(screen.getByText('12')).toBeTruthy()
-    expect(screen.getByText('due now')).toBeTruthy()
-    expect(colorOf(container.firstElementChild!)).toBe('#BA7517')
-  })
-  it('links when given an address, and the whole card is the link', () => {
-    render(<IndexCard color="#BA7517" title="Deck" value="3" sub="due" href="/flashcards/d1" />)
-    expect(screen.getByRole('link', { name: /Deck/ }).getAttribute('href')).toBe('/flashcards/d1')
   })
 })
 

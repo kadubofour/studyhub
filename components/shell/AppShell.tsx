@@ -184,7 +184,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <PanelLeftOpen size={18} aria-hidden />
           </button>
         )}
-        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 py-5 md:px-10 md:py-9 ${path.startsWith('/planner') ? 'max-w-[1500px]' : 'max-w-5xl'}`}>{!immersive && <EndingBanner />}{children}</main>
+        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : 'max-w-5xl py-5 md:px-10 md:py-9'}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">

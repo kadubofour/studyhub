@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
 import { TaskRow } from '@/components/planner/TaskRow'
+import { TaskCard } from '@/components/planner/TaskCard'
 import { TaskDialog } from '@/components/planner/TaskDialog'
 import { CalendarView } from '@/components/calendar/CalendarView'
 import { TimetableView } from '@/components/calendar/TimetableView'
@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { createTask, deleteTask, listOpenTasks, listRecentlyDone, setTaskDone, updateTask, type NewTask } from '@/lib/data/tasks'
 import { createClass, deleteClass, listClasses, updateClass } from '@/lib/data/classes'
-import { bucketTasks } from '@/lib/dates'
+import { boardColumns, boardSummary, rescheduleTo, type MoveChoice } from '@/lib/tasks/board'
 import type { ClassSlot, Course, Task, TaskType } from '@/lib/types'
 import { useScanSaved } from '@/lib/scan/events'
 
@@ -66,7 +66,7 @@ export default function PlannerPage() {
   const now = new Date()
   const byCourse = useMemo(() => tasks.filter(t => !filter || t.course_id === filter), [tasks, filter])
   const visible = useMemo(() => byCourse.filter(t => typeFilter === 'all' || t.type === typeFilter), [byCourse, typeFilter])
-  const buckets = bucketTasks(visible, tz, now)
+  const columns = boardColumns(visible, tz, now)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
   const countOf = (id: TypeFilter) => (id === 'all' ? byCourse.length : byCourse.filter(t => t.type === id).length)
   const visibleDone = done.filter(t => !filter || t.course_id === filter)
@@ -152,68 +152,89 @@ export default function PlannerPage() {
     )
   }
 
-  const group = (label: string, list: Task[], color = 'text-muted') => list.length > 0 && (
-    <section className="mt-4">
-      <h2 className={`mb-1 text-xs font-medium ${color}`}>{label}</h2>
-      {list.map(t => (
-        <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} onToggle={() => finish(t)} onDelete={() => remove(t)} onEdit={() => setEditing(t)} />
-      ))}
+  function move(t: Task, to: MoveChoice) {
+    edit(t.id, { title: t.title, type: t.type, course_id: t.course_id, priority: t.priority, due_at: rescheduleTo(to, tz, now) })
+  }
+  const card = (t: Task) => (
+    <TaskCard key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} onToggle={() => finish(t)} onEdit={() => setEditing(t)} onMove={to => move(t, to)} />
+  )
+  const column = (title: string, list: Task[], empty: string, extra?: React.ReactNode) => (
+    <section aria-label={title} className="min-w-0 rounded-2xl bg-surface p-3">
+      <h2 className="mb-2 flex items-center justify-between text-sm font-semibold">{title}<span className="text-xs font-normal text-muted">{list.length + (extra ? columns.overdue.length : 0)}</span></h2>
+      <div className="space-y-2">
+        {extra}
+        {list.map(card)}
+        {list.length === 0 && !extra && <p className="px-1 py-3 text-sm text-muted">{empty}</p>}
+        {list.length === 0 && extra && <p className="px-1 py-1 text-sm text-muted">{empty}</p>}
+      </div>
     </section>
   )
 
   return (
     <div>
-      <PageHeader title="Planner" />
-      <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
-        setCourses(next)
-        listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks
-        listRecentlyDone(supabase(), new Date(Date.now() - DONE_DAYS * 86_400_000)).then(setDone).catch(() => {})
-        listClasses(supabase()).then(setClasses)
-      }} />
-      <div role="tablist" className="mb-3 flex gap-1">
-        {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-            className={`rounded-lg px-3 py-1 text-sm ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
-            {t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 className="text-lg font-medium">Planner</h1>
+        <div role="tablist" className="flex gap-1">
+          {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+              className={`rounded-lg px-3 py-1 text-sm ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
+              {t[0].toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto [&>div]:!mb-0">
+          <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
+            setCourses(next)
+            listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks
+            listRecentlyDone(supabase(), new Date(Date.now() - DONE_DAYS * 86_400_000)).then(setDone).catch(() => {})
+            listClasses(supabase()).then(setClasses)
+          }} />
+        </div>
       </div>
 
       {tab === 'tasks' && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:has-[aside:empty]:grid-cols-1">
-        <div className="min-w-0">
+        <div>
           <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
-          <div role="group" aria-label="Task type" className="mb-1 flex flex-wrap gap-1.5">
-            {TYPE_CHIPS.map(c => (
-              <button key={c.id} type="button" aria-pressed={typeFilter === c.id} onClick={() => setTypeFilter(c.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${typeFilter === c.id ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
-                {c.label} <span className="text-muted">{countOf(c.id)}</span>
-              </button>
-            ))}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium" aria-live="polite">{boardSummary(columns)}</p>
+            <div role="group" aria-label="Task type" className="flex flex-wrap gap-1.5">
+              {TYPE_CHIPS.map(c => (
+                <button key={c.id} type="button" aria-pressed={typeFilter === c.id} onClick={() => setTypeFilter(c.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${typeFilter === c.id ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
+                  {c.label} <span className="text-muted">{countOf(c.id)}</span>
+                </button>
+              ))}
+            </div>
           </div>
           {loaded && courses.length === 0 && tasks.length === 0 && (
-            <p className="mt-6 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
+            <p className="mb-3 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
           )}
-          {group('Overdue', buckets.overdue, 'text-danger')}
-          {group('Today', buckets.today, 'text-fg')}
-          {group('Upcoming', buckets.upcoming)}
-          {group('No date', buckets.noDate)}
-        </div>
-        <aside aria-label="Study plan and finished tasks" className="min-w-0 space-y-4 empty:hidden [&>section]:!mt-0">
-          <StudyPlanPanel courses={courses} tasks={tasks} />
-        {visibleDone.length > 0 && (
-          <section aria-label="Done" className="card">
-            <button type="button" aria-expanded={showDone} onClick={() => setShowDone(s => !s)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-fg">
-              {showDone ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}Done ({visibleDone.length})
-            </button>
-            {showDone && (
-              <div className="mt-1">
-                {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {column('Today', columns.today, 'Nothing due today', columns.overdue.length > 0 && (
+              <div role="group" aria-label="Overdue" className="space-y-2 rounded-xl bg-danger-soft p-2">
+                <h3 className="px-1 text-xs font-semibold text-danger">Overdue</h3>
+                {columns.overdue.map(card)}
               </div>
+            ))}
+            {column('This week', columns.week, 'Nothing else this week')}
+            {column('Later', columns.later, 'Nothing dated further out')}
+            {column('Someday', columns.someday, 'Tasks without a date wait here')}
+          </div>
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-2 [&>section]:!mt-0">
+            <StudyPlanPanel courses={courses} tasks={tasks} />
+            {visibleDone.length > 0 && (
+              <section aria-label="Done" className="card">
+                <button type="button" aria-expanded={showDone} onClick={() => setShowDone(s => !s)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-fg">
+                  {showDone ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}Done ({visibleDone.length})
+                </button>
+                {showDone && (
+                  <div className="mt-1">
+                    {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
+                  </div>
+                )}
+              </section>
             )}
-          </section>
-        )}
-        </aside>
+          </div>
         </div>
       )}
       {tab === 'week' && (

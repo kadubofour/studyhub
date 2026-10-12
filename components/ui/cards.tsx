@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 
-// Four card styles, each for where it fits. The colour comes in as --c, so one class does the tinting in every look and theme.
+// Card styles for where they fit: tinted tiles (A), split cards (D) and an open strip (C). The colour comes in as --c, so one class does the tinting in every look and theme.
 const wrap = (href: string | undefined, className: string, style: React.CSSProperties, children: React.ReactNode) =>
   href ? <Link href={href} className={className} style={style}>{children}</Link> : <div className={className} style={style}>{children}</div>
 const colorVar = (color: string) => ({ '--c': color }) as React.CSSProperties
@@ -15,20 +15,6 @@ export function TintTile({ color, icon: Icon, label, children, href, className =
       <span aria-hidden="true" className="mb-2.5 flex size-8 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--c)_28%,var(--raised))]"><Icon size={17} aria-hidden="true" /></span>
       <div className="text-xs text-fg">{label}</div>
       <div className="mt-0.5 text-3xl font-medium leading-tight">{children}</div>
-    </>
-  ))
-}
-
-// B. Index card: a hairline border, a coloured rule across the top, the figure set in the serif voice. For decks.
-export function IndexCard({ color, title, eyebrow, value, sub, href, valueColor }: {
-  color: string; title: string; eyebrow?: React.ReactNode; value: React.ReactNode; sub?: React.ReactNode; href?: string; valueColor?: boolean
-}) {
-  return wrap(href, 'block rounded-md border border-line border-t-4 border-t-[var(--c)] bg-raised px-3.5 py-3 transition hover:bg-surface', colorVar(color), (
-    <>
-      <div className="font-medium">{title}</div>
-      {eyebrow && <div className="mt-0.5">{eyebrow}</div>}
-      <div className="mt-3 text-3xl leading-none" style={{ fontFamily: 'var(--font-lora), Georgia, serif', color: valueColor ? 'var(--c)' : undefined }}>{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </>
   ))
 }

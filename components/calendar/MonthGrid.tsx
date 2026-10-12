@@ -19,7 +19,7 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
   const month = anchor.slice(0, 7)
   const rows = keys.length / 7
   return (
-    <div tabIndex={0} role="region" aria-label="Month" className="no-scrollbar flex flex-col overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 19rem)', minHeight: Math.max(380, rows * 84 + 32) }}>
+    <div tabIndex={0} role="region" aria-label="Month" className="no-scrollbar flex flex-col overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 12rem)', minHeight: Math.max(380, rows * 84 + 32) }}>
       <div className="grid shrink-0 grid-cols-7 border-b border-line text-center text-[11px] font-medium tracking-wide text-muted" aria-hidden>
         {HEAD.map(h => <span key={h} className="py-2">{h}</span>)}
       </div>
