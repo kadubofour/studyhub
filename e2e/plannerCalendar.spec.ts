@@ -6,6 +6,7 @@ const openCalendar = async (page: Page) => {
   await page.goto('/planner')
   await page.getByRole('tab', { name: 'Week' }).click()
   await expect(page.getByRole('button', { name: 'Today' })).toBeVisible()
+  await page.waitForLoadState('networkidle') // let the grid settle (it scrolls to the current time as it appears)
 }
 
 test('Week: add an exam, see it in the week and the month, and it is still there after a reload', async ({ page }) => {
