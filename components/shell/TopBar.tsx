@@ -110,7 +110,7 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
           <span className={`${chip} bg-surface text-fg`}>
             <Zap size={15} className="text-accent" aria-hidden /><span className="sm:hidden">Lv {xp.level.level}</span><span className="hidden sm:inline">Level {xp.level.level}</span>
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
-              className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-line sm:block">
+              className="block h-1.5 w-8 overflow-hidden rounded-full bg-line sm:w-14">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
             </span>
           </span>

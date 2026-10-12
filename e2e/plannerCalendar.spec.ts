@@ -26,10 +26,16 @@ test('Calendar: add an exam, see it in the week and the month, and it is still t
   await expect(page.getByRole('button', { name: /Finals/ })).toBeVisible()
 })
 
-test('Calendar: click an empty hour to add a class there, and click the class to delete it', async ({ page }) => {
+test('Calendar: add a class (from an empty hour on a computer), and click the class to delete it', async ({ page, isMobile }) => {
   await signUp(page)
   await openCalendar(page)
-  await page.getByTestId('slot-10').first().click()
+  if (isMobile) {
+    // the first-exam invitation covers the middle of a small screen, so use the Add menu there
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Class' }).click()
+  } else {
+    await page.getByTestId('slot-10').first().click()
+  }
   await expect(page.getByRole('heading', { name: 'Add class' })).toBeVisible()
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   const block = page.getByRole('button', { name: /^Biology \d/ })
