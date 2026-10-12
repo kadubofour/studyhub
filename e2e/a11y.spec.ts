@@ -10,6 +10,11 @@ async function problems(page: Page, label: string) {
     .map(v => `${label}: ${v.id} (${v.impact}) ${v.nodes.length}x, e.g. ${v.nodes[0].target.join(' ')} :: ${v.nodes[0].failureSummary?.split('\n')[1]?.trim() ?? ''}`)
 }
 const settle = async (page: Page) => { await page.waitForLoadState('networkidle') }
+// The address of the student's first course page, found from Progress
+async function coursePath(page: Page) {
+  await page.goto('/progress'); await settle(page)
+  return (await page.getByRole('link', { name: 'Open course page' }).getAttribute('href'))!
+}
 
 const PUBLIC = ['/', '/login', '/signup', '/terms', '/privacy']
 const APP = ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/tutor', '/lectures', '/library', '/profile']
@@ -30,7 +35,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.getByRole('radio', { name: 'Classic look' }).click() // new students start on Vivid
     await expect(page.locator('.app-root')).toHaveAttribute('data-look', 'classic')
     const found: string[] = []
-    for (const path of APP) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} classic ${path}`)) }
+    for (const path of [...APP, await coursePath(page)]) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} classic ${path}`)) }
     expect(found).toEqual([])
   })
 
@@ -43,7 +48,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('radio', { name: `${look} look` }).click()
       await expect(page.locator('.app-root')).toHaveAttribute('data-look', look.toLowerCase())
       const found: string[] = []
-      for (const path of ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/library', '/profile']) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} ${look} ${path}`)) }
+      for (const path of ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/library', '/profile', await coursePath(page)]) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} ${look} ${path}`)) }
       expect(found).toEqual([])
     })
   }
