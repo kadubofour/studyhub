@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { AlertTriangle, Circle, CircleCheck, CircleDot, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Upload, type LucideIcon } from 'lucide-react'
@@ -39,9 +39,18 @@ export default function CoursePageRoute() {
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
+  const [reloading, setReloading] = useState(false)
+  const inFlight = useRef(false) // set at once, before the next render, so a quick double tap loads once
+  // A retry: if it fails the page that is already showing stays, with a message
   const load = useCallback(async () => {
-    try { setData(await loadCoursePage(supabase(), id, new Date())); setFailed(false) } catch { setFailed(true) }
-  }, [id])
+    if (inFlight.current) return
+    inFlight.current = true
+    setReloading(true)
+    try { setData(await loadCoursePage(supabase(), id, new Date())); setFailed(false) }
+    catch { if (data) toast('Could not reload this course. Check your connection.'); else setFailed(true) }
+    inFlight.current = false
+    setReloading(false)
+  }, [id, data, toast])
   useEffect(() => {
     let live = true
     loadCoursePage(supabase(), id, new Date()).then(d => { if (live) { setData(d); setFailed(false) } }).catch(() => { if (live) setFailed(true) })
@@ -64,6 +73,7 @@ export default function CoursePageRoute() {
   const { course, items, topics, exam } = data
   const sections = items ? courseSections(items, course.id) : []
   const due = items ? cardsDue(items) : 0
+  const dueDecks = items ? items.filter(i => i.kind === 'deck' && (i.due ?? 0) > 0) : []
   const weak = topics ? weakSpots(topics.map(t => ({ ...t })), now) : []
   const weakIds = new Set(weak.map(w => w.topic_id))
 
@@ -98,7 +108,9 @@ export default function CoursePageRoute() {
           {due > 0 && (
             <section aria-label="Cards due" className="card flex items-center justify-between gap-2">
               <span className="font-medium">{plural(due, 'card')} due</span>
-              <Link href="/review" className="btn-primary">Review</Link>
+              {dueDecks.length === 1
+                ? <Link href={`/review?deck=${dueDecks[0].id}`} className="btn-primary">Review</Link>
+                : <Link href="/review" className="btn-primary">Review all courses</Link>}
             </section>
           )}
           {exam && (
@@ -148,7 +160,7 @@ export default function CoursePageRoute() {
       {items === null ? (
         <div role="alert" className="card text-sm text-danger">
           Could not load this course&apos;s material.
-          <button type="button" className="btn ml-2" onClick={() => { void load() }}>Try again</button>
+          <button type="button" className="btn ml-2" disabled={reloading} onClick={() => { void load() }}>Try again</button>
         </div>
       ) : items.length === 0 ? (
         <EmptyState icon={FolderOpen} tone="b" title={`Nothing in ${course.name} yet`} body="Notes, decks, lectures, quizzes and tutor chats you add to this course show up here.">

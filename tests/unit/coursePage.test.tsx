@@ -13,13 +13,14 @@ const topic = (id: string, name: string, status: TopicStat['status'], extra: Par
 type Page = { course: typeof course; items: LibraryItem[] | null; topics: TopicStat[] | null; exam: { id: string; title: string; due_at: string } | null } | null
 let page: Page
 let loadError = false
+let loadCalls = 0
 const push = vi.fn()
 const requestUpload = vi.fn()
 const createChat = vi.fn(async (..._a: unknown[]) => ({ id: 'chat1' }))
 const startRevision = vi.fn(async (..._a: unknown[]) => '/tutor/rev1?ask=Quiz')
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'bio' }), useRouter: () => ({ push }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
-vi.mock('@/lib/data/coursePage', () => ({ loadCoursePage: async () => { if (loadError) throw new Error('offline'); return page } }))
+vi.mock('@/lib/data/coursePage', () => ({ loadCoursePage: async () => { loadCalls++; if (loadError) throw new Error('offline'); return page } }))
 vi.mock('@/lib/data/tutor', () => ({ createChat: (...a: unknown[]) => createChat(...a) }))
 vi.mock('@/lib/tutor/revise', () => ({ startRevision: (...a: unknown[]) => startRevision(...a) }))
 vi.mock('@/lib/scan/events', () => ({ requestUpload: () => requestUpload() }))
@@ -40,7 +41,7 @@ const FULL = (): NonNullable<Page> => ({
   topics: [topic('t1', 'Glycolysis', 'weak', { answers_30d: 6, correct_30d: 2, answers_all: 6 }), topic('t2', 'Mitosis', 'mastered')],
   exam: { id: 'x', title: 'Midterm', due_at: new Date(Date.now() + 9 * 86_400_000).toISOString() },
 })
-beforeEach(() => { page = FULL(); loadError = false; push.mockClear(); requestUpload.mockClear(); createChat.mockClear(); startRevision.mockClear() })
+beforeEach(() => { page = FULL(); loadError = false; loadCalls = 0; push.mockClear(); requestUpload.mockClear(); createChat.mockClear(); startRevision.mockClear() })
 afterEach(cleanup)
 
 describe('Course page', () => {
@@ -58,7 +59,7 @@ describe('Course page', () => {
   it('totals the cards due across decks and links to review', async () => {
     await open()
     expect(screen.getByText('5 cards due')).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Review' }).getAttribute('href')).toBe('/review')
+    expect(screen.getByRole('link', { name: 'Review all courses' }).getAttribute('href')).toBe('/review')
   })
   it('names the next exam and points to the planner', async () => {
     await open()
@@ -121,6 +122,25 @@ describe('Course page', () => {
     await open()
     expect(screen.getByRole('heading', { name: 'Biology' })).toBeTruthy()
     expect(screen.getByRole('alert').textContent).toMatch(/Could not load/)
+  })
+  it('Review opens the one deck that is due, so the count matches what is reviewed', async () => {
+    page!.items = [item('deck', 'd1', 'Cells', '2026-10-09T10:00:00Z', { due: 3 }), item('deck', 'd2', 'Genetics', '2026-10-08T10:00:00Z', { due: 0 })]
+    await open()
+    expect(screen.getByRole('link', { name: 'Review' }).getAttribute('href')).toBe('/review?deck=d1')
+  })
+  it('with several decks due, Review is labelled as covering every course', async () => {
+    await open()
+    expect(screen.getByRole('link', { name: 'Review all courses' }).getAttribute('href')).toBe('/review')
+  })
+  it('a failed retry keeps the header and says so, and a double tap loads once', async () => {
+    page!.items = null
+    await open()
+    loadError = true; loadCalls = 0
+    const b = screen.getByRole('button', { name: 'Try again' })
+    await act(async () => { fireEvent.click(b); fireEvent.click(b) })
+    expect(loadCalls).toBe(1)
+    expect(screen.getByRole('heading', { name: 'Biology' })).toBeTruthy()
+    expect(screen.getByText(/Could not reload/)).toBeTruthy()
   })
   it('offers retry when the whole page cannot load', async () => {
     loadError = true
