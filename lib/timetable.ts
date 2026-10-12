@@ -27,3 +27,18 @@ export function gridHours(classes: { start_time: string; end_time: string }[]): 
   }
   return { start, end: Math.min(24, end) }
 }
+
+// The top bar's class period chip: the class on now (until when) or the next one today (when it starts); nothing once today's are over
+export function classChip(
+  classes: { course_id: string; day_of_week: number; start_time: string; end_time: string }[],
+  courses: { id: string; name: string }[], tz: string, now: Date,
+): { label: string; short: string } | null {
+  const dow = weekdayOfKey(localDayKey(now, tz))
+  const hhmm = localTimeHHMM(now, tz)
+  const today = classes.filter(c => c.day_of_week === dow).sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const name = (c: { course_id: string }) => courses.find(x => x.id === c.course_id)?.name ?? 'Class'
+  const on = today.find(c => c.start_time.slice(0, 5) <= hhmm && hhmm < c.end_time.slice(0, 5))
+  if (on) { const short = `till ${on.end_time.slice(0, 5)}`; return { label: `${name(on)} · ${short}`, short } }
+  const next = today.find(c => c.start_time.slice(0, 5) > hhmm)
+  return next ? { label: `${name(next)} · ${next.start_time.slice(0, 5)}`, short: next.start_time.slice(0, 5) } : null
+}
