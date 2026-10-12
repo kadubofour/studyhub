@@ -48,7 +48,10 @@ export default function PlannerPage() {
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [editing, setEditing] = useState<Task | null>(null)
   // Scan (in the app's sidebar) saved tasks or classes: show them
-  useScanSaved(() => { loadPlanner().then(([c, t, cl, d]) => { setCourses(c); setTasks(t); setClasses(cl); setDone(d) }).catch(() => {}) })
+  useScanSaved(() => { loadPlanner().then(([c, t, cl, d]) => {
+    setCourses(c); setClasses(cur => [...cl, ...cur.filter(x => x.id.startsWith('temp-'))]); setDone(d)
+    setTasks(cur => [...t, ...cur.filter(x => x.id.startsWith('temp-'))])
+  }).catch(() => {}) })
 
   useEffect(() => {
     loadPlanner().then(([c, t, cl, d]) => {
@@ -163,6 +166,7 @@ export default function PlannerPage() {
       <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
         setCourses(next)
         listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks
+        listRecentlyDone(supabase(), new Date(Date.now() - DONE_DAYS * 86_400_000)).then(setDone).catch(() => {})
         listClasses(supabase()).then(setClasses)
       }} />
       <div role="tablist" className="mb-3 flex gap-1">
@@ -208,7 +212,7 @@ export default function PlannerPage() {
         </div>
       )}
       {tab === 'calendar' && (
-        <CalendarView classes={visibleClasses} courses={courses} tasks={byCourse} tz={tz}
+        <CalendarView classes={visibleClasses} courses={courses} tasks={byCourse} tz={tz} courseId={filter}
           empty={loaded && classes.length === 0 && tasks.length === 0}
           onSaveClass={saveClass} onDeleteClass={removeClass} onAddTask={add} onEditTask={edit} onDoneTask={finish} onDeleteTask={remove} />
       )}

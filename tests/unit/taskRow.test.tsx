@@ -38,4 +38,9 @@ describe('TaskRow', () => {
     fireEvent.click(box)
     expect(ticks).toBe(1)
   })
+  it('cannot be edited or deleted while it is still saving', () => {
+    render(<TaskRow task={task('temp-9')} tz="UTC" now={new Date()} onToggle={() => {}} onEdit={() => {}} onDelete={() => {}} />)
+    expect((screen.getByRole('button', { name: 'Edit Essay' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Delete Essay' }) as HTMLButtonElement).disabled).toBe(true)
+  })
 })

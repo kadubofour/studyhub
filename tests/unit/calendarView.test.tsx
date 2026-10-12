@@ -108,6 +108,35 @@ describe('CalendarView', () => {
     })
   })
 
+  describe('things that are still saving', () => {
+    it('a deadline that is still saving cannot be opened', () => {
+      setup({ tasks: [task('temp-1', 'Fresh')] })
+      fireEvent.click(within(screen.getByRole('group', { name: 'Wednesday 14 October' })).getByText('Fresh'))
+      expect(screen.queryByRole('heading', { name: 'Edit task' })).toBeNull()
+    })
+    it('nor a class that is still saving', () => {
+      setup({ classes: [{ ...klass, id: 'temp-k' }] })
+      fireEvent.click(within(screen.getByRole('group', { name: 'Tuesday 13 October' })).getByRole('button', { name: /Biology/ }))
+      expect(screen.queryByRole('heading', { name: 'Edit class' })).toBeNull()
+    })
+  })
+
+  it('shows only the study sessions of the chosen course', () => {
+    const mk = (courseId: string, topic: string) => ({ plan: { id: `p-${courseId}` }, courseId, today: [], schedule: [{ day: '2026-10-15', sessions: [{ topicId: topic, topicName: topic, kind: 'learn', minutes: 30, noteId: null }] }] }) as unknown as PlanView
+    views = [mk('bio', 'Glycolysis'), mk('chem', 'Bonds')]
+    setup({ courseId: 'bio' })
+    const thursday = within(screen.getByRole('group', { name: 'Thursday 15 October' }))
+    expect(thursday.getByText('Learn: Glycolysis')).toBeTruthy()
+    expect(thursday.queryByText('Learn: Bonds')).toBeNull()
+  })
+
+  it('a late slot ends at 23:59, which a time field can show', () => {
+    const h = setup({ classes: [{ ...klass, start_time: '22:00:00', end_time: '23:30:00' }] })
+    fireEvent.click(within(screen.getByRole('group', { name: 'Thursday 15 October' })).getByTestId('slot-23'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(h.onSaveClass).toHaveBeenCalledWith(expect.objectContaining({ start_time: '23:00', end_time: '23:59' }), undefined)
+  })
+
   describe('editing a deadline', () => {
     const openEssay = () => fireEvent.click(within(screen.getByRole('group', { name: 'Wednesday 14 October' })).getByRole('button', { name: /Essay/ }))
     it('opens it, and saves the changes', () => {

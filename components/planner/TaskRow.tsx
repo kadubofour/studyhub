@@ -25,7 +25,7 @@ export function TaskRow({ task, course, tz, now, done, onToggle, onDelete, onEdi
       <div className="min-w-0 flex-1">
         <div className={`flex items-center gap-1.5 ${done ? 'text-muted line-through' : ''}`}>
           {onEdit
-            ? <button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} className="min-w-0 truncate text-left hover:text-accent">{task.title}</button>
+            ? <button type="button" onClick={onEdit} disabled={saving} aria-label={`Edit ${task.title}`} className="min-w-0 truncate text-left hover:text-accent disabled:hover:text-fg">{task.title}</button>
             : <span className="truncate">{task.title}</span>}
           {task.priority === 'high' && !done && <span className="inline-flex shrink-0 items-center text-danger"><Flag size={13} aria-hidden /><span className="sr-only">High priority</span></span>}
         </div>
@@ -38,7 +38,7 @@ export function TaskRow({ task, course, tz, now, done, onToggle, onDelete, onEdi
       </div>
       {task.due_at && <DateTile dueAt={task.due_at} tz={tz} now={now} />}
       {onDelete && (
-        <button onClick={onDelete} aria-label={`Delete ${task.title}`} className="btn-ghost opacity-0 group-hover:opacity-100 focus:opacity-100">
+        <button onClick={onDelete} disabled={saving} aria-label={`Delete ${task.title}`} className="btn-ghost opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:hidden">
           <Trash2 size={14} aria-hidden />
         </button>
       )}

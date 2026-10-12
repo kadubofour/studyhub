@@ -43,7 +43,8 @@ export function bucketTasks<T extends { due_at: string | null; done_at: string |
   }
   // By due time; among tasks due at the same time, high priority first
   const high = (t: T) => ((t as { priority?: string }).priority === 'high' ? 0 : 1)
-  const byDue = (a: T, b: T) => (a.due_at ?? '').localeCompare(b.due_at ?? '') || high(a) - high(b)
+  const moment = (t: T) => (t.due_at ? Date.parse(t.due_at) : 0)
+  const byDue = (a: T, b: T) => moment(a) - moment(b) || high(a) - high(b)
   out.overdue.sort(byDue); out.today.sort(byDue); out.upcoming.sort(byDue)
   return out
 }
