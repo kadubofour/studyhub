@@ -46,20 +46,39 @@ describe('globals.css matches LOOKS', () => {
 
 describe('Vivid sidebar', () => {
   // The sidebar scopes its own text and line colours, so it must stay readable on its own background
-  const light = block('.app-root[data-look="vivid"] aside')
-  const dark = block('.dark .app-root[data-look="vivid"] aside')
+  const light = block('.app-root[data-look="vivid"] .app-sidebar')
+  const dark = block('.dark .app-root[data-look="vivid"] .app-sidebar')
   const bgOf = (b: string) => value(b, 'background')!.toUpperCase()
   const lum = (hex: string) => contrastRatio(hex, '#000000') // higher means lighter
   it('is darker than the page in both modes', () => {
     expect(lum(bgOf(light))).toBeLessThan(lum(LOOKS.vivid.light.bg))
     expect(lum(bgOf(dark))).toBeLessThan(lum(LOOKS.vivid.dark.bg))
   })
-  it.each([['light', light, () => bgOf(light)], ['dark', dark, () => bgOf(dark)]] as const)('its text is readable on it (%s)', (_m, b, bg) => {
-    const fg = (value(light, '--fg')!).toUpperCase()
-    const muted = (value(light, '--muted')!).toUpperCase()
-    expect(contrastRatio(fg, bg()), 'fg').toBeGreaterThanOrEqual(4.5)
-    expect(contrastRatio(muted, bg()), 'muted').toBeGreaterThanOrEqual(4.5)
-    void b
+  it.each([['light', light, () => bgOf(light)], ['dark', dark, () => bgOf(dark)]] as const)('its text is readable on it (%s)', (_m, _b, bg) => {
+    for (const token of ['--fg', '--muted', '--danger', '--success']) {
+      expect(contrastRatio(value(light, token)!.toUpperCase(), bg()), token).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+  it('is only the app sidebar, not every aside (the Study panel in a note is an aside too)', () => {
+    expect(css).not.toMatch(/data-look="vivid"\] aside\s*[{,]/)
+    expect(css).not.toMatch(/data-look="playful"\] aside\s*[{,]/)
+    expect(light).toContain('color-scheme: dark')
+  })
+})
+
+describe('look shapes sit below utilities', () => {
+  it('are in the components layer, so a utility such as pl-9 or pr-12 still wins on an element', () => {
+    expect(css).toMatch(/@layer components \{\s*\/\* Vivid shapes/)
+    const start = css.indexOf('/* Vivid shapes')
+    const end = css.indexOf('.prose-note h1 {')
+    const layer = css.slice(start, end)
+    expect(layer.trimEnd().endsWith('}')).toBe(true)
+  })
+  it('leave the padding of selects alone, which makes room for their chevron', () => {
+    const rule = css.split(String.fromCharCode(10)).find(l => l.includes('data-look="vivid"] select.input') && l.includes('{'))
+    expect(rule, 'vivid select rule').toBeTruthy()
+    const body = rule!.slice(rule!.indexOf('{'))
+    expect(body).not.toContain('padding')
   })
 })
 

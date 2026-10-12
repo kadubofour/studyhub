@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FocusSession } from '../types'
 import { check, fetchAll } from './util'
+import { announceProgressChanged } from '@/lib/xp/events'
 
 export async function logFocusSession(
   sb: SupabaseClient, s: { startedAt: Date; endedAt: Date; minutes: number; completed: boolean },
@@ -9,6 +10,7 @@ export async function logFocusSession(
   check(await sb.from('focus_sessions').upsert({
     started_at: s.startedAt.toISOString(), ended_at: s.endedAt.toISOString(), minutes: s.minutes, completed: s.completed,
   }, { onConflict: 'user_id,started_at', ignoreDuplicates: true }))
+  announceProgressChanged()
 }
 
 export async function listSessionsSince(sb: SupabaseClient, since: Date): Promise<FocusSession[]> {

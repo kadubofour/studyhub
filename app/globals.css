@@ -47,12 +47,14 @@
   --shadow: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
   --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
 }
-/* The sidebar is always the darker shade: charcoal on the light page, near-black on the dark one. Its own tokens re-colour everything inside it. */
-.app-root[data-look="vivid"] aside {
-  background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #2A2D37;
-  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg);
+/* The app sidebar (only that: the Study panel in a note is an aside too) is always the darker shade: charcoal on the light page,
+   near-black on the dark one. Its own tokens re-colour everything inside it. */
+.app-root[data-look="vivid"] .app-sidebar {
+  background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
+  --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
+  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
 }
-.dark .app-root[data-look="vivid"] aside { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #1B1B21; }
+.dark .app-root[data-look="vivid"] .app-sidebar { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #25252D; }
 /* Playful: thick outlines, flat colour, buttons that press down */
 .app-root[data-look="playful"] {
   --bg: #F7FBF4; --raised: #FFFFFF; --surface: #EAF2E5; --line: #CFDACA; --fg: #26301F; --muted: #556350;
@@ -129,6 +131,7 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .section-label { @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-muted; }
 }
 
+@layer components {
 /* Vivid shapes: larger corners and type, a livelier hero, pill buttons. Same classes, so every page changes at once. */
 .app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; }
 .app-root[data-look="vivid"] .card { padding: 1.25rem; }
@@ -141,7 +144,8 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .app-root[data-look="vivid"] .btn, .app-root[data-look="vivid"] .btn-primary, .app-root[data-look="vivid"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
 .app-root[data-look="vivid"] .btn-primary { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent); }
 .app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] .field select,
-.app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; padding-inline: 1rem; }
+.app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; }
+.app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] input.input { padding-inline: 1rem; }
 .app-root[data-look="vivid"] .field textarea, .app-root[data-look="vivid"] textarea.input { border-radius: 1.25rem; }
 
 /* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
@@ -161,8 +165,9 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: translateY(2px); border-bottom-width: 2px; }
 .app-root[data-look="playful"] .field input, .app-root[data-look="playful"] .field select, .app-root[data-look="playful"] .field textarea,
 .app-root[data-look="playful"] input.input, .app-root[data-look="playful"] select.input, .app-root[data-look="playful"] textarea.input { border-width: 2px; border-radius: 1rem; }
-.app-root[data-look="playful"] aside { border-right-width: 2px; }
+.app-root[data-look="playful"] .app-sidebar { border-right-width: 2px; }
 @media (prefers-reduced-motion: reduce) { .app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: none; } }
+}
 
 .prose-note h1 { font-size: 1.4rem; font-weight: 600; margin: .7em 0 .3em; }
 .prose-note h2 { font-size: 1.15rem; font-weight: 600; margin: .7em 0 .3em; }

@@ -2,6 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react'
 import { createTimer, startTimer, pauseTimer } from '@/lib/timer'
+import { forgetXp } from '@/lib/xp/celebrate'
+import { announceProgressChanged } from '@/lib/xp/events'
 import type { XpSummary } from '@/lib/xp/rules'
 
 const MIN = 60_000
@@ -11,10 +13,11 @@ let now = 0
 const toggle = vi.fn()
 let xp: XpSummary | null = null
 let due = 0
+let countCalls = 0
 let dueFails = false
 vi.mock('next/navigation', () => ({ usePathname: () => path }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
-vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => { if (dueFails) throw new Error('offline'); return due } }))
+vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => { countCalls++; if (dueFails) throw new Error('offline'); return due } }))
 vi.mock('@/components/providers/FocusProvider', async orig => ({ ...(await orig<typeof import('@/components/providers/FocusProvider')>()), useFocus: () => ({ timer, now, toggle, todayMinutes: 0 }) }))
 let xpKey: unknown
 vi.mock('@/components/xp/useXp', () => ({ useXp: (key: unknown) => { xpKey = key; return { xp, reload: vi.fn() } } }))
@@ -24,10 +27,50 @@ const summary = (over: Partial<XpSummary> = {}): XpSummary => ({
   total: 120, today: 10, level: { level: 2, into: 70, span: 150, toNext: 80 }, streak: 0, best: 0, goals: [], allDone: false, bonus: 20, last14: [], ...over,
 })
 const open = async () => { await act(async () => { render(<TopBar />) }) }
-beforeEach(() => { path = '/home'; timer = createTimer('focus', 25 * MIN); now = 0; xp = null; due = 0; dueFails = false; toggle.mockClear() })
+beforeEach(() => { forgetXp(); countCalls = 0; path = '/home'; timer = createTimer('focus', 25 * MIN); now = 0; xp = null; due = 0; dueFails = false; toggle.mockClear() })
 afterEach(cleanup)
 
+describe('TopBar keeping up', () => {
+  it('counts the due cards again when something says progress changed, such as finishing a review', async () => {
+    due = 3
+    await open()
+    expect(screen.getByRole('link', { name: '3 cards due' })).toBeTruthy()
+    due = 0
+    await act(async () => { announceProgressChanged() })
+    expect(screen.getByRole('link', { name: 'No cards due' })).toBeTruthy()
+    expect(countCalls).toBe(2)
+  })
+  it('leaves room for the Show sidebar button when the sidebar is hidden', async () => {
+    await act(async () => { render(<TopBar sidebarHidden />) })
+    expect(screen.getByRole('banner').className).toContain('md:pl-16')
+  })
+  it('has short and long wording for narrow and wide screens, so nothing is cut off on a phone', async () => {
+    due = 12
+    xp = summary({ streak: 4 })
+    await open()
+    const bar = screen.getByRole('banner')
+    for (const text of ['12', '12 cards due', '4d', '4-day streak', 'Lv 2', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
+  })
+  it('shows the cheer first in the strip, so it does not push the other chips about', async () => {
+    xp = summary({ total: 120 })
+    const { rerender } = render(<TopBar />)
+    xp = summary({ total: 130 })
+    await act(async () => { rerender(<TopBar />) })
+    const strip = screen.getByRole('banner').querySelector('.overflow-x-auto')!
+    expect(strip.firstElementChild!.textContent).toBe('+10 XP')
+  })
+})
+
 describe('TopBar celebrations', () => {
+  it('still celebrates after a full-screen page took the bar away and brought it back', async () => {
+    xp = summary({ total: 120 })
+    const first = render(<TopBar />)
+    await act(async () => {})
+    first.unmount() // a quiz or note editor page: no top bar
+    xp = summary({ total: 135 })
+    await act(async () => { render(<TopBar />) })
+    expect(screen.getByRole('status').textContent).toBe('+15 XP')
+  })
   const level = (n: number, into = 10) => ({ level: n, into, span: 150, toNext: 140 })
   it('reads XP again on every page, so a session finished elsewhere is noticed', async () => {
     path = '/home'

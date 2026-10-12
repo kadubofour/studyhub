@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { check, must } from '@/lib/data/util'
 import type { PlanMode, StoredSession } from './types'
+import { announceProgressChanged } from '@/lib/xp/events'
 
 export type PlanRow = {
   id: string; course_id: string; exam_task_id: string; mode: PlanMode; minutes_per_day: number; days_off: number[]
@@ -33,4 +34,5 @@ export async function ensureDay(sb: SupabaseClient, planId: string, day: string,
 }
 export async function saveDaySessions(sb: SupabaseClient, dayId: string, sessions: StoredSession[]): Promise<void> {
   check(await sb.from('study_plan_days').update({ sessions }).eq('id', dayId))
+  announceProgressChanged()
 }

@@ -100,7 +100,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   return (
     <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={lookOf(profile.look)}>
       {sidebar && (
-        <aside className="no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
+        <aside className="app-sidebar no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
           <div className="mb-6 flex items-center justify-between px-1">
             <Link href="/home" onClick={e => guard(e, '/home')} className="flex items-center gap-2 text-[15px] font-semibold">
               <span className="flex size-7 items-center justify-center rounded-lg text-white" style={{ background: 'linear-gradient(135deg, var(--accent-solid), var(--accent-glow))' }}>
@@ -145,7 +145,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       )}
       <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-16 md:pb-0'}`}>
         <OfflineBanner />
-        {lookOf(profile.look) === 'vivid' && !immersive && <TopBar />}
+        {lookOf(profile.look) === 'vivid' && !immersive && <TopBar sidebarHidden={!sidebar} />}
         {!sidebar && !immersive && (
           <button className="no-print btn-ghost fixed left-3 top-3 z-30 hidden md:inline-flex" onClick={() => setCollapsed(false)}
             aria-label="Show sidebar" title="Show sidebar">

@@ -66,8 +66,10 @@ test('a task ticked by mistake can be undone', async ({ page }) => {
 test('task added on home shows under Today', async ({ page }) => {
   await signUp(page)
   await page.getByLabel('Add a task').fill('Read chapter 4')
+  const saved = page.waitForResponse(r => r.url().includes('/rest/v1/tasks') && r.request().method() === 'POST')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(page.getByText('Read chapter 4')).toBeVisible()
+  await saved // it shows at once and is saved a moment later; reloading sooner would lose it
   await page.reload()
   await expect(page.getByText('Read chapter 4')).toBeVisible()
 })
