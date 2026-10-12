@@ -38,6 +38,11 @@ describe('badges', () => {
   it('measures deep focus in hours', () => {
     expect(by(ctx({ focus_minutes: 180 }))['deep-focus']).toMatchObject({ value: 3, target: 10, unit: 'hours' })
   })
+  it('describes what is counted without overclaiming', () => {
+    const how = Object.fromEntries(BADGES.map(b => [b.id, b.how]))
+    expect(how['reviewer']).toBe('Do 100 card reviews')
+    expect(how['quiz-ace']).toBe('Finish 5 quiz attempts')
+  })
   it('counts how many are earned', () => {
     expect(earnedCount(evaluate(ctx({ notes: 10, lectures: 1 })))).toBe(3) // first note, note-taker, first lecture
   })

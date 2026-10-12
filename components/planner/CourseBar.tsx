@@ -54,10 +54,10 @@ export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-1.5">
-      <button className={chip(selected === null && !none)} style={tint('var(--accent)', selected === null && !none)} onClick={() => onSelect(null)}>All</button>
-      {unsorted && <button className={chip(none)} style={tint('var(--muted)', none)} onClick={unsorted.onClick}>Unsorted</button>}
+      <button className={chip(selected === null && !none)} aria-pressed={selected === null && !none} style={tint('var(--accent)', selected === null && !none)} onClick={() => onSelect(null)}>All</button>
+      {unsorted && <button className={chip(none)} aria-pressed={none} style={tint('var(--muted)', none)} onClick={unsorted.onClick}>Unsorted</button>}
       {courses.map(c => (
-        <button key={c.id} className={chip(selected === c.id && !none)} style={tint(c.color, selected === c.id && !none)} onClick={() => onSelect(c.id)}
+        <button key={c.id} className={chip(selected === c.id && !none)} aria-pressed={selected === c.id && !none} style={tint(c.color, selected === c.id && !none)} onClick={() => onSelect(c.id)}
           onDoubleClick={() => openEdit(c)} onContextMenu={e => { e.preventDefault(); openEdit(c) }}
           title="Double-click to edit">
           <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: c.color }} />{c.name}

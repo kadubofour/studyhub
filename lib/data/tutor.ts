@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Source } from '@/lib/ai/tutorContext'
-import { check, must } from './util'
+import { check, fetchAll, must } from './util'
 
 export type TutorChat = { id: string; title: string; course_id: string | null; note_id: string | null; lecture_id: string | null; guided: boolean; created_at: string; updated_at: string }
 export type TutorMessage = {
@@ -11,7 +11,7 @@ const CHAT = 'id,title,course_id,note_id,lecture_id,guided,created_at,updated_at
 const MESSAGE = 'id,chat_id,role,content,sources,proposals,status,created_at'
 
 export async function listChats(sb: SupabaseClient): Promise<TutorChat[]> {
-  return must(await sb.from('tutor_chats').select(CHAT).order('updated_at', { ascending: false }))
+  return fetchAll<TutorChat>((from, to) => sb.from('tutor_chats').select(CHAT).order('updated_at', { ascending: false }).order('id').range(from, to))
 }
 export async function getChat(sb: SupabaseClient, id: string): Promise<TutorChat> {
   return must(await sb.from('tutor_chats').select(CHAT).eq('id', id).single())

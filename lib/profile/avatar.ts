@@ -1,5 +1,7 @@
 // Eight colours for the avatar; white initials read well on each (checked in tests)
 export const AVATAR_COLORS = ['#3B5BDB', '#6741D9', '#0B7A5E', '#C2410C', '#BE185D', '#A15C07', '#0E7490', '#475569'] as const
+// Names to read out for the swatches, in the same order
+export const AVATAR_NAMES = ['Blue', 'Violet', 'Green', 'Orange', 'Pink', 'Amber', 'Teal', 'Slate'] as const
 export const DEFAULT_AVATAR = AVATAR_COLORS[0]
 
 export const isAvatarColor = (v: unknown): v is (typeof AVATAR_COLORS)[number] =>

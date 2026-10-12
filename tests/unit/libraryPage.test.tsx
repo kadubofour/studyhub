@@ -20,12 +20,13 @@ let items: LibraryItem[]
 let loadFails = false
 let search = ''
 const requestUpload = vi.fn()
-const moveItems = vi.fn(async (..._a: unknown[]) => {})
+let movedCount: number | null = null
+const moveItems = vi.fn(async (_sb: unknown, picked: unknown[], _course: unknown) => movedCount ?? picked.length)
 const loadLibrary = vi.fn(async () => { if (loadFails) throw new Error('offline'); return items })
 vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses, createCourse: vi.fn(), updateCourse: vi.fn(), deleteCourse: vi.fn() }))
-vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (...a: unknown[]) => moveItems(...a) }))
+vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (sb: unknown, p: unknown[], c: unknown) => moveItems(sb, p, c) }))
 vi.mock('@/lib/scan/events', () => ({ requestUpload: () => requestUpload() }))
 import LibraryPage from '@/app/(app)/library/page'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -33,7 +34,7 @@ import { ToastProvider } from '@/components/providers/ToastProvider'
 const open = async () => { await act(async () => { render(<ToastProvider><LibraryPage /></ToastProvider>) }) }
 const rows = () => screen.getAllByRole('listitem').map(li => li.textContent ?? '')
 const click = async (el: HTMLElement) => { await act(async () => { fireEvent.click(el) }) }
-beforeEach(() => { items = STUFF; loadFails = false; search = ''; requestUpload.mockClear(); moveItems.mockClear(); loadLibrary.mockClear() })
+beforeEach(() => { movedCount = null; items = STUFF; loadFails = false; search = ''; requestUpload.mockClear(); moveItems.mockClear(); loadLibrary.mockClear() })
 afterEach(cleanup)
 
 describe('Library', () => {
@@ -69,6 +70,7 @@ describe('Library', () => {
       await click(screen.getByRole('button', { name: 'Spanish' }))
       expect(rows()).toHaveLength(1)
       await click(screen.getByRole('button', { name: 'Unsorted' }))
+      expect(screen.getByRole('button', { name: 'Unsorted' }).getAttribute('aria-pressed')).toBe('true')
       expect(rows().map(t => t.includes('Loose thoughts') || t.includes('Why the matrix'))).toEqual([true, true])
       await click(screen.getByRole('button', { name: 'All' }))
       expect(rows()).toHaveLength(7)
@@ -77,6 +79,12 @@ describe('Library', () => {
       search = 'course=bio'
       await open()
       expect(rows()).toHaveLength(4)
+    })
+    it('shows everything when the address names a course that no longer exists', async () => {
+      search = 'course=deleted-long-ago'
+      await open()
+      expect(rows()).toHaveLength(7)
+      expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
     })
     it('opens on Unsorted when the address says none', async () => {
       search = 'course=none'
@@ -113,6 +121,8 @@ describe('Library', () => {
       expect(moveItems).toHaveBeenCalledWith({}, [{ kind: 'note', id: 'n2' }, { kind: 'chat', id: 'c1' }], 'bio')
       expect(loadLibrary).toHaveBeenCalledTimes(2)
       expect(screen.getByText('Moved 2 items.')).toBeTruthy()
+      expect(screen.getAllByRole('status').some(s => s.textContent === '2 items selected')).toBe(false)
+      expect(screen.queryByText('2 items selected')).toBeNull()
       expect(screen.queryByText('2 selected')).toBeNull()
     })
     it('can move items out of any course', async () => {
@@ -121,6 +131,33 @@ describe('Library', () => {
       fireEvent.change(screen.getByLabelText('Move to'), { target: { value: 'none' } })
       await click(screen.getByRole('button', { name: 'Move' }))
       expect(moveItems).toHaveBeenCalledWith({}, [{ kind: 'note', id: 'n1' }], null)
+    })
+    it('moves only what is shown: ticked items hidden by a filter stay where they are', async () => {
+      await open()
+      await click(screen.getByRole('button', { name: 'Unsorted' }))
+      await pick(/Loose thoughts/); await pick(/Why the matrix/)
+      await click(screen.getByRole('button', { name: 'Spanish' }))
+      await click(screen.getByRole('checkbox', { name: 'Select all shown' }))
+      expect(screen.getByText('1 selected')).toBeTruthy()
+      fireEvent.change(screen.getByLabelText('Move to'), { target: { value: 'bio' } })
+      await click(screen.getByRole('button', { name: 'Move' }))
+      expect(moveItems).toHaveBeenCalledWith({}, [{ kind: 'deck', id: 'd2' }], 'bio')
+    })
+    it('says so when only some of the items could be moved', async () => {
+      movedCount = 1
+      await open()
+      await pick(/Loose thoughts/); await pick(/Why the matrix/)
+      fireEvent.change(screen.getByLabelText('Move to'), { target: { value: 'bio' } })
+      await click(screen.getByRole('button', { name: 'Move' }))
+      expect(screen.getByText('Moved 1 of 2 items. The others had changed.')).toBeTruthy()
+    })
+    it('says nothing was moved when none could be', async () => {
+      movedCount = 0
+      await open()
+      await pick(/Loose thoughts/)
+      fireEvent.change(screen.getByLabelText('Move to'), { target: { value: 'bio' } })
+      await click(screen.getByRole('button', { name: 'Move' }))
+      expect(screen.getByText('Nothing was moved. Those items had changed.')).toBeTruthy()
     })
     it('does not let a quiz be ticked, and says why', async () => {
       await open()
@@ -183,6 +220,7 @@ describe('Library', () => {
   it('has the page title and lists courses as filters', async () => {
     await open()
     expect(screen.getByRole('heading', { level: 1, name: 'Library' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Biology' }).getAttribute('aria-pressed')).toBe('false')
     const chips = screen.getByRole('group', { name: 'Courses' })
     expect(within(chips).getByRole('button', { name: 'Biology' })).toBeTruthy()
   })

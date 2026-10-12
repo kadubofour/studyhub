@@ -32,6 +32,7 @@ export default function LibraryPage() {
   const toast = useToast()
   const fromAddress = useSearchParams().get('course')
   const [courses, setCourses] = useState<Course[]>([])
+  const [coursesLoaded, setCoursesLoaded] = useState(false)
   const [items, setItems] = useState<LibraryItem[] | null>(null)
   const [failed, setFailed] = useState(false)
   const [view, setView] = useState<View>(() => ({ course: fromAddress ?? 'all', kind: null, q: '', sort: 'recent' }))
@@ -44,20 +45,23 @@ export default function LibraryPage() {
   }, [])
   useEffect(() => {
     let live = true
-    listCourses(supabase()).then(c => { if (live) setCourses(c) }).catch(() => {})
+    listCourses(supabase()).then(c => { if (live) { setCourses(c); setCoursesLoaded(true) } }).catch(() => {})
     loadLibrary(supabase(), new Date()).then(l => { if (live) { setItems(l); setFailed(false) } }).catch(() => { if (live) setFailed(true) })
     return () => { live = false }
   }, [])
 
   const courseOf = (id: string | null) => courses.find(c => c.id === id) ?? null
-  const shown = items ? visible(items, view) : []
-  const counts = items ? countsByKind(items, view) : null
-  // Ticks for items that have since gone (after a move or a refresh) simply do not count
-  const picked = (items ?? []).filter(i => selected.has(key(i)) && isMovable(i))
+  // An address naming a course that is gone (or never was) shows everything instead of an empty list
+  const course = view.course === 'all' || view.course === 'none' || !coursesLoaded || courses.some(c => c.id === view.course) ? view.course : 'all'
+  const current: View = { ...view, course }
+  const shown = items ? visible(items, current) : []
+  const counts = items ? countsByKind(items, current) : null
+  // Only what is shown can be moved, so a tick hidden by a filter never goes along unseen
   const movableShown = shown.filter(isMovable)
+  const picked = movableShown.filter(i => selected.has(key(i)))
   const allShownPicked = movableShown.length > 0 && movableShown.every(i => selected.has(key(i)))
-  const filtered = view.kind !== null || view.q.trim() !== '' || view.course !== 'all'
-  const courseName = view.course !== 'all' && view.course !== 'none' ? courseOf(view.course)?.name : null
+  const filtered = view.kind !== null || view.q.trim() !== '' || course !== 'all'
+  const courseName = course !== 'all' && course !== 'none' ? courseOf(course)?.name : null
 
   function toggle(i: LibraryItem) {
     setSelected(s => { const n = new Set(s); if (n.has(key(i))) n.delete(key(i)); else n.add(key(i)); return n })
@@ -69,9 +73,10 @@ export default function LibraryPage() {
   async function move() {
     if (!picked.length || !target || moving) return
     setMoving(true)
+    const wanted = picked.length
     try {
-      await moveItems(supabase(), picked.map(i => ({ kind: i.kind, id: i.id })), target === 'none' ? null : target)
-      toast(`Moved ${plural(picked.length, 'item')}.`)
+      const n = await moveItems(supabase(), picked.map(i => ({ kind: i.kind, id: i.id })), target === 'none' ? null : target)
+      toast(n === wanted ? `Moved ${plural(n, 'item')}.` : n === 0 ? 'Nothing was moved. Those items had changed.' : `Moved ${n} of ${plural(wanted, 'item')}. The others had changed.`)
       setSelected(new Set()); setTarget('')
     } catch { toast('Could not move those items.') }
     await load()
@@ -98,9 +103,9 @@ export default function LibraryPage() {
       ) : (
         <>
           <div role="group" aria-label="Courses">
-            <CourseBar courses={courses} selected={courses.some(c => c.id === view.course) ? view.course : null}
+            <CourseBar courses={courses} selected={courses.some(c => c.id === course) ? course : null}
               onSelect={id => setView(v => ({ ...v, course: id ?? 'all' }))} onChange={c => { setCourses(c); void load() }} // a deleted course frees its items, so read them again
-              unsorted={{ active: view.course === 'none', onClick: () => setView(v => ({ ...v, course: 'none' })) }} />
+              unsorted={{ active: course === 'none', onClick: () => setView(v => ({ ...v, course: 'none' })) }} />
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="relative min-w-48 flex-1">
@@ -124,7 +129,7 @@ export default function LibraryPage() {
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
             <label className="flex items-center gap-2 text-muted">
               <input type="checkbox" checked={allShownPicked} disabled={movableShown.length === 0} onChange={toggleAll} aria-label="Select all shown" />
-              <span aria-live="polite">{picked.length > 0 ? `${picked.length} selected` : plural(shown.length, 'item')}</span>
+              <span>{picked.length > 0 ? `${picked.length} selected` : plural(shown.length, 'item')}</span>
             </label>
             {picked.length > 0 && (
               <div className="flex items-center gap-2">
@@ -138,14 +143,15 @@ export default function LibraryPage() {
             )}
           </div>
 
+          <span role="status" className="sr-only">{picked.length > 0 ? `${plural(picked.length, 'item')} selected` : ''}</span>
           {shown.length === 0 ? (
-            filtered && items.some(i => view.course === 'all' || (view.course === 'none' ? i.course_id === null : i.course_id === view.course)) ? (
+            filtered && items.some(i => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)) ? (
               <div className="card space-y-2 py-8 text-center">
                 <p className="text-sm">Nothing matches.</p>
                 <button type="button" className="btn" onClick={() => setView({ course: 'all', kind: null, q: '', sort: view.sort })}>Clear filters</button>
               </div>
             ) : (
-              <div className="card py-8 text-center text-sm text-muted">{view.course === 'none' ? 'Everything is in a course.' : courseName ? 'Nothing in this course yet.' : 'Nothing here yet.'}</div>
+              <div className="card py-8 text-center text-sm text-muted">{course === 'none' ? 'Everything is in a course.' : courseName ? 'Nothing in this course yet.' : 'Nothing here yet.'}</div>
             )
           ) : (
             <ul className="space-y-2">

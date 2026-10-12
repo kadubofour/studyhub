@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { AVATAR_COLORS, initials, isAvatarColor } from '@/lib/profile/avatar'
+import { AVATAR_COLORS, AVATAR_NAMES, initials, isAvatarColor } from '@/lib/profile/avatar'
 import { contrastRatio } from '@/lib/appearance'
 
 describe('initials', () => {
@@ -23,6 +23,11 @@ describe('avatar colours', () => {
   it('has eight, and white initials are readable on every one (WCAG AA)', () => {
     expect(AVATAR_COLORS).toHaveLength(8)
     for (const c of AVATAR_COLORS) expect(contrastRatio('#ffffff', c), c).toBeGreaterThanOrEqual(4.5)
+  })
+  it('gives each colour a name that can be read out', () => {
+    expect(AVATAR_NAMES).toHaveLength(8)
+    expect(AVATAR_NAMES.every(n => /^[A-Z][a-z]+$/.test(n))).toBe(true)
+    expect(new Set(AVATAR_NAMES).size).toBe(8)
   })
   it('recognises only its own colours, whatever the letter case', () => {
     expect(isAvatarColor('#3B5BDB')).toBe(true)

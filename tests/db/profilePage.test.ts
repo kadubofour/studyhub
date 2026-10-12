@@ -15,7 +15,7 @@ describe('profile columns', () => {
   })
   it('refuse a long or empty school or programme, and anything that is not a colour', async () => {
     const u = await newUser()
-    for (const bad of [{ school: 'a'.repeat(81) }, { school: '' }, { programme: 'a'.repeat(81) }, { programme: '' }, { avatar_color: 'red' }, { avatar_color: '#12345' }, { avatar_color: '#GGGGGG' }]) {
+    for (const bad of [{ display_name: 'a'.repeat(81) }, { display_name: '' }, { school: 'a'.repeat(81) }, { school: '' }, { programme: 'a'.repeat(81) }, { programme: '' }, { avatar_color: 'red' }, { avatar_color: '#12345' }, { avatar_color: '#GGGGGG' }]) {
       expect((await u.sb.from('profiles').update(bad).eq('id', u.id)).error, JSON.stringify(bad)).not.toBeNull()
     }
   })

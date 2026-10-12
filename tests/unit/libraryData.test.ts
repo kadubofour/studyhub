@@ -3,7 +3,7 @@ import { loadLibrary, moveItems } from '@/lib/data/library'
 
 type Call = { table: string; op: string; arg?: unknown; col?: string; ids?: unknown[] }
 // A stand-in client: reads give the rows for the table; writes are recorded
-function client(rows: Record<string, unknown[]>, failOn?: string) {
+function client(rows: Record<string, unknown[]>, failOn?: string, gone: Set<string> = new Set()) {
   const calls: Call[] = []
   const from = (table: string) => {
     let op = 'select'
@@ -14,9 +14,14 @@ function client(rows: Record<string, unknown[]>, failOn?: string) {
     q.range = (a: number, b: number) => { range = [a, b]; return q }
     q.update = (patch: unknown) => { op = 'update'; arg = patch; return q }
     q.delete = () => { op = 'delete'; return q }
-    q.in = (col: string, ids: unknown[]) => { calls.push({ table, op, arg, col, ids }); return q }
+    let touched: unknown[] = []
+    q.in = (col: string, ids: unknown[]) => { calls.push({ table, op, arg, col, ids }); touched = ids; return q }
     q.then = (res: (v: unknown) => unknown) => {
-      if (op !== 'select') return res({ error: table === failOn ? { message: 'x' } : null })
+      if (op !== 'select') {
+        if (table === failOn) return res({ data: null, error: { message: 'x' } })
+        // an update returns the rows it changed; ids in `gone` match nothing
+        return res({ data: touched.filter(id => !gone.has(String(id))).map(id => ({ id })), error: null })
+      }
       const all = rows[table] ?? []
       return res({ data: range ? all.slice(range[0], range[1] + 1) : all, error: null })
     }
@@ -67,7 +72,7 @@ describe('moveItems', () => {
     { kind: 'note' as const, id: 'n1' }, { kind: 'note' as const, id: 'n2' }, { kind: 'deck' as const, id: 'd1' },
     { kind: 'lecture' as const, id: 'l1' }, { kind: 'chat' as const, id: 'c1' }, { kind: 'quiz' as const, id: 'q1' },
   ]
-  it('changes the course of each kind in one request, and never touches a quiz', async () => {
+  it('changes the course of each kind, and never touches a quiz', async () => {
     const c = client({})
     await moveItems(c.sb, items, 'bio')
     const updates = c.calls.filter(k => k.op === 'update')
@@ -75,24 +80,46 @@ describe('moveItems', () => {
     for (const u of updates) expect(u.arg).toEqual({ course_id: 'bio' })
     expect(c.calls.some(k => k.table === 'quizzes')).toBe(false)
   })
+  it('leaves topic links to the database, which drops them only when the course really changes', async () => {
+    const c = client({})
+    await moveItems(c.sb, items, 'bio')
+    expect(c.calls.some(k => k.table === 'topic_links')).toBe(false)
+  })
   it('can put things back in no course', async () => {
     const c = client({})
     await moveItems(c.sb, [{ kind: 'note', id: 'n1' }], null)
     expect(c.calls.find(k => k.op === 'update')!.arg).toEqual({ course_id: null })
   })
-  it('takes moved notes, lectures and decks out of the topics of their old course', async () => {
+  it('says how many it really moved', async () => {
+    expect(await moveItems(client({}).sb, items, 'bio')).toBe(5)
+    expect(await moveItems(client({}, undefined, new Set(['n2', 'c1'])).sb, items, 'bio')).toBe(3) // two were deleted meanwhile
+  })
+  it('sends long selections in batches, so no request address grows too long', async () => {
+    const many = Array.from({ length: 250 }, (_, i) => ({ kind: 'note' as const, id: `n${i}` }))
     const c = client({})
-    await moveItems(c.sb, items, 'bio')
-    const unlinks = c.calls.filter(k => k.table === 'topic_links' && k.op === 'delete')
-    expect(unlinks.map(k => [k.col, k.ids])).toEqual([['note_id', ['n1', 'n2']], ['deck_id', ['d1']], ['lecture_id', ['l1']]])
+    expect(await moveItems(c.sb, many, 'bio')).toBe(250)
+    const sizes = c.calls.filter(k => k.op === 'update').map(k => k.ids!.length)
+    expect(sizes).toEqual([100, 100, 50])
   })
   it('does nothing for an empty or all-quiz selection', async () => {
     const c = client({})
-    await moveItems(c.sb, [], 'bio')
-    await moveItems(c.sb, [{ kind: 'quiz', id: 'q1' }], 'bio')
+    expect(await moveItems(c.sb, [], 'bio')).toBe(0)
+    expect(await moveItems(c.sb, [{ kind: 'quiz', id: 'q1' }], 'bio')).toBe(0)
     expect(c.calls).toEqual([])
   })
   it('fails, and says so, when a change is refused', async () => {
     await expect(moveItems(client({}, 'decks').sb, items, 'bio')).rejects.toBeTruthy()
+  })
+})
+
+describe('loadLibrary reads past one page', () => {
+  it('keeps every note, lecture, chat and quiz even beyond 1000 of them', async () => {
+    const notes = Array.from({ length: 2300 }, (_, i) => ({ id: `n${i}`, course_id: null, title: `Note ${i}`, updated_at: '2026-10-10T10:00:00Z' }))
+    const quizzes = Array.from({ length: 1200 }, (_, i) => ({ id: `q${i}`, note_id: 'n0', title: `Quiz ${i}`, created_at: '2026-10-10T12:00:00Z' }))
+    const chats = Array.from({ length: 1100 }, (_, i) => ({ id: `c${i}`, title: `Chat ${i}`, course_id: null, note_id: null, lecture_id: null, guided: false, created_at: '', updated_at: '2026-10-06T11:00:00Z' }))
+    const items = await loadLibrary(client({ notes, quizzes, tutor_chats: chats, decks: [], cards: [], lectures: [] }).sb, NOW)
+    expect(items.filter(i => i.kind === 'note')).toHaveLength(2300)
+    expect(items.filter(i => i.kind === 'quiz')).toHaveLength(1200)
+    expect(items.filter(i => i.kind === 'chat')).toHaveLength(1100)
   })
 })

@@ -38,6 +38,28 @@ describe('Library against the real database', () => {
     expect(items.every(i => i.course_id === chem)).toBe(true)
     expect((await u.sb.from('topic_links').select('id')).data).toEqual([])
   })
+  it('keeps topic links when an item is moved to the course it is already in', async () => {
+    const u = await newUser()
+    const bio = await course(u, 'Biology')
+    const m = await material(u, bio)
+    const topic = (await u.sb.from('topics').insert({ course_id: bio, name: 'Krebs cycle' }).select('id').single()).data!.id as string
+    await u.sb.from('topic_links').insert([{ topic_id: topic, note_id: m.note }, { topic_id: topic, deck_id: m.deck }])
+    expect(await moveItems(u.sb, [{ kind: 'note', id: m.note }, { kind: 'deck', id: m.deck }], bio)).toBe(2)
+    expect((await u.sb.from('topic_links').select('id')).data).toHaveLength(2)
+  })
+  it('does not change the edited time of a note or chat that is only moved, but does when it is edited', async () => {
+    const u = await newUser()
+    const bio = await course(u, 'Biology'), chem = await course(u, 'Chemistry')
+    const m = await material(u, bio)
+    const edited = async (table: 'notes' | 'tutor_chats', id: string) => (await u.sb.from(table).select('updated_at').eq('id', id).single()).data!.updated_at as string
+    const note0 = await edited('notes', m.note), chat0 = await edited('tutor_chats', m.chat)
+    await new Promise(r => setTimeout(r, 30))
+    await moveItems(u.sb, [{ kind: 'note', id: m.note }, { kind: 'chat', id: m.chat }], chem)
+    expect(await edited('notes', m.note)).toBe(note0)
+    expect(await edited('tutor_chats', m.chat)).toBe(chat0)
+    await u.sb.from('notes').update({ title: 'Krebs cycle, revised' }).eq('id', m.note)
+    expect(await edited('notes', m.note)).not.toBe(note0)
+  })
   it('can put items back in no course', async () => {
     const u = await newUser()
     const bio = await course(u, 'Biology')

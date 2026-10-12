@@ -64,6 +64,18 @@ describe('Profile page: who the student is', () => {
   })
 })
 
+describe('Profile page: when XP cannot be read', () => {
+  it('still shows the totals that were read, and does not show badges that need XP as locked', async () => {
+    xp = null
+    await open()
+    const tiles = screen.getByRole('list', { name: 'Study totals' })
+    expect(within(tiles).getByText('Notes').closest('li')!.textContent).toContain('12')
+    expect(within(tiles).queryByText('Level')).toBeNull()
+    expect(within(tiles).queryByText('Streak')).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Badges' })).toBeNull()
+  })
+})
+
 describe('Profile page: what the student has done', () => {
   it('shows the totals', async () => {
     await open()
@@ -105,7 +117,9 @@ describe('Profile page: what the student has done', () => {
     await open()
     expect(screen.getByRole('alert').textContent).toContain('Could not load your study totals')
     expect(screen.getByRole('heading', { level: 1, name: 'Ama Mensah' })).toBeTruthy()
-    expect(screen.queryByRole('list', { name: 'Study totals' })).toBeNull()
+    const tiles = screen.getByRole('list', { name: 'Study totals' })
+    expect(within(tiles).getByText('Level')).toBeTruthy() // what came from XP still shows
+    expect(within(tiles).queryByText('Notes')).toBeNull()
   })
   it('links each course to its place in the Library', async () => {
     await open()
@@ -123,7 +137,7 @@ describe('Profile page: editing', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ama K. Mensah' } })
     fireEvent.change(screen.getByLabelText('School'), { target: { value: 'KNUST' } })
     fireEvent.change(screen.getByLabelText('Programme'), { target: { value: 'Pharmacy' } })
-    await click(screen.getByRole('radio', { name: '#BE185D' }))
+    await click(screen.getByRole('radio', { name: 'Pink' }))
     await click(screen.getByRole('button', { name: 'Save' }))
     expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u1', { display_name: 'Ama K. Mensah', school: 'KNUST', programme: 'Pharmacy', avatar_color: '#BE185D' })
     expect(screen.getByRole('heading', { level: 1, name: 'Ama K. Mensah' })).toBeTruthy()
@@ -143,7 +157,13 @@ describe('Profile page: editing', () => {
   it('limits the fields to 80 characters', async () => {
     await open()
     await edit()
-    for (const label of ['Name', 'School', 'Programme']) expect(screen.getByLabelText(label).getAttribute('maxlength')).toBe(label === 'Name' ? '60' : '80')
+    for (const label of ['Name', 'School', 'Programme']) expect(screen.getByLabelText(label).getAttribute('maxlength')).toBe('80')
+  })
+  it('moves between the colours with the arrow keys', async () => {
+    await open()
+    await edit()
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'Blue' }), { key: 'ArrowRight' })
+    expect(screen.getByRole('radio', { name: 'Violet' }).getAttribute('aria-checked')).toBe('true')
   })
   it('says it could not save, and keeps the form open with what was typed', async () => {
     saveFails = true
@@ -169,7 +189,8 @@ describe('Profile page: editing', () => {
     await edit()
     const group = screen.getByRole('radiogroup', { name: 'Avatar colour' })
     expect(within(group).getAllByRole('radio')).toHaveLength(8)
-    expect(within(group).getByRole('radio', { name: '#3B5BDB' }).getAttribute('aria-checked')).toBe('true')
+    expect(within(group).getByRole('radio', { name: 'Blue' }).getAttribute('aria-checked')).toBe('true')
+    expect(within(group).getAllByRole('radio').filter(r => r.getAttribute('tabindex') === '0')).toHaveLength(1) // arrow keys move between them
   })
   it('saves once when Save is pressed twice', async () => {
     await open()

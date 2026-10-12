@@ -4,6 +4,9 @@ alter table public.profiles
   add column programme text check (programme is null or length(programme) between 1 and 80),
   add column avatar_color text not null default '#3B5BDB' check (avatar_color ~ '^#[0-9A-Fa-f]{6}$');
 
+-- A name is at most 80 characters (not checked against names saved before today)
+alter table public.profiles add constraint profiles_display_name_len check (display_name is null or length(display_name) between 1 and 80) not valid;
+
 -- One row of totals for the signed-in student. Security invoker: row level security keeps every count to their own rows.
 create function public.profile_stats()
 returns table (notes int, decks int, cards int, lectures int, lecture_minutes int, quizzes_done int, focus_minutes int, reviews int, games int, tutor_messages int, courses int)

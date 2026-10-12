@@ -9,7 +9,8 @@ import { useXp } from '@/components/xp/useXp'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { getProfileStats, updateProfile } from '@/lib/data/profile'
-import { AVATAR_COLORS } from '@/lib/profile/avatar'
+import { AVATAR_COLORS, AVATAR_NAMES } from '@/lib/profile/avatar'
+import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 import { earnedCount, evaluate, type BadgeState, type Stats } from '@/lib/profile/badges'
 import type { Course } from '@/lib/types'
 
@@ -63,12 +64,13 @@ export default function ProfilePage() {
     savingRef.current = false; setSaving(false)
   }
 
-  const badges = stats && xp ? evaluate({ stats, bestStreak: xp.best, level: xp.level.level }) : stats ? evaluate({ stats, bestStreak: 0, level: 1 }) : null
+  // Badges need both: with XP unread, the streak and level badges would wrongly show as locked
+  const badges = stats && xp ? evaluate({ stats, bestStreak: xp.best, level: xp.level.level }) : null
   const sub = [profile.programme, profile.school].filter(Boolean).join(' · ')
-  const tiles: [string, string, 'a' | 'b' | 'c'][] = stats && xp ? [
-    ['Level', String(xp.level.level), 'c'], ['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b'], ['Focus time', fmtMinutes(stats.focus_minutes), 'c'],
-    ['Notes', String(stats.notes), 'b'], ['Flashcards', String(stats.cards), 'a'], ['Lectures', String(stats.lectures), 'c'], ['Quizzes finished', String(stats.quizzes_done), 'b'],
-  ] : []
+  const tiles: [string, string, 'a' | 'b' | 'c'][] = [
+    ...(xp ? [['Level', String(xp.level.level), 'c'], ['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
+    ...(stats ? [['Focus time', fmtMinutes(stats.focus_minutes), 'c'], ['Notes', String(stats.notes), 'b'], ['Flashcards', String(stats.cards), 'a'], ['Lectures', String(stats.lectures), 'c'], ['Quizzes finished', String(stats.quizzes_done), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
+  ]
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -88,16 +90,21 @@ export default function ProfilePage() {
 
       {editing && (
         <form onSubmit={save} className="card space-y-3" aria-label="Edit profile">
-          <label className="field"><span>Name</span><input value={form.name} maxLength={60} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
+          <label className="field"><span>Name</span><input value={form.name} maxLength={80} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
           <label className="field"><span>School</span><input value={form.school} maxLength={80} onChange={e => setForm({ ...form, school: e.target.value })} placeholder="University of Ghana" /></label>
           <label className="field"><span>Programme</span><input value={form.programme} maxLength={80} onChange={e => setForm({ ...form, programme: e.target.value })} placeholder="Biology" /></label>
           <div>
-            <div className="mb-1.5 text-sm text-muted" id="avatar-colour">Avatar colour</div>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="avatar-colour" aria-label="Avatar colour">
-              {AVATAR_COLORS.map(c => {
+            <div className="mb-1.5 text-sm text-muted">Avatar colour</div>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Avatar colour">
+              {AVATAR_COLORS.map((c, i) => {
                 const on = form.color.toLowerCase() === c.toLowerCase()
                 return (
-                  <button key={c} type="button" role="radio" aria-checked={on} aria-label={c} onClick={() => setForm({ ...form, color: c })}
+                  <button key={c} type="button" role="radio" aria-checked={on} aria-label={AVATAR_NAMES[i]} tabIndex={on ? 0 : -1} onClick={() => setForm({ ...form, color: c })}
+                    onKeyDown={e => {
+                      const to = radioKeyTarget(e.key, i, AVATAR_COLORS.length)
+                      if (to === null) return
+                      e.preventDefault(); setForm({ ...form, color: AVATAR_COLORS[to] }); focusRadio(e.currentTarget, to)
+                    }}
                     className={`flex size-9 items-center justify-center rounded-full text-white ${on ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : ''}`} style={{ background: c }}>
                     {on && <Check size={16} aria-hidden />}
                   </button>

@@ -59,7 +59,7 @@ test('Profile: shows who and how far, and the school, programme and colour can b
   await page.getByRole('button', { name: 'Edit profile' }).click()
   await page.getByLabel('School').fill('KNUST')
   await page.getByLabel('Programme').fill('Pharmacy')
-  await page.getByRole('radio', { name: '#BE185D' }).click()
+  await page.getByRole('radio', { name: 'Pink' }).click()
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page.getByText('Pharmacy · KNUST')).toBeVisible()
   await page.reload()
