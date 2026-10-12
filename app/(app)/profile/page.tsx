@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, Flame, Layers, Lock, MessagesSquare, Mic, NotebookPen, Pencil, ListChecks, Gamepad2, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
+import { Check, Flame, Layers, Mic, NotebookPen, Pencil, ListChecks, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
 import { usePlan } from '@/components/billing/usePlan'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -11,22 +11,15 @@ import { listCourses } from '@/lib/data/courses'
 import { getProfileStats, updateProfile } from '@/lib/data/profile'
 import { AVATAR_COLORS, AVATAR_NAMES } from '@/lib/profile/avatar'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
-import { BADGES, earnedCount, evaluate, inDisplayOrder, type BadgeState, type Stats } from '@/lib/profile/badges'
+import type { Stats } from '@/lib/profile/stats'
 import type { Course } from '@/lib/types'
 
-const ICON: Record<BadgeState['icon'], LucideIcon> = { note: NotebookPen, cards: Layers, mic: Mic, focus: Timer, quiz: ListChecks, game: Gamepad2, chat: MessagesSquare, flame: Flame, star: Star }
-// A colour for each badge, so the grid is lively; the icons are decoration, the words say everything
-const MEDAL = ['#D85A30', '#1D9E75', '#BA7517', '#378ADD', '#7F77DD', '#D4537E']
-const RING = 76
-const RING_STROKE = 5
-const RING_R = (RING - RING_STROKE) / 2
-const RING_C = 2 * Math.PI * RING_R
 const TILE_ICON: Record<string, LucideIcon> = { Level: Trophy, Streak: Flame, 'Best streak': Flame, 'Focus time': Timer, Notes: NotebookPen, Flashcards: Layers, Lectures: Mic, 'Quizzes finished': ListChecks }
 const fmtMinutes = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
 const longDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 
-// Who the student is, what they have done, and the badges they have earned
+// Who the student is and what they have done
 export default function ProfilePage() {
   const { profile, setProfile } = useProfile()
   const { xp } = useXp()
@@ -71,8 +64,6 @@ export default function ProfilePage() {
     savingRef.current = false; setSaving(false)
   }
 
-  // Badges need both: with XP unread, the streak and level badges would wrongly show as locked
-  const badges = stats && xp ? inDisplayOrder(evaluate({ stats, bestStreak: xp.best, level: xp.level.level })) : null
   const sub = [profile.programme, profile.school].filter(Boolean).join(' · ')
   const tiles: [string, string, 'a' | 'b' | 'c'][] = [
     ...(xp ? [['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
@@ -170,40 +161,6 @@ export default function ProfilePage() {
         </div>
         )}
       </section>
-
-      {badges && (
-        <section aria-labelledby="badges-title" className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 id="badges-title" className="text-base font-semibold">Badges</h2>
-            <span className="text-sm text-muted">{earnedCount(badges)} of {badges.length} badges earned</span>
-          </div>
-          <ul aria-label="Badges" className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {badges.map(b => {
-              const Icon = ICON[b.icon]
-              const colour = MEDAL[BADGES.findIndex(x => x.id === b.id) % MEDAL.length]
-              return (
-                <li key={b.id} className="card flex flex-col items-center gap-1 py-4 text-center">
-                  <span aria-hidden="true" className="relative flex items-center justify-center" style={{ width: RING, height: RING }}>
-                    <svg width={RING} height={RING} viewBox={`0 0 ${RING} ${RING}`} className="absolute inset-0 -rotate-90">
-                      <circle cx={RING / 2} cy={RING / 2} r={RING_R} fill="none" stroke="var(--surface)" strokeWidth={RING_STROKE} />
-                      <circle data-arc cx={RING / 2} cy={RING / 2} r={RING_R} fill="none" stroke={colour} strokeWidth={RING_STROKE} strokeLinecap="round"
-                        strokeDasharray={RING_C} strokeDashoffset={RING_C * (1 - b.value / b.target)} />
-                    </svg>
-                    <span className="relative flex size-14 items-center justify-center rounded-full" style={b.earned ? { background: colour, color: '#fff' } : { background: 'var(--surface)', color: 'var(--muted)' }}>
-                      {b.earned ? <Icon size={26} /> : <Lock size={20} />}
-                    </span>
-                  </span>
-                  <div data-badge-label className="mt-1 font-semibold">{b.label}</div>
-                  <div className="text-xs text-muted">{b.how}</div>
-                  <div className={`mt-0.5 inline-flex items-center gap-1 text-xs font-medium ${b.earned ? 'text-success' : 'text-muted'}`}>
-                    {b.earned && <Check size={12} aria-hidden="true" />}{b.earned ? 'Earned' : `Locked · ${b.value} / ${b.target}${b.unit ? ` ${b.unit}` : ''}`}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
 
       <section aria-labelledby="courses-title" className="space-y-2">
         <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Profile } from '../types'
 import { must } from './util'
-import type { Stats } from '@/lib/profile/badges'
+import type { Stats } from '@/lib/profile/stats'
 
 export async function getProfile(sb: SupabaseClient, id: string): Promise<Profile> {
   return must(await sb.from('profiles').select('*').eq('id', id).single<Profile>())
