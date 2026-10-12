@@ -9,6 +9,11 @@ import type { AccentName, FontName, LookName } from './appearance'
 export interface Profile {
   id: string
   display_name: string | null
+  /** Shown under the name on the profile; both optional */
+  school: string | null
+  programme: string | null
+  /** The avatar's background, one of AVATAR_COLORS */
+  avatar_color: string
   timezone: string
   daily_goal_minutes: number
   focus_minutes: number
