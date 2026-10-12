@@ -16,15 +16,21 @@ describe('globals.css matches LOOKS', () => {
   it.each([
     ['classic', 'light', ':root'], ['classic', 'dark', '.dark'],
     ['paper', 'light', '.app-root[data-look="paper"]'], ['paper', 'dark', '.dark .app-root[data-look="paper"]'],
+    ['vivid', 'light', '.app-root[data-look="vivid"]'], ['vivid', 'dark', '.dark .app-root[data-look="vivid"]'],
+    ['playful', 'light', '.app-root[data-look="playful"]'], ['playful', 'dark', '.dark .app-root[data-look="playful"]'],
   ] as const)('%s %s colours', (look, mode, selector) => {
     const b = block(selector)
     for (const k of KEYS) expect(value(b, `--${k}`), `${look} ${mode} --${k}`).toBe(LOOKS[look][mode][k].toLowerCase())
   })
-  it('Paper tile tints match, in light and dark', () => {
-    for (const [mode, selector] of [['light', '.app-root[data-look="paper"]'], ['dark', '.dark .app-root[data-look="paper"]']] as const) {
+  it.each(['paper', 'vivid', 'playful'] as const)('%s tile tints match, in light and dark', look => {
+    for (const [mode, selector] of [['light', `.app-root[data-look="${look}"]`], ['dark', `.dark .app-root[data-look="${look}"]`]] as const) {
       const b = block(selector)
-      ;(['a', 'b', 'c'] as const).forEach((t, i) => expect(value(b, `--tile-${t}`), `${mode} tile ${t}`).toBe(LOOKS.paper[mode].tiles[i].toLowerCase()))
+      ;(['a', 'b', 'c'] as const).forEach((t, i) => expect(value(b, `--tile-${t}`), `${look} ${mode} tile ${t}`).toBe(LOOKS[look][mode].tiles[i].toLowerCase()))
     }
+  })
+  it.each(['vivid', 'playful'] as const)('%s sets the page background behind the app, in light and dark', look => {
+    expect(css).toContain(`body:has(.app-root[data-look="${look}"])`)
+    expect(css).toContain(`.dark body:has(.app-root[data-look="${look}"])`)
   })
   it('Classic tiles are the plain card colour in both modes, so Classic is unchanged', () => {
     for (const selector of [':root', '.dark']) {

@@ -25,7 +25,7 @@ export type FontName = keyof typeof FONTS
 export const isAccent = (v: unknown): v is AccentName => typeof v === 'string' && v in ACCENTS
 export const isFont = (v: unknown): v is FontName => typeof v === 'string' && v in FONTS
 
-// The two looks. The colours here are the ones in app/globals.css (tests/unit/lookCss.test.ts keeps them in
+// The looks. The colours here are the ones in app/globals.css (tests/unit/lookCss.test.ts keeps them in
 // step); they exist in TypeScript so contrast can be checked and the Settings previews can show them.
 export type ModeColors = { bg: string; raised: string; surface: string; line: string; fg: string; muted: string; tiles: [string, string, string] }
 
@@ -39,6 +39,16 @@ export const LOOKS = {
     label: 'Paper', blurb: 'Warm cream, softer edges',
     light: { bg: '#F6F0E4', raised: '#FFFBF2', surface: '#EFE7D6', line: '#E2D8C3', fg: '#2A2520', muted: '#6E6455', tiles: ['#F8E4D4', '#F7EDC4', '#DDEEE3'] },
     dark: { bg: '#1C1915', raised: '#25211C', surface: '#2E2923', line: '#3A342C', fg: '#EFE8DA', muted: '#A39A8A', tiles: ['#3A2A1F', '#38331B', '#1F3027'] },
+  },
+  vivid: {
+    label: 'Vivid', blurb: 'Bold colour, big and friendly',
+    light: { bg: '#F6F4FF', raised: '#FFFFFF', surface: '#ECE8FF', line: '#DDD6FA', fg: '#1E1B3A', muted: '#585380', tiles: ['#FFDCCB', '#CDEFE0', '#FFEBB0'] },
+    dark: { bg: '#15122B', raised: '#1F1B3F', surface: '#2A2552', line: '#3A3470', fg: '#F0EEFF', muted: '#ADA7DA', tiles: ['#4D2B22', '#1E4034', '#4C3C12'] },
+  },
+  playful: {
+    label: 'Playful', blurb: 'Chunky buttons, thick outlines',
+    light: { bg: '#F7FBF4', raised: '#FFFFFF', surface: '#EAF2E5', line: '#CFDACA', fg: '#26301F', muted: '#556350', tiles: ['#FFEFBF', '#D6F1DD', '#D5E8FF'] },
+    dark: { bg: '#131F24', raised: '#1E2D34', surface: '#26373F', line: '#3A4B54', fg: '#F0F6F9', muted: '#A9BBC4', tiles: ['#3D3515', '#1E3B2A', '#1C3447'] },
   },
 } as const satisfies Record<string, { label: string; blurb: string; light: ModeColors; dark: ModeColors }>
 

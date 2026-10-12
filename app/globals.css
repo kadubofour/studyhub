@@ -35,9 +35,35 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
   --tile-a: #3A2A1F; --tile-b: #38331B; --tile-c: #1F3027;
 }
+/* Vivid: bold colour, big type, soft large corners. Colours are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
+.app-root[data-look="vivid"] {
+  --bg: #F6F4FF; --raised: #FFFFFF; --surface: #ECE8FF; --line: #DDD6FA; --fg: #1E1B3A; --muted: #585380;
+  --shadow: 0 2px 4px rgb(60 40 160 / 0.06), 0 8px 24px rgb(60 40 160 / 0.10);
+  --tile-a: #FFDCCB; --tile-b: #CDEFE0; --tile-c: #FFEBB0;
+}
+.dark .app-root[data-look="vivid"] {
+  --bg: #15122B; --raised: #1F1B3F; --surface: #2A2552; --line: #3A3470; --fg: #F0EEFF; --muted: #ADA7DA;
+  --shadow: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+  --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
+}
+/* Playful: thick outlines, flat colour, buttons that press down */
+.app-root[data-look="playful"] {
+  --bg: #F7FBF4; --raised: #FFFFFF; --surface: #EAF2E5; --line: #CFDACA; --fg: #26301F; --muted: #556350;
+  --shadow: none;
+  --tile-a: #FFEFBF; --tile-b: #D6F1DD; --tile-c: #D5E8FF;
+}
+.dark .app-root[data-look="playful"] {
+  --bg: #131F24; --raised: #1E2D34; --surface: #26373F; --line: #3A4B54; --fg: #F0F6F9; --muted: #A9BBC4;
+  --shadow: none;
+  --tile-a: #3D3515; --tile-b: #1E3B2A; --tile-c: #1C3447;
+}
 /* Behind the app (overscroll on phones) matches the look */
 body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
 .dark body:has(.app-root[data-look="paper"]) { background: #1C1915; }
+body:has(.app-root[data-look="vivid"]) { background: #F6F4FF; }
+.dark body:has(.app-root[data-look="vivid"]) { background: #15122B; }
+body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
+.dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
 
 @theme inline {
   --color-bg: var(--bg); --color-raised: var(--raised); --color-surface: var(--surface); --color-line: var(--line);
@@ -95,6 +121,42 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .hero { @apply rounded-2xl px-5 py-4 text-white; background: linear-gradient(135deg, var(--accent-solid), var(--accent-glow)); box-shadow: var(--shadow); }
   .section-label { @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-muted; }
 }
+
+/* Vivid shapes: larger corners and type, a livelier hero, pill buttons. Same classes, so every page changes at once. */
+.app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; }
+.app-root[data-look="vivid"] .card { padding: 1.25rem; }
+.app-root[data-look="vivid"] .tile { padding: 1rem 1.25rem; border-color: transparent; }
+.app-root[data-look="vivid"] .tile-label { font-size: .8125rem; font-weight: 500; color: var(--fg); }
+.app-root[data-look="vivid"] .tile-value { font-size: 1.875rem; font-weight: 600; line-height: 1.15; }
+.app-root[data-look="vivid"] .section-label { color: var(--accent); font-weight: 600; letter-spacing: .06em; }
+.app-root[data-look="vivid"] .hero { border-radius: 1.75rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
+.app-root[data-look="vivid"] .hero h1 { font-size: 2rem; line-height: 1.15; }
+.app-root[data-look="vivid"] .btn, .app-root[data-look="vivid"] .btn-primary, .app-root[data-look="vivid"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
+.app-root[data-look="vivid"] .btn-primary { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent); }
+.app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] .field select,
+.app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; padding-inline: 1rem; }
+.app-root[data-look="vivid"] .field textarea, .app-root[data-look="vivid"] textarea.input { border-radius: 1.25rem; }
+.app-root[data-look="vivid"] aside { background: var(--surface); }
+
+/* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
+.app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }
+.app-root[data-look="playful"] .card { padding: 1.125rem; }
+.app-root[data-look="playful"] .tile-label { font-size: .8125rem; font-weight: 600; color: var(--fg); }
+.app-root[data-look="playful"] .tile-value { font-size: 1.75rem; font-weight: 700; }
+.app-root[data-look="playful"] .section-label { color: var(--fg); font-weight: 700; letter-spacing: .08em; }
+.app-root[data-look="playful"] .hero { background: var(--accent-solid); border-radius: 1.5rem; padding: 1.25rem 1.5rem; box-shadow: none; border-bottom: 5px solid color-mix(in srgb, #000 22%, var(--accent-solid)); }
+.app-root[data-look="playful"] .hero h1 { font-size: 1.75rem; font-weight: 700; }
+.app-root[data-look="playful"] .btn, .app-root[data-look="playful"] .btn-primary, .app-root[data-look="playful"] .btn-danger {
+  border-radius: 1rem; font-weight: 700; border-width: 2px; border-bottom-width: 4px; padding-block: .5rem; box-shadow: none;
+}
+.app-root[data-look="playful"] .btn { border-color: var(--line); }
+.app-root[data-look="playful"] .btn-primary { border-color: color-mix(in srgb, #000 22%, var(--accent-solid)); }
+.app-root[data-look="playful"] .btn-danger { border-color: color-mix(in srgb, #000 22%, var(--danger)); }
+.app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: translateY(2px); border-bottom-width: 2px; }
+.app-root[data-look="playful"] .field input, .app-root[data-look="playful"] .field select, .app-root[data-look="playful"] .field textarea,
+.app-root[data-look="playful"] input.input, .app-root[data-look="playful"] select.input, .app-root[data-look="playful"] textarea.input { border-width: 2px; border-radius: 1rem; }
+.app-root[data-look="playful"] aside { border-right-width: 2px; }
+@media (prefers-reduced-motion: reduce) { .app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: none; } }
 
 .prose-note h1 { font-size: 1.4rem; font-weight: 600; margin: .7em 0 .3em; }
 .prose-note h2 { font-size: 1.15rem; font-weight: 600; margin: .7em 0 .3em; }
