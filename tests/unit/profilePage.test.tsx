@@ -90,6 +90,31 @@ describe('Profile page: what the student has done', () => {
     expect(t('Lectures')).toContain('2')
     expect(t('Quizzes finished')).toContain('5')
   })
+  it('puts a picture on every total, and leaves it out of the reading order', async () => {
+    await open()
+    const tiles = screen.getByRole('list', { name: 'Study totals' })
+    for (const li of within(tiles).getAllByRole('listitem')) expect(li.querySelector('svg[aria-hidden="true"]'), li.textContent ?? '').not.toBeNull()
+  })
+  it('shows the level as a ring with the number in it', async () => {
+    await open()
+    const ring = screen.getByTestId('level-ring')
+    expect(ring.textContent).toBe('2')
+    expect(ring.getAttribute('aria-hidden')).toBe('true')
+  })
+  it('lists earned badges first, then the locked ones nearest to done', async () => {
+    await open()
+    const labels = within(screen.getByRole('list', { name: 'Badges' })).getAllByRole('listitem').map(li => li.querySelector('[data-badge-label]')!.textContent)
+    expect(labels.slice(0, 8)).toEqual(['First note', 'Note-taker', 'Card collector', 'Reviewer', 'First lecture', 'Quiz ace', '3-day streak', '7-day streak'])
+    expect(labels.slice(8)).toEqual(['Deep focus', 'Level 5', 'Player', 'Curious'])
+  })
+  it('draws each badge as a medal whose ring fills with progress, full when earned', async () => {
+    await open()
+    const arcs = (name: string) => within(screen.getByRole('list', { name: 'Badges' })).getByText(name).closest('li')!.querySelector('circle[data-arc]') as SVGCircleElement
+    const full = arcs('Note-taker')
+    expect(Number(full.getAttribute('stroke-dashoffset'))).toBe(0)
+    const half = arcs('Deep focus') // 5 of 10 hours
+    expect(Number(half.getAttribute('stroke-dashoffset'))).toBeCloseTo(Number(half.getAttribute('stroke-dasharray')) / 2, 1)
+  })
   it('shows the progress to the next level in words', async () => {
     await open()
     const bar = screen.getByRole('progressbar', { name: 'Progress to level 3' })

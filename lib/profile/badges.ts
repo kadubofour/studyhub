@@ -31,3 +31,9 @@ export function evaluate(c: Ctx): BadgeState[] {
 }
 
 export const earnedCount = (states: BadgeState[]) => states.filter(b => b.earned).length
+
+// Earned badges first, then the locked ones closest to done (a tie keeps the usual order)
+export function inDisplayOrder(states: BadgeState[]): BadgeState[] {
+  const progress = (b: BadgeState) => b.value / b.target
+  return states.map((b, i) => ({ b, i })).sort((x, y) => Number(y.b.earned) - Number(x.b.earned) || progress(y.b) - progress(x.b) || x.i - y.i).map(x => x.b)
+}
