@@ -4,9 +4,16 @@ import { signUp } from './helpers'
 const root = (page: import('@playwright/test').Page) => page.locator('.app-root')
 const bg = (page: import('@playwright/test').Page) => root(page).evaluate(el => getComputedStyle(el).backgroundColor)
 
+test('a new student starts on Vivid, with a dark sidebar and a top bar', async ({ page }) => {
+  await signUp(page)
+  await expect(root(page)).toHaveAttribute('data-look', 'vivid')
+  await expect(page.getByRole('banner', { name: 'Today at a glance' })).toBeVisible()
+})
+
 test('choose Paper in Settings: the app changes at once, and it is still Paper after a reload', async ({ page }) => {
   await signUp(page)
   await page.goto('/settings')
+  await page.getByRole('radio', { name: 'Classic look' }).click() // new students start on Vivid
   await expect(root(page)).toHaveAttribute('data-look', 'classic')
   const classic = await bg(page)
   await page.getByRole('radio', { name: 'Paper look' }).click()

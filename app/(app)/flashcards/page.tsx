@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Layers } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Dialog } from '@/components/ui/Dialog'
@@ -47,11 +48,9 @@ export default function FlashcardsPage() {
         <button className="btn" onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
       </>} />
       {decks?.length === 0 && (
-        <div className="card flex flex-col items-center gap-3 py-10 text-center">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"><Layers size={22} aria-hidden /></span>
-          <p className="max-w-xs text-sm text-muted">Group cards into decks, one per topic. Reviews are scheduled so you remember for longer.</p>
+        <EmptyState icon={Layers} tone="a" title="Make your first deck" body="Group cards into decks, one per topic. Reviews are scheduled so you remember for longer.">
           <button className="btn-primary" onClick={() => setOpen(true)}>Create a deck</button>
-        </div>
+        </EmptyState>
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {decks?.map(d => {

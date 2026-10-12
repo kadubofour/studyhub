@@ -137,10 +137,12 @@ describe('appearance settings', () => {
     const bad = await u.sb.from('profiles').update({ accent: 'neon' }).eq('id', u.id)
     expect(bad.error).not.toBeNull()
   })
-  it('defaults to the Classic look, saves Paper, and rejects unknown looks', async () => {
+  it('defaults a new student to the Vivid look, saves each look, and rejects unknown looks', async () => {
     const u = await newUser()
     const { data: p } = await u.sb.from('profiles').select('look').eq('id', u.id).single()
-    expect(p).toEqual({ look: 'classic' })
+    expect(p).toEqual({ look: 'vivid' })
+    for (const look of ['paper', 'vivid', 'playful', 'classic']) expect((await u.sb.from('profiles').update({ look }).eq('id', u.id)).error, look).toBeNull()
+    expect((await u.sb.from('profiles').update({ look: 'neon' }).eq('id', u.id)).error).not.toBeNull()
     expect((await u.sb.from('profiles').update({ look: 'paper' }).eq('id', u.id)).error).toBeNull()
     expect((await u.sb.from('profiles').select('look').eq('id', u.id).single()).data).toEqual({ look: 'paper' })
     expect((await u.sb.from('profiles').update({ look: 'neon' }).eq('id', u.id)).error).not.toBeNull()

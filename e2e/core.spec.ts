@@ -66,8 +66,10 @@ test('a task ticked by mistake can be undone', async ({ page }) => {
 test('task added on home shows under Today', async ({ page }) => {
   await signUp(page)
   await page.getByLabel('Add a task').fill('Read chapter 4')
+  const saved = page.waitForResponse(r => r.url().includes('/rest/v1/tasks') && r.request().method() === 'POST')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(page.getByText('Read chapter 4')).toBeVisible()
+  await saved // it shows at once and is saved a moment later; reloading sooner would lose it
   await page.reload()
   await expect(page.getByText('Read chapter 4')).toBeVisible()
 })
@@ -129,11 +131,12 @@ test('notes: search finds words inside a note', async ({ page }) => {
 test('focus timer runs and pauses', async ({ page }) => {
   await signUp(page)
   await page.goto('/focus')
-  await expect(page.getByText('25:00')).toBeVisible()
-  await page.getByRole('button', { name: 'Start' }).click()
+  const main = page.getByRole('main') // the top bar shows the clock too
+  await expect(main.getByText('25:00')).toBeVisible()
+  await main.getByRole('button', { name: 'Start' }).click()
   await page.waitForTimeout(1500)
-  await page.getByRole('button', { name: 'Pause' }).click()
-  await expect(page.getByText(/24:5\d/)).toBeVisible()
+  await main.getByRole('button', { name: 'Pause' }).click()
+  await expect(main.getByText(/24:5\d/)).toBeVisible()
   await page.reload()
-  await expect(page.getByText(/24:5\d/)).toBeVisible() // restored after reload
+  await expect(main.getByText(/24:5\d/)).toBeVisible() // restored after reload
 })

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AnswerRecord, Quiz, QuizAttempt } from '../types'
 import { check, must } from './util'
+import { announceProgressChanged } from '@/lib/xp/events'
 
 const QUIZ = 'id,note_id,title,questions,created_at'
 const ATTEMPT = 'id,quiz_id,answers,correct,total,started_at,finished_at'
@@ -41,7 +42,9 @@ export async function saveAttempt(sb: SupabaseClient, id: string, answers: Recor
 }
 
 export async function finishAttempt(sb: SupabaseClient, id: string, answers: Record<string, AnswerRecord>, correct: number): Promise<QuizAttempt> {
-  return must(await sb.from('quiz_attempts').update({ answers, correct, finished_at: new Date().toISOString() }).eq('id', id).select(ATTEMPT).single())
+  const done = must(await sb.from('quiz_attempts').update({ answers, correct, finished_at: new Date().toISOString() }).eq('id', id).select(ATTEMPT).single<QuizAttempt>())
+  announceProgressChanged()
+  return done
 }
 
 export async function listFinishedAttemptsSince(sb: SupabaseClient, since: Date) {

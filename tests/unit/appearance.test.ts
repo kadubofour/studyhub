@@ -38,15 +38,18 @@ describe('contrastRatio', () => {
 })
 
 describe('looks', () => {
-  it('offers Classic and Paper', () => {
-    expect(Object.keys(LOOKS)).toEqual(['classic', 'paper'])
+  it('offers Classic, Paper, Vivid and Playful', () => {
+    expect(Object.keys(LOOKS)).toEqual(['classic', 'paper', 'vivid', 'playful'])
     expect(isLook('paper')).toBe(true)
+    expect(isLook('vivid')).toBe(true)
+    expect(isLook('playful')).toBe(true)
     expect(isLook('neon')).toBe(false)
   })
   it('falls back to Classic for a missing or unknown look', () => {
     expect(lookOf(undefined)).toBe('classic')
     expect(lookOf('neon')).toBe('classic')
     expect(lookOf('paper')).toBe('paper')
+    expect(lookOf('vivid')).toBe('vivid')
   })
   it.each(Object.entries(LOOKS))('%s: text is readable on its backgrounds, light and dark (WCAG AA)', (name, look) => {
     for (const mode of ['light', 'dark'] as const) {

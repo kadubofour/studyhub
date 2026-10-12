@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Upload, CheckSquare, X, NotebookPen, Search, MoreHorizontal, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
 import { formatDistanceToNow } from 'date-fns'
 import { CourseTag } from '@/components/ui/CourseTag'
@@ -136,14 +137,10 @@ export function NotesSidebar() {
       </div>
 
       {empty && (
-        <div className="card flex flex-col items-center gap-3 py-10 text-center">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"><NotebookPen size={22} aria-hidden /></span>
-          <p className="max-w-sm text-sm text-muted">Write lecture notes, summaries and formulas, or import a Word document or PDF.</p>
-          <div className="flex gap-2">
-            <button className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
-            <button className="btn-primary" onClick={create}>Write your first note</button>
-          </div>
-        </div>
+        <EmptyState icon={NotebookPen} tone="b" title="Your notes start here" body="Write lecture notes, summaries and formulas, or upload slides, a Word document, a PDF or a text file.">
+          <button className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
+          <button className="btn-primary" onClick={create}>Write your first note</button>
+        </EmptyState>
       )}
       {notes && !empty && shown.length === 0 && <p className="py-2 text-sm text-muted">No notes match.</p>}
 

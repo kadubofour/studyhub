@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -13,6 +13,8 @@ import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
+import { GoalRing } from '@/components/home/GoalRing'
+import { requestScan, requestUpload } from '@/lib/scan/events'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
@@ -72,6 +74,8 @@ export default function HomePage() {
   const goal = profile.daily_goal_minutes
   const focusPct = Math.min(100, Math.round((focus.todayMinutes / goal) * 100))
   const running = focus.timer.startedAt !== null
+  // Vivid and Playful show the goal as a ring with chips for level, XP and streak
+  const bold = profile.look === 'vivid' || profile.look === 'playful'
   const weekKeys = weekKeysFor(todayKey)
   const maxWeek = Math.max(goal, ...weekKeys.map(k => week.get(k) ?? 0), 1)
 
@@ -113,6 +117,18 @@ export default function HomePage() {
             <Link href="/settings" aria-label="Settings" className="rounded-lg p-1.5 hover:bg-white/15"><Settings size={17} aria-hidden /></Link>
           </div>
         </div>
+        {bold ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+            <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
+            {xp && profile.look === 'playful' && ( // Vivid shows these in the top bar
+              <div className="flex flex-wrap gap-2 text-sm font-medium">
+                <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
+                <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>
+                {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}
+              </div>
+            )}
+          </div>
+        ) : (<>
         <div className="mt-4 flex items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25" role="progressbar" aria-valuenow={focusPct} aria-valuemin={0} aria-valuemax={100} aria-label="Focus goal progress">
             <div className="h-2 rounded-full bg-white transition-all" style={{ width: `${focusPct}%` }} />
@@ -120,6 +136,7 @@ export default function HomePage() {
           <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
         </div>
         {xp && <p className="mt-2 text-sm opacity-90">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
+        </>)}
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -138,6 +155,19 @@ export default function HomePage() {
           </div>
         </Link>
       </section>
+
+      {bold && (
+        <section aria-label="Start from your material" className="tile tile-a flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold">Start from your material</div>
+            <p className="text-sm">Slides, PDFs, notes or a photo become notes, flashcards and a quiz.</p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={15} aria-hidden />Upload</button>
+            <button type="button" className="btn" onClick={() => requestScan()}><ScanLine size={15} aria-hidden />Scan</button>
+          </div>
+        </section>
+      )}
 
       <WeakSpotsCard courses={courses} />
 

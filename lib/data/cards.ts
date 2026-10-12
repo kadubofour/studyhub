@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Card } from '../types'
 import { cardToState, schedule, stateToCardPatch, type Rating } from '../srs'
 import { check, fetchAll, must } from './util'
+import { announceProgressChanged } from '@/lib/xp/events'
 
 const COLS = 'id,deck_id,front,back,due_at,interval_days,ease,reps,lapses'
 
@@ -46,5 +47,6 @@ export async function rateCard(sb: SupabaseClient, card: Card, rating: Rating, n
     p_card_id: card.id, p_due_at: p.due_at, p_interval_days: p.interval_days, p_ease: p.ease, p_reps: p.reps,
     p_lapses: p.lapses, p_rating: rating, p_reviewed_at: now.toISOString(), p_prev_interval_days: card.interval_days,
   }).select(COLS).single())
+  announceProgressChanged()
   return updated
 }

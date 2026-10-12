@@ -35,9 +35,44 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
   --tile-a: #3A2A1F; --tile-b: #38331B; --tile-c: #1F3027;
 }
+/* Vivid: bold colour on a light neutral page, big type, soft large corners, a darker sidebar and a top bar.
+   Colours are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
+.app-root[data-look="vivid"] {
+  --bg: #FAFAF8; --raised: #FFFFFF; --surface: #F1F1EE; --line: #E4E3DE; --fg: #1B1B1F; --muted: #5D5C66;
+  --shadow: 0 2px 4px rgb(20 20 30 / 0.05), 0 8px 24px rgb(20 20 30 / 0.08);
+  --tile-a: #FFDCCB; --tile-b: #CDEFE0; --tile-c: #FFEBB0;
+}
+.dark .app-root[data-look="vivid"] {
+  --bg: #18181C; --raised: #212127; --surface: #2B2B33; --line: #3A3A44; --fg: #F2F2F5; --muted: #A9A9B6;
+  --shadow: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+  --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
+}
+/* The app sidebar (only that: the Study panel in a note is an aside too) is always the darker shade: charcoal on the light page,
+   near-black on the dark one. Its own tokens re-colour everything inside it. */
+.app-root[data-look="vivid"] .app-sidebar {
+  background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
+  --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
+  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
+}
+.dark .app-root[data-look="vivid"] .app-sidebar { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #25252D; }
+/* Playful: thick outlines, flat colour, buttons that press down */
+.app-root[data-look="playful"] {
+  --bg: #F7FBF4; --raised: #FFFFFF; --surface: #EAF2E5; --line: #CFDACA; --fg: #26301F; --muted: #556350;
+  --shadow: none;
+  --tile-a: #FFEFBF; --tile-b: #D6F1DD; --tile-c: #D5E8FF;
+}
+.dark .app-root[data-look="playful"] {
+  --bg: #131F24; --raised: #1E2D34; --surface: #26373F; --line: #3A4B54; --fg: #F0F6F9; --muted: #A9BBC4;
+  --shadow: none;
+  --tile-a: #3D3515; --tile-b: #1E3B2A; --tile-c: #1C3447;
+}
 /* Behind the app (overscroll on phones) matches the look */
 body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
 .dark body:has(.app-root[data-look="paper"]) { background: #1C1915; }
+body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
+.dark body:has(.app-root[data-look="vivid"]) { background: #18181C; }
+body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
+.dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
 
 @theme inline {
   --color-bg: var(--bg); --color-raised: var(--raised); --color-surface: var(--surface); --color-line: var(--line);
@@ -96,6 +131,44 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .section-label { @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-muted; }
 }
 
+@layer components {
+/* Vivid shapes: larger corners and type, a livelier hero, pill buttons. Same classes, so every page changes at once. */
+.app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; }
+.app-root[data-look="vivid"] .card { padding: 1.25rem; }
+.app-root[data-look="vivid"] .tile { padding: 1rem 1.25rem; border-color: transparent; }
+.app-root[data-look="vivid"] .tile-label { font-size: .8125rem; font-weight: 500; color: var(--fg); }
+.app-root[data-look="vivid"] .tile-value { font-size: 1.875rem; font-weight: 600; line-height: 1.15; }
+.app-root[data-look="vivid"] .section-label { color: var(--accent); font-weight: 600; letter-spacing: .06em; }
+.app-root[data-look="vivid"] .hero { border-radius: 1.75rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
+.app-root[data-look="vivid"] .hero h1 { font-size: 2rem; line-height: 1.15; }
+.app-root[data-look="vivid"] .btn, .app-root[data-look="vivid"] .btn-primary, .app-root[data-look="vivid"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
+.app-root[data-look="vivid"] .btn-primary { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent); }
+.app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] .field select,
+.app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; }
+.app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] input.input { padding-inline: 1rem; }
+.app-root[data-look="vivid"] .field textarea, .app-root[data-look="vivid"] textarea.input { border-radius: 1.25rem; }
+
+/* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
+.app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }
+.app-root[data-look="playful"] .card { padding: 1.125rem; }
+.app-root[data-look="playful"] .tile-label { font-size: .8125rem; font-weight: 600; color: var(--fg); }
+.app-root[data-look="playful"] .tile-value { font-size: 1.75rem; font-weight: 700; }
+.app-root[data-look="playful"] .section-label { color: var(--fg); font-weight: 700; letter-spacing: .08em; }
+.app-root[data-look="playful"] .hero { background: var(--accent-solid); border-radius: 1.5rem; padding: 1.25rem 1.5rem; box-shadow: none; border-bottom: 5px solid color-mix(in srgb, #000 22%, var(--accent-solid)); }
+.app-root[data-look="playful"] .hero h1 { font-size: 1.75rem; font-weight: 700; }
+.app-root[data-look="playful"] .btn, .app-root[data-look="playful"] .btn-primary, .app-root[data-look="playful"] .btn-danger {
+  border-radius: 1rem; font-weight: 700; border-width: 2px; border-bottom-width: 4px; padding-block: .5rem; box-shadow: none;
+}
+.app-root[data-look="playful"] .btn { border-color: var(--line); }
+.app-root[data-look="playful"] .btn-primary { border-color: color-mix(in srgb, #000 22%, var(--accent-solid)); }
+.app-root[data-look="playful"] .btn-danger { border-color: color-mix(in srgb, #000 22%, var(--danger)); }
+.app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: translateY(2px); border-bottom-width: 2px; }
+.app-root[data-look="playful"] .field input, .app-root[data-look="playful"] .field select, .app-root[data-look="playful"] .field textarea,
+.app-root[data-look="playful"] input.input, .app-root[data-look="playful"] select.input, .app-root[data-look="playful"] textarea.input { border-width: 2px; border-radius: 1rem; }
+.app-root[data-look="playful"] .app-sidebar { border-right-width: 2px; }
+@media (prefers-reduced-motion: reduce) { .app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: none; } }
+}
+
 .prose-note h1 { font-size: 1.4rem; font-weight: 600; margin: .7em 0 .3em; }
 .prose-note h2 { font-size: 1.15rem; font-weight: 600; margin: .7em 0 .3em; }
 .prose-note h3 { font-weight: 600; margin: .5em 0 .2em; }
@@ -133,6 +206,8 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .print-note:last-child { break-after: auto; }
 }
 
+@keyframes xp-pop { from { opacity: 0; transform: translateY(6px) scale(.9); } 60% { transform: translateY(-2px) scale(1.06); } to { opacity: 1; transform: none; } }
+.xp-pop { animation: xp-pop .45s ease-out; }
 @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } }
 @media (pointer: coarse) { .menu-kbd { display: none; } }

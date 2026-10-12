@@ -8,6 +8,7 @@ const push = vi.fn()
 vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }) }))
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
+vi.mock('@/components/shell/TopBar', () => ({ TopBar: (p: { sidebarHidden?: boolean }) => <header aria-label="Today at a glance">top bar {p.sidebarHidden ? 'sidebar hidden' : 'sidebar shown'}</header> }))
 vi.mock('@/components/scan/ScanDialog', () => ({
   ScanDialog: (p: { initialTarget: string; initialFiles?: File[]; onSaved?: () => void; onClose: () => void }) => (
     <div role="dialog">scan {p.initialTarget} files {p.initialFiles?.length ?? 0}<button onClick={p.onSaved}>saved</button><button onClick={p.onClose}>close</button></div>
@@ -111,6 +112,29 @@ describe('Scan in the app shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'close' }))
     fireEvent.click(screen.getAllByRole('button', { name: 'Scan' })[0])
     expect(screen.getByRole('dialog').textContent).toContain('files 0')
+  })
+
+  it('shows the top bar in the Vivid look only, and not on a full-screen page', () => {
+    path = '/home'
+    const vivid = render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(screen.getByRole('banner', { name: 'Today at a glance' })).toBeTruthy()
+    vivid.unmount()
+    render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(screen.queryByRole('banner', { name: 'Today at a glance' })).toBeNull()
+    cleanup()
+    path = '/notes/abc'
+    render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(screen.queryByRole('banner', { name: 'Today at a glance' })).toBeNull()
+  })
+
+  it('marks the sidebar so the Vivid styles reach it and nothing else, and tells the top bar when the sidebar is hidden', () => {
+    path = '/home'
+    const shown = render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(shown.container.querySelector('aside.app-sidebar')).not.toBeNull()
+    expect(screen.getByRole('banner', { name: 'Today at a glance' }).textContent).toContain('sidebar shown')
+    shown.unmount()
+    render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell initialCollapsed><p>page</p></AppShell></ProfileProvider>)
+    expect(screen.getByRole('banner', { name: 'Today at a glance' }).textContent).toContain('sidebar hidden')
   })
 
   it('has Tutor in the sidebar and the phone tab bar', () => {

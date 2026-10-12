@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, FileText, FolderInput, Mic, MoreHorizontal, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { Dialog } from '@/components/ui/Dialog'
@@ -151,7 +152,7 @@ export default function LecturesPage() {
         <p className="text-xs text-muted">{formatMb(used)} of {formatMb(AUDIO_QUOTA_BYTES)} audio</p>
         <StorageMessage used={used} />
       </div>
-      {lectures?.length === 0 && <p className="card py-10 text-center text-sm text-muted">No lectures yet. Press Record at the start of your next lecture.</p>}
+      {lectures?.length === 0 && <EmptyState icon={Mic} tone="c" title="Capture your next lecture" body="No lectures yet. Press Record at the start of your next lecture." />}
       <ul className="space-y-2">
         {lectures?.map(l => (
           <li key={l.id} className="group relative">
