@@ -138,11 +138,11 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 {g.scan && (
                   <>
                     <button type="button" onClick={() => setUploading(true)}
-                      className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                      className="mt-1 flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <Upload size={17} aria-hidden />Upload
                     </button>
                     <button type="button" onClick={() => { setScanFiles(undefined); setScanning(true) }}
-                      className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                      className="flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <ScanLine size={17} aria-hidden />Scan
                     </button>
                   </>

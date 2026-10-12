@@ -174,6 +174,17 @@ describe('Scan in the app shell', () => {
     expect(screen.queryByRole('group', { name: 'Courses' })).toBeNull()
   })
 
+  it('Upload and Scan are solid and darker than the sidebar, with no dashed outline', () => {
+    path = '/home'
+    const { container } = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    const side = container.querySelector('.app-sidebar') as HTMLElement
+    for (const name of ['Upload', 'Scan']) {
+      const b = within(side).getByRole('button', { name })
+      expect(b.className, name).not.toContain('dashed')
+      expect(b.className, name).toContain('bg-black/')
+    }
+  })
+
   it('marks the sidebar so the Vivid styles reach it and nothing else, and tells the top bar when the sidebar is hidden', () => {
     path = '/home'
     const shown = render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
