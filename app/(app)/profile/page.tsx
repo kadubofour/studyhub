@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, Flame, Layers, Mic, NotebookPen, Pencil, ListChecks, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
+import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { usePlan } from '@/components/billing/usePlan'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useXp } from '@/components/xp/useXp'
@@ -161,6 +162,8 @@ export default function ProfilePage() {
         </div>
         )}
       </section>
+
+      <PreferencesCard />
 
       <section aria-labelledby="courses-title" className="space-y-2">
         <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>

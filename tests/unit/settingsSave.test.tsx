@@ -20,6 +20,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refres
 import { ProfileProvider, useProfile } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import SettingsPage from '@/app/(app)/settings/page'
+import { PreferencesCard } from '@/components/profile/PreferencesCard'
+import { AppearanceCard } from '@/components/settings/AppearanceCard'
 
 const base: Profile = { id: 'u', display_name: 'Ama', school: null, programme: null, avatar_color: '#3B5BDB', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true }
 function AccentProbe() { return <output data-testid="accent">{useProfile().profile.accent}</output> }
@@ -29,7 +31,7 @@ beforeAll(() => {
 })
 afterEach(cleanup)
 
-const renderPage = () => render(<ProfileProvider initial={base}><ToastProvider><SettingsPage /><AccentProbe /></ToastProvider></ProfileProvider>)
+const renderPage = () => render(<ProfileProvider initial={base}><ToastProvider><PreferencesCard /><AppearanceCard /><AccentProbe /></ToastProvider></ProfileProvider>)
 
 describe('Settings save', () => {
   it('automatic maths can be switched off', async () => {
@@ -60,5 +62,15 @@ describe('Settings save', () => {
     fireEvent.change(screen.getByLabelText('Focus length (min)'), { target: { value: '31' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save changes' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/time zone isn't supported/)
+  })
+})
+
+describe('Settings page', () => {
+  it('no longer holds the profile and focus form, which lives on the profile page, and keeps Sign out', () => {
+    render(<ProfileProvider initial={base}><ToastProvider><SettingsPage /></ToastProvider></ProfileProvider>)
+    expect(screen.queryByLabelText('Focus length (min)')).toBeNull()
+    expect(screen.queryByText('Profile and focus')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy()
+    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
   })
 })

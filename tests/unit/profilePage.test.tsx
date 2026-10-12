@@ -64,6 +64,16 @@ describe('Profile page: who the student is', () => {
   })
 })
 
+describe('Profile page: preferences', () => {
+  it('holds the focus and time zone settings that used to be in Settings, without a second Name field', async () => {
+    await open()
+    expect(screen.getByRole('heading', { name: 'Preferences' })).toBeTruthy()
+    expect(screen.getByLabelText('Focus length (min)')).toBeTruthy()
+    expect(screen.getByLabelText('Time zone')).toBeTruthy()
+    expect(screen.queryAllByLabelText('Name')).toHaveLength(0) // Edit profile is closed, and the card has no Name
+  })
+})
+
 describe('Profile page: no badges', () => {
   it('has no badges section', async () => {
     await open()
