@@ -10,6 +10,11 @@ export async function listOpenTasks(sb: SupabaseClient): Promise<Task[]> {
   return must(await sb.from('tasks').select(COLS).is('done_at', null).order('due_at', { ascending: true, nullsFirst: false }))
 }
 
+// Tasks finished since `since`, newest first (the planner's Done section)
+export async function listRecentlyDone(sb: SupabaseClient, since: Date, limit = 50): Promise<Task[]> {
+  return must(await sb.from('tasks').select(COLS).not('done_at', 'is', null).gte('done_at', since.toISOString()).order('done_at', { ascending: false }).limit(limit))
+}
+
 export async function createTask(sb: SupabaseClient, input: NewTask): Promise<Task> {
   return must(await sb.from('tasks').insert(input).select(COLS).single())
 }

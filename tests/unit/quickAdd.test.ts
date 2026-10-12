@@ -9,6 +9,19 @@ const eod = (key: string) => {
   return new Date(Date.UTC(y, m - 1, d + 1, 3, 59, 59)).toISOString()
 }
 
+describe('parseQuickAdd priority', () => {
+  it('reads a lone trailing ! as high priority and drops it from the title', () => {
+    expect(parseQuickAdd('Essay fri !', NY, now)).toEqual({ title: 'Essay', dueAt: eod('2026-10-02'), priority: 'high' })
+    expect(parseQuickAdd('Call mum !', NY, now)).toEqual({ title: 'Call mum', dueAt: null, priority: 'high' })
+  })
+  it('leaves an exclamation mark that is part of a word alone', () => {
+    expect(parseQuickAdd('Hooray! fri', NY, now)).toEqual({ title: 'Hooray!', dueAt: eod('2026-10-02') })
+  })
+  it('keeps a lone ! as the title, there being nothing else', () => {
+    expect(parseQuickAdd('!', NY, now)).toEqual({ title: '!', dueAt: null })
+  })
+})
+
 describe('parseQuickAdd', () => {
   it('parses a trailing weekday abbreviation', () => {
     expect(parseQuickAdd('Calc problem set fri', NY, now)).toEqual({ title: 'Calc problem set', dueAt: eod('2026-10-02') })

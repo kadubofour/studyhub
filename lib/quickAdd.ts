@@ -20,8 +20,14 @@ function stripFillers(words: string[]): string[] {
   return out
 }
 
-export function parseQuickAdd(input: string, tz: string, now: Date): { title: string; dueAt: string | null } {
-  const words = input.trim().split(/\s+/).filter(Boolean)
+export function parseQuickAdd(input: string, tz: string, now: Date): { title: string; dueAt: string | null; priority?: 'high' } {
+  const all = input.trim().split(/\s+/).filter(Boolean)
+  // A lone ! at the end ("Essay fri !") marks it high priority; with nothing else typed it is just the title
+  if (all.length > 1 && all[all.length - 1] === '!') return { ...parseWords(all.slice(0, -1), tz, now), priority: 'high' }
+  return parseWords(all, tz, now)
+}
+
+function parseWords(words: string[], tz: string, now: Date): { title: string; dueAt: string | null } {
   const todayKey = localDayKey(now, tz)
   const done = (titleWords: string[], key: string) =>
     ({ title: stripFillers(titleWords).join(' '), dueAt: endOfLocalDay(key, tz).toISOString() })

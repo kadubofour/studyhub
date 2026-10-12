@@ -15,6 +15,21 @@ describe('QuickAdd', () => {
     expect(screen.getByText('Due Fri, Oct 9')).toBeTruthy()
   })
 
+  it('sends high priority when the text ends with !', () => {
+    const onAdd = vi.fn()
+    render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)
+    fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Essay fri !' } })
+    expect(screen.getByText('High priority')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onAdd.mock.calls[0][0]).toMatchObject({ title: 'Essay', priority: 'high' })
+  })
+  it('sends no priority otherwise, so the task stays normal', () => {
+    const onAdd = vi.fn()
+    render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)
+    fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Essay fri' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onAdd.mock.calls[0][0].priority).toBeUndefined()
+  })
   it('shows the implicit default due date when no date word is typed', () => {
     render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={() => {}} compact implicitDue="Today" />)
     fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Read chapter 4' } })

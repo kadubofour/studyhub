@@ -1,6 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Flag } from 'lucide-react'
 import { parseQuickAdd } from '@/lib/quickAdd'
 import { formatDueLong } from '@/lib/dates'
 import type { NewTask } from '@/lib/data/tasks'
@@ -22,7 +22,7 @@ export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false,
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!parsed.title) return
-    onAdd({ title: parsed.title, due_at: parsed.dueAt, course_id: effectiveCourse, type })
+    onAdd({ title: parsed.title, due_at: parsed.dueAt, course_id: effectiveCourse, type, ...(parsed.priority ? { priority: parsed.priority } : {}) })
     setText('')
   }
 
@@ -33,6 +33,7 @@ export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false,
       {dueLabel && text.trim() && (
         <span className="inline-flex items-center gap-1 text-xs font-medium text-accent" aria-live="polite"><CalendarDays size={13} aria-hidden />Due {dueLabel}</span>
       )}
+      {parsed.priority && text.trim() && <span className="inline-flex items-center gap-1 text-xs font-medium text-danger"><Flag size={13} aria-hidden />High priority</span>}
       {!compact && (
         <>
           <select aria-label="Course" className="input" value={effectiveCourse ?? ''} onChange={e => setCourseId(e.target.value || null)}>
