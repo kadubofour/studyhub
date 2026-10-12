@@ -86,6 +86,17 @@ describe('Library', () => {
       expect(rows()).toHaveLength(7)
       expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
     })
+    it('links to the course page once a course is chosen', async () => {
+      search = 'course=bio'
+      await open()
+      expect(screen.getByRole('link', { name: 'Open course page' }).getAttribute('href')).toBe('/courses/bio')
+    })
+    it('has no course page link for All or Unsorted', async () => {
+      await open()
+      expect(screen.queryByRole('link', { name: 'Open course page' })).toBeNull()
+      await click(screen.getByRole('button', { name: /Unsorted/ }))
+      expect(screen.queryByRole('link', { name: 'Open course page' })).toBeNull()
+    })
     it('opens on Unsorted when the address says none', async () => {
       search = 'course=none'
       await open()

@@ -94,7 +94,12 @@ export default function LibraryPage() {
 
   return (
     <div>
-      <PageHeader title="Library" actions={items.length > 0 && <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>} />
+      <PageHeader title="Library" actions={items.length > 0 && (
+        <>
+          {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
+          <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
+        </>
+      )} />
       {items.length === 0 ? (
         <EmptyState icon={FolderOpen} tone="b" title="Your library starts here" body="Every note, deck, lecture, quiz and tutor chat you make shows up here, sorted by course. Bring your first material in.">
           <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>

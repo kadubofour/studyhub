@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, Circle, CircleCheck, CircleDot } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { postAi } from '@/components/ai/aiFetch'
@@ -100,6 +101,7 @@ export function TopicsSection() {
         <select className="input max-w-52" aria-label="Topics course" value={courseId ?? ''} disabled={busy || saving || !!editing} onChange={e => pickCourse(e.target.value)}>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        {courseId && <Link href={`/courses/${courseId}`} className="btn-ghost text-accent">Open course page</Link>}
       </div>
 
       {editing ? (
