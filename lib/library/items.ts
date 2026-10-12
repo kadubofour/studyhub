@@ -1,5 +1,5 @@
 export type Kind = 'note' | 'deck' | 'lecture' | 'quiz' | 'chat'
-export type LibraryItem = { kind: Kind; id: string; title: string; course_id: string | null; at: string; meta: string; href: string }
+export type LibraryItem = { kind: Kind; id: string; title: string; course_id: string | null; at: string; meta: string; href: string; due?: number }
 // course: 'all', 'none' (not in any course) or a course id
 export type View = { course: 'all' | 'none' | string; kind: Kind | null; q: string; sort: 'recent' | 'name' }
 
