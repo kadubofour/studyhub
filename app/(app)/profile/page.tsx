@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, Flame, Layers, Mic, NotebookPen, Pencil, ListChecks, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
+import { Check, Pencil, Zap } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
+import { StatStrip } from '@/components/ui/cards'
 import { usePlan } from '@/components/billing/usePlan'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useXp } from '@/components/xp/useXp'
@@ -15,7 +16,6 @@ import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 import type { Stats } from '@/lib/profile/stats'
 import type { Course } from '@/lib/types'
 
-const TILE_ICON: Record<string, LucideIcon> = { Level: Trophy, Streak: Flame, 'Best streak': Flame, 'Focus time': Timer, Notes: NotebookPen, Flashcards: Layers, Lectures: Mic, 'Quizzes finished': ListChecks }
 const fmtMinutes = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
 const longDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -146,19 +146,7 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
-        {tiles.length > 0 && (
-          <ul aria-label="Study totals" className={`grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4 ${xp ? 'border-t border-line pt-5' : ''}`}>
-            {tiles.map(([label, value, tone]) => (
-              <li key={label} className="flex items-center gap-3">
-                {(() => { const Icon = TILE_ICON[label] ?? Star; return <span aria-hidden="true" className={`tile-${tone} flex size-11 shrink-0 items-center justify-center rounded-2xl border border-line`}><Icon size={22} className="text-accent" aria-hidden="true" /></span> })()}
-                <div className="min-w-0">
-                  <div className="truncate text-2xl font-semibold leading-tight">{value}</div>
-                  <div className="text-xs leading-tight text-muted">{label}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <StatStrip label="Study totals" items={tiles.map(([label, value]) => ({ label, value }))} />
         </div>
         )}
       </section>

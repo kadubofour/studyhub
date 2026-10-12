@@ -11,6 +11,7 @@ import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProv
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
+import { TintTile } from '@/components/ui/cards'
 import { useLook } from '@/components/providers/useLook'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
@@ -145,20 +146,17 @@ export default function HomePage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <div className="tile tile-a">
-          <div className="tile-label"><ListChecks size={14} className="text-success" aria-hidden />Tasks today</div>
-          <div className="tile-value">{doneToday} <span className="text-sm font-normal text-muted">/ {doneToday + list.length - doneIds.size}</span></div>
-        </div>
-        <Link href={due > 0 ? '/review' : '/flashcards'} className="tile tile-b transition hover:border-accent">
-          <div className="tile-label"><Layers size={14} className="text-[#D4537E]" aria-hidden />Cards due</div>
-          <div className="tile-value flex items-center gap-1">{due}{due > 0 && <ArrowRight size={15} className="text-muted" aria-hidden />}</div>
-        </Link>
-        <Link href="/planner" className="tile tile-c col-span-2 transition hover:border-accent md:col-span-1">
-          <div className="tile-label"><School size={14} className="text-[#BA7517]" aria-hidden />Next class</div>
-          <div className="mt-1 truncate font-medium">
-            {nextCourse ? <><span style={{ color: nextCourse.color }}>{nextCourse.name}</span> · {nextLabel}</> : <span className="text-muted">No classes yet</span>}
-          </div>
-        </Link>
+        <TintTile color="#1D9E75" icon={ListChecks} label="Tasks today">
+          {doneToday} <span className="text-sm font-normal text-muted">/ {doneToday + list.length - doneIds.size}</span>
+        </TintTile>
+        <TintTile color="#D4537E" icon={Layers} label="Cards due" href={due > 0 ? '/review' : '/flashcards'}>
+          <span className="flex items-center gap-1">{due}{due > 0 && <ArrowRight size={15} className="text-muted" aria-hidden />}</span>
+        </TintTile>
+        <TintTile color="#BA7517" icon={School} label="Next class" href="/planner" className="col-span-2 md:col-span-1">
+          <span className="block truncate text-lg">
+            {nextCourse ? <>{nextCourse.name} · {nextLabel}</> : <span className="text-muted">No classes yet</span>}
+          </span>
+        </TintTile>
       </section>
 
       {bold && (

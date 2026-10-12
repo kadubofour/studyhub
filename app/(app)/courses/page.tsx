@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookOpen } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SplitCard } from '@/components/ui/cards'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
@@ -41,12 +42,8 @@ export default function CoursesPage() {
       <ul aria-label="Your courses" className="grid gap-3 sm:grid-cols-2">
         {courses.map(c => (
           <li key={c.id}>
-            <Link href={`/courses/${c.id}`} className="card flex items-center gap-3 border-l-8 py-4 transition hover:bg-surface" style={{ borderLeftColor: c.color }}>
-              <div className="min-w-0">
-                <div className="truncate font-semibold">{c.name}</div>
-                <div className="text-sm text-muted">{summaryLine(items.filter(i => i.course_id === c.id))}</div>
-              </div>
-            </Link>
+            <SplitCard color={c.color} icon={BookOpen} href={`/courses/${c.id}`} title={c.name}
+              value={items.filter(i => i.course_id === c.id).length} sub={summaryLine(items.filter(i => i.course_id === c.id))} />
           </li>
         ))}
       </ul>

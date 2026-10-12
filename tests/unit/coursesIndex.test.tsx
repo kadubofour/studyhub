@@ -28,6 +28,14 @@ describe('Courses', () => {
     expect(bio.textContent).toContain('2 notes · 1 deck')
     expect(within(list).getByRole('link', { name: /Spanish/ }).textContent).toContain('Nothing here yet')
   })
+  it('draws each course as a split card: the item count in a coloured block, the words beside it', async () => {
+    items = [item('note', 'n1', 'bio'), item('note', 'n2', 'bio'), item('deck', 'd1', 'bio')]
+    await open()
+    const bio = within(screen.getByRole('list', { name: 'Your courses' })).getByRole('link', { name: /Biology/ })
+    const block = bio.querySelector('[data-block]') as HTMLElement
+    expect(block.textContent).toBe('3')
+    expect((bio.style as CSSStyleDeclaration).getPropertyValue('--c')).toBe('#1D9E75')
+  })
   it('invites the student to make a course when there are none', async () => {
     courses = []
     await open()

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Layers } from 'lucide-react'
+import { IndexCard } from '@/components/ui/cards'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -57,22 +58,8 @@ export default function FlashcardsPage() {
           const c = courseOf(d.course_id)
           const color = c?.color ?? 'var(--accent-solid)'
           return (
-            <Link key={d.id} href={`/flashcards/${d.id}`} className="tile group relative overflow-hidden transition hover:-translate-y-0.5">
-              {/* stacked-cards motif in the course colour */}
-              <span aria-hidden className="absolute -right-3 -top-3 size-16 rotate-12 rounded-xl opacity-15" style={{ background: color }} />
-              <span aria-hidden className="absolute -right-1 top-1 size-12 rotate-6 rounded-xl opacity-25" style={{ background: color }} />
-              <div className="relative">
-                <div className="font-semibold">{d.name}</div>
-                <CourseTag course={c} className="mt-0.5" />
-                <div className="mt-4 flex items-end justify-between">
-                  <div>
-                    <div className="text-2xl font-semibold" style={{ color: d.due > 0 ? color : undefined }}>{d.due}</div>
-                    <div className="text-xs text-muted">{d.due > 0 ? 'due now' : 'all caught up'}</div>
-                  </div>
-                  <div className="text-xs text-muted">{d.total} cards</div>
-                </div>
-              </div>
-            </Link>
+            <IndexCard key={d.id} href={`/flashcards/${d.id}`} color={color} title={d.name} eyebrow={<CourseTag course={c} />}
+              value={d.due} valueColor={d.due > 0} sub={`${d.due > 0 ? 'due now' : 'all caught up'} · ${d.total} ${d.total === 1 ? 'card' : 'cards'}`} />
           )
         })}
       </div>

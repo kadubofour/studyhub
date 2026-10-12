@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Flame, Trophy, Timer, Brain } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StatStrip } from '@/components/ui/cards'
 import { QuizScores } from '@/components/progress/QuizScores'
 import { TopicsSection } from '@/components/progress/TopicsSection'
 import { XpCard } from '@/components/xp/XpCard'
@@ -18,15 +18,6 @@ import type { FocusSession, Review } from '@/lib/types'
 // Heatmap shades in the student's accent colour
 const LEVELS = ['var(--surface)', 'color-mix(in srgb, var(--accent-solid) 30%, transparent)', 'color-mix(in srgb, var(--accent-solid) 62%, transparent)', 'var(--accent-solid)']
 const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
-
-function Stat({ label, value, icon: Icon, color }: { label: string; value: string; icon: typeof Flame; color: string }) {
-  return (
-    <div>
-      <div className="tile-label"><Icon size={14} style={{ color }} aria-hidden />{label}</div>
-      <div className="tile-value">{value}</div>
-    </div>
-  )
-}
 
 export default function ProgressPage() {
   const { profile } = useProfile()
@@ -65,12 +56,12 @@ export default function ProgressPage() {
     <div>
       <PageHeader title="Progress" />
       <div className="card mb-4 space-y-4">
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
-        <Stat icon={Flame} color="#D85A30" label="Current streak" value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`} />
-        <Stat icon={Trophy} color="#BA7517" label="Best streak" value={`${streak.best} ${streak.best === 1 ? 'day' : 'days'}`} />
-        <Stat icon={Timer} color="var(--accent)" label="Focus this week" value={fmtMin(thisWeek)} />
-        <Stat icon={Brain} color="#1D9E75" label="Retention (30 days)" value={ret === null ? '—' : `${Math.round(ret * 100)}%`} />
-      </div>
+      <StatStrip label="Study stats" items={[
+        { label: 'Current streak', value: `${streak.current} ${streak.current === 1 ? 'day' : 'days'}` },
+        { label: 'Best streak', value: `${streak.best} ${streak.best === 1 ? 'day' : 'days'}` },
+        { label: 'Focus this week', value: fmtMin(thisWeek) },
+        { label: 'Retention (30 days)', value: ret === null ? '—' : `${Math.round(ret * 100)}%` },
+      ]} />
       {xp && <div className="border-t border-line pt-4"><XpCard xp={xp} bare /></div>}
       </div>
       <section className="card mb-4">
