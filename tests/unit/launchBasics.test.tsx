@@ -61,7 +61,7 @@ describe('robots and sitemap', () => {
     const r = robots()
     const rule = Array.isArray(r.rules) ? r.rules[0] : r.rules
     expect(rule.allow).toBe('/')
-    expect(rule.disallow).toEqual(expect.arrayContaining(['/api/', '/home', '/notes', '/settings']))
+    expect(rule.disallow).toEqual(expect.arrayContaining(['/api/', '/home', '/notes', '/settings', '/library', '/profile']))
     expect(r.sitemap).toBe('https://studyhub.test/sitemap.xml')
   })
   it('lists only the public pages', () => {

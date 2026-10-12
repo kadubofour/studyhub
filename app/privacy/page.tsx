@@ -9,7 +9,7 @@ export default function PrivacyPage() {
       <section>
         <h2>What we keep</h2>
         <ul>
-          <li>Your account: your email, your name and your settings.</li>
+          <li>Your account: your email, your name, your school and programme if you add them, and your settings.</li>
           <li>What you add: notes, flashcards, tasks and classes, quizzes and your answers, lecture recordings and their transcripts, uploaded files, tutor chats, study plans, topics and saved links.</li>
           <li>What you do: reviews, focus sessions and game plays. Your XP, level and streak are worked out from these.</li>
           <li>Payments: if you buy Premium, the payment reference, the amount, how you paid, and the card brand and last four digits. We never see or store your full card or mobile money details; Paystack handles them.</li>

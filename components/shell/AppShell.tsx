@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
-  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload,
+  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload, FolderOpen,
 } from 'lucide-react'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { UploadMaterial } from '@/components/notes/UploadMaterial'
 import { TopBar } from './TopBar'
+import { Avatar } from '@/components/profile/Avatar'
 import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
 import type { ScanTarget } from '@/lib/ai/scan'
 import { useTheme } from 'next-themes'
@@ -32,6 +33,7 @@ const GROUPS = [
     { href: '/progress', label: 'Progress', icon: BarChart3 },
   ] },
   { label: 'Study', scan: true, items: [
+    { href: '/library', label: 'Library', icon: FolderOpen },
     { href: '/notes', label: 'Notes', icon: NotebookPen },
     { href: '/lectures', label: 'Lectures', icon: Mic },
     { href: '/flashcards', label: 'Flashcards', icon: Layers },
@@ -135,6 +137,11 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-0.5">
+            <Link href="/profile" onClick={e => guard(e, '/profile')} aria-current={active('/profile') ? 'page' : undefined}
+              className={`mb-1 flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition ${active('/profile') ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+              <Avatar name={profile.display_name} color={profile.avatar_color} size={28} />
+              <span className="truncate">{profile.display_name || 'Your profile'}</span>
+            </Link>
             <button className="btn-ghost" onClick={toggleTheme}>
               {dark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
               {dark ? 'Light mode' : 'Dark mode'}

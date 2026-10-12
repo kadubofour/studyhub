@@ -131,7 +131,7 @@ describe('TopBar', () => {
     expect(within(bar).getByText('Planner')).toBeTruthy()
   })
   it('names the page for each section, and nothing for an unknown one', async () => {
-    for (const [p, name] of [['/home', 'Home'], ['/flashcards/d1', 'Flashcards'], ['/review', 'Review'], ['/progress', 'Progress'], ['/tutor/c1', 'Tutor']] as const) {
+    for (const [p, name] of [['/home', 'Home'], ['/library', 'Library'], ['/profile', 'Profile'], ['/flashcards/d1', 'Flashcards'], ['/review', 'Review'], ['/progress', 'Progress'], ['/tutor/c1', 'Tutor']] as const) {
       path = p
       await open()
       expect(within(screen.getByRole('banner')).getByText(name), p).toBeTruthy()

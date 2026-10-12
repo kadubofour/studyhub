@@ -9,6 +9,11 @@ import type { AccentName, FontName, LookName } from './appearance'
 export interface Profile {
   id: string
   display_name: string | null
+  /** Shown under the name on the profile; both optional */
+  school: string | null
+  programme: string | null
+  /** The avatar's background, one of AVATAR_COLORS */
+  avatar_color: string
   timezone: string
   daily_goal_minutes: number
   focus_minutes: number
@@ -35,7 +40,7 @@ export interface ClassSlot {
 }
 export interface NoteSummary { id: string; course_id: string | null; title: string; updated_at: string }
 export interface Note extends NoteSummary { content_md: string }
-export interface Deck { id: string; course_id: string | null; name: string }
+export interface Deck { id: string; course_id: string | null; name: string; created_at?: string }
 export interface DeckWithDue extends Deck { due: number; total: number }
 export interface Card {
   id: string; deck_id: string; front: string; back: string; due_at: string

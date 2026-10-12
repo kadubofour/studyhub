@@ -8,9 +8,12 @@ import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/components/providers/ToastProvider'
 import type { Course } from '@/lib/types'
 
-export function CourseBar({ courses, selected, onSelect, onChange }: {
+// `unsorted` adds an "Unsorted" chip for what is in no course (the Library); while it is active no course chip is
+export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
   courses: Course[]; selected: string | null; onSelect: (id: string | null) => void; onChange: (c: Course[]) => void
+  unsorted?: { active: boolean; onClick: () => void }
 }) {
+  const none = !!unsorted?.active
   const toast = useToast()
   const [editing, setEditing] = useState<Course | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Course | null>(null)
@@ -51,16 +54,17 @@ export function CourseBar({ courses, selected, onSelect, onChange }: {
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-1.5">
-      <button className={chip(selected === null)} style={tint('var(--accent)', selected === null)} onClick={() => onSelect(null)}>All</button>
+      <button className={chip(selected === null && !none)} aria-pressed={selected === null && !none} style={tint('var(--accent)', selected === null && !none)} onClick={() => onSelect(null)}>All</button>
+      {unsorted && <button className={chip(none)} aria-pressed={none} style={tint('var(--muted)', none)} onClick={unsorted.onClick}>Unsorted</button>}
       {courses.map(c => (
-        <button key={c.id} className={chip(selected === c.id)} style={tint(c.color, selected === c.id)} onClick={() => onSelect(c.id)}
+        <button key={c.id} className={chip(selected === c.id && !none)} aria-pressed={selected === c.id && !none} style={tint(c.color, selected === c.id && !none)} onClick={() => onSelect(c.id)}
           onDoubleClick={() => openEdit(c)} onContextMenu={e => { e.preventDefault(); openEdit(c) }}
           title="Double-click to edit">
           <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: c.color }} />{c.name}
         </button>
       ))}
       <button className="btn-ghost" onClick={openNew}><Plus size={14} aria-hidden />Course</button>
-      {selected && <button className="btn-ghost" onClick={() => openEdit(courses.find(c => c.id === selected)!)}>Edit</button>}
+      {selected && !none && <button className="btn-ghost" onClick={() => openEdit(courses.find(c => c.id === selected)!)}>Edit</button>}
 
       <Dialog open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'New course' : 'Edit course'}>
         <form onSubmit={save} className="space-y-3">

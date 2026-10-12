@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AudioMime, LecturePart, TranscriptLine } from '@/lib/lectures/time'
-import { check, must } from './util'
+import { check, fetchAll, must } from './util'
 
 export type TranscriptStatus = 'none' | 'live' | 'processing' | 'done' | 'failed'
 export type Lecture = {
@@ -13,7 +13,7 @@ export type LectureSummary = Pick<Lecture, 'id' | 'course_id' | 'title' | 'recor
 const COLS = 'id,course_id,title,recorded_at,duration_seconds,audio_bytes,mime,parts,transcript,transcript_status,transcript_source,note_id'
 
 export async function listLectures(sb: SupabaseClient): Promise<LectureSummary[]> {
-  return must(await sb.from('lectures').select('id,course_id,title,recorded_at,duration_seconds,transcript_status,transcript_source,audio_bytes').order('recorded_at', { ascending: false }))
+  return fetchAll<LectureSummary>((from, to) => sb.from('lectures').select('id,course_id,title,recorded_at,duration_seconds,transcript_status,transcript_source,audio_bytes').order('recorded_at', { ascending: false }).order('id').range(from, to))
 }
 
 export async function getLecture(sb: SupabaseClient, id: string): Promise<Lecture> {

@@ -28,6 +28,10 @@ describe('Privacy page', () => {
     expect(screen.getByText(/cookies and browser storage/i)).toBeTruthy()
     expect(screen.getByText(/backups/i)).toBeTruthy()
   })
+  it('lists the school and programme among what is kept', () => {
+    render(<PrivacyPage />)
+    expect(screen.getByText(/your school and programme/i)).toBeTruthy()
+  })
   it('says no advertising or tracking cookies are used', () => {
     render(<PrivacyPage />)
     expect(screen.getAllByText(/no advertising/i).length).toBeGreaterThan(0)

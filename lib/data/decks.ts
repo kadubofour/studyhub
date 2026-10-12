@@ -3,7 +3,7 @@ import type { Deck, DeckWithDue } from '../types'
 import { check, fetchAll, must } from './util'
 
 export async function listDecksWithDue(sb: SupabaseClient, now: Date): Promise<DeckWithDue[]> {
-  const decks: Deck[] = must(await sb.from('decks').select('id,course_id,name').order('created_at'))
+  const decks: Deck[] = must(await sb.from('decks').select('id,course_id,name,created_at').order('created_at'))
   const cards = await fetchAll<{ deck_id: string; due_at: string }>((from, to) =>
     sb.from('cards').select('deck_id,due_at').order('id').range(from, to))
   const nowMs = now.getTime()
