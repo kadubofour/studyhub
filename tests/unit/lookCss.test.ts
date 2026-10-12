@@ -79,6 +79,14 @@ describe('Classic is the calm version of Vivid', () => {
     const layer = css.slice(css.indexOf('/* Vivid shapes'), css.indexOf('.prose-note h1 {'))
     for (const sel of ['.card', '.tile', '.btn', 'input.input', '.hero']) expect(layer, sel).toContain(`.app-root[data-look="classic"] ${sel}`)
   })
+  it('Paper in dark mode gets all of it too, so there is no jump when the page learns the theme', () => {
+    expect(css).toContain('.dark .app-root[data-look="paper"] .app-sidebar')
+    const layer = css.slice(css.indexOf('/* Classic shapes'), css.indexOf('/* Playful shapes'))
+    for (const sel of ['.card', '.tile', '.btn', 'input.input']) expect(layer, sel).toContain(`.dark .app-root[data-look="paper"] ${sel}`)
+  })
+  it('top bar chips stand out from the bar in Classic', () => {
+    expect(css).toMatch(/data-look="classic"\][^{]*Today at a glance[^{]*\{[^}]*background: var\(--surface\)/)
+  })
   it('stays calm: plain tiles, no glow under the main button, quieter section labels', () => {
     const layer = css.slice(css.indexOf('/* Classic shapes'), css.indexOf('/* Playful shapes'))
     expect(layer).not.toContain('color-mix')

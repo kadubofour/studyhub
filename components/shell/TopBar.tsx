@@ -18,7 +18,7 @@ const PAGES: [string, string][] = [
 const pageName = (path: string) => PAGES.find(([p]) => path === p || path.startsWith(p + '/'))?.[1]
 const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium'
 
-// A strip above every page (Vivid look): the focus timer, cards due, the streak and the level, so they are one glance away
+// A strip above every page (Classic and Vivid looks): the focus timer, cards due, the streak and the level, so they are one glance away
 export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
   const path = usePathname()
   const { timer, now, toggle } = useFocus()

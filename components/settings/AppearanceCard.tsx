@@ -25,6 +25,7 @@ export function AppearanceCard() {
   const LOOK_NAMES = lookChoices(mode)
 
   function choose(patch: { accent?: AccentName; font?: FontName; look?: LookName }) {
+    if (Object.keys(patch).length === 1 && patch.look === look) return // e.g. Classic shown for a saved Paper in dark mode: keep the saved choice
     const before = profile
     const keys = Object.keys(patch) as (keyof typeof patch)[]
     save(

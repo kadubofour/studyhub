@@ -6,7 +6,8 @@ import type { Profile } from '@/lib/types'
 let path = '/planner'
 const push = vi.fn()
 vi.mock('next/navigation', () => ({ usePathname: () => path, useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }) }))
-vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }) }))
+let theme = 'light'
+vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: theme, setTheme: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/components/shell/TopBar', () => ({ TopBar: (p: { sidebarHidden?: boolean }) => <header aria-label="Today at a glance">top bar {p.sidebarHidden ? 'sidebar hidden' : 'sidebar shown'}</header> }))
 vi.mock('@/components/scan/ScanDialog', () => ({
@@ -128,6 +129,17 @@ describe('Scan in the app shell', () => {
     path = '/notes/abc'
     render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
     expect(screen.queryByRole('banner', { name: 'Today at a glance' })).toBeNull()
+  })
+
+  it('shows Paper as Classic in dark mode, with the top bar, and Paper again in light', () => {
+    path = '/home'
+    theme = 'dark'
+    const dark = render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(dark.container.querySelector('.app-root')!.getAttribute('data-look')).toBe('classic')
+    expect(screen.getByRole('banner', { name: 'Today at a glance' })).toBeTruthy()
+    dark.unmount(); theme = 'light'
+    const light = render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(light.container.querySelector('.app-root')!.getAttribute('data-look')).toBe('paper')
   })
 
   it('marks the sidebar so the Vivid styles reach it and nothing else, and tells the top bar when the sidebar is hidden', () => {

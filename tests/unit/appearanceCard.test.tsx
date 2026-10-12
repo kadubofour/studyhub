@@ -30,6 +30,13 @@ describe('Paper is light mode only', () => {
     expect(screen.getByTestId('look').textContent).toBe('paper')
     expect(screen.getByText(/Paper is for light mode/)).toBeTruthy()
   })
+  it('choosing the Classic that is already shown does not replace the saved Paper', async () => {
+    resolved = 'dark'
+    open({ ...base, look: 'paper' })
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Classic look' })) })
+    expect(updateProfile).not.toHaveBeenCalled()
+    expect(screen.getByTestId('look').textContent).toBe('paper')
+  })
   it('keyboard moving skips Paper in dark mode', async () => {
     resolved = 'dark'
     open()

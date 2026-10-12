@@ -75,7 +75,7 @@ export default function HomePage() {
   const goal = profile.daily_goal_minutes
   const focusPct = Math.min(100, Math.round((focus.todayMinutes / goal) * 100))
   const running = focus.timer.startedAt !== null
-  // Vivid and Playful show the goal as a ring with chips for level, XP and streak
+  // Every look but Paper shows the goal as a ring with chips for level, XP and streak
   const look = useLook()
   const bold = look !== 'paper'
   const weekKeys = weekKeysFor(todayKey)
@@ -124,7 +124,7 @@ export default function HomePage() {
         {bold ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
-            {xp && look === 'playful' && ( // Vivid shows these in the top bar
+            {xp && look === 'playful' && ( // the top bar (Classic, Vivid) shows these
               <div className="flex flex-wrap gap-2 text-sm font-medium">
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
                 <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>

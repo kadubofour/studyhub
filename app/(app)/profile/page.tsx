@@ -75,7 +75,7 @@ export default function ProfilePage() {
   const badges = stats && xp ? inDisplayOrder(evaluate({ stats, bestStreak: xp.best, level: xp.level.level })) : null
   const sub = [profile.programme, profile.school].filter(Boolean).join(' · ')
   const tiles: [string, string, 'a' | 'b' | 'c'][] = [
-    ...(xp ? [['Level', String(xp.level.level), 'c'], ['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
+    ...(xp ? [['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
     ...(stats ? [['Focus time', fmtMinutes(stats.focus_minutes), 'c'], ['Notes', String(stats.notes), 'b'], ['Flashcards', String(stats.cards), 'a'], ['Lectures', String(stats.lectures), 'c'], ['Quizzes finished', String(stats.quizzes_done), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
   ]
 
