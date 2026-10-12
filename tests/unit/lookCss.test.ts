@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
-import { LOOKS } from '@/lib/appearance'
+import { LOOKS, contrastRatio } from '@/lib/appearance'
 
 const css = fs.readFileSync('app/globals.css', 'utf8').replace(/\r\n/g, '\n')
 // The declarations inside the first rule whose selector is exactly `selector`
@@ -41,6 +41,25 @@ describe('globals.css matches LOOKS', () => {
   it('defines the tile classes and a matching page background behind Paper', () => {
     for (const t of ['a', 'b', 'c']) expect(css).toContain(`.tile-${t} { background: var(--tile-${t}); }`)
     expect(css).toContain('body:has(.app-root[data-look="paper"])')
+  })
+})
+
+describe('Vivid sidebar', () => {
+  // The sidebar scopes its own text and line colours, so it must stay readable on its own background
+  const light = block('.app-root[data-look="vivid"] aside')
+  const dark = block('.dark .app-root[data-look="vivid"] aside')
+  const bgOf = (b: string) => value(b, 'background')!.toUpperCase()
+  const lum = (hex: string) => contrastRatio(hex, '#000000') // higher means lighter
+  it('is darker than the page in both modes', () => {
+    expect(lum(bgOf(light))).toBeLessThan(lum(LOOKS.vivid.light.bg))
+    expect(lum(bgOf(dark))).toBeLessThan(lum(LOOKS.vivid.dark.bg))
+  })
+  it.each([['light', light, () => bgOf(light)], ['dark', dark, () => bgOf(dark)]] as const)('its text is readable on it (%s)', (_m, b, bg) => {
+    const fg = (value(light, '--fg')!).toUpperCase()
+    const muted = (value(light, '--muted')!).toUpperCase()
+    expect(contrastRatio(fg, bg()), 'fg').toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(muted, bg()), 'muted').toBeGreaterThanOrEqual(4.5)
+    void b
   })
 })
 

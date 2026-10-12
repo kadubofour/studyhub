@@ -41,9 +41,9 @@ export const LOOKS = {
     dark: { bg: '#1C1915', raised: '#25211C', surface: '#2E2923', line: '#3A342C', fg: '#EFE8DA', muted: '#A39A8A', tiles: ['#3A2A1F', '#38331B', '#1F3027'] },
   },
   vivid: {
-    label: 'Vivid', blurb: 'Bold colour, big and friendly',
-    light: { bg: '#F6F4FF', raised: '#FFFFFF', surface: '#ECE8FF', line: '#DDD6FA', fg: '#1E1B3A', muted: '#585380', tiles: ['#FFDCCB', '#CDEFE0', '#FFEBB0'] },
-    dark: { bg: '#15122B', raised: '#1F1B3F', surface: '#2A2552', line: '#3A3470', fg: '#F0EEFF', muted: '#ADA7DA', tiles: ['#4D2B22', '#1E4034', '#4C3C12'] },
+    label: 'Vivid', blurb: 'Bold colour, dark sidebar, top bar',
+    light: { bg: '#FAFAF8', raised: '#FFFFFF', surface: '#F1F1EE', line: '#E4E3DE', fg: '#1B1B1F', muted: '#5D5C66', tiles: ['#FFDCCB', '#CDEFE0', '#FFEBB0'] },
+    dark: { bg: '#18181C', raised: '#212127', surface: '#2B2B33', line: '#3A3A44', fg: '#F2F2F5', muted: '#A9A9B6', tiles: ['#4D2B22', '#1E4034', '#4C3C12'] },
   },
   playful: {
     label: 'Playful', blurb: 'Chunky buttons, thick outlines',

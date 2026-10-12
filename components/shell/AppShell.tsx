@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { UploadMaterial } from '@/components/notes/UploadMaterial'
+import { TopBar } from './TopBar'
 import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
 import type { ScanTarget } from '@/lib/ai/scan'
 import { useTheme } from 'next-themes'
@@ -144,6 +145,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       )}
       <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-16 md:pb-0'}`}>
         <OfflineBanner />
+        {lookOf(profile.look) === 'vivid' && !immersive && <TopBar />}
         {!sidebar && !immersive && (
           <button className="no-print btn-ghost fixed left-3 top-3 z-30 hidden md:inline-flex" onClick={() => setCollapsed(false)}
             aria-label="Show sidebar" title="Show sidebar">

@@ -35,17 +35,24 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
   --tile-a: #3A2A1F; --tile-b: #38331B; --tile-c: #1F3027;
 }
-/* Vivid: bold colour, big type, soft large corners. Colours are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
+/* Vivid: bold colour on a light neutral page, big type, soft large corners, a darker sidebar and a top bar.
+   Colours are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
 .app-root[data-look="vivid"] {
-  --bg: #F6F4FF; --raised: #FFFFFF; --surface: #ECE8FF; --line: #DDD6FA; --fg: #1E1B3A; --muted: #585380;
-  --shadow: 0 2px 4px rgb(60 40 160 / 0.06), 0 8px 24px rgb(60 40 160 / 0.10);
+  --bg: #FAFAF8; --raised: #FFFFFF; --surface: #F1F1EE; --line: #E4E3DE; --fg: #1B1B1F; --muted: #5D5C66;
+  --shadow: 0 2px 4px rgb(20 20 30 / 0.05), 0 8px 24px rgb(20 20 30 / 0.08);
   --tile-a: #FFDCCB; --tile-b: #CDEFE0; --tile-c: #FFEBB0;
 }
 .dark .app-root[data-look="vivid"] {
-  --bg: #15122B; --raised: #1F1B3F; --surface: #2A2552; --line: #3A3470; --fg: #F0EEFF; --muted: #ADA7DA;
+  --bg: #18181C; --raised: #212127; --surface: #2B2B33; --line: #3A3A44; --fg: #F2F2F5; --muted: #A9A9B6;
   --shadow: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
   --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
 }
+/* The sidebar is always the darker shade: charcoal on the light page, near-black on the dark one. Its own tokens re-colour everything inside it. */
+.app-root[data-look="vivid"] aside {
+  background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #2A2D37;
+  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg);
+}
+.dark .app-root[data-look="vivid"] aside { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #1B1B21; }
 /* Playful: thick outlines, flat colour, buttons that press down */
 .app-root[data-look="playful"] {
   --bg: #F7FBF4; --raised: #FFFFFF; --surface: #EAF2E5; --line: #CFDACA; --fg: #26301F; --muted: #556350;
@@ -60,8 +67,8 @@
 /* Behind the app (overscroll on phones) matches the look */
 body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
 .dark body:has(.app-root[data-look="paper"]) { background: #1C1915; }
-body:has(.app-root[data-look="vivid"]) { background: #F6F4FF; }
-.dark body:has(.app-root[data-look="vivid"]) { background: #15122B; }
+body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
+.dark body:has(.app-root[data-look="vivid"]) { background: #18181C; }
 body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
 .dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
 
@@ -136,7 +143,6 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] .field select,
 .app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; padding-inline: 1rem; }
 .app-root[data-look="vivid"] .field textarea, .app-root[data-look="vivid"] textarea.input { border-radius: 1.25rem; }
-.app-root[data-look="vivid"] aside { background: var(--surface); }
 
 /* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
 .app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }
