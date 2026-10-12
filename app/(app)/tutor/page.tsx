@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MessageSquarePlus } from 'lucide-react'
+import { MessageSquarePlus, MessagesSquare } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { supabase } from '@/lib/supabase/client'
@@ -26,7 +27,7 @@ export default function TutorPage() {
   return (
     <div>
       <PageHeader title="Tutor" actions={<button type="button" className="btn-primary" onClick={start}><MessageSquarePlus size={14} aria-hidden />New chat</button>} />
-      {chats?.length === 0 && <p className="card py-10 text-center text-sm text-muted">No chats yet. Ask the tutor about a note, or start a new chat.</p>}
+      {chats?.length === 0 && <EmptyState icon={MessagesSquare} tone="a" title="Ask anything about your courses" body="No chats yet. Ask the tutor about a note, or start a new chat." />}
       <ul className="space-y-2">
         {chats?.map(c => (
           <li key={c.id}>
