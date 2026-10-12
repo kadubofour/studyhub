@@ -19,7 +19,7 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
 
   await page.getByRole('button', { name: 'Biology', exact: true }).click()
   await page.getByRole('link', { name: 'Open course page' }).click()
-  await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/)
+  await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 }) // the first visit compiles the page in the dev server
   await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()
   await expect(page.getByText('1 note · 1 deck')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Notes' }).getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
