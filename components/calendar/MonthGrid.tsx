@@ -42,7 +42,7 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
             return (
               <div key={k} data-day={k} className={`min-h-28 space-y-0.5 border-b border-r border-line p-1 ${outside ? 'bg-surface/40' : ''}`}>
                 <button type="button" aria-label={longDay(k)} aria-current={k === todayKey ? 'date' : undefined} data-outside={outside ? 'true' : undefined} onClick={() => onDayClick(k)}
-                  className={`flex size-6 items-center justify-center rounded-full text-xs hover:bg-surface ${k === todayKey ? 'bg-fg font-semibold text-bg hover:bg-fg' : outside ? 'text-muted/60' : ''}`}>
+                  className={`flex size-6 items-center justify-center rounded-full text-xs hover:bg-surface ${k === todayKey ? 'bg-fg font-semibold text-bg hover:bg-fg' : outside ? 'text-muted' : ''}`}>
                   {Number(k.slice(8))}
                 </button>
                 {entries.slice(0, SHOWN).map(e => <div key={e.id}>{e.node}</div>)}

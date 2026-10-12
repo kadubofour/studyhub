@@ -61,7 +61,7 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
                 <span className="text-[11px] tracking-wide text-muted" aria-hidden>{SHORT_DAYS[d.getUTCDay()]}</span>
                 <span aria-hidden className={`flex size-8 items-center justify-center rounded-full text-lg ${today ? 'bg-fg font-semibold text-bg' : ''}`}>{d.getUTCDate()}</span>
               </div>
-              <div className="space-y-0.5 border-b border-line p-1" style={{ minHeight: stripH }}>
+              <div className={`sticky z-10 space-y-0.5 border-b border-line p-1 ${today ? 'bg-accent-soft' : 'bg-raised'}`} style={{ minHeight: stripH, top: HEADER_H }}>
                 {items.map(i => <ItemChip key={`${i.kind}-${i.id}`} item={i} course={courseOf(i.courseId)} onClick={() => onItemClick(i)} />)}
               </div>
               <div className="relative" style={{ height }}>

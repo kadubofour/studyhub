@@ -37,7 +37,7 @@ export function MiniMonth({ anchor, todayKey, rangeKeys, onPick }: { anchor: Day
           return (
             <button key={k} type="button" aria-label={label(k)} aria-current={today ? 'date' : undefined} data-in-range={inRange.has(k) ? 'true' : undefined}
               onClick={() => onPick(k)}
-              className={`mx-auto flex size-7 items-center justify-center rounded-full text-xs transition ${today ? 'bg-fg font-semibold text-bg' : inRange.has(k) ? 'bg-accent-soft text-accent' : outside ? 'text-muted/60 hover:bg-surface' : 'hover:bg-surface'}`}>
+              className={`mx-auto flex size-7 items-center justify-center rounded-full text-xs transition ${today ? 'bg-fg font-semibold text-bg' : inRange.has(k) ? 'bg-accent-soft text-accent' : outside ? 'text-muted hover:bg-surface' : 'hover:bg-surface'}`}>
               {Number(k.slice(8))}
             </button>
           )
