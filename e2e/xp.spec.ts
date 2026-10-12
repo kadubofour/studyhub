@@ -3,12 +3,13 @@ import { noteWithText, signUp } from './helpers'
 
 test('a new student starts at level 1; ticking a task and finishing a quiz earn XP on Home and Progress', async ({ page }) => {
   await signUp(page)
-  await expect(page.getByText('Level 1 · 0 XP')).toBeVisible()
+  const bar = page.getByRole('banner', { name: 'Today at a glance' }).getByRole('progressbar', { name: 'Progress to level 2' })
+  await expect(page.getByRole('banner', { name: 'Today at a glance' }).getByText('Level 1')).toBeVisible()
+  await expect(bar).toHaveAttribute('aria-valuetext', '0 of 50 XP')
 
   await page.getByLabel('Add a task').fill('Read chapter 4')
   await page.getByLabel('Add a task').press('Enter')
   await page.getByLabel('Mark Read chapter 4 done').check()
-  await expect(page.getByText('Level 1 · 5 XP')).toBeVisible()
 
   await noteWithText(page)
   await page.getByRole('button', { name: '✦ Study' }).click()
@@ -29,7 +30,7 @@ test('a new student starts at level 1; ticking a task and finishing a quiz earn 
   await expect(page.getByText('3 / 4')).toBeVisible()
 
   await page.goto('/home')
-  await expect(page.getByText('Level 1 · 15 XP')).toBeVisible()
+  await expect(bar).toHaveAttribute('aria-valuetext', '15 of 50 XP')
 
   await page.goto('/progress')
   const xp = page.locator('section', { has: page.getByRole('heading', { name: 'XP', exact: true }) })

@@ -40,5 +40,5 @@ test('play Speed round and Match from a deck; the plays earn XP', async ({ page 
   await expect(page.getByText('Could not save this play.')).toHaveCount(0)
 
   await page.goto('/home')
-  await expect(page.getByText('Level 1 · 16 XP')).toBeVisible()
+  await expect(page.getByRole('banner', { name: 'Today at a glance' }).getByRole('progressbar', { name: 'Progress to level 2' })).toHaveAttribute('aria-valuetext', '16 of 50 XP')
 })

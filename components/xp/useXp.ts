@@ -8,7 +8,7 @@ import { summarize, type XpSummary } from '@/lib/xp/rules'
 
 // The student's XP, level, goals and streak. null while loading and if loading fails, so callers just show nothing.
 // `key` changes when something that earns XP happened elsewhere (a focus session logged), so the numbers are read again.
-export function useXp(key: number = 0) {
+export function useXp(key: number | string = 0) {
   const { profile } = useProfile()
   const tz = profile.timezone
   const [xp, setXp] = useState<XpSummary | null>(null)

@@ -16,7 +16,8 @@ vi.mock('next/navigation', () => ({ usePathname: () => path }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => { if (dueFails) throw new Error('offline'); return due } }))
 vi.mock('@/components/providers/FocusProvider', async orig => ({ ...(await orig<typeof import('@/components/providers/FocusProvider')>()), useFocus: () => ({ timer, now, toggle, todayMinutes: 0 }) }))
-vi.mock('@/components/xp/useXp', () => ({ useXp: () => ({ xp, reload: vi.fn() }) }))
+let xpKey: unknown
+vi.mock('@/components/xp/useXp', () => ({ useXp: (key: unknown) => { xpKey = key; return { xp, reload: vi.fn() } } }))
 import { TopBar } from '@/components/shell/TopBar'
 
 const summary = (over: Partial<XpSummary> = {}): XpSummary => ({
@@ -25,6 +26,59 @@ const summary = (over: Partial<XpSummary> = {}): XpSummary => ({
 const open = async () => { await act(async () => { render(<TopBar />) }) }
 beforeEach(() => { path = '/home'; timer = createTimer('focus', 25 * MIN); now = 0; xp = null; due = 0; dueFails = false; toggle.mockClear() })
 afterEach(cleanup)
+
+describe('TopBar celebrations', () => {
+  const level = (n: number, into = 10) => ({ level: n, into, span: 150, toNext: 140 })
+  it('reads XP again on every page, so a session finished elsewhere is noticed', async () => {
+    path = '/home'
+    await open()
+    const first = xpKey
+    cleanup()
+    path = '/planner'
+    await open()
+    expect(xpKey).not.toBe(first)
+  })
+  it('has one polite status area, empty at first and when XP is first read', async () => {
+    xp = summary({ total: 120 })
+    await open()
+    const status = screen.getByRole('status')
+    expect(status.getAttribute('aria-live')).toBe('polite')
+    expect(status.textContent).toBe('')
+  })
+  it('cheers the points gained when XP goes up', async () => {
+    xp = summary({ total: 120 })
+    const { rerender } = render(<TopBar />)
+    xp = summary({ total: 145 })
+    await act(async () => { rerender(<TopBar />) })
+    expect(screen.getByRole('status').textContent).toBe('+25 XP')
+  })
+  it('announces a new level', async () => {
+    xp = summary({ total: 190, level: level(2) })
+    const { rerender } = render(<TopBar />)
+    xp = summary({ total: 210, level: level(3) })
+    await act(async () => { rerender(<TopBar />) })
+    expect(screen.getByRole('status').textContent).toBe('Level up! You reached level 3 (+20 XP)')
+  })
+  it('stays quiet when nothing was gained', async () => {
+    xp = summary({ total: 120 })
+    const { rerender } = render(<TopBar />)
+    xp = summary({ total: 120 })
+    await act(async () => { rerender(<TopBar />) })
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+  it('fades away after a few seconds', async () => {
+    vi.useFakeTimers()
+    try {
+      xp = summary({ total: 120 })
+      const { rerender } = render(<TopBar />)
+      xp = summary({ total: 130 })
+      await act(async () => { rerender(<TopBar />) })
+      expect(screen.getByRole('status').textContent).toBe('+10 XP')
+      await act(async () => { vi.advanceTimersByTime(4500) })
+      expect(screen.getByRole('status').textContent).toBe('')
+    } finally { vi.useRealTimers() }
+  })
+})
 
 describe('TopBar', () => {
   it('is a labelled region with the page name', async () => {

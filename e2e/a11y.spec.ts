@@ -26,6 +26,9 @@ for (const scheme of ['light', 'dark'] as const) {
     test.setTimeout(150_000)
     await page.emulateMedia({ colorScheme: scheme })
     await signUp(page)
+    await page.goto('/settings')
+    await page.getByRole('radio', { name: 'Classic look' }).click() // new students start on Vivid
+    await expect(page.locator('.app-root')).toHaveAttribute('data-look', 'classic')
     const found: string[] = []
     for (const path of APP) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} classic ${path}`)) }
     expect(found).toEqual([])

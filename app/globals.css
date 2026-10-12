@@ -201,6 +201,8 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .print-note:last-child { break-after: auto; }
 }
 
+@keyframes xp-pop { from { opacity: 0; transform: translateY(6px) scale(.9); } 60% { transform: translateY(-2px) scale(1.06); } to { opacity: 1; transform: none; } }
+.xp-pop { animation: xp-pop .45s ease-out; }
 @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } }
 @media (pointer: coarse) { .menu-kbd { display: none; } }

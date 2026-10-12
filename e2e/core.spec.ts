@@ -129,11 +129,12 @@ test('notes: search finds words inside a note', async ({ page }) => {
 test('focus timer runs and pauses', async ({ page }) => {
   await signUp(page)
   await page.goto('/focus')
-  await expect(page.getByText('25:00')).toBeVisible()
-  await page.getByRole('button', { name: 'Start' }).click()
+  const main = page.getByRole('main') // the top bar shows the clock too
+  await expect(main.getByText('25:00')).toBeVisible()
+  await main.getByRole('button', { name: 'Start' }).click()
   await page.waitForTimeout(1500)
-  await page.getByRole('button', { name: 'Pause' }).click()
-  await expect(page.getByText(/24:5\d/)).toBeVisible()
+  await main.getByRole('button', { name: 'Pause' }).click()
+  await expect(main.getByText(/24:5\d/)).toBeVisible()
   await page.reload()
-  await expect(page.getByText(/24:5\d/)).toBeVisible() // restored after reload
+  await expect(main.getByText(/24:5\d/)).toBeVisible() // restored after reload
 })

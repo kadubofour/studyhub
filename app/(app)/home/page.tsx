@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -14,6 +14,7 @@ import { greetingFont } from '@/lib/appearance'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
 import { GoalRing } from '@/components/home/GoalRing'
+import { requestScan, requestUpload } from '@/lib/scan/events'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
@@ -119,7 +120,7 @@ export default function HomePage() {
         {bold ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
-            {xp && (
+            {xp && profile.look === 'playful' && ( // Vivid shows these in the top bar
               <div className="flex flex-wrap gap-2 text-sm font-medium">
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
                 <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>
@@ -154,6 +155,19 @@ export default function HomePage() {
           </div>
         </Link>
       </section>
+
+      {bold && (
+        <section aria-label="Start from your material" className="tile tile-a flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold">Start from your material</div>
+            <p className="text-sm">Slides, PDFs, notes or a photo become notes, flashcards and a quiz.</p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={15} aria-hidden />Upload</button>
+            <button type="button" className="btn" onClick={() => requestScan()}><ScanLine size={15} aria-hidden />Scan</button>
+          </div>
+        </section>
+      )}
 
       <WeakSpotsCard courses={courses} />
 

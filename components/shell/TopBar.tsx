@@ -8,6 +8,7 @@ import { useXp } from '@/components/xp/useXp'
 import { supabase } from '@/lib/supabase/client'
 import { countDueCards } from '@/lib/data/cards'
 import { remainingMs } from '@/lib/timer'
+import { celebrate, type Burst, type Snapshot } from '@/lib/xp/celebrate'
 
 const PAGES: [string, string][] = [
   ['/home', 'Home'], ['/planner', 'Planner'], ['/focus', 'Focus'], ['/progress', 'Progress'], ['/notes', 'Notes'], ['/lectures', 'Lectures'],
@@ -20,8 +21,22 @@ const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5
 export function TopBar() {
   const path = usePathname()
   const { timer, now, toggle } = useFocus()
-  const { xp } = useXp()
+  const { xp } = useXp(path) // read again on each page: a session finished on another page shows up here
   const [due, setDue] = useState<number | null>(null)
+  // When XP has gone up since the last reading, cheer for a few seconds (set while rendering, the supported way to react to a changed value)
+  const [seen, setSeen] = useState<Snapshot | null>(null)
+  const [burst, setBurst] = useState<Burst | null>(null)
+  const now_ = xp ? { total: xp.total, level: xp.level.level } : null
+  if (now_ && (!seen || seen.total !== now_.total || seen.level !== now_.level)) {
+    setSeen(now_)
+    const b = celebrate(seen, now_)
+    if (b) setBurst(b)
+  }
+  useEffect(() => {
+    if (!burst) return
+    const t = setTimeout(() => setBurst(null), 4000)
+    return () => clearTimeout(t)
+  }, [burst])
 
   // Counted again on each page, so it is right after a review session
   useEffect(() => {
@@ -52,12 +67,15 @@ export function TopBar() {
             <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? 'No cards due' : `${due} due`}</span>
           </Link>
         )}
+        <span role="status" aria-live="polite" className={burst ? `${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}` : 'sr-only'}>
+          {burst ? (burst.levelUp ? `Level up! You reached level ${burst.levelUp} (+${burst.gained} XP)` : `+${burst.gained} XP`) : ''}
+        </span>
         {xp && xp.streak > 0 && <span className={`${chip} tile-c text-fg`}><Flame size={15} aria-hidden />{xp.streak}-day streak</span>}
         {xp && (
           <span className={`${chip} bg-surface text-fg`}>
             <Zap size={15} className="text-accent" aria-hidden />Level {xp.level.level}
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
-              className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-line sm:block">
+              className="block h-1.5 w-10 overflow-hidden rounded-full bg-line sm:w-14">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
             </span>
           </span>
