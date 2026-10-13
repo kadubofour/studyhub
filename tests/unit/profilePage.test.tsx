@@ -107,11 +107,10 @@ describe('Profile page: what the student has done', () => {
     expect(t('Lectures')).toContain('2')
     expect(t('Quizzes finished')).toContain('5')
   })
-  it('shows the totals as an open strip of big figures, not a grid of icon boxes', async () => {
+  it('puts a picture on every total, and leaves it out of the reading order', async () => {
     await open()
-    const strip = screen.getByRole('list', { name: 'Study totals' })
-    expect(strip.className).not.toContain('border') // no lines between the figures
-    for (const li of within(strip).getAllByRole('listitem')) expect(li.querySelector('svg'), li.textContent ?? '').toBeNull()
+    const tiles = screen.getByRole('list', { name: 'Study totals' })
+    for (const li of within(tiles).getAllByRole('listitem')) expect(li.querySelector('svg[aria-hidden="true"]'), li.textContent ?? '').not.toBeNull()
   })
   it('shows the level as a ring with the number in it', async () => {
     await open()
