@@ -12,10 +12,10 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
 export function CourseAccess({ courses, counts, recent }: { courses: Course[]; counts: CourseCounts; recent: Recent[] }) {
   if (courses.length === 0) return null
   return (
-    <section aria-label="Course material" className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <section aria-label="Course material" className="space-y-5">
       <div>
         <h2 className="section-label">Your courses</h2>
-        <ul aria-label="Your courses" className="grid gap-2.5 sm:grid-cols-2">
+        <ul aria-label="Your courses" className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))]">
           {courses.map(c => {
             const n = counts[c.id] ?? { notes: 0, decks: 0, lectures: 0 }
             const total = n.notes + n.decks + n.lectures
@@ -25,14 +25,14 @@ export function CourseAccess({ courses, counts, recent }: { courses: Course[]; c
         </ul>
       </div>
       {recent.length > 0 && (
-        <div className="card">
+        <div>
           <h2 className="section-label">Jump back in</h2>
-          <ul aria-label="Jump back in" className="divide-y divide-line">
+          <ul aria-label="Jump back in" className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
             {recent.map(r => {
               const Icon = ICON[r.kind]
               return (
-                <li key={`${r.kind}-${r.id}`} className="flex items-center gap-3 py-2">
-                  <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface text-accent"><Icon size={16} /></span>
+                <li key={`${r.kind}-${r.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-raised px-3.5 py-3">
+                  <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface text-accent"><Icon size={17} /></span>
                   <div className="min-w-0 flex-1">
                     <Link href={r.href} className="block truncate font-medium hover:text-accent">{r.title}</Link>
                     <CourseTag course={courses.find(c => c.id === r.course_id)} />

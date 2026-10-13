@@ -24,13 +24,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-xl space-y-5">
+    <div className="space-y-5">
       <PageHeader title="Settings" />
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <div className="min-w-0 space-y-5"><AppearanceCard /></div>
+        <div className="min-w-0 space-y-5">
       <PlanCard />
       <StorageCard />
-      <AppearanceCard />
       <p className="text-sm text-muted">Light or dark mode, time zone, focus lengths and note settings are on your <Link href="/profile" className="text-accent underline">profile</Link>.</p>
       <DataCard />
+        </div>
+      </div>
       <div className="flex items-center justify-between gap-4">
         <p className="flex gap-4 text-xs text-muted"><Link href="/terms" className="hover:text-fg">Terms</Link><Link href="/privacy" className="hover:text-fg">Privacy</Link></p>
         <button type="button" className="btn" onClick={signOut}>Sign out</button>

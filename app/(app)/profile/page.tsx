@@ -72,7 +72,8 @@ export default function ProfilePage() {
   ]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="grid items-start gap-5 lg:grid-cols-2">
+      <div className="min-w-0 space-y-5">
       <section className="card overflow-hidden p-0" aria-labelledby="profile-name">
         <div aria-hidden="true" className="h-16" style={{ background: `linear-gradient(135deg, ${profile.avatar_color}, color-mix(in srgb, ${profile.avatar_color} 55%, #ffffff))` }} />
         <div className="flex flex-wrap items-end gap-4 px-5 pb-5">
@@ -90,6 +91,56 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      <section aria-labelledby="totals-title" className="space-y-3">
+        <h2 id="totals-title" className="text-base font-semibold">Your study so far</h2>
+        {statsFailed && <p role="alert" className="text-sm text-danger">Could not load your study totals. Check your connection.</p>}
+        {(tiles.length > 0 || xp) && (
+        <div className="card space-y-5">
+        {xp && (
+          <div className="flex items-center gap-4">
+            <div data-testid="level-ring" aria-hidden="true" className="relative flex size-20 shrink-0 items-center justify-center text-3xl font-semibold">
+              <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0 -rotate-90">
+                <circle cx="40" cy="40" r="35" fill="none" stroke="var(--surface)" strokeWidth="7" />
+                <circle cx="40" cy="40" r="35" fill="none" stroke="var(--accent-solid)" strokeWidth="7" strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 35} strokeDashoffset={2 * Math.PI * 35 * (1 - xp.level.into / xp.level.span)} />
+              </svg>
+              {xp.level.level}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-2"><span className="flex items-center gap-1.5 text-lg font-semibold"><Zap size={16} className="text-accent" aria-hidden="true" />Level {xp.level.level}</span><span className="text-sm text-muted">{xp.total} XP in all</span></div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}>
+                <div className="h-2.5 rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-muted">{xp.level.toNext} XP to level {xp.level.level + 1}</p>
+            </div>
+          </div>
+        )}
+        <StatStrip label="Study totals" items={tiles.map(([label, value]) => ({ label, value }))} />
+        </div>
+        )}
+      </section>
+
+      <section aria-labelledby="courses-title" className="space-y-2">
+        <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>
+        {courses.length === 0 ? <p className="text-sm text-muted">No courses yet. Add one in the Planner.</p> : (
+          <ul aria-label="Your courses" className="flex flex-wrap gap-2">
+            {courses.map(c => (
+              <li key={c.id}>
+                <Link href={`/courses/${c.id}`} className="inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-1.5 text-sm hover:bg-surface">
+                  <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: c.color }} />{c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <p className="flex gap-4 text-sm text-muted">
+        <Link href="/settings" className="hover:text-fg">Settings</Link>
+        <Link href="/library" className="hover:text-fg">Library</Link>
+      </p>
+      </div>
+      <div className="min-w-0 space-y-5">
       {editing && (
         <form onSubmit={save} className="card space-y-3" aria-label="Edit profile">
           <label className="field"><span>Name</span><input value={form.name} maxLength={80} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
@@ -122,56 +173,9 @@ export default function ProfilePage() {
         </form>
       )}
 
-      <section aria-labelledby="totals-title" className="space-y-3">
-        <h2 id="totals-title" className="text-base font-semibold">Your study so far</h2>
-        {statsFailed && <p role="alert" className="text-sm text-danger">Could not load your study totals. Check your connection.</p>}
-        {(tiles.length > 0 || xp) && (
-        <div className="card space-y-5">
-        {xp && (
-          <div className="flex items-center gap-4">
-            <div data-testid="level-ring" aria-hidden="true" className="relative flex size-20 shrink-0 items-center justify-center text-3xl font-semibold">
-              <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0 -rotate-90">
-                <circle cx="40" cy="40" r="35" fill="none" stroke="var(--surface)" strokeWidth="7" />
-                <circle cx="40" cy="40" r="35" fill="none" stroke="var(--accent-solid)" strokeWidth="7" strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 35} strokeDashoffset={2 * Math.PI * 35 * (1 - xp.level.into / xp.level.span)} />
-              </svg>
-              {xp.level.level}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2"><span className="flex items-center gap-1.5 text-lg font-semibold"><Zap size={16} className="text-accent" aria-hidden="true" />Level {xp.level.level}</span><span className="text-sm text-muted">{xp.total} XP in all</span></div>
-              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}>
-                <div className="h-2.5 rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
-              </div>
-              <p className="mt-1 text-xs text-muted">{xp.level.toNext} XP to level {xp.level.level + 1}</p>
-            </div>
-          </div>
-        )}
-        <StatStrip label="Study totals" items={tiles.map(([label, value]) => ({ label, value }))} />
-        </div>
-        )}
-      </section>
-
       <PreferencesCard />
 
-      <section aria-labelledby="courses-title" className="space-y-2">
-        <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>
-        {courses.length === 0 ? <p className="text-sm text-muted">No courses yet. Add one in the Planner.</p> : (
-          <ul aria-label="Your courses" className="flex flex-wrap gap-2">
-            {courses.map(c => (
-              <li key={c.id}>
-                <Link href={`/courses/${c.id}`} className="inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-1.5 text-sm hover:bg-surface">
-                  <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: c.color }} />{c.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <p className="flex gap-4 text-sm text-muted">
-        <Link href="/settings" className="hover:text-fg">Settings</Link>
-        <Link href="/library" className="hover:text-fg">Library</Link>
-      </p>
+      </div>
     </div>
   )
 }
