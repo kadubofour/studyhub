@@ -13,7 +13,7 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
   await page.goto('/library')
   await page.getByRole('button', { name: 'Unsorted' }).click()
   await page.getByRole('checkbox', { name: 'Select all shown' }).check()
-  await page.getByLabel('Move to').selectOption({ label: 'Biology' })
+  await page.getByRole('radiogroup', { name: 'Move to' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('button', { name: 'Move', exact: true }).click()
   await expect(page.getByText('Moved 2 items.')).toBeVisible()
 

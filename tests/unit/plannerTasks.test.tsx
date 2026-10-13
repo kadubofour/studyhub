@@ -79,7 +79,7 @@ describe('Task list', () => {
     await click(screen.getByRole('button', { name: 'Edit Essay' }))
     expect(screen.getByRole('heading', { name: 'Edit task' })).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Essay draft' } })
-    fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'high' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'High' }))
     await click(screen.getByRole('button', { name: 'Save' }))
     expect(updateTask).toHaveBeenCalledWith({}, 't1', expect.objectContaining({ title: 'Essay draft', priority: 'high' }))
     expect(screen.getByRole('button', { name: 'Edit Essay draft' })).toBeTruthy()

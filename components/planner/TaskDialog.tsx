@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { Dialog } from '@/components/ui/Dialog'
 import { endOfLocalDay, localDayKey } from '@/lib/dates'
 import type { NewTask } from '@/lib/data/tasks'
@@ -38,26 +39,16 @@ function TaskForm({ initial, courses, tz, onClose, onSave, onDelete, onDone }: O
   return (
     <form onSubmit={submit} className="space-y-3">
       <label className="field"><span>Title</span><input value={title} onChange={e => { setTitle(e.target.value); setError(null) }} placeholder="Calc problem set" autoFocus /></label>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="field"><span>Type</span>
-          <select value={type} onChange={e => setType(e.target.value as TaskType)}>
-            <option value="other">Task</option><option value="assignment">Assignment</option>
-            <option value="exam">Exam</option><option value="reading">Reading</option>
-          </select>
-        </label>
-        <label className="field"><span>Priority</span>
-          <select value={priority} onChange={e => setPriority(e.target.value as Priority)}>
-            <option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option>
-          </select>
-        </label>
-        <label className="field"><span>Course</span>
-          <select value={courseId} onChange={e => setCourseId(e.target.value)}>
-            <option value="">No course</option>
-            {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </label>
-        <label className="field"><span>Due date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
+      <div className="field"><span>Type</span>
+        <ChoiceChips label="Type" value={type} options={[{ value: 'other', label: 'Task' }, { value: 'assignment', label: 'Assignment' }, { value: 'exam', label: 'Exam' }, { value: 'reading', label: 'Reading' }]} onChange={v => setType(v as TaskType)} />
       </div>
+      <div className="field"><span>Priority</span>
+        <ChoiceChips label="Priority" value={priority} options={[{ value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }]} onChange={v => setPriority(v as Priority)} />
+      </div>
+      <div className="field"><span>Course</span>
+        <ChoiceChips label="Course" value={courseId} options={[{ value: '', label: 'No course' }, ...courses.map(c => ({ value: c.id, label: c.name, color: c.color }))]} onChange={setCourseId} />
+      </div>
+      <label className="field"><span>Due date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       <div className="flex justify-between pt-1">
         <div className="flex gap-2">

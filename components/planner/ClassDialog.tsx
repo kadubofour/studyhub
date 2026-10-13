@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { Dialog } from '@/components/ui/Dialog'
 import type { ClassKind, ClassSlot, Course } from '@/lib/types'
 
@@ -37,22 +38,16 @@ function ClassForm({ initial, courses, onClose, onSave, onDelete }: Omit<Props, 
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <label className="field"><span>Course</span>
-        <select value={courseId} onChange={e => setCourseId(e.target.value)}>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </label>
+      <div className="field"><span>Course</span>
+        <ChoiceChips label="Course" value={courseId} options={courses.map(c => ({ value: c.id, label: c.name, color: c.color }))} onChange={setCourseId} />
+      </div>
+      <div className="field"><span>Day</span>
+        <ChoiceChips label="Day" value={String(day)} options={DAYS.map((d, i) => ({ value: String(i), label: d.slice(0, 3) }))} onChange={v => setDay(Number(v))} size="sm" />
+      </div>
+      <div className="field"><span>Type</span>
+        <ChoiceChips label="Type" value={kind} options={['lecture', 'lab', 'tutorial', 'seminar', 'other'].map(k => ({ value: k, label: k[0].toUpperCase() + k.slice(1) }))} onChange={v => setKind(v as ClassKind)} size="sm" />
+      </div>
       <div className="grid grid-cols-2 gap-2">
-        <label className="field"><span>Day</span>
-          <select value={day} onChange={e => setDay(Number(e.target.value))}>
-            {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
-          </select>
-        </label>
-        <label className="field"><span>Type</span>
-          <select value={kind} onChange={e => setKind(e.target.value as ClassKind)}>
-            {['lecture', 'lab', 'tutorial', 'seminar', 'other'].map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
-        </label>
         <label className="field"><span>Start</span><input type="time" value={start} onChange={e => { setStart(e.target.value); setError(null) }} /></label>
         <label className="field"><span>End</span><input type="time" value={end} onChange={e => { setEnd(e.target.value); setError(null) }} /></label>
       </div>

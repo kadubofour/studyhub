@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest'
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 
 let resolveUpdate: ((p: Profile) => void) | null = null
@@ -69,11 +69,11 @@ describe('Preferences follow the theme toggled elsewhere', () => {
   it('shows the theme chosen with the sidebar button, so saving System afterwards really saves it', async () => {
     function Toggle() { const { setProfile } = useProfile(); return <button onClick={() => setProfile(p => ({ ...p, theme: 'dark' }))}>sidebar dark</button> }
     render(<ProfileProvider initial={base}><ToastProvider><PreferencesCard /><Toggle /></ToastProvider></ProfileProvider>)
-    const select = screen.getByLabelText('Theme') as HTMLSelectElement
-    expect(select.value).toBe('system')
+    const theme = screen.getByRole('radiogroup', { name: 'Theme' })
+    expect(within(theme).getByRole('radio', { name: 'System' }).getAttribute('aria-checked')).toBe('true')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'sidebar dark' })) })
-    expect(select.value).toBe('dark')
-    fireEvent.change(select, { target: { value: 'system' } })
+    expect(within(theme).getByRole('radio', { name: 'Dark' }).getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(within(theme).getByRole('radio', { name: 'System' }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save changes' })) })
     expect(lastPatch).toEqual({ theme: 'system' })
   })

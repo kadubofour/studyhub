@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Search, Upload, type LucideIcon } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -117,10 +118,7 @@ export default function LibraryPage() {
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
               <input className="input w-full pl-9" placeholder="Search the library" aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
             </div>
-            <select className="input" aria-label="Sort" value={view.sort} onChange={e => setView(v => ({ ...v, sort: e.target.value as View['sort'] }))}>
-              <option value="recent">Newest first</option>
-              <option value="name">Name</option>
-            </select>
+            <ChoiceChips label="Sort" value={view.sort} options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} onChange={v => setView(prev => ({ ...prev, sort: v as View['sort'] }))} />
           </div>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {KINDS.map(k => (
@@ -137,12 +135,9 @@ export default function LibraryPage() {
               <span>{picked.length > 0 ? `${picked.length} selected` : plural(shown.length, 'item')}</span>
             </label>
             {picked.length > 0 && (
-              <div className="flex items-center gap-2">
-                <select className="input" aria-label="Move to" value={target} onChange={e => setTarget(e.target.value)}>
-                  <option value="">Move to…</option>
-                  <option value="none">Unsorted</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted">Move to</span>
+                <ChoiceChips label="Move to" value={target} options={[{ value: 'none', label: 'Unsorted' }, ...courses.map(c => ({ value: c.id, label: c.name, color: c.color }))]} onChange={setTarget} size="sm" />
                 <button type="button" className="btn-primary" disabled={!target || moving} onClick={() => { void move() }}>Move</button>
               </div>
             )}

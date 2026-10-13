@@ -64,7 +64,7 @@ test('Tasks: a ! makes it high priority, a task can be edited, finished into Don
 
   await page.getByRole('button', { name: 'Edit Essay' }).click()
   await page.getByLabel('Title').fill('Essay draft')
-  await page.getByRole('dialog').getByLabel('Course').selectOption({ label: 'Biology' })
+  await page.getByRole('dialog').getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Edit Essay draft' })).toBeVisible()
   await page.reload()
@@ -84,7 +84,7 @@ test('Tasks: the type chips filter the list', async ({ page }) => {
   await page.getByLabel('Add a task').fill('Call mum')
   await page.getByRole('button', { name: /^Add$/ }).click()
   await page.getByLabel('Add a task').fill('Midterm')
-  await page.getByLabel('Type', { exact: true }).selectOption('exam')
+  await page.getByRole('radio', { name: 'Exam' }).click()
   await page.getByRole('button', { name: /^Add$/ }).click()
   const chips = page.getByRole('group', { name: 'Task type' })
   await chips.getByRole('button', { name: /^Exams/ }).click()
