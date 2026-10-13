@@ -13,6 +13,11 @@ export async function listDecksWithDue(sb: SupabaseClient, now: Date): Promise<D
   })
 }
 
+// Decks without their cards: for lists that only need the names
+export async function listDecks(sb: SupabaseClient): Promise<{ id: string; course_id: string | null; name: string; created_at?: string }[]> {
+  return must(await sb.from('decks').select('id,course_id,name,created_at').order('created_at', { ascending: false }))
+}
+
 export async function createDeck(sb: SupabaseClient, input: { name: string; course_id?: string | null }): Promise<Deck> {
   return must(await sb.from('decks').insert(input).select('id,course_id,name').single())
 }
