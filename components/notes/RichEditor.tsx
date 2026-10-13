@@ -90,30 +90,6 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   const resolver = useMemo(() => makeImageResolver(supabase(), profile.id), [profile.id])
   // The picture being marked up: it becomes the drawing surface where it sits in the note
   const [editing, setEditing] = useState<NoteImageEditing | null>(null)
-  const startMarkup = useCallback(async (img: NoteImageInfo) => {
-    const url = await resolver(img.src).catch(() => null)
-    if (!url) { toast('That picture could not be opened right now.'); return }
-    setEditing({ pos: img.pos, src: img.src, url })
-  }, [resolver, toast])
-  const finishMarkup = useCallback(async (picture: Blob) => {
-    const ed = editorRef.current
-    if (!ed || !editing) return
-    await applyMarkup(ed, supabase(), profile.id, { kind: 'edit', pos: editing.pos, src: editing.src }, picture)
-    setEditing(null)
-  }, [editing, profile.id])
-  const cancelMarkup = useCallback(() => setEditing(null), [])
-  const imagesCtx = useMemo(() => ({ resolve: resolver, onMarkup: (img: NoteImageInfo) => void startMarkup(img), editing, finishMarkup, cancelMarkup }), [resolver, startMarkup, editing, finishMarkup, cancelMarkup])
-  // Draw: a blank white page goes into the note and is opened for drawing straight away
-  const draw = useCallback(async () => {
-    const ed = editorRef.current
-    if (!ed) return
-    try {
-      const token = await uploadNoteImage(supabase(), profile.id, await flatten(null, 1200, 800, []))
-      insertNoteImage(ed, token, 'Drawing')
-      const placed = noteImages(ed).find(i => i.src === token)
-      if (placed) await startMarkup(placed)
-    } catch { toast('Could not start a drawing.') }
-  }, [profile.id, startMarkup, toast])
   const pictureInput = useRef<HTMLInputElement>(null)
   const editorRef = useRef<Editor | null>(null)
   const addRef = useRef<(files: File[]) => void>(() => {})
@@ -155,6 +131,31 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   useEffect(() => {
     editor?.commands.setAutoMath(autoMath)
   }, [editor, autoMath])
+
+  const startMarkup = useCallback(async (img: NoteImageInfo) => {
+    const url = await resolver(img.src).catch(() => null)
+    if (!url) { toast('That picture could not be opened right now.'); return }
+    setEditing({ pos: img.pos, src: img.src, url })
+  }, [resolver, toast])
+  const finishMarkup = useCallback(async (picture: Blob) => {
+    const ed = editor
+    if (!ed || !editing) return
+    await applyMarkup(ed, supabase(), profile.id, { kind: 'edit', pos: editing.pos, src: editing.src }, picture)
+    setEditing(null)
+  }, [editor, editing, profile.id])
+  const cancelMarkup = useCallback(() => setEditing(null), [])
+  const imagesCtx = useMemo(() => ({ resolve: resolver, onMarkup: (img: NoteImageInfo) => void startMarkup(img), editing, finishMarkup, cancelMarkup }), [resolver, startMarkup, editing, finishMarkup, cancelMarkup])
+  // Draw: a blank white page goes into the note and is opened for drawing straight away
+  const draw = useCallback(async () => {
+    const ed = editor
+    if (!ed) return
+    try {
+      const token = await uploadNoteImage(supabase(), profile.id, await flatten(null, 1200, 800, []))
+      insertNoteImage(ed, token, 'Drawing')
+      const placed = noteImages(ed).find(i => i.src === token)
+      if (placed) await startMarkup(placed)
+    } catch { toast('Could not start a drawing.') }
+  }, [editor, profile.id, startMarkup, toast])
 
   // Pictures go in one after another: shrunk, stored in the student's folder, then written into the note. A reason is given when one cannot.
   useEffect(() => {
