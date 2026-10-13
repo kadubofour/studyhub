@@ -170,7 +170,7 @@ function Editor({ titleId, title, source, onCancel, onDone }: {
               <input value={text} onChange={e => setText(e.target.value)} maxLength={120} placeholder="Type, then click the picture" className="min-w-0 flex-1 rounded-lg border border-line bg-raised px-3 py-1.5" />
             </label>
           )}
-          <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-line bg-surface p-2">
+          <div role="group" aria-label="Drawing area" tabIndex={0} className="min-h-0 flex-1 overflow-auto rounded-lg border border-line bg-surface p-2">
             {loaded ? (
               <canvas ref={canvasRef} width={loaded.width} height={loaded.height} aria-label="Picture being marked up" role="img"
                 onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
