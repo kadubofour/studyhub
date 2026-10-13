@@ -34,7 +34,9 @@ export async function prepareImage(file: Blob, io: ImageIo = browserImageIo): Pr
   let decoded: Awaited<ReturnType<ImageIo['decode']>>
   try { decoded = await io.decode(file) } catch { throw new ImageError('unreadable') }
   const { width, height } = fitWithin(decoded.width, decoded.height, MAX_SIDE)
-  const out = await io.encode(decoded.source, width, height, 'image/webp', 0.85).catch(() => null)
+  // Safari cannot save WebP from a canvas, so JPEG is tried before giving up and storing the original at full size
+  const out = (await io.encode(decoded.source, width, height, 'image/webp', 0.85).catch(() => null))
+    ?? (await io.encode(decoded.source, width, height, 'image/jpeg', 0.85).catch(() => null))
   const best = out ?? file
   if (best.size > MAX_BYTES) throw new ImageError('big')
   return best

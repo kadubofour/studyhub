@@ -174,7 +174,7 @@ function Editor({ titleId, title, source, onCancel, onDone }: {
             {loaded ? (
               <canvas ref={canvasRef} width={loaded.width} height={loaded.height} aria-label="Picture being marked up" role="img"
                 onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-                className="mx-auto block h-auto max-w-full touch-none bg-white" style={{ cursor: tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair' }} />
+                className="mx-auto block h-auto max-h-[62vh] w-auto max-w-full touch-none bg-white" style={{ cursor: tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair' }} />
             ) : <p className="p-6 text-sm text-muted">Opening the picture…</p>}
           </div>
         </>

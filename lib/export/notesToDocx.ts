@@ -171,7 +171,11 @@ export async function notesToDocx(notes: ExportNote[], loadImage?: ImageLoader):
   loaded = new Map()
   if (loadImage) {
     const files = [...new Set(notes.flatMap(n => imageFilesIn(n.content_md)))]
-    await Promise.all(files.map(async f => { const pic = await loadImage(f).catch(() => null); if (pic) loaded.set(f, pic) }))
+    // A few at a time: every picture is decoded in memory while it waits
+    const queue = [...files]
+    await Promise.all(Array.from({ length: Math.min(3, files.length) }, async () => {
+      for (let f = queue.shift(); f !== undefined; f = queue.shift()) { const pic = await loadImage(f).catch(() => null); if (pic) loaded.set(f, pic) }
+    }))
   }
   const children = notes.flatMap((n, i) => [
     ...(i > 0 ? [new Paragraph({ children: [new PageBreak()] })] : []),

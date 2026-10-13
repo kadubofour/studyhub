@@ -27,8 +27,15 @@ function PrintNotes() {
     if (!notes?.length) return
     document.title = notes.length === 1 ? notes[0].title : 'Studyhub notes'
     // Wait for fonts so the PDF doesn't capture fallback glyphs
-    const t = setTimeout(() => { void document.fonts.ready.then(() => window.print()) }, 400)
-    return () => clearTimeout(t)
+    // ...and for the pictures, which are fetched after the page draws (but not for ever if one cannot be reached)
+    const started = Date.now()
+    const ready = () => !document.querySelector('[data-pending-image]') && Array.from(document.images).every(i => i.complete)
+    const t = setInterval(() => {
+      if (!ready() && Date.now() - started < 15_000) return
+      clearInterval(t)
+      void document.fonts.ready.then(() => window.print())
+    }, 400)
+    return () => clearInterval(t)
   }, [notes])
 
   if (failed) return <p className="p-8 text-sm text-muted">Couldn&apos;t load these notes. Go back to Notes and try exporting again.</p>

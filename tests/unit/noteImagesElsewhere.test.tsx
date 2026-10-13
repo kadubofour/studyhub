@@ -5,7 +5,7 @@ import JSZip from 'jszip'
 
 vi.mock('@/lib/supabase/client', () => ({
   supabase: () => ({
-    auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
+    auth: { getSession: async () => ({ data: { session: { user: { id: 'u1' } } } }) },
     storage: { from: () => ({ createSignedUrl: async (p: string) => ({ data: { signedUrl: `https://s.test/${p}` }, error: null }) }) },
   }),
 }))

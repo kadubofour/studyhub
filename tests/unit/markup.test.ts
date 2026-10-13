@@ -113,6 +113,12 @@ describe('flatten', () => {
     expect(calls).toContain('drawImage(obj,0,0,800,600)')
     expect(calls).toContain('stroke()')
   })
+  it('saves a JPEG when the browser cannot save WebP (Safari)', async () => {
+    const { ctx } = fakeCtx()
+    const toBlob = (cb: BlobCallback, type?: string) => cb(type === 'image/webp' ? new Blob(['x'], { type: 'image/png' }) : new Blob(['x'], { type }))
+    const canvas = { getContext: () => ctx, toBlob } as unknown as HTMLCanvasElement
+    expect((await flatten(null, 10, 10, [], () => canvas)).type).toBe('image/jpeg')
+  })
   it('leaves out the picture for a blank page, and says so when the file cannot be made', async () => {
     const { ctx, calls } = fakeCtx()
     const canvas = { getContext: () => ctx, toBlob: (cb: BlobCallback) => cb(null) } as unknown as HTMLCanvasElement

@@ -64,6 +64,11 @@ function PictureButton({ input }: { input: React.RefObject<HTMLInputElement | nu
 }
 
 const isPicture = (f: File) => ACCEPTED.includes(f.type)
+function onlyPicture(data: DataTransfer | null): boolean {
+  const html = (data?.getData('text/html') ?? '').replace(/<!--[\s\S]*?-->|<meta[^>]*>/gi, '').trim()
+  const text = (data?.getData('text/plain') ?? '').trim()
+  return (!html || /^<img[^>]*>$/i.test(html)) && !text
+}
 // The description a picture gets from its file name: "Krebs cycle.png" -> "Krebs cycle"; a screenshot's "image.png" gets none
 const altFrom = (name: string) => { const n = name.replace(/\.[^.]+$/, '').trim(); return /^(image|screenshot|untitled)\d*$/i.test(n) ? '' : n.slice(0, 120) }
 
@@ -105,7 +110,8 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
       // A picture pasted (a screenshot) or dropped on the note goes in; anything else is left to the editor
       handlePaste: (_view, event) => {
         const files = Array.from(event.clipboardData?.files ?? []).filter(isPicture)
-        if (!files.length) return false
+        // Office puts a picture of the copied text or table beside the text itself: only a paste that is just a picture goes in as one
+        if (!files.length || !onlyPicture(event.clipboardData)) return false
         event.preventDefault(); addRef.current(files); return true
       },
       handleDrop: (view, event, _slice, moved) => {

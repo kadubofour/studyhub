@@ -64,7 +64,8 @@ export async function flatten(
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height)
   if (base) ctx.drawImage(base, 0, 0, width, height)
   drawMarks(ctx, marks, width)
-  const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/webp', 0.85))
+  const save = (type: string) => new Promise<Blob | null>(r => canvas.toBlob(b => r(b && b.type === type ? b : null), type, 0.85))
+  const blob = (await save('image/webp')) ?? (await save('image/jpeg')) // Safari cannot save WebP
   if (!blob) throw new Error('could not save')
   return blob
 }

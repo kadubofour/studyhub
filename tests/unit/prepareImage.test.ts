@@ -35,6 +35,12 @@ describe('prepareImage', () => {
     await prepareImage(blob('image/jpeg', 300_000), i)
     expect(i.encode).toHaveBeenCalledWith({}, 800, 600, 'image/webp', 0.85)
   })
+  it('saves as JPEG, shrunk, when the browser cannot save WebP (Safari)', async () => {
+    const encode = vi.fn(async (_s: unknown, _w: number, _h: number, type: string) => (type === 'image/webp' ? null : blob(type, 3000)))
+    const out = await prepareImage(blob('image/jpeg', 9_000_000), io({ encode }))
+    expect(out.type).toBe('image/jpeg')
+    expect(encode).toHaveBeenCalledWith({}, MAX_SIDE, 800, 'image/jpeg', 0.85)
+  })
   it('keeps the original when it cannot be re-saved and is already small enough', async () => {
     const original = blob('image/png', 1000)
     const out = await prepareImage(original, io({ encode: vi.fn(async () => null) }))

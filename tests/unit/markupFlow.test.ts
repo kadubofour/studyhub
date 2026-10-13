@@ -22,15 +22,15 @@ beforeEach(() => { upload.mockClear().mockResolvedValue('studyhub-image:new.webp
 afterEach(() => { while (editors.length) editors.pop()!.destroy() })
 
 describe('putting finished markup in the note', () => {
-  it('swaps the marked-up picture in for the one it started from and removes the old file', async () => {
+  it('swaps the marked-up picture in for the one it started from, and keeps the old file for undo and copies', async () => {
     const e = make('Intro\n\n![Cell](studyhub-image:old.webp)\n\nEnd')
     const [img] = noteImages(e)
     await applyMarkup(e, sb, 'u1', { kind: 'edit', pos: img.pos, src: img.src }, blob)
     expect(e.getMarkdown()).toBe('Intro\n\n![Cell](studyhub-image:new.webp)\n\nEnd') // same place, same description
     expect(upload).toHaveBeenCalledWith(sb, 'u1', blob)
-    expect(remove).toHaveBeenCalledWith(sb, 'u1', ['old.webp'])
+    expect(remove).not.toHaveBeenCalled() // undo, or the same picture in another note, may still need it
   })
-  it('keeps the old file while another picture in the note still uses it', async () => {
+  it('swaps only the picture that was marked when two use the same file', async () => {
     const e = make('![a](studyhub-image:old.webp)\n\n![b](studyhub-image:old.webp)')
     const [first] = noteImages(e)
     await applyMarkup(e, sb, 'u1', { kind: 'edit', pos: first.pos, src: first.src }, blob)
@@ -56,13 +56,6 @@ describe('putting finished markup in the note', () => {
     await applyMarkup(e, sb, 'u1', { kind: 'draw' }, blob)
     expect(e.getMarkdown()).toContain('![Drawing](studyhub-image:new.webp)')
     expect(remove).not.toHaveBeenCalled()
-  })
-  it('does not fail the save if clearing the old file fails', async () => {
-    remove.mockRejectedValue(new Error('offline'))
-    const e = make('![Cell](studyhub-image:old.webp)')
-    const [img] = noteImages(e)
-    await expect(applyMarkup(e, sb, 'u1', { kind: 'edit', pos: img.pos, src: img.src }, blob)).resolves.toBeUndefined()
-    expect(e.getMarkdown()).toContain('new.webp')
   })
   it('leaves the note alone when the upload fails', async () => {
     upload.mockRejectedValue(new Error('offline'))

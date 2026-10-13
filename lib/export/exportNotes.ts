@@ -16,6 +16,7 @@ function imageLoader(userId: string): ImageLoader {
     const canvas = document.createElement('canvas')
     canvas.width = bitmap.width; canvas.height = bitmap.height
     canvas.getContext('2d')!.drawImage(bitmap, 0, 0)
+    bitmap.close()
     const png = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/png'))
     return png ? { data: new Uint8Array(await png.arrayBuffer()), width: bitmap.width, height: bitmap.height, type: 'png' } : null
   }

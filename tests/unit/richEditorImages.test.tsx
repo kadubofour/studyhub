@@ -29,6 +29,11 @@ const open = async (markdown = '') => {
   await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RichEditor markdown={markdown} onChange={m => { md = m }} onReady={e => { editor = e }} onMarkup={() => {}} onDraw={() => {}} /></ToastProvider></ProfileProvider>) })
 }
 const png = (name = 'cell.png') => new File([new Uint8Array(10)], name, { type: 'image/png' })
+// jsdom has no layout; ProseMirror asks for it when it scrolls a new picture into view
+const noRects = () => [] as unknown as DOMRectList
+Range.prototype.getClientRects ??= noRects
+Element.prototype.getClientRects ??= noRects
+Range.prototype.getBoundingClientRect ??= () => new DOMRect()
 beforeEach(() => { md = ''; editor = null; prepare.mockClear().mockImplementation(async f => f); upload.mockClear().mockResolvedValue('studyhub-image:new1.webp') })
 afterEach(cleanup)
 
@@ -61,6 +66,13 @@ describe('adding pictures', () => {
     const el = screen.getByLabelText('Note')
     await act(async () => { fireEvent.paste(el, { clipboardData: { files: [png('image.png')], items: [], types: ['Files'], getData: () => '' } }) })
     await waitFor(() => expect(md).toContain('studyhub-image:new1.webp'))
+  })
+  it('does not turn a paste of text or a table from Office into a picture', async () => {
+    await open('Hello')
+    // Office puts a picture of the copied cells next to the cells; the editor's paste handler is called as the browser would, and leaves it to the editor
+    const event = { clipboardData: { files: [png('image.png')], getData: (t: string) => (t === 'text/html' ? '<table><tr><td>1</td></tr></table>' : t === 'text/plain' ? '1' : '') }, preventDefault: vi.fn() } as unknown as ClipboardEvent
+    expect(editor!.view.someProp('handlePaste', f => f(editor!.view, event, Slice.empty))).toBeFalsy()
+    expect(upload).not.toHaveBeenCalled()
   })
   it('puts in a picture dropped on the note', async () => {
     await open('Hello')
