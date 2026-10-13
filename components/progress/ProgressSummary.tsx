@@ -36,7 +36,7 @@ export function ProgressSummary({ xp, stats }: { xp: XpSummary | null; stats: { 
         <div className={xp ? '' : 'md:col-span-2'}><StatStrip label="Study stats" items={stats} columns={2} /></div>
       </div>
       {xp && (
-        <div className="border-t border-line pt-4">
+        <div>
           <h2 className="mb-2 text-sm font-medium">XP, last 14 days</h2>
           <div className="flex h-20 items-end gap-1" role="img" aria-label={`XP per day, last 14 days. ${xp.last14.map(d => `${d.day}: ${d.xp} XP`).join('; ')}`}>
             {xp.last14.map(d => (

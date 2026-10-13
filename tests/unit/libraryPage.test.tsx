@@ -23,7 +23,7 @@ const requestUpload = vi.fn()
 let movedCount: number | null = null
 const moveItems = vi.fn(async (_sb: unknown, picked: unknown[], _course: unknown) => movedCount ?? picked.length)
 const loadLibrary = vi.fn(async () => { if (loadFails) throw new Error('offline'); return items })
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search) }))
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search), useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses, createCourse: vi.fn(), updateCourse: vi.fn(), deleteCourse: vi.fn() }))
 vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (sb: unknown, p: unknown[], c: unknown) => moveItems(sb, p, c) }))
@@ -74,6 +74,11 @@ describe('Library', () => {
       expect(rows().map(t => t.includes('Loose thoughts') || t.includes('Why the matrix'))).toEqual([true, true])
       await click(screen.getByRole('button', { name: 'All' }))
       expect(rows()).toHaveLength(7)
+    })
+    it('has quick ways to start a note or a deck', async () => {
+      await open()
+      expect(screen.getByRole('button', { name: 'New note' })).toBeTruthy()
+      expect(screen.getByRole('link', { name: 'New deck' }).getAttribute('href')).toBe('/flashcards?new=1')
     })
     it('opens on a course named in the address', async () => {
       search = 'course=bio'

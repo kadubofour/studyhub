@@ -7,6 +7,7 @@ import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -98,6 +99,8 @@ export default function LibraryPage() {
       <PageHeader title="Library" actions={items.length > 0 && (
         <>
           {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
+          <NewNoteButton className="btn" />
+          <Link href="/flashcards?new=1" className="btn"><Layers size={14} aria-hidden />New deck</Link>
           <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
         </>
       )} />

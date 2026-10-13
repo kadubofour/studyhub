@@ -110,7 +110,7 @@ describe('Profile page: what the student has done', () => {
   it('shows the totals as an open strip of big figures, not a grid of icon boxes', async () => {
     await open()
     const strip = screen.getByRole('list', { name: 'Study totals' })
-    expect(strip.className).toContain('border-y')
+    expect(strip.className).not.toContain('border') // no lines between the figures
     for (const li of within(strip).getAllByRole('listitem')) expect(li.querySelector('svg'), li.textContent ?? '').toBeNull()
   })
   it('shows the level as a ring with the number in it', async () => {

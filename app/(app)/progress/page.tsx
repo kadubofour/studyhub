@@ -4,6 +4,9 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { QuizScores } from '@/components/progress/QuizScores'
 import { TopicsSection } from '@/components/progress/TopicsSection'
 import { ProgressSummary } from '@/components/progress/ProgressSummary'
+import { NewNoteButton } from '@/components/quick/NewNoteButton'
+import { QuickActions } from '@/components/quick/QuickActions'
+import { Layers, MessagesSquare, Timer } from 'lucide-react'
 import { useXp } from '@/components/xp/useXp'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -62,6 +65,12 @@ export default function ProgressPage() {
         { label: 'Best streak', value: `${streak.best} ${streak.best === 1 ? 'day' : 'days'}` },
         { label: 'Focus this week', value: fmtMin(thisWeek) },
         { label: 'Retention (30 days)', value: ret === null ? '—' : `${Math.round(ret * 100)}%` },
+      ]} />
+      <QuickActions label="Quick actions" actions={[
+        { label: 'Start focus', icon: Timer, href: '/focus' },
+        { label: 'Review cards', icon: Layers, href: '/review' },
+        { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
+        { node: <NewNoteButton /> },
       ]} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <section className="card">

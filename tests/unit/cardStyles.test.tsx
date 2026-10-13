@@ -55,6 +55,10 @@ describe('StatStrip (C)', () => {
     expect(list.className).toContain('grid-cols-2')
     expect(list.className).not.toContain('md:grid-cols-4')
   })
+  it('has no lines between or around the figures', () => {
+    const { container } = render(<StatStrip label="x" items={[{ label: 'A', value: '1' }, { label: 'B', value: '2' }, { label: 'C', value: '3' }]} />)
+    expect(container.innerHTML).not.toContain('border')
+  })
   it('says nothing for no items', () => {
     const { container } = render(<StatStrip label="x" items={[]} />)
     expect(container.firstElementChild).toBeNull()

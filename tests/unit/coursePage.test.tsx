@@ -86,6 +86,11 @@ describe('Course page', () => {
     expect(createChat).toHaveBeenCalledWith({}, expect.objectContaining({ course_id: 'bio' }))
     expect(push).toHaveBeenCalledWith('/tutor/chat1')
   })
+  it('can start a note or a deck in this course from the header', async () => {
+    await open()
+    expect(screen.getByRole('button', { name: 'New note' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'New deck' }).getAttribute('href')).toBe('/flashcards?new=1&course=bio')
+  })
   it('Upload opens the upload dialog and Library opens on this course', async () => {
     await open()
     await click(screen.getByRole('button', { name: /Upload/ }))

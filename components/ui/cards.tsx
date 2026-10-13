@@ -34,13 +34,13 @@ export function SplitCard({ color, icon: Icon, value, title, sub, href }: { colo
   ))
 }
 
-// C. Open strip: big figures on the page divided by thin rules, no boxes. For study totals.
+// C. Open strip: big figures laid out on the page, with room between them and no lines or boxes. For study totals.
 export function StatStrip({ label, items, columns = 4 }: { label: string; items: { label: string; value: string; sub?: string }[]; columns?: 2 | 4 }) {
   if (items.length === 0) return null
   return (
-    <ul aria-label={label} className={`grid grid-cols-2 border-y border-line ${columns === 4 ? 'md:grid-cols-4' : ''}`}>
-      {items.map((it, i) => (
-        <li key={it.label} className={`px-4 py-3.5 ${i % 2 === 1 ? 'border-l border-line' : ''} ${columns === 4 ? `md:border-l ${i % 4 === 0 ? 'md:border-l-0' : ''}` : ''} ${i >= 2 ? 'border-t border-line' : ''} ${columns === 4 ? (i >= 4 ? 'md:border-t' : 'md:border-t-0') : ''}`}>
+    <ul aria-label={label} className={`grid grid-cols-2 gap-x-6 gap-y-5 ${columns === 4 ? 'md:grid-cols-4' : ''}`}>
+      {items.map(it => (
+        <li key={it.label} className="min-w-0">
           <div className="text-xs text-muted">{it.label}</div>
           <div className="mt-0.5 truncate text-3xl font-medium leading-tight">{it.value}</div>
           {it.sub && <div className="text-xs text-muted">{it.sub}</div>}
