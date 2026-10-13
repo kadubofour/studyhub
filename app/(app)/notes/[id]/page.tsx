@@ -12,6 +12,10 @@ import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
 import { FindBar } from '@/components/notes/FindBar'
 import { EquationDialog, type EquationInit } from '@/components/notes/EquationDialog'
+import { ImageMarkup } from '@/components/notes/ImageMarkup'
+import { applyMarkup, type MarkupTarget } from '@/components/notes/markupFlow'
+import type { NoteImageInfo } from '@/components/notes/NoteImagesContext'
+import { makeImageResolver } from '@/lib/notes/images'
 import { requestUpload } from '@/lib/scan/events'
 import { findMatches, findKey, wrap, highlightInElement, clearElementHighlights } from '@/components/notes/findInNote'
 import type { EditMath } from '@/components/notes/extensions'
@@ -73,6 +77,8 @@ function NoteEditor({ id }: { id: string }) {
   useEffect(() => { if (studyParam) router.replace(`/notes/${id}`) }, [studyParam, id, router])
   const [equation, setEquation] = useState<EquationEdit | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
+  // The markup tool: open on a picture from the note (with a link to draw on), or on a blank page for a sketch
+  const [markup, setMarkup] = useState<{ seq: number; target: MarkupTarget; url: string | null } | null>(null)
   const [draft, setDraft] = useState<Note | null>(null)
   // Ref holds the latest draft: the Tiptap onUpdate callback is created once, so reading
   // `draft` state from it would merge onto a stale copy and drop title/course edits.
@@ -172,6 +178,17 @@ function NoteEditor({ id }: { id: string }) {
     const end = ta?.selectionEnd ?? cur.length
     change({ content_md: cur.slice(0, start) + text + cur.slice(end) })
     requestAnimationFrame(() => { ta?.focus(); ta?.setSelectionRange(start + text.length, start + text.length) })
+  }
+
+  async function openMarkup(img: NoteImageInfo) {
+    const url = await makeImageResolver(supabase(), profile.id)(img.src).catch(() => null)
+    if (!url) { toast('That picture couldn\'t be opened right now.'); return }
+    setMarkup({ seq: Date.now(), target: { kind: 'edit', pos: img.pos, src: img.src }, url })
+  }
+  async function finishMarkup(picture: Blob) {
+    if (!editor || !markup) return
+    await applyMarkup(editor, supabase(), profile.id, markup.target, picture)
+    setMarkup(null)
   }
 
   function saveEquation(latex: string, display: boolean) {
@@ -274,7 +291,8 @@ function NoteEditor({ id }: { id: string }) {
               onChange={e => change({ title: e.target.value })} aria-label="Title" />
             {mode === 'rich' ? (
               <RichEditor key={`rich-${note.id}`} markdown={draft.content_md} onChange={md => change({ content_md: md })}
-                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} autoMath={profile.auto_math} />
+                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} autoMath={profile.auto_math}
+                onMarkup={img => void openMarkup(img)} onDraw={() => setMarkup({ seq: Date.now(), target: { kind: 'draw' }, url: null })} />
             ) : (
               <div className="mt-4 grid gap-6 md:grid-cols-2">
                 <textarea ref={markdownRef} className="input min-h-[70vh] font-mono text-[13px]" value={draft.content_md} aria-label="Markdown"
@@ -294,6 +312,10 @@ function NoteEditor({ id }: { id: string }) {
         )}
       </div>
       {studyOpen && <StudyPanel note={draft} initialTab={firstTab} onClose={() => setStudyOpen(false)} prepare={flush} applyContent={applyContent} />}
+      {markup && (
+        <ImageMarkup key={markup.seq} open title={markup.target.kind === 'draw' ? 'Draw' : 'Markup'}
+          source={markup.url ? { url: markup.url } : { blank: true }} onCancel={() => setMarkup(null)} onDone={finishMarkup} />
+      )}
       {equation && (
         <EquationDialog key={equation.seq} open initial={equation.initial} onClose={() => setEquation(null)} onSave={saveEquation} />
       )}
