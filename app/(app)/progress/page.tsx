@@ -73,7 +73,7 @@ export default function ProgressPage() {
             {weeks.map((days, i) => (
               <div key={i} className="grid gap-1">
                 {days.map(k => (
-                  <div key={k} title={`${k}: ${fmtMin(minutes.get(k) ?? 0)}`} className="aspect-square w-full rounded-md"
+                  <div key={k} title={`${k}: ${fmtMin(minutes.get(k) ?? 0)}`} className="h-6 w-full rounded-md"
                     style={{ background: k > today ? 'transparent' : LEVELS[level(minutes.get(k) ?? 0)] }} />
                 ))}
               </div>

@@ -33,7 +33,7 @@ test('a new student starts at level 1; ticking a task and finishing a quiz earn 
   await expect(bar).toHaveAttribute('aria-valuetext', '15 of 50 XP')
 
   await page.goto('/progress')
-  const xp = page.locator('section', { has: page.getByRole('heading', { name: 'XP', exact: true }) })
+  const xp = page.getByRole('region', { name: 'Your progress' })
   await expect(xp.getByText('15 XP', { exact: true })).toBeVisible()
   await expect(xp.getByText('15 of 50 XP to level 2')).toBeVisible()
 })

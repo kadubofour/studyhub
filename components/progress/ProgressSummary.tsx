@@ -33,7 +33,7 @@ export function ProgressSummary({ xp, stats }: { xp: XpSummary | null; stats: { 
             </div>
           </div>
         )}
-        <div className={xp ? '' : 'md:col-span-2'}><StatStrip label="Study stats" items={stats} /></div>
+        <div className={xp ? '' : 'md:col-span-2'}><StatStrip label="Study stats" items={stats} columns={2} /></div>
       </div>
       {xp && (
         <div className="border-t border-line pt-4">

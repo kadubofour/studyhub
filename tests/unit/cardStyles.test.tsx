@@ -49,6 +49,12 @@ describe('StatStrip (C)', () => {
     expect(items[0].textContent).toContain('12')
     expect(items[2].textContent).toContain('this week')
   })
+  it('can stay two columns wide, for a narrow space, so figures never get cut short', () => {
+    render(<StatStrip label="Four" columns={2} items={[{ label: 'A', value: '1' }, { label: 'B', value: '2' }, { label: 'C', value: '3' }, { label: 'D', value: '4' }]} />)
+    const list = screen.getByRole('list', { name: 'Four' })
+    expect(list.className).toContain('grid-cols-2')
+    expect(list.className).not.toContain('md:grid-cols-4')
+  })
   it('says nothing for no items', () => {
     const { container } = render(<StatStrip label="x" items={[]} />)
     expect(container.firstElementChild).toBeNull()
