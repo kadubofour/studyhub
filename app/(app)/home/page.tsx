@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
 import { TintTile } from '@/components/ui/cards'
+import { HeroFocus } from '@/components/home/HeroFocus'
 import { useLook } from '@/components/providers/useLook'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
@@ -126,6 +127,7 @@ export default function HomePage() {
         {bold ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
+            <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} />
             {xp && look === 'playful' && ( // the top bar (Classic, Vivid) shows these
               <div className="flex flex-wrap gap-2 text-sm font-medium">
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
@@ -190,7 +192,7 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-4">
-          <div className="card text-center">
+          {!bold && <div className="card text-center">
             <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
             <div className="font-mono text-4xl font-semibold tracking-tight">{fmtClock(remainingMs(focus.timer, focus.now))}</div>
             <div className="mt-3 flex justify-center gap-2">
@@ -199,7 +201,7 @@ export default function HomePage() {
               </button>
               <Link href="/focus" className="btn">Open</Link>
             </div>
-          </div>
+          </div>}
           <div className="card">
             <h2 className="section-label">This week</h2>
             <div className="flex h-24 items-end gap-2" role="img" aria-label="Focus minutes per day this week">
