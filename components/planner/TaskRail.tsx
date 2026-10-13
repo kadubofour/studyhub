@@ -36,7 +36,7 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
             return (
               <button key={t.id} type="button" aria-pressed={on} onClick={() => onType(t.id)}
                 className={`flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm transition ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
-                <span>{t.label}</span><span className="text-xs">{typeCounts[t.id]}</span>
+                <span>{t.label}</span>{' '}<span className="text-xs">{typeCounts[t.id]}</span>
               </button>
             )
           })}
