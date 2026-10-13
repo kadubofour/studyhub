@@ -66,7 +66,7 @@ describe('adding pictures', () => {
     await open('Hello')
     // jsdom has no layout for the drop position, so the editor's drop handler is called as the browser would
     const event = { dataTransfer: { files: [png('dropped.png')] }, clientX: 5, clientY: 5, preventDefault: vi.fn() } as unknown as DragEvent
-    let handled: boolean | undefined
+    let handled: unknown
     await act(async () => { handled = editor!.view.someProp('handleDrop', f => f(editor!.view, event, Slice.empty, false)) })
     expect(handled).toBe(true)
     await waitFor(() => expect(md).toContain('studyhub-image:new1.webp'))

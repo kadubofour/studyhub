@@ -5,6 +5,7 @@ import { PenLine, Trash2 } from 'lucide-react'
 import { NoteImagesContext } from './NoteImagesContext'
 import { isImageToken } from '@/lib/notes/images'
 
+/* eslint-disable @next/next/no-img-element -- signed links, not optimisable by next/image */
 const isWeb = (src: string) => /^https?:\/\//i.test(src)
 
 // A picture in a note: drawn from its address once that is known, with Markup and Remove on it while it is selected.

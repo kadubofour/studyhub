@@ -1,6 +1,6 @@
 import {
   AlignmentType, Document, ExternalHyperlink, HeadingLevel, ImportedXmlComponent, LevelFormat, Packer, PageBreak,
-  Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType, type ParagraphChild,
+  ImageRun, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType, type ParagraphChild,
 } from 'docx'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
@@ -8,8 +8,16 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import type { Root, RootContent, PhrasingContent, List } from 'mdast'
 import { latexToOmml, stripControl } from './mathToOmml'
+import { imageFilesIn, isImageToken, tokenFile } from '@/lib/notes/images'
 
 export interface ExportNote { title: string; course: string | null; content_md: string }
+
+/** A picture ready for the document: PNG/JPEG bytes and the size it was made at */
+export interface DocxImage { data: Uint8Array; width: number; height: number; type: 'png' | 'jpg' }
+/** Fetches the picture a studyhub-image token stands for; null when it cannot be had */
+export type ImageLoader = (file: string) => Promise<DocxImage | null>
+const MAX_WIDTH = 520 // points on a page with normal margins
+let loaded = new Map<string, DocxImage>()
 
 type Marks = { bold?: boolean; italics?: boolean; strike?: boolean }
 const HEADINGS = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6]
@@ -38,9 +46,16 @@ function inline(nodes: PhrasingContent[], marks: Marks = {}): ParagraphChild[] {
       case 'link':
         out.push(new ExternalHyperlink({ link: n.url, children: [new TextRun({ text: textOf(n.children), style: 'Hyperlink', ...marks })] }))
         break
-      case 'image':
+      case 'image': {
+        const pic = isImageToken(n.url) ? loaded.get(tokenFile(n.url) ?? '') : undefined
+        if (pic) {
+          const w = Math.min(pic.width, MAX_WIDTH)
+          out.push(new ImageRun({ type: pic.type, data: pic.data, transformation: { width: w, height: Math.round(pic.height * w / pic.width) }, altText: { name: n.alt || 'Picture', title: n.alt || 'Picture', description: n.alt || 'Picture' } }))
+          break
+        }
         out.push(new TextRun({ text: `[Image: ${n.alt || n.url}]`, italics: true, color: '6B6A65' }))
         break
+      }
       case 'inlineMath': out.push(mathXml(n.value, false) ?? new TextRun({ text: `$${n.value}$`, ...marks })); break
       default:
         if ('children' in n) out.push(...inline(n.children as PhrasingContent[], marks))
@@ -151,8 +166,13 @@ export function noteParagraphs(note: ExportNote): (Paragraph | Table)[] {
   return [...head, ...tree.children.flatMap(n => block(n, { level: 0 }))]
 }
 
-export async function notesToDocx(notes: ExportNote[]): Promise<Blob> {
+export async function notesToDocx(notes: ExportNote[], loadImage?: ImageLoader): Promise<Blob> {
   orderedLists = []
+  loaded = new Map()
+  if (loadImage) {
+    const files = [...new Set(notes.flatMap(n => imageFilesIn(n.content_md)))]
+    await Promise.all(files.map(async f => { const pic = await loadImage(f).catch(() => null); if (pic) loaded.set(f, pic) }))
+  }
   const children = notes.flatMap((n, i) => [
     ...(i > 0 ? [new Paragraph({ children: [new PageBreak()] })] : []),
     ...noteParagraphs(n),
