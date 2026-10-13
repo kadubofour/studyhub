@@ -72,8 +72,9 @@ test('Tasks: a ! makes it high priority, a task can be edited, finished into Don
 
   await page.getByLabel('Mark Essay draft done').click()
   await expect(page.getByRole('button', { name: 'Edit Essay draft' })).toHaveCount(0)
-  await page.getByRole('button', { name: /Done \(1\)/ }).click()
-  await page.getByRole('region', { name: 'Done' }).getByLabel('Mark Essay draft done').click()
+  await page.getByRole('button', { name: /^Done 1/ }).click()
+  await page.getByLabel('Mark Essay draft done').click()
+  await page.getByRole('button', { name: /^All tasks/ }).click()
   await expect(page.getByRole('button', { name: 'Edit Essay draft' })).toBeVisible()
 })
 

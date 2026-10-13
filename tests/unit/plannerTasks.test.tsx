@@ -105,18 +105,17 @@ describe('Task list', () => {
     await click(within(chips).getByRole('button', { name: /^All/ }))
     expect(screen.getByRole('button', { name: 'Edit Lab report' })).toBeTruthy()
   })
-  it('keeps finished tasks in a Done section, which can bring one back', async () => {
+  it('keeps finished tasks in the Done list, which can bring one back', async () => {
     open = [task('t1', 'Essay')]
     done = [task('t2', 'Old lab', { done_at: '2026-10-10T10:00:00Z' })]
     await load()
-    const section = screen.getByRole('region', { name: 'Done' })
-    expect(within(section).queryByText('Old lab')).toBeNull() // folded away until opened
-    await click(within(section).getByRole('button', { name: /Done \(1\)/ }))
-    expect(within(section).getByText('Old lab')).toBeTruthy()
-    await click(within(section).getByLabelText('Mark Old lab done'))
+    expect(screen.queryByText('Old lab')).toBeNull() // not among the open tasks
+    await click(screen.getByRole('button', { name: /^Done/ }))
+    expect(screen.getByRole('heading', { name: 'Done' })).toBeTruthy()
+    await click(screen.getByLabelText('Mark Old lab done'))
     expect(setTaskDone).toHaveBeenCalledWith({}, 't2', false)
+    await click(screen.getByRole('button', { name: /^All tasks/ }))
     expect(screen.getByRole('button', { name: 'Edit Old lab' })).toBeTruthy() // back in the list
-    expect(screen.queryByRole('region', { name: 'Done' })).toBeNull() // nothing left to show
   })
   it('a task ticked off moves to Done at once', async () => {
     open = [task('t1', 'Essay')]
@@ -124,11 +123,11 @@ describe('Task list', () => {
     await click(screen.getByLabelText('Mark Essay done'))
     expect(setTaskDone).toHaveBeenCalledWith({}, 't1', true)
     expect(screen.queryByRole('button', { name: 'Edit Essay' })).toBeNull()
-    expect(screen.getByRole('button', { name: /Done \(1\)/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^Done 1/ })).toBeTruthy()
   })
-  it('has no Done section when nothing is finished', async () => {
+  it('shows a Done count of nothing when nothing is finished', async () => {
     open = [task('t1', 'Essay')]
     await load()
-    expect(screen.queryByRole('region', { name: 'Done' })).toBeNull()
+    expect(screen.getByRole('button', { name: /^Done 0/ })).toBeTruthy()
   })
 })

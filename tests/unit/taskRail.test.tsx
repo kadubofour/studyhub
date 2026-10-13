@@ -14,7 +14,7 @@ describe('TaskRail', () => {
   it('lists the task lists with their counts, marking the one shown', () => {
     setup({ list: 'today' })
     const nav = screen.getByRole('navigation', { name: 'Task lists' })
-    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['All tasks9', 'Today3', 'Upcoming5', 'Someday1', 'Done4'])
+    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['All tasks 9', 'Today 3', 'Upcoming 5', 'Someday 1', 'Done 4'])
     expect(within(nav).getByRole('button', { name: /^Today/ }).getAttribute('aria-current')).toBe('true')
     expect(within(nav).getByRole('button', { name: /^All tasks/ }).getAttribute('aria-current')).toBeNull()
   })

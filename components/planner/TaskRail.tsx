@@ -15,7 +15,7 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
   type: TypeFilter; onType: (t: TypeFilter) => void; typeCounts: Record<TypeFilter, number>
 }) {
   return (
-    <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+    <div className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
       <nav aria-label="Task lists" className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
         {LISTS.map(l => {
           const Icon = ICON[l.id]
@@ -23,7 +23,7 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
           return (
             <button key={l.id} type="button" aria-current={on ? 'true' : undefined} onClick={() => onList(l.id)}
               className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition ${on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
-              <Icon size={16} aria-hidden /><span className="flex-1 text-left">{l.label}</span><span className={`text-xs ${on ? 'text-accent' : 'text-muted'}`}>{counts[l.id]}</span>
+              <Icon size={16} aria-hidden /><span className="flex-1 text-left">{l.label}</span>{' '}<span className={`text-xs ${on ? 'text-accent' : 'text-muted'}`}>{counts[l.id]}</span>
             </button>
           )
         })}

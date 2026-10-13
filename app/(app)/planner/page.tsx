@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
@@ -16,14 +15,12 @@ import { listCourses } from '@/lib/data/courses'
 import { createTask, deleteTask, listOpenTasks, listRecentlyDone, setTaskDone, updateTask, type NewTask } from '@/lib/data/tasks'
 import { createClass, deleteClass, listClasses, updateClass } from '@/lib/data/classes'
 import { boardColumns, boardSummary, rescheduleTo, type MoveChoice } from '@/lib/tasks/board'
-import type { ClassSlot, Course, Task, TaskType } from '@/lib/types'
+import { LISTS, listCounts, taskGroups, tasksForList, type ListId } from '@/lib/tasks/lists'
+import { TaskRail, type TypeFilter } from '@/components/planner/TaskRail'
+import type { ClassSlot, Course, Task } from '@/lib/types'
 import { useScanSaved } from '@/lib/scan/events'
 
 type Tab = 'tasks' | 'week' | 'timetable'
-type TypeFilter = 'all' | TaskType
-const TYPE_CHIPS: { id: TypeFilter; label: string }[] = [
-  { id: 'all', label: 'All' }, { id: 'other', label: 'Tasks' }, { id: 'assignment', label: 'Assignments' }, { id: 'exam', label: 'Exams' }, { id: 'reading', label: 'Readings' },
-]
 const DONE_DAYS = 7
 
 // Everything the planner shows; loaded at first and again after a scan adds items
@@ -42,7 +39,7 @@ export default function PlannerPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [done, setDone] = useState<Task[]>([])
-  const [showDone, setShowDone] = useState(false)
+  const [list, setList] = useState<ListId>('all')
   const [filter, setFilter] = useState<string | null>(null)
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [loaded, setLoaded] = useState(false)
@@ -68,7 +65,8 @@ export default function PlannerPage() {
   const visible = useMemo(() => byCourse.filter(t => typeFilter === 'all' || t.type === typeFilter), [byCourse, typeFilter])
   const columns = boardColumns(visible, tz, now)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
-  const countOf = (id: TypeFilter) => (id === 'all' ? byCourse.length : byCourse.filter(t => t.type === id).length)
+  const typeCounts = { all: byCourse.length, other: 0, assignment: 0, exam: 0, reading: 0 } as Record<TypeFilter, number>
+  for (const t of byCourse) typeCounts[t.type]++
   const visibleDone = done.filter(t => !filter || t.course_id === filter)
   const visibleClasses = classes.filter(c => !filter || c.course_id === filter)
 
@@ -155,20 +153,18 @@ export default function PlannerPage() {
   function move(t: Task, to: MoveChoice) {
     edit(t.id, { title: t.title, type: t.type, course_id: t.course_id, priority: t.priority, due_at: rescheduleTo(to, tz, now) })
   }
-  const card = (t: Task) => (
-    <TaskCard key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} onToggle={() => finish(t)} onEdit={() => setEditing(t)} onMove={to => move(t, to)} />
+  const counts = listCounts(visible, visibleDone.length, tz, now)
+  const shown = tasksForList(list, visible, tz, now)
+  const groups = taskGroups(shown, tz, now)
+  const row = (t: Task) => (
+    <TaskCard key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} onToggle={() => finish(t)} onEdit={() => setEditing(t)} onMove={to => move(t, to)} onDelete={() => remove(t)} />
   )
-  const column = (title: string, list: Task[], empty: string, extra?: React.ReactNode) => (
-    <section aria-label={title} className="min-w-0 rounded-2xl bg-surface p-3">
-      <h2 className="mb-2 flex items-center justify-between text-sm font-semibold">{title}<span className="text-xs font-normal text-muted">{list.length + (extra ? columns.overdue.length : 0)}</span></h2>
-      <div className="space-y-2">
-        {extra}
-        {list.map(card)}
-        {list.length === 0 && !extra && <p className="px-1 py-3 text-sm text-muted">{empty}</p>}
-        {list.length === 0 && extra && <p className="px-1 py-1 text-sm text-muted">{empty}</p>}
-      </div>
-    </section>
-  )
+  const title = LISTS.find(l => l.id === list)!.label
+  const subtitle = list === 'done' ? `${visibleDone.length} finished in the last ${DONE_DAYS} days`
+    : list === 'someday' ? `${counts.someday} without a date`
+    : list === 'upcoming' ? `${counts.upcoming} coming up`
+    : boardSummary(columns)
+  const EMPTY: Record<ListId, string> = { all: 'No open tasks. Add one above.', today: 'Nothing due today', upcoming: 'Nothing coming up', someday: 'Tasks without a date wait here', done: `Nothing finished in the last ${DONE_DAYS} days` }
 
   return (
     <div>
@@ -193,47 +189,36 @@ export default function PlannerPage() {
       </div>
 
       {tab === 'tasks' && (
-        <div>
-          <QuickAdd courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium" aria-live="polite">{boardSummary(columns)}</p>
-            <div role="group" aria-label="Task type" className="flex flex-wrap gap-1.5">
-              {TYPE_CHIPS.map(c => (
-                <button key={c.id} type="button" aria-pressed={typeFilter === c.id} onClick={() => setTypeFilter(c.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${typeFilter === c.id ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
-                  {c.label} <span className="text-muted">{countOf(c.id)}</span>
-                </button>
-              ))}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)]">
+          <TaskRail list={list} onList={setList} counts={counts} type={typeFilter} onType={setTypeFilter} typeCounts={typeCounts} />
+          <div className="min-w-0">
+            <div className="mb-4">
+              <h2 className="text-2xl font-semibold">{title}</h2>
+              <p className="text-sm text-muted" aria-live="polite">{subtitle}</p>
             </div>
-          </div>
-          {loaded && courses.length === 0 && tasks.length === 0 && (
-            <p className="mb-3 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
-          )}
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {column('Today', columns.today, 'Nothing due today', columns.overdue.length > 0 && (
-              <div role="group" aria-label="Overdue" className="space-y-2 rounded-xl bg-danger-soft p-2">
-                <h3 className="px-1 text-xs font-semibold text-danger">Overdue</h3>
-                {columns.overdue.map(card)}
-              </div>
-            ))}
-            {column('This week', columns.week, 'Nothing else this week')}
-            {column('Later', columns.later, 'Nothing dated further out')}
-            {column('Someday', columns.someday, 'Tasks without a date wait here')}
-          </div>
-          <div className="mt-4 grid items-start gap-4 lg:grid-cols-2 [&>section]:!mt-0">
-            <StudyPlanPanel courses={courses} tasks={tasks} />
-            {visibleDone.length > 0 && (
-              <section aria-label="Done" className="card">
-                <button type="button" aria-expanded={showDone} onClick={() => setShowDone(s => !s)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-fg">
-                  {showDone ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}Done ({visibleDone.length})
-                </button>
-                {showDone && (
-                  <div className="mt-1">
-                    {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
-                  </div>
-                )}
-              </section>
+            {list !== 'done' && <QuickAdd variant="card" courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />}
+            {loaded && courses.length === 0 && tasks.length === 0 && (
+              <p className="mb-3 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
             )}
+            {list === 'done' ? (
+              visibleDone.length === 0 ? <p className="rounded-2xl bg-surface px-4 py-8 text-center text-sm text-muted">{EMPTY.done}</p> : (
+                <div className="card divide-y divide-line overflow-hidden p-0">
+                  {visibleDone.map(t => <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done onToggle={() => reopen(t)} />)}
+                </div>
+              )
+            ) : groups.length === 0 ? (
+              <p className="rounded-2xl bg-surface px-4 py-8 text-center text-sm text-muted">{EMPTY[list]}</p>
+            ) : (
+              <div className="space-y-3">
+                {groups.map(g => (
+                  <section key={g.key} aria-label={g.label} className="overflow-hidden rounded-2xl border border-line bg-raised">
+                    <h3 className={`flex items-center justify-between px-4 pb-1 pt-3 text-xs font-semibold ${g.tone === 'danger' ? 'text-danger' : g.tone === 'today' ? 'text-accent' : 'text-muted'}`}>{g.label}<span className="font-normal text-muted">{g.tasks.length}</span></h3>
+                    <div className="divide-y divide-line">{g.tasks.map(row)}</div>
+                  </section>
+                ))}
+              </div>
+            )}
+            {list !== 'done' && <div className="mt-5 [&>section]:!mt-0"><StudyPlanPanel courses={courses} tasks={tasks} /></div>}
           </div>
         </div>
       )}

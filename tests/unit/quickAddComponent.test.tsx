@@ -15,6 +15,15 @@ describe('QuickAdd', () => {
     expect(screen.getByText('Due Fri, Oct 9')).toBeTruthy()
   })
 
+  it('as a card, keeps every control and the Add button', () => {
+    const onAdd = vi.fn()
+    render(<QuickAdd variant="card" courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)
+    fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Essay fri' } })
+    expect(screen.getByLabelText('Course')).toBeTruthy()
+    expect(screen.getByLabelText('Type')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onAdd).toHaveBeenCalledTimes(1)
+  })
   it('sends high priority when the text ends with !', () => {
     const onAdd = vi.fn()
     render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)

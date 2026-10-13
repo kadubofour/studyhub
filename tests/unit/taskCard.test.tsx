@@ -10,7 +10,7 @@ const task = (over: Partial<Task> = {}): Task =>
   ({ id: '6b1c', course_id: 'bio', title: 'Essay', type: 'assignment', due_at: '2026-10-16T23:59:59Z', priority: 'normal', done_at: null, created_at: '', ...over })
 const NOW = new Date('2026-10-14T10:00:00Z')
 const setup = (t: Task, extra: Partial<React.ComponentProps<typeof TaskCard>> = {}) => {
-  const h = { onToggle: vi.fn(), onEdit: vi.fn(), onMove: vi.fn() }
+  const h = { onToggle: vi.fn(), onEdit: vi.fn(), onMove: vi.fn(), onDelete: vi.fn() }
   render(<TaskCard task={t} course={course} tz="Africa/Accra" now={NOW} {...h} {...extra} />)
   return h
 }
@@ -45,6 +45,11 @@ describe('TaskCard', () => {
     expect(h.onMove).toHaveBeenCalledWith('tomorrow')
     expect(screen.queryByRole('menu')).toBeNull()
   })
+  it('deletes from its own button', () => {
+    const h = setup(task())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Essay' }))
+    expect(h.onDelete).toHaveBeenCalledTimes(1)
+  })
   it('Escape closes the menu', () => {
     setup(task())
     fireEvent.click(screen.getByRole('button', { name: 'Move Essay' }))
@@ -56,6 +61,7 @@ describe('TaskCard', () => {
     expect((screen.getByLabelText('Mark Essay done') as HTMLInputElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'Edit Essay' }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'Move Essay' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Delete Essay' }) as HTMLButtonElement).disabled).toBe(true)
   })
   it('shows no date line for a task without one', () => {
     setup(task({ due_at: null }))
