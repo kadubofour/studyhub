@@ -15,7 +15,8 @@ vi.mock('@/lib/data/profile', () => ({
     return new Promise(r => { resolveUpdate = r })
   },
 }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }))
+let search = ''
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams(search) }))
 
 import { ProfileProvider, useProfile } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -80,12 +81,38 @@ describe('Preferences follow the theme toggled elsewhere', () => {
 })
 
 describe('Settings page', () => {
-  it('no longer holds the profile and focus form, which lives on the profile page, and keeps Sign out', () => {
-    render(<ProfileProvider initial={base}><ToastProvider><SettingsPage /></ToastProvider></ProfileProvider>)
+  const page = (q = '') => { search = q; return render(<ProfileProvider initial={base}><ToastProvider><SettingsPage /></ToastProvider></ProfileProvider>) }
+  it('opens on Appearance, with the sections beside it, and no longer holds the profile and focus form', () => {
+    page()
+    expect(screen.getByRole('navigation', { name: 'Settings sections' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Appearance' })).toBeTruthy()
+    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
     expect(screen.queryByLabelText('Focus length (min)')).toBeNull()
     expect(screen.queryByText('Profile and focus')).toBeNull()
+  })
+  it('shows one section at a time: Account has Sign out, the profile pointer and the legal links', () => {
+    page()
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }))
+    expect(screen.getByRole('heading', { name: 'Account' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy()
-    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Terms' }).getAttribute('href')).toBe('/terms')
+    expect(screen.getByRole('link', { name: 'Privacy' }).getAttribute('href')).toBe('/privacy')
     expect(screen.getByText(/light or dark mode/i)).toBeTruthy()
+    expect(screen.queryByRole('radiogroup', { name: 'Look' })).toBeNull()
+  })
+  it('can open on a section named in the address', () => {
+    page('section=account')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy()
+  })
+  it('falls back to Appearance for a section that does not exist', () => {
+    page('section=nonsense')
+    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
+  })
+  it('has Your data with the download and delete options', () => {
+    page()
+    fireEvent.click(screen.getByRole('button', { name: 'Your data' }))
+    expect(screen.getByRole('button', { name: 'Download my data' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete my account' })).toBeTruthy()
   })
 })

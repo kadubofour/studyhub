@@ -15,7 +15,7 @@ export function CourseAccess({ courses, counts, recent }: { courses: Course[]; c
     <section aria-label="Course material" className="space-y-5">
       <div>
         <h2 className="section-label">Your courses</h2>
-        <ul aria-label="Your courses" className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))]">
+        <ul aria-label="Your courses" className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]">
           {courses.map(c => {
             const n = counts[c.id] ?? { notes: 0, decks: 0, lectures: 0 }
             const total = n.notes + n.decks + n.lectures
@@ -27,7 +27,7 @@ export function CourseAccess({ courses, counts, recent }: { courses: Course[]; c
       {recent.length > 0 && (
         <div>
           <h2 className="section-label">Jump back in</h2>
-          <ul aria-label="Jump back in" className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+          <ul aria-label="Jump back in" className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]">
             {recent.map(r => {
               const Icon = ICON[r.kind]
               return (

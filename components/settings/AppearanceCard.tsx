@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { ACCENTS, CONTENT_WIDTHS, FONTS, LOOKS, contentWidthOf, effectiveLook, lookChoices, type AccentName, type ContentWidth, type FontName, type LookName } from '@/lib/appearance'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { SettingRow } from './SettingRow'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
 const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[]
@@ -38,11 +39,9 @@ export function AppearanceCard() {
   }
 
   return (
-    <section className="card space-y-4">
-      <h2 className="text-base font-semibold">Appearance</h2>
-      <div>
-        <div className="mb-2 text-sm text-muted">Look</div>
-        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Look">
+    <div className="card divide-y divide-line p-0">
+      <SettingRow title="Look" hint="The style of the whole app.">
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-4" role="radiogroup" aria-label="Look">
           {LOOK_NAMES.map((name, i) => {
             const on = look === name
             const c = LOOKS[name][mode]
@@ -68,14 +67,11 @@ export function AppearanceCard() {
           })}
         </div>
         {mode === 'dark' && <p className="mt-2 text-xs text-muted">Paper is for light mode. Switch to light mode to use it{profile.look === 'paper' ? ' (your choice is kept)' : ''}.</p>}
-      </div>
-      <div>
-        <div className="mb-2 text-sm text-muted">Content width</div>
+      </SettingRow>
+      <SettingRow title="Content width" hint="Focused is a centred column, Wide uses more of the screen, Full uses all of it.">
         <ChoiceChips label="Content width" value={contentWidthOf(profile.content_width)} options={CONTENT_WIDTHS.map(w => ({ value: w.id, label: w.label }))} onChange={v => choose({ content_width: v as ContentWidth })} />
-        <p className="mt-1.5 text-xs text-muted">Focused is a centred column, Wide uses more of the screen, Full uses all of it.</p>
-      </div>
-      <div>
-        <div className="mb-2 text-sm text-muted">Accent colour</div>
+      </SettingRow>
+      <SettingRow title="Accent colour" hint="Buttons, links and highlights.">
         <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Accent colour">
           {ACCENT_NAMES.map((name, i) => {
             const a = ACCENTS[name]
@@ -96,10 +92,9 @@ export function AppearanceCard() {
             )
           })}
         </div>
-      </div>
-      <div>
-        <div className="mb-2 text-sm text-muted">Font</div>
-        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Font">
+      </SettingRow>
+      <SettingRow title="Font" hint="The typeface used throughout.">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="Font">
           {FONT_NAMES.map((name, i) => {
             const on = profile.font === name
             return (
@@ -118,7 +113,7 @@ export function AppearanceCard() {
             )
           })}
         </div>
-      </div>
-    </section>
+      </SettingRow>
+    </div>
   )
 }
