@@ -183,6 +183,21 @@ describe('Scan in the app shell', () => {
     expect(without.container.querySelector('.app-root')!.hasAttribute('data-topbar')).toBe(false)
   })
 
+  it('sizes the content by the student\'s width choice, and the planner always uses the whole screen', () => {
+    const main = (path_: string, width?: string) => {
+      path = path_
+      const r = render(<ProfileProvider initial={{ ...profile, ...(width ? { content_width: width } : {}) } as Profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+      const cls = r.container.querySelector('main')!.className
+      r.unmount()
+      return cls
+    }
+    expect(main('/home', 'focused')).toContain('max-w-5xl')
+    expect(main('/home', 'wide')).toContain('max-w-[1400px]')
+    expect(main('/home', 'full')).toContain('max-w-none')
+    expect(main('/home')).toContain('max-w-[1400px]') // an old profile without a choice is wide
+    expect(main('/planner', 'focused')).toContain('max-w-none')
+  })
+
   it('Upload and Scan are solid and darker than the sidebar, with no dashed outline', () => {
     path = '/home'
     const { container } = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)

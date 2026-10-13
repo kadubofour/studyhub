@@ -45,6 +45,26 @@ describe('Paper is light mode only', () => {
   })
 })
 
+describe('Content width', () => {
+  it('offers Focused, Wide and Full, with the current one chosen', () => {
+    open({ ...base, content_width: 'full' } as Profile)
+    const group = screen.getByRole('radiogroup', { name: 'Content width' })
+    expect(group).toBeTruthy()
+    expect(screen.getByRole('radio', { name: 'Full' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('radio', { name: 'Wide' }).getAttribute('aria-checked')).toBe('false')
+  })
+  it('an old profile without a choice shows Wide', () => {
+    open(base)
+    expect(screen.getByRole('radio', { name: 'Wide' }).getAttribute('aria-checked')).toBe('true')
+  })
+  it('applies the choice at once and saves it', async () => {
+    open(base)
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Focused' })) })
+    expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u', { content_width: 'focused' })
+    expect(screen.getByRole('radio', { name: 'Focused' }).getAttribute('aria-checked')).toBe('true')
+  })
+})
+
 describe('Look picker', () => {
   it('shows Classic and Paper and marks the current one', () => {
     open()

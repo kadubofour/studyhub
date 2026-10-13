@@ -67,6 +67,13 @@ export const effectiveLook = (look: unknown, resolvedTheme: string | undefined):
 export const lookChoices = (resolvedTheme: string | undefined): LookName[] =>
   (Object.keys(LOOKS) as LookName[]).filter(l => !(l === 'paper' && resolvedTheme === 'dark'))
 
+// How wide the app's content is: a centred column, a wide layout (the default), or the whole window
+export const CONTENT_WIDTHS = [
+  { id: 'focused', label: 'Focused' }, { id: 'wide', label: 'Wide' }, { id: 'full', label: 'Full' },
+] as const
+export type ContentWidth = (typeof CONTENT_WIDTHS)[number]['id']
+export const contentWidthOf = (v: unknown): ContentWidth => (CONTENT_WIDTHS.some(w => w.id === v) ? (v as ContentWidth) : 'wide')
+
 // Paper's serif greeting only while the student is on the default Sans font: their font choice wins
 export const greetingFont = (look: unknown, font: unknown): string | undefined =>
   look === 'paper' && font === 'sans' ? 'var(--font-lora)' : undefined

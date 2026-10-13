@@ -21,7 +21,7 @@ import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { isRecording } from '@/lib/lectures/recordingGuard'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, FONTS } from '@/lib/appearance'
+import { ACCENTS, FONTS, contentWidthOf } from '@/lib/appearance'
 import { useLook } from '@/components/providers/useLook'
 import { useCoursesChanged } from '@/lib/course/events'
 import { listCourses } from '@/lib/data/courses'
@@ -184,7 +184,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <PanelLeftOpen size={18} aria-hidden />
           </button>
         )}
-        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : 'max-w-5xl py-5 md:px-10 md:py-9'}`}>{!immersive && <EndingBanner />}{children}</main>
+        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">

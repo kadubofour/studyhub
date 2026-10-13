@@ -6,7 +6,8 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { useSaver } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, FONTS, LOOKS, effectiveLook, lookChoices, type AccentName, type FontName, type LookName } from '@/lib/appearance'
+import { ACCENTS, CONTENT_WIDTHS, FONTS, LOOKS, contentWidthOf, effectiveLook, lookChoices, type AccentName, type ContentWidth, type FontName, type LookName } from '@/lib/appearance'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
 const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[]
@@ -24,7 +25,7 @@ export function AppearanceCard() {
   const look = effectiveLook(profile.look, mode) // Paper shows as Classic in dark mode
   const LOOK_NAMES = lookChoices(mode)
 
-  function choose(patch: { accent?: AccentName; font?: FontName; look?: LookName }) {
+  function choose(patch: { accent?: AccentName; font?: FontName; look?: LookName; content_width?: ContentWidth }) {
     if (Object.keys(patch).length === 1 && patch.look === look) return // e.g. Classic shown for a saved Paper in dark mode: keep the saved choice
     const before = profile
     const keys = Object.keys(patch) as (keyof typeof patch)[]
@@ -67,6 +68,11 @@ export function AppearanceCard() {
           })}
         </div>
         {mode === 'dark' && <p className="mt-2 text-xs text-muted">Paper is for light mode. Switch to light mode to use it{profile.look === 'paper' ? ' (your choice is kept)' : ''}.</p>}
+      </div>
+      <div>
+        <div className="mb-2 text-sm text-muted">Content width</div>
+        <ChoiceChips label="Content width" value={contentWidthOf(profile.content_width)} options={CONTENT_WIDTHS.map(w => ({ value: w.id, label: w.label }))} onChange={v => choose({ content_width: v as ContentWidth })} />
+        <p className="mt-1.5 text-xs text-muted">Focused is a centred column, Wide uses more of the screen, Full uses all of it.</p>
       </div>
       <div>
         <div className="mb-2 text-sm text-muted">Accent colour</div>
