@@ -4,6 +4,7 @@ import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { PenLine, Trash2 } from 'lucide-react'
 import { NoteImagesContext } from './NoteImagesContext'
 import { isImageToken } from '@/lib/notes/images'
+import { MarkupPanel } from './ImageMarkup'
 
 /* eslint-disable @next/next/no-img-element -- signed links, not optimisable by next/image */
 const isWeb = (src: string) => /^https?:\/\//i.test(src)
@@ -28,6 +29,16 @@ export function NoteImageView({ node, selected, deleteNode, getPos }: NodeViewPr
   const [focused, setFocused] = useState(false)
   const shown = selected || focused
   const markup = () => { const pos = getPos(); if (pos !== undefined) ctx?.onMarkup?.({ pos, src, alt }) }
+
+  // The picture being marked up turns into the drawing surface, in place: the note around it stays where it is
+  const pos = getPos()
+  if (ctx?.editing && ctx.editing.src === src && ctx.editing.pos === pos) {
+    return (
+      <NodeViewWrapper className="my-3" data-note-image contentEditable={false}>
+        <MarkupPanel source={{ url: ctx.editing.url }} onCancel={() => ctx.cancelMarkup?.()} onDone={b => ctx.finishMarkup!(b)} />
+      </NodeViewWrapper>
+    )
+  }
 
   return (
     <NodeViewWrapper className="my-3 select-none" data-note-image>

@@ -11,8 +11,10 @@ import { editorQuickActions } from './editorQuickActions'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useProfile } from '@/components/providers/ProfileProvider'
-import { NoteImagesContext, type NoteImageInfo } from './NoteImagesContext'
-import { insertNoteImage } from './noteImage'
+import { NoteImagesContext, type NoteImageEditing, type NoteImageInfo } from './NoteImagesContext'
+import { applyMarkup } from './markupFlow'
+import { flatten } from '@/lib/markup/draw'
+import { insertNoteImage, noteImages } from './noteImage'
 import { supabase } from '@/lib/supabase/client'
 import { makeImageResolver } from '@/lib/notes/images'
 import { ACCEPTED, IMAGE_ERROR_TEXT, ImageError, prepareImage, uploadNoteImage } from '@/lib/notes/prepareImage'
@@ -72,7 +74,7 @@ function onlyPicture(data: DataTransfer | null): boolean {
 // The description a picture gets from its file name: "Krebs cycle.png" -> "Krebs cycle"; a screenshot's "image.png" gets none
 const altFrom = (name: string) => { const n = name.replace(/\.[^.]+$/, '').trim(); return /^(image|screenshot|untitled)\d*$/i.test(n) ? '' : n.slice(0, 120) }
 
-export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, onMarkup, onDraw, autoMath = true }: {
+export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, autoMath = true }: {
   markdown: string
   onChange: (md: string) => void
   /** Hands the editor to the page (menu bar commands, find); null when it goes away. */
@@ -80,17 +82,38 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   /** Clicking an equation opens it for editing. Must only call stable setters: it is read once. */
   onEditMath?: EditMath
   onInsertEquation?: () => void
-  /** Markup was chosen on a picture in the note */
-  onMarkup?: (img: NoteImageInfo) => void
-  /** The Draw button: a sketch from a blank page */
-  onDraw?: () => void
   /** Profile > Preferences > Turn typed maths into equations */
   autoMath?: boolean
 }) {
   const toast = useToast()
   const { profile } = useProfile()
   const resolver = useMemo(() => makeImageResolver(supabase(), profile.id), [profile.id])
-  const imagesCtx = useMemo(() => ({ resolve: resolver, onMarkup }), [resolver, onMarkup])
+  // The picture being marked up: it becomes the drawing surface where it sits in the note
+  const [editing, setEditing] = useState<NoteImageEditing | null>(null)
+  const startMarkup = useCallback(async (img: NoteImageInfo) => {
+    const url = await resolver(img.src).catch(() => null)
+    if (!url) { toast('That picture could not be opened right now.'); return }
+    setEditing({ pos: img.pos, src: img.src, url })
+  }, [resolver, toast])
+  const finishMarkup = useCallback(async (picture: Blob) => {
+    const ed = editorRef.current
+    if (!ed || !editing) return
+    await applyMarkup(ed, supabase(), profile.id, { kind: 'edit', pos: editing.pos, src: editing.src }, picture)
+    setEditing(null)
+  }, [editing, profile.id])
+  const cancelMarkup = useCallback(() => setEditing(null), [])
+  const imagesCtx = useMemo(() => ({ resolve: resolver, onMarkup: (img: NoteImageInfo) => void startMarkup(img), editing, finishMarkup, cancelMarkup }), [resolver, startMarkup, editing, finishMarkup, cancelMarkup])
+  // Draw: a blank white page goes into the note and is opened for drawing straight away
+  const draw = useCallback(async () => {
+    const ed = editorRef.current
+    if (!ed) return
+    try {
+      const token = await uploadNoteImage(supabase(), profile.id, await flatten(null, 1200, 800, []))
+      insertNoteImage(ed, token, 'Drawing')
+      const placed = noteImages(ed).find(i => i.src === token)
+      if (placed) await startMarkup(placed)
+    } catch { toast('Could not start a drawing.') }
+  }, [profile.id, startMarkup, toast])
   const pictureInput = useRef<HTMLInputElement>(null)
   const editorRef = useRef<Editor | null>(null)
   const addRef = useRef<(files: File[]) => void>(() => {})
@@ -203,7 +226,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         <TableButton editor={editor} on={active('table')} />
         {tool('Equation', Sigma, () => onInsertEquation?.())}
         <PictureButton input={pictureInput} />
-        {tool('Draw', PencilRuler, () => onDraw?.())}
+        {tool('Draw', PencilRuler, () => void draw())}
         {active('table') && <><span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-line" /><TableTools editor={editor} /></>}
       </div>
       <input ref={pictureInput} type="file" hidden aria-label="Choose pictures" accept={ACCEPTED.join(',')} multiple

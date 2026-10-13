@@ -26,7 +26,7 @@ let md = ''
 let editor: Editor | null = null
 const open = async (markdown = '') => {
   md = markdown
-  await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RichEditor markdown={markdown} onChange={m => { md = m }} onReady={e => { editor = e }} onMarkup={() => {}} onDraw={() => {}} /></ToastProvider></ProfileProvider>) })
+  await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RichEditor markdown={markdown} onChange={m => { md = m }} onReady={e => { editor = e }} /></ToastProvider></ProfileProvider>) })
 }
 const png = (name = 'cell.png') => new File([new Uint8Array(10)], name, { type: 'image/png' })
 // jsdom has no layout; ProseMirror asks for it when it scrolls a new picture into view
@@ -128,6 +128,19 @@ describe('a note that has a picture', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove picture' })) })
     await waitFor(() => expect(md).not.toContain('studyhub-image:a.webp'))
     expect(md).toContain('Intro')
+  })
+  it('Markup turns the picture into the drawing surface where it sits, and Cancel puts it back', async () => {
+    await open(NOTE)
+    await screen.findByRole('img', { name: 'The Krebs cycle' })
+    await act(async () => { editor!.commands.setNodeSelection(editor!.state.doc.content.child(0).nodeSize) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Markup' })) })
+    const panel = await screen.findByRole('group', { name: 'Marking up the picture' })
+    expect(within(screen.getByLabelText('Note')).getByText(/Intro/)).toBeTruthy() // the note around it stays
+    expect(screen.getByLabelText('Note').contains(panel)).toBe(true)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel' })) })
+    expect(screen.queryByRole('group', { name: 'Marking up the picture' })).toBeNull()
+    expect(await screen.findByRole('img', { name: 'The Krebs cycle' })).toBeTruthy()
+    expect(md).toContain('studyhub-image:a.webp')
   })
   it('keeps a picture it cannot reach as a placeholder with its description, not a broken image', async () => {
     const sb = await import('@/lib/supabase/client')

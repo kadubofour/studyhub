@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Circle, Eraser, Highlighter, Minus, PenLine, Redo2, Square, Trash2, Type, Undo2, type LucideIcon } from 'lucide-react'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
@@ -24,28 +24,13 @@ const ERASE_REACH = 10 // screen pixels
 /** Where the picture comes from: a link to draw on top of, or nothing for a blank white page */
 export type MarkupSource = { url: string } | { blank: true }
 
-// Draw on a picture, or on a blank page. The marks stay separate until Done, which hands back one flattened picture; Cancel hands back nothing.
-export function ImageMarkup({ open, title, source, onCancel, onDone }: {
-  open: boolean; title: string; source: MarkupSource; onCancel: () => void; onDone: (picture: Blob) => void | Promise<void>
-}) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const titleId = useId()
-  useEffect(() => {
-    const d = ref.current
-    if (!d) return
-    if (open && !d.open) d.showModal()
-    if (!open && d.open) d.close()
-  }, [open])
-  return (
-    <dialog ref={ref} onClose={onCancel} aria-labelledby={titleId}
-      className="m-auto flex max-h-[94vh] w-[min(96vw,1100px)] flex-col rounded-xl border border-line bg-bg p-4 text-fg backdrop:bg-black/50 open:flex">
-      {open && <Editor key={'url' in source ? source.url : 'blank'} titleId={titleId} title={title} source={source} onCancel={onCancel} onDone={onDone} />}
-    </dialog>
-  )
+// Draw on a picture right where it sits in the note. The marks stay separate until Done, which hands back one flattened picture; Cancel hands back nothing.
+export function MarkupPanel(props: { source: MarkupSource; onCancel: () => void; onDone: (picture: Blob) => void | Promise<void> }) {
+  return <Editor {...props} />
 }
 
-function Editor({ titleId, title, source, onCancel, onDone }: {
-  titleId: string; title: string; source: MarkupSource; onCancel: () => void; onDone: (picture: Blob) => void | Promise<void>
+function Editor({ source, onCancel, onDone }: {
+  source: MarkupSource; onCancel: () => void; onDone: (picture: Blob) => void | Promise<void>
 }) {
   const blank = 'blank' in source
   const url = 'url' in source ? source.url : null
@@ -134,9 +119,9 @@ function Editor({ titleId, title, source, onCancel, onDone }: {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3" onKeyDown={keys}>
+    <div role="group" aria-label="Marking up the picture" className="flex flex-col gap-3 rounded-xl border border-line bg-raised p-3" onKeyDown={e => { keys(e); if (e.key === 'Escape') { e.stopPropagation(); onCancel() } }}>
       <div className="flex items-center justify-between gap-3">
-        <h2 id={titleId} className="text-base font-medium">{title}</h2>
+        <span className="text-sm font-medium">Marking up</span>
         <div className="flex gap-2">
           <button type="button" className={BTN_OUTLINE} onClick={onCancel}>Cancel</button>
           <button type="button" className={BTN_SOLID} onClick={() => void done()} disabled={!loaded || loaded.failed || saving}>{saving ? 'Saving…' : 'Done'}</button>
@@ -170,11 +155,11 @@ function Editor({ titleId, title, source, onCancel, onDone }: {
               <input value={text} onChange={e => setText(e.target.value)} maxLength={120} placeholder="Type, then click the picture" className="min-w-0 flex-1 rounded-lg border border-line bg-raised px-3 py-1.5" />
             </label>
           )}
-          <div role="group" aria-label="Drawing area" tabIndex={0} className="min-h-0 flex-1 overflow-auto rounded-lg border border-line bg-surface p-2">
+          <div className="rounded-lg border border-line bg-surface p-2">
             {loaded ? (
               <canvas ref={canvasRef} width={loaded.width} height={loaded.height} aria-label="Picture being marked up" role="img"
                 onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-                className="mx-auto block h-auto max-h-[62vh] w-auto max-w-full touch-none bg-white" style={{ cursor: tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair' }} />
+                className="mx-auto block h-auto w-auto max-w-full touch-none bg-white" style={{ cursor: tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair' }} />
             ) : <p className="p-6 text-sm text-muted">Opening the picture…</p>}
           </div>
         </>

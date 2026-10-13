@@ -24,6 +24,7 @@ async function storedToken(page: Page) {
   return md.match(/studyhub-image:[^)\s]+/)?.[0] ?? null
 }
 async function scribble(page: Page) {
+  await page.getByLabel('Picture being marked up').scrollIntoViewIfNeeded()
   const box = (await page.getByLabel('Picture being marked up').boundingBox())!
   await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3)
   await page.mouse.down()
@@ -62,7 +63,7 @@ test('mark up a picture: Done saves it as the note\'s picture, and Cancel change
   // Cancel leaves the picture as it was
   await page.locator('.ProseMirror img[alt="cell"]').click()
   await page.getByRole('button', { name: 'Markup' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Markup' })
+  const dialog = page.getByRole('group', { name: 'Marking up the picture' })
   await expect(dialog).toBeVisible()
   await scribble(page)
   await dialog.getByRole('button', { name: 'Cancel' }).click()
@@ -90,7 +91,7 @@ test('the Draw button makes a sketch on a blank page and puts it in the note', a
   await signUp(page)
   await newNote(page, 'Sketch')
   await page.getByRole('button', { name: 'Draw' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Draw' })
+  const dialog = page.getByRole('group', { name: 'Marking up the picture' })
   await expect(dialog).toBeVisible()
   await scribble(page)
   await dialog.getByRole('button', { name: 'Done' }).click()
@@ -103,7 +104,7 @@ test('the markup tool has no serious accessibility problems', async ({ page }) =
   await signUp(page)
   await newNote(page, 'A11y')
   await page.getByRole('button', { name: 'Draw' }).click()
-  await expect(page.getByRole('dialog', { name: 'Draw' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Marking up the picture' })).toBeVisible()
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
   expect(r.violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(v => `${v.id}: ${v.nodes[0].target.join(' ')}`)).toEqual([])
 })

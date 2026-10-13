@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react'
-import { ImageMarkup, type MarkupSource } from '@/components/notes/ImageMarkup'
+import { MarkupPanel, type MarkupSource } from '@/components/notes/ImageMarkup'
 
 // jsdom has no canvas or picture loading, so both are stood in for: a recording canvas and an Image that loads at once
 const calls: string[] = []
@@ -17,8 +17,6 @@ class FakeImage {
 beforeEach(() => {
   calls.length = 0; failLoad = false
   vi.stubGlobal('Image', FakeImage)
-  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) { this.setAttribute('open', '') }
-  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) { this.removeAttribute('open') }
   HTMLCanvasElement.prototype.getContext = (() => ctx) as never
   HTMLCanvasElement.prototype.toBlob = function (cb: BlobCallback) { cb(new Blob(['x'], { type: 'image/webp' })) }
   // The canvas is shown at its own size, so a screen pixel is a picture pixel
@@ -28,7 +26,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 const open = async (source: MarkupSource = { url: 'https://s.test/p.webp' }, over: Partial<{ onDone: (b: Blob) => void; onCancel: () => void }> = {}) => {
   const onDone = over.onDone ?? vi.fn(), onCancel = over.onCancel ?? vi.fn()
-  await act(async () => { render(<ImageMarkup open title="Markup" source={source} onCancel={onCancel} onDone={onDone} />) })
+  await act(async () => { render(<MarkupPanel source={source} onCancel={onCancel} onDone={onDone} />) })
   return { onDone, onCancel, canvas: await screen.findByLabelText('Picture being marked up') }
 }
 const stroke = (canvas: HTMLElement, from: [number, number], to: [number, number]) => {
@@ -122,9 +120,14 @@ describe('the markup tool', () => {
   })
   it('says so when the picture cannot be opened, and cannot be saved', async () => {
     failLoad = true
-    await act(async () => { render(<ImageMarkup open title="Markup" source={{ url: 'https://s.test/x.webp' }} onCancel={() => {}} onDone={() => {}} />) })
+    await act(async () => { render(<MarkupPanel source={{ url: 'https://s.test/x.webp' }} onCancel={() => {}} onDone={() => {}} />) })
     expect((await screen.findByRole('alert')).textContent).toMatch(/could not be opened/i)
     expect(screen.getByRole('button', { name: 'Done' }).hasAttribute('disabled')).toBe(true)
+  })
+  it('Escape cancels, like the Cancel button', async () => {
+    const { onCancel, canvas } = await open()
+    fireEvent.keyDown(canvas, { key: 'Escape' })
+    expect(onCancel).toHaveBeenCalled()
   })
   it('undoes with Ctrl+Z', async () => {
     const { canvas } = await open()
