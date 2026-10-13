@@ -14,6 +14,7 @@ describe('TintTile (A)', () => {
     expect(screen.getByText('4')).toBeTruthy()
     expect(colorOf(container.firstElementChild!)).toBe('#1D9E75')
     expect(container.querySelector('svg[aria-hidden="true"]')).toBeTruthy()
+    expect(container.firstElementChild!.hasAttribute('data-tint')).toBe(true) // so a calmer look can take the colour out
   })
   it('is a link when it has somewhere to go', () => {
     render(<TintTile color="#D4537E" icon={Flame} label="Cards due" href="/review">23</TintTile>)

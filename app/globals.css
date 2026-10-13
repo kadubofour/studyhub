@@ -87,6 +87,11 @@ body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
 /* With the top bar showing the page name, the page's own title is for screen readers only (it would say the name twice) */
 .app-root[data-topbar] .page-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
+/* Classic is calm: the tinted tiles become plain raised cards with a hairline (unlayered, so they beat the tile's own tint) */
+.app-root[data-look="classic"] [data-tint], .dark .app-root[data-look="paper"] [data-tint] { background: var(--raised); border: 1px solid var(--line); }
+.app-root[data-look="classic"] [data-tint-icon], .dark .app-root[data-look="paper"] [data-tint-icon] { background: var(--surface); }
+.app-root[data-look="classic"] [data-block], .dark .app-root[data-look="paper"] [data-block] { background: var(--surface); color: var(--fg); box-shadow: inset 4px 0 0 var(--c); }
+
 /* A scrollable area without its scrollbar: it still scrolls (wheel, touch, keyboard) */
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }

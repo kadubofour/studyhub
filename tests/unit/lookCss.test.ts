@@ -139,6 +139,18 @@ describe('no-scrollbar', () => {
   })
 })
 
+describe('Classic has no colourful cards', () => {
+  it('tinted tiles are plain raised cards with a hairline in Classic, and in Paper in dark mode', () => {
+    for (const sel of ['.app-root[data-look="classic"] [data-tint]', '.dark .app-root[data-look="paper"] [data-tint]']) {
+      const rule = css.split(String.fromCharCode(10)).find(l => l.includes(sel))
+      expect(rule, sel).toBeTruthy()
+    }
+    expect(css).toMatch(/\[data-tint\] \{[^}]*background: var\(--raised\)/)
+    expect(css).toMatch(/\[data-tint-icon\] \{[^}]*background: var\(--surface\)/)
+    expect(css).toMatch(/\[data-block\] \{[^}]*background: var\(--surface\)[^}]*inset 4px 0 0 var\(--c\)/) // a course keeps its colour as a bar
+  })
+})
+
 describe('page title with the top bar', () => {
   it('is hidden from sight but kept for screen readers when the top bar shows the page name', () => {
     expect(css).toMatch(/\.app-root\[data-topbar\] \.page-title \{[^}]*position: absolute/)

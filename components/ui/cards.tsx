@@ -2,8 +2,8 @@ import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 
 // Card styles for where they fit: tinted tiles (A), split cards (D) and an open strip (C). The colour comes in as --c, so one class does the tinting in every look and theme.
-const wrap = (href: string | undefined, className: string, style: React.CSSProperties, children: React.ReactNode) =>
-  href ? <Link href={href} className={className} style={style}>{children}</Link> : <div className={className} style={style}>{children}</div>
+const wrap = (href: string | undefined, className: string, style: React.CSSProperties, children: React.ReactNode, attrs: Record<string, string> = {}) =>
+  href ? <Link href={href} className={className} style={style} {...attrs}>{children}</Link> : <div className={className} style={style} {...attrs}>{children}</div>
 const colorVar = (color: string) => ({ '--c': color }) as React.CSSProperties
 
 // A. Tinted tile: a soft wash of its own colour, an icon in a circle, a big figure. For the numbers on Home.
@@ -12,11 +12,11 @@ export function TintTile({ color, icon: Icon, label, children, href, className =
 }) {
   return wrap(href, `block rounded-[20px] bg-[color-mix(in_srgb,var(--c)_16%,var(--raised))] px-4 py-3.5 transition hover:brightness-95 ${className}`, colorVar(color), (
     <>
-      <span aria-hidden="true" className="mb-2.5 flex size-8 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--c)_28%,var(--raised))]"><Icon size={17} aria-hidden="true" /></span>
+      <span aria-hidden="true" data-tint-icon className="mb-2.5 flex size-8 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--c)_28%,var(--raised))]"><Icon size={17} aria-hidden="true" /></span>
       <div className="text-xs text-fg">{label}</div>
       <div className="mt-0.5 text-3xl font-medium leading-tight">{children}</div>
     </>
-  ))
+  ), { 'data-tint': '' })
 }
 
 // D. Split card: a solid block of the colour (darkened, so white stays readable) holding the icon and figure, the words beside it. For courses.
