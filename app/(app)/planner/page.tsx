@@ -169,7 +169,7 @@ export default function PlannerPage() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h1 className="text-lg font-medium">Planner</h1>
+        <h1 className="page-title text-lg font-medium">Planner</h1>
         <div role="tablist" className="flex gap-1">
           {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}

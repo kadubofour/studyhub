@@ -139,6 +139,13 @@ describe('no-scrollbar', () => {
   })
 })
 
+describe('page title with the top bar', () => {
+  it('is hidden from sight but kept for screen readers when the top bar shows the page name', () => {
+    expect(css).toMatch(/\.app-root\[data-topbar\] \.page-title \{[^}]*position: absolute/)
+    expect(css).toMatch(/\.app-root\[data-topbar\] \.page-title \{[^}]*clip/)
+  })
+})
+
 describe('printing', () => {
   it('resets Paper too, so a printed page is black on white whatever the look and theme', () => {
     const start = css.indexOf('@media print {')

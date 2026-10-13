@@ -114,7 +114,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   } as React.CSSProperties
 
   return (
-    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={look}>
+    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={look} data-topbar={(look === 'vivid' || look === 'classic') && !immersive ? '' : undefined}>
       {sidebar && (
         <aside className="app-sidebar no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
           <div className="mb-6 flex items-center justify-between px-1">

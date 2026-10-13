@@ -174,6 +174,15 @@ describe('Scan in the app shell', () => {
     expect(screen.queryByRole('group', { name: 'Courses' })).toBeNull()
   })
 
+  it('marks the shell when the top bar shows the page name, so the page does not say it twice', () => {
+    path = '/home'
+    const withBar = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(withBar.container.querySelector('.app-root')!.hasAttribute('data-topbar')).toBe(true)
+    withBar.unmount()
+    const without = render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(without.container.querySelector('.app-root')!.hasAttribute('data-topbar')).toBe(false)
+  })
+
   it('Upload and Scan are solid and darker than the sidebar, with no dashed outline', () => {
     path = '/home'
     const { container } = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
