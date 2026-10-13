@@ -18,6 +18,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "@tiptap/extension-image": "^3.31.4",
     "@tiptap/extension-list": "^3.31.4",
     "@tiptap/extension-mathematics": "^3.31.4",
     "@tiptap/extension-table": "^3.31.4",
