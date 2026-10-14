@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { addMark, canRedo, canUndo, clearMarks, emptyHistory, eraseMark, redo, undo } from '@/lib/markup/history'
 import { hitTest } from '@/lib/markup/hit'
-import { drawMark, flatten } from '@/lib/markup/draw'
+import { drawMark } from '@/lib/markup/draw'
 import { strokeWidth, textSize, type Mark } from '@/lib/markup/marks'
 
 const line = (id: string, from: [number, number], to: [number, number]): Mark => ({ id, kind: 'line', color: '#000', size: 'M', from, to })
@@ -99,30 +99,5 @@ describe('drawing marks', () => {
     drawMark(ctx, cases[0][0], 1200)
     expect(calls.filter(c => c.startsWith('lineTo')).length).toBe(3) // the shaft and the two sides of the head
     expect(textSize('L', 1200)).toBeGreaterThan(textSize('S', 1200))
-  })
-})
-
-describe('flatten', () => {
-  it('draws a white page, the picture and every mark, then saves a WebP', async () => {
-    const { ctx, calls } = fakeCtx()
-    const toBlob = vi.fn((cb: BlobCallback, type?: string, q?: number) => { expect([type, q]).toEqual(['image/webp', 0.85]); cb(new Blob(['x'], { type: 'image/webp' })) })
-    const canvas = { getContext: () => ctx, toBlob } as unknown as HTMLCanvasElement
-    const blob = await flatten({} as CanvasImageSource, 800, 600, [pen('a')], () => canvas)
-    expect(blob.type).toBe('image/webp')
-    expect(calls[0]).toBe('fillRect(0,0,800,600)')
-    expect(calls).toContain('drawImage(obj,0,0,800,600)')
-    expect(calls).toContain('stroke()')
-  })
-  it('saves a JPEG when the browser cannot save WebP (Safari)', async () => {
-    const { ctx } = fakeCtx()
-    const toBlob = (cb: BlobCallback, type?: string) => cb(type === 'image/webp' ? new Blob(['x'], { type: 'image/png' }) : new Blob(['x'], { type }))
-    const canvas = { getContext: () => ctx, toBlob } as unknown as HTMLCanvasElement
-    expect((await flatten(null, 10, 10, [], () => canvas)).type).toBe('image/jpeg')
-  })
-  it('leaves out the picture for a blank page, and says so when the file cannot be made', async () => {
-    const { ctx, calls } = fakeCtx()
-    const canvas = { getContext: () => ctx, toBlob: (cb: BlobCallback) => cb(null) } as unknown as HTMLCanvasElement
-    await expect(flatten(null, 10, 10, [], () => canvas)).rejects.toThrow('could not save')
-    expect(calls.some(c => c.startsWith('drawImage'))).toBe(false)
   })
 })

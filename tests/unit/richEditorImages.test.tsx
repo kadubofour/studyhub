@@ -38,10 +38,9 @@ beforeEach(() => { md = ''; editor = null; prepare.mockClear().mockImplementatio
 afterEach(cleanup)
 
 describe('adding pictures', () => {
-  it('has Image and Sketch buttons in the toolbar', async () => {
+  it('has an Image button in the toolbar', async () => {
     await open()
     expect(screen.getByRole('button', { name: 'Image' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Sketch' })).toBeTruthy()
   })
   it('puts in the pictures chosen with the file picker, named after the file', async () => {
     await open('Hello')
@@ -119,28 +118,14 @@ describe('a note that has a picture', () => {
     await act(async () => {})
     expect(screen.queryByRole('img', { name: 'bad' })?.getAttribute('src') ?? null).toBeNull()
   })
-  it('shows Markup and Remove on a picture that is selected, and Remove takes it out of the note', async () => {
+  it('shows Remove on a picture that is selected, and Remove takes it out of the note', async () => {
     await open(NOTE)
     await screen.findByRole('img', { name: 'The Krebs cycle' })
-    expect(screen.queryByRole('button', { name: 'Markup' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove picture' })).toBeNull()
     await act(async () => { editor!.commands.setNodeSelection(editor!.state.doc.content.child(0).nodeSize) })
-    expect(screen.getByRole('button', { name: 'Markup' })).toBeTruthy()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove picture' })) })
     await waitFor(() => expect(md).not.toContain('studyhub-image:a.webp'))
     expect(md).toContain('Intro')
-  })
-  it('Markup turns the picture into the drawing surface where it sits, and Cancel puts it back', async () => {
-    await open(NOTE)
-    await screen.findByRole('img', { name: 'The Krebs cycle' })
-    await act(async () => { editor!.commands.setNodeSelection(editor!.state.doc.content.child(0).nodeSize) })
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Markup' })) })
-    const panel = await screen.findByRole('group', { name: 'Marking up the picture' })
-    expect(within(screen.getByLabelText('Note')).getByText(/Intro/)).toBeTruthy() // the note around it stays
-    expect(screen.getByLabelText('Note').contains(panel)).toBe(true)
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel' })) })
-    expect(screen.queryByRole('group', { name: 'Marking up the picture' })).toBeNull()
-    expect(await screen.findByRole('img', { name: 'The Krebs cycle' })).toBeTruthy()
-    expect(md).toContain('studyhub-image:a.webp')
   })
   it('keeps a picture it cannot reach as a placeholder with its description, not a broken image', async () => {
     const sb = await import('@/lib/supabase/client')

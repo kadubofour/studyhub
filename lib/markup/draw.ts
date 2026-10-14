@@ -52,20 +52,3 @@ export function drawMark(ctx: Ctx, m: Mark, imageWidth: number) {
 export function drawMarks(ctx: Ctx, marks: Mark[], imageWidth: number) {
   for (const m of marks) drawMark(ctx, m, imageWidth)
 }
-
-/** The picture (or a white page) with every mark on it, as a WebP file ready to store */
-export async function flatten(
-  base: CanvasImageSource | null, width: number, height: number, marks: Mark[],
-  makeCanvas: (w: number, h: number) => HTMLCanvasElement = (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
-): Promise<Blob> {
-  const canvas = makeCanvas(width, height)
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('no canvas')
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height)
-  if (base) ctx.drawImage(base, 0, 0, width, height)
-  drawMarks(ctx, marks, width)
-  const save = (type: string) => new Promise<Blob | null>(r => canvas.toBlob(b => r(b && b.type === type ? b : null), type, 0.85))
-  const blob = (await save('image/webp')) ?? (await save('image/jpeg')) // Safari cannot save WebP
-  if (!blob) throw new Error('could not save')
-  return blob
-}

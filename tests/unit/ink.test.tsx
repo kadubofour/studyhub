@@ -90,14 +90,6 @@ describe('the ink layer on a note', () => {
     fireEvent.pointerDown(c, { clientX: 25, clientY: 1, pointerId: 1 }) // 50 units across, on the first line
     await waitFor(() => expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ id: 'b' })]))
   })
-  it('places typed text where the note is clicked', async () => {
-    const onChange = vi.fn()
-    await act(async () => { render(<InkLayer marks={[]} active onChange={onChange} />) })
-    fireEvent.click(screen.getByRole('button', { name: 'Text' }))
-    fireEvent.change(screen.getByLabelText('Text to place'), { target: { value: 'Exam!' } })
-    fireEvent.pointerDown(document.querySelector('canvas[data-ink]')!, { clientX: 100, clientY: 40, pointerId: 1 })
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ kind: 'text', text: 'Exam!', at: [200, 80] })]))
-  })
   it('does not draw when it is not active', async () => {
     const onChange = vi.fn()
     await act(async () => { render(<InkLayer marks={[]} active={false} onChange={onChange} />) })

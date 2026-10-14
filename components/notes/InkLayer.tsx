@@ -33,7 +33,6 @@ export function InkLayer({ marks, active, onChange, onDone }: {
   const [tool, setTool] = useState<ToolKey>('pen')
   const [color, setColor] = useState<string>(COLORS[1].value)
   const [size, setSize] = useState<SizeKey>('M')
-  const [text, setText] = useState('')
   const [box, setBox] = useState({ w: 0, h: 0 })
   const sent = useRef(marks)
 
@@ -91,27 +90,20 @@ export function InkLayer({ marks, active, onChange, onDone }: {
     const p = pointOf(e)
     e.currentTarget.setPointerCapture?.(e.pointerId)
     if (tool === 'eraser') { eraseAt(e); return }
-    if (tool === 'text') {
-      const t = text.trim()
-      if (t) { setHistory(h => addMark(h, { id: newId(), kind: 'text', color, size, at: p, text: t })); setText('') }
-      return
-    }
-    setDraft(tool === 'pen' || tool === 'highlighter' ? { id: newId(), kind: tool, color, size, points: [p] } : { id: newId(), kind: tool, color, size, from: p, to: p })
+    setDraft({ id: newId(), kind: 'pen', color, size, points: [p] })
   }
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!active) return
     if (tool === 'eraser') { if (e.buttons) eraseAt(e); return }
     if (!draft) return
     const p = pointOf(e)
-    setDraft(d => (!d ? d : d.kind === 'pen' || d.kind === 'highlighter' ? { ...d, points: [...d.points, p] } : d.kind === 'text' ? d : { ...d, to: p }))
+    setDraft(d => (d && d.kind === 'pen' ? { ...d, points: [...d.points, p] } : d))
   }
   const up = () => {
     if (!draft) return
     const d = draft
     setDraft(null)
-    const kept: Mark = d.kind === 'pen' || d.kind === 'highlighter' ? { ...d, points: thin(d.points) } : d
-    const tiny = 'from' in d && Math.hypot(d.to[0] - d.from[0], d.to[1] - d.from[1]) < 4
-    if (!tiny) setHistory(h => addMark(h, kept))
+    if (d.kind === 'pen') setHistory(h => addMark(h, { ...d, points: thin(d.points) }))
   }
 
   return (
@@ -119,11 +111,11 @@ export function InkLayer({ marks, active, onChange, onDone }: {
       <canvas ref={canvasRef} aria-hidden={!active} data-ink data-active={active ? 'true' : 'false'}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
         className={`absolute inset-0 z-10 h-full w-full ${active ? 'touch-none' : 'pointer-events-none'}`}
-        style={{ cursor: !active ? undefined : tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair' }} />
+        style={{ cursor: !active ? undefined : tool === 'eraser' ? 'cell' : 'crosshair' }} />
       {active && (
         <div role="group" aria-label="Draw on the note" className="fixed inset-x-3 bottom-4 z-30 mx-auto flex max-w-fit flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-raised p-2.5 shadow-xl">
           <MarkupToolbar tool={tool} setTool={setTool} color={color} setColor={setColor} size={size} setSize={setSize}
-            history={history} setHistory={setHistory} text={text} setText={setText} textHint="Type, then click the note" />
+            history={history} setHistory={setHistory} />
           <button type="button" className={BTN_SOLID} onClick={() => onDone?.()}>Done</button>
         </div>
       )}

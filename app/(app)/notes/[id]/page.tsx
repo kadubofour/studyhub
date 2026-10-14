@@ -263,7 +263,7 @@ function NoteEditor({ id }: { id: string }) {
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} /></span>
-        {mode === 'rich' && <button type="button" className={`btn ${inking ? 'bg-accent-soft text-accent' : ''}`} aria-pressed={inking} onClick={() => setInking(i => !i)}><PencilLine size={15} aria-hidden />Draw on note</button>}
+        {mode === 'rich' && <button type="button" className={`btn ${inking ? 'bg-accent-soft text-accent' : ''}`} aria-pressed={inking} onClick={() => setInking(i => !i)}><PencilLine size={15} aria-hidden />Draw</button>}
         <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦ Study</button>
         {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>

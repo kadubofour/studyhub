@@ -51,17 +51,19 @@ describe('marked-up text in a Word export', () => {
 
 describe('the highlight tools in the editor', () => {
   const profile = { id: 'u1', display_name: 'Ama', timezone: 'UTC', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', content_width: 'wide', auto_math: true, onboarded: true } as Profile
-  it('highlights the selected words from the toolbar and takes the highlight off again', async () => {
+  it('highlights the selected words with one Highlight button, with no colours to choose from, and takes it off again', async () => {
     let md = ''
     let editor: Editor | null = null
     await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RichEditor markdown="Alpha beta gamma" onChange={m => { md = m }} onReady={e => { editor = e }} /></ToastProvider></ProfileProvider>) })
+    expect(screen.getAllByRole('button', { name: /^Highlight/ })).toHaveLength(1)
+    expect(screen.queryByRole('group', { name: 'Highlight' })).toBeNull()
     await act(async () => { editor!.commands.setTextSelection({ from: 7, to: 11 }) }) // "beta"
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight green' })) })
-    expect(md).toBe('Alpha <mark class="hl hl-green">beta</mark> gamma')
-    expect(screen.getByRole('button', { name: 'Highlight green' }).getAttribute('aria-pressed')).toBe('true')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight' })) })
+    expect(md).toBe('Alpha <mark class="hl hl-yellow">beta</mark> gamma')
+    expect(screen.getByRole('button', { name: 'Highlight' }).getAttribute('aria-pressed')).toBe('true')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Underline' })) })
     expect(md).toContain('<u>')
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight green' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight' })) })
     expect(md).not.toContain('<mark')
   })
 })
