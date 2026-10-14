@@ -92,7 +92,7 @@ describe('ScanDialog', () => {
     runScan.mockResolvedValue({ ok: true, value: { cards: [{ front: 'Cell?', back: 'Unit of life' }, { front: 'ATP?', back: 'Energy' }] } })
     await openDialog()
     await add(photo('a.jpg'), photo('b.jpg'))
-    fireEvent.change(screen.getByLabelText('Make'), { target: { value: 'cards' } })
+    fireEvent.click(screen.getByRole('radio', { name: /Flashcards/ }))
     await act(async () => { fireEvent.click(scanButton(2)) })
     const arg = runScan.mock.calls[0][0] as { pages: { file: File }[]; target: string; userId: string; today: string }
     expect(arg.pages.map(p => p.file.name)).toEqual(['a.jpg', 'b.jpg'])
@@ -163,5 +163,33 @@ describe('ScanDialog', () => {
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Cells')
     fireEvent.click(screen.getByRole('button', { name: '↺ Scan again' }))
     expect(pageTexts()).toHaveLength(1)
+  })
+
+  it('offers the three results as cards, with the preset one chosen', async () => {
+    await openDialog('planner')
+    const cards = screen.getAllByRole('radio')
+    expect(cards.map(c => c.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true'])
+    expect(screen.getByRole('radiogroup', { name: 'Make' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /A note/ }))
+    expect(screen.getByRole('radio', { name: /A note/ }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('takes pages dropped on it, with the count shown, and ignores a drop of something that is not a file', async () => {
+    await openDialog()
+    const zone = screen.getByRole('group', { name: 'Drop pages to scan' })
+    await act(async () => { fireEvent.drop(zone, { dataTransfer: { types: ['Files'], files: [photo('d1.jpg'), photo('d2.jpg')] } }) })
+    expect(pageTexts()).toHaveLength(2)
+    expect(screen.getByText('2 of 10')).toBeTruthy()
+    await act(async () => { fireEvent.drop(zone, { dataTransfer: { types: ['text/plain'], files: [] } }) })
+    expect(pageTexts()).toHaveLength(2)
+  })
+
+  it('shows a highlight while files are dragged over the drop area', async () => {
+    await openDialog()
+    const zone = screen.getByRole('group', { name: 'Drop pages to scan' })
+    fireEvent.dragEnter(zone, { dataTransfer: { types: ['Files'] } })
+    expect(zone.getAttribute('data-dragging')).toBe('true')
+    fireEvent.dragLeave(zone, { dataTransfer: { types: ['Files'] } })
+    expect(zone.getAttribute('data-dragging')).toBe('false')
   })
 })

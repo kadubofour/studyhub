@@ -7,7 +7,7 @@ export function ScanPages({ pages, onMove, onRetake, onRemove }: {
   pages: ScanPage[]; onMove: (i: number, by: -1 | 1) => void; onRetake: (i: number) => void; onRemove: (i: number) => void
 }) {
   return (
-    <ol className="grid max-h-80 grid-cols-2 gap-2 overflow-y-auto" aria-label="Pages">
+    <ol className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3" aria-label="Pages">
       {pages.map((p, i) => (
         <li key={p.id} className="relative overflow-hidden rounded-xl border border-line bg-surface">
           {p.preview

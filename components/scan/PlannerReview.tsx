@@ -1,4 +1,6 @@
 'use client'
+import { DialogFooter } from '@/components/ui/Dialog'
+import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -115,10 +117,10 @@ export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanA
       )}
       {problem && <p className="text-xs text-muted">{problem}</p>}
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-      <div className="flex justify-between gap-2">
-        <button type="button" className="btn" onClick={onScanAgain}>↺ Scan again</button>
-        <button type="button" className="btn-primary" disabled={!!problem || saving} onClick={save}>Save {count} item{count === 1 ? '' : 's'}</button>
-      </div>
+      <DialogFooter>
+        <button type="button" className={`${BTN_OUTLINE} mr-auto`} onClick={onScanAgain}>↺ Scan again</button>
+        <button type="button" className={BTN_SOLID} disabled={!!problem || saving} onClick={save}>Save {count} item{count === 1 ? '' : 's'}</button>
+      </DialogFooter>
     </div>
   )
 }

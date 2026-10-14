@@ -1,8 +1,11 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, ImagePlus, Loader2 } from 'lucide-react'
-import { Dialog } from '@/components/ui/Dialog'
+import { CalendarDays, Camera, FileText, ImagePlus, Images, Layers, Loader2, ScanLine } from 'lucide-react'
+import { Dialog, DialogFooter } from '@/components/ui/Dialog'
+import { DropZone } from '@/components/ui/DropZone'
+import { OptionCards, type OptionCard } from '@/components/ui/OptionCards'
+import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { AiError } from '@/components/ai/AiError'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -19,7 +22,11 @@ import { PlannerReview } from './PlannerReview'
 import type { Course } from '@/lib/types'
 import type { ScanCardsResult, ScanNoteResult, ScanPlannerResult, ScanTarget } from '@/lib/ai/scan'
 
-const TARGETS: [ScanTarget, string][] = [['note', 'A note'], ['cards', 'Flashcards'], ['planner', 'Planner tasks and classes']]
+const TARGET_CARDS: OptionCard[] = [
+  { value: 'note', label: 'A note', description: 'The text on the pages, typed up', icon: FileText },
+  { value: 'cards', label: 'Flashcards', description: 'Question and answer cards to revise', icon: Layers },
+  { value: 'planner', label: 'Planner tasks and classes', description: 'From a timetable or a to-do list', icon: CalendarDays },
+]
 type Result = { target: 'note'; value: ScanNoteResult } | { target: 'cards'; value: ScanCardsResult } | { target: 'planner'; value: ScanPlannerResult }
 type Problem = { code: string; message: string }
 const release = (p?: ScanPage) => { if (p?.preview) URL.revokeObjectURL(p.preview) }
@@ -65,13 +72,16 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved, initialFiles
     onClose()
   }
 
-  async function add(input: HTMLInputElement) {
-    const files = Array.from(input.files ?? [])
-    input.value = ''
+  async function addList(files: File[]) {
     if (!files.length) return
     const r = await addFiles(pages, files, countPdfPagesInBrowser)
     setPages(r.pages)
     setProblem(r.error ? { code: 'pages', message: r.error } : null)
+  }
+  async function add(input: HTMLInputElement) {
+    const files = Array.from(input.files ?? [])
+    input.value = ''
+    await addList(files)
   }
 
   async function retake(input: HTMLInputElement) {
@@ -152,39 +162,61 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved, initialFiles
 
   const scanAgain = () => { setResult(null); setStage('add') }
 
+  const takePhotos = <button type="button" className={BTN_OUTLINE} onClick={() => camera.current?.click()}><Camera size={14} aria-hidden />Take photos</button>
+  const choose = <button ref={chooseButton} type="button" className={pages.length ? BTN_OUTLINE : BTN_SOLID} onClick={() => chooser.current?.click()}><ImagePlus size={14} aria-hidden />Choose images or a PDF</button>
+  const subtitle = stage === 'review' ? 'Check what was read, then save it.' : stage === 'reading' ? 'This usually takes 10 to 30 seconds.' : 'Turn photos of notes, slides or a timetable into something you can study.'
+
   return (
-    <Dialog open={open} onClose={close} title="Scan pages">
+    <Dialog open={open} onClose={close} title="Scan pages" icon={ScanLine} size="md" subtitle={subtitle}>
       {stage === 'add' && (
-        <div className="space-y-3">
-          <label className="field"><span>Make</span>
-            <select value={target} onChange={e => setTarget(e.target.value as ScanTarget)}>
-              {TARGETS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-            </select>
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="btn justify-center" onClick={() => camera.current?.click()}><Camera size={14} aria-hidden />Take photos</button>
-            <button ref={chooseButton} type="button" className="btn justify-center" onClick={() => chooser.current?.click()}><ImagePlus size={14} aria-hidden />Choose images or a PDF</button>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">What should it make?</p>
+            <OptionCards label="Make" value={target} onChange={v => setTarget(v as ScanTarget)} options={TARGET_CARDS} />
           </div>
           <input ref={camera} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" tabIndex={-1} aria-label="Photos from camera" onChange={e => void add(e.currentTarget)} />
           <input ref={chooser} type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" className="sr-only" tabIndex={-1} aria-label="Images or a PDF to scan" onChange={e => void add(e.currentTarget)} />
           <input ref={retakeInput} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" tabIndex={-1} aria-label="Retake photo" onChange={e => void retake(e.currentTarget)} />
-          {pages.length > 0
-            ? <ScanPages pages={pages} onMove={move} onRemove={remove} onRetake={i => { retaking.current = i; retakeInput.current?.click() }} />
-            : <p className="rounded-2xl border-2 border-dashed border-line px-4 py-6 text-center text-sm text-muted">Add up to 10 pages: photos of notes, slides, a whiteboard or a timetable, or one short PDF.</p>}
-          {problem && <AiError code={problem.code} message={problem.message} />}
-          {plan.billing && !plan.loading && !plan.isPremium && <p className="text-xs text-muted">{freeAllowanceText(plan.usedToday)}</p>}
-          <div className="flex justify-end gap-2">
-            <button type="button" className="btn" onClick={close}>Cancel</button>
-            <button type="button" className="btn-primary" disabled={!pages.length} onClick={scan}>✦ Scan {n} page{n === 1 ? '' : 's'}</button>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">Your pages</p>
+              <span className="text-xs text-muted" aria-live="polite">{n} of 10</span>
+            </div>
+            <DropZone label="Drop pages to scan" onFiles={files => void addList(files)} className={pages.length ? 'p-3' : 'px-4 py-7 text-center'}>
+              {pages.length > 0 ? (
+                <div className="space-y-3">
+                  <ScanPages pages={pages} onMove={move} onRemove={remove} onRetake={i => { retaking.current = i; retakeInput.current?.click() }} />
+                  <div className="flex flex-wrap gap-2">{takePhotos}{choose}</div>
+                </div>
+              ) : (
+                <>
+                  <span aria-hidden className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent"><Images size={24} /></span>
+                  <p className="mt-3 font-medium">Drop photos or a PDF here</p>
+                  <p className="mx-auto mb-4 mt-1 max-w-xs text-xs text-muted">Add up to 10 pages: photos of notes, slides, a whiteboard or a timetable, or one short PDF.</p>
+                  <div className="flex flex-wrap justify-center gap-2">{takePhotos}{choose}</div>
+                </>
+              )}
+            </DropZone>
           </div>
+          {problem && <AiError code={problem.code} message={problem.message} />}
+          <DialogFooter note={plan.billing && !plan.loading && !plan.isPremium ? freeAllowanceText(plan.usedToday) : undefined}>
+            <button type="button" className={BTN_OUTLINE} onClick={close}>Cancel</button>
+            <button type="button" className={BTN_SOLID} disabled={!pages.length} onClick={scan}>✦ Scan {n} page{n === 1 ? '' : 's'}</button>
+          </DialogFooter>
         </div>
       )}
       {stage === 'reading' && (
-        <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-9 text-center" role="status">
+          <div className="flex -space-x-3" aria-hidden>
+            {pages.filter(p => p.preview).slice(0, 4).map(p => (
+              // eslint-disable-next-line @next/next/no-img-element -- a local photo preview (blob URL)
+              <img key={p.id} src={p.preview ?? undefined} alt="" className="size-14 rounded-lg border-2 border-bg object-cover shadow" />
+            ))}
+          </div>
           <Loader2 size={26} className="animate-spin text-accent" aria-hidden />
-          <p className="text-sm">Reading your pages…</p>
+          <p className="text-sm font-medium">Reading your pages…</p>
           <p className="text-xs text-muted">Usually 10–30 seconds.</p>
-          <button type="button" className="btn mt-2" onClick={cancel}>Cancel scan</button>
+          <button type="button" className={`${BTN_OUTLINE} mt-1`} onClick={cancel}>Cancel scan</button>
         </div>
       )}
       {stage === 'review' && result?.target === 'note' && (
