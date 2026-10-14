@@ -132,3 +132,34 @@ test('the drawing can be undone, and its tools have no serious accessibility pro
   await bar.getByRole('button', { name: 'Undo' }).click()
   await expect.poll(() => inkPixels(page)).toBe(0)
 })
+
+test('draw with another brush and a custom thickness, and rub out part of a stroke without taking the whole stroke', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Brushes')
+  // Draw sits among the other tools in the editor's toolbar
+  await expect(page.getByRole('button', { name: 'Image' })).toBeVisible()
+  await page.getByRole('button', { name: 'Draw', exact: true }).click()
+  const bar = page.getByRole('group', { name: 'Draw on the note' })
+  await expect(bar).toBeVisible()
+  await bar.getByRole('button', { name: 'Marker' }).click()
+  await bar.getByRole('slider', { name: 'Thickness' }).fill('18')
+  const box = (await page.locator('canvas[data-ink]').boundingBox())!
+  await page.mouse.move(box.x + 40, box.y + 320); await page.mouse.down(); await page.mouse.move(box.x + 300, box.y + 320, { steps: 12 }); await page.mouse.up()
+  await expect.poll(() => inkPixels(page)).toBeGreaterThan(500)
+  const whole = await inkPixels(page)
+
+  // The rubber takes a bite out of the middle: less ink, but not none
+  await bar.getByRole('button', { name: 'Rub out' }).click()
+  await page.mouse.move(box.x + 170, box.y + 320); await page.mouse.down(); await page.mouse.move(box.x + 190, box.y + 320, { steps: 4 }); await page.mouse.up()
+  await expect.poll(() => inkPixels(page)).toBeLessThan(whole * 0.9)
+  expect(await inkPixels(page)).toBeGreaterThan(whole * 0.4)
+
+  // One Undo puts the whole rub-out back
+  await bar.getByRole('button', { name: 'Undo' }).click()
+  await expect.poll(() => inkPixels(page)).toBeGreaterThan(whole * 0.97)
+
+  // The other eraser takes the stroke away completely
+  await bar.getByRole('button', { name: 'Erase whole stroke' }).click()
+  await page.mouse.click(box.x + 100, box.y + 320)
+  await expect.poll(() => inkPixels(page)).toBe(0)
+})

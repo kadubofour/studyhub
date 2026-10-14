@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { MarkupToolbar } from './MarkupToolbar'
 import { BTN_SOLID } from '@/components/ui/buttonStyles'
-import { COLORS, newId, type Mark, type Pt, type SizeKey, type ToolKey } from '@/lib/markup/marks'
-import { addMark, emptyHistory, eraseMark, redo, undo, type History } from '@/lib/markup/history'
+import { COLORS, DEFAULT_WIDTH, isBrush, newId, type Mark, type Pt, type ToolKey } from '@/lib/markup/marks'
+import { addMark, emptyHistory, eraseMark, redo, replaceMarks, undo, type History } from '@/lib/markup/history'
 import { hitTest } from '@/lib/markup/hit'
-import { INK_TEXT_BASIS, INK_WIDTH, drawInk, inkPerPixel } from '@/lib/markup/ink'
+import { rubOut, rubberRadius } from '@/lib/markup/rub'
+import { INK_WIDTH, drawInk, inkPerPixel } from '@/lib/markup/ink'
 
 const ERASE_REACH = 10 // screen pixels
 
@@ -21,8 +22,9 @@ function thin(points: Pt[]): Pt[] {
 }
 
 /**
- * Pen, highlighter, shapes and text drawn straight onto a note. The layer covers the note's content (its parent must be
- * `relative`) and scrolls with it. While `active` it takes the pointer and shows its tools; otherwise it only shows what was drawn.
+ * Freehand drawing straight onto a note, with a choice of brushes, any thickness, and two erasers. The layer covers the
+ * note's content (its parent must be `relative`) and scrolls with it. While `active` it takes the pointer and shows its
+ * tools; otherwise it only shows what was drawn.
  */
 export function InkLayer({ marks, active, onChange, onDone }: {
   marks: Mark[]; active: boolean; onChange?: (marks: Mark[]) => void; onDone?: () => void
@@ -30,9 +32,12 @@ export function InkLayer({ marks, active, onChange, onDone }: {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [history, setHistory] = useState<History>(() => ({ ...emptyHistory(), marks }))
   const [draft, setDraft] = useState<Mark | null>(null)
+  // What a rub-out gesture has left so far: shown while the pointer is down, and put in the history as one step when it lifts
+  const [rubbed, setRubbed] = useState<Mark[] | null>(null)
+  const rubbedNow = useRef<Mark[] | null>(null)
   const [tool, setTool] = useState<ToolKey>('pen')
   const [color, setColor] = useState<string>(COLORS[1].value)
-  const [size, setSize] = useState<SizeKey>('M')
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
   const [box, setBox] = useState({ w: 0, h: 0 })
   const sent = useRef(marks)
 
@@ -59,8 +64,9 @@ export function InkLayer({ marks, active, onChange, onDone }: {
     if (!c || !ctx || !box.w || !box.h) return
     const ratio = window.devicePixelRatio || 1
     c.width = Math.round(box.w * ratio); c.height = Math.round(box.h * ratio)
-    drawInk(ctx, draft ? [...history.marks, draft] : history.marks, box.w, ratio)
-  }, [box, history.marks, draft])
+    const base = rubbed ?? history.marks
+    drawInk(ctx, draft ? [...base, draft] : base, box.w, ratio)
+  }, [box, history.marks, draft, rubbed])
 
   // Ctrl+Z / Ctrl+Shift+Z and Escape while drawing
   useEffect(() => {
@@ -80,30 +86,41 @@ export function InkLayer({ marks, active, onChange, onDone }: {
     return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]
   }
   const eraseAt = (e: React.PointerEvent) => {
-    const id = hitTest(history.marks, pointOf(e), INK_TEXT_BASIS, ERASE_REACH * inkPerPixel(e.currentTarget.getBoundingClientRect().width))
+    const id = hitTest(history.marks, pointOf(e), ERASE_REACH * inkPerPixel(e.currentTarget.getBoundingClientRect().width))
     if (id) setHistory(h => eraseMark(h, id))
+  }
+  const rubAt = (e: React.PointerEvent) => {
+    const next = rubOut(rubbedNow.current ?? history.marks, pointOf(e), rubberRadius(width))
+    if (next !== (rubbedNow.current ?? history.marks)) { rubbedNow.current = next; setRubbed(next) }
   }
 
   const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!active) return
     e.preventDefault()
-    const p = pointOf(e)
     e.currentTarget.setPointerCapture?.(e.pointerId)
     if (tool === 'eraser') { eraseAt(e); return }
-    setDraft({ id: newId(), kind: 'pen', color, size, points: [p] })
+    if (tool === 'rubber') { rubbedNow.current = null; rubAt(e); return }
+    if (isBrush(tool)) setDraft({ id: newId(), brush: tool, color, width, points: [pointOf(e)] })
   }
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!active) return
     if (tool === 'eraser') { if (e.buttons) eraseAt(e); return }
+    if (tool === 'rubber') { if (e.buttons) rubAt(e); return }
     if (!draft) return
     const p = pointOf(e)
-    setDraft(d => (d && d.kind === 'pen' ? { ...d, points: [...d.points, p] } : d))
+    setDraft(d => (d ? { ...d, points: [...d.points, p] } : d))
   }
   const up = () => {
+    if (rubbedNow.current) {
+      const result = rubbedNow.current
+      rubbedNow.current = null
+      setRubbed(null)
+      setHistory(h => replaceMarks(h, result))
+    }
     if (!draft) return
     const d = draft
     setDraft(null)
-    if (d.kind === 'pen') setHistory(h => addMark(h, { ...d, points: thin(d.points) }))
+    setHistory(h => addMark(h, { ...d, points: thin(d.points) }))
   }
 
   return (
@@ -111,10 +128,10 @@ export function InkLayer({ marks, active, onChange, onDone }: {
       <canvas ref={canvasRef} aria-hidden={!active} data-ink data-active={active ? 'true' : 'false'}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
         className={`absolute inset-0 z-10 h-full w-full ${active ? 'touch-none' : 'pointer-events-none'}`}
-        style={{ cursor: !active ? undefined : tool === 'eraser' ? 'cell' : 'crosshair' }} />
+        style={{ cursor: !active ? undefined : tool === 'eraser' || tool === 'rubber' ? 'cell' : 'crosshair' }} />
       {active && (
         <div role="group" aria-label="Draw on the note" className="fixed inset-x-3 bottom-4 z-30 mx-auto flex max-w-fit flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-raised p-2.5 shadow-xl">
-          <MarkupToolbar tool={tool} setTool={setTool} color={color} setColor={setColor} size={size} setSize={setSize}
+          <MarkupToolbar tool={tool} setTool={setTool} color={color} setColor={setColor} width={width} setWidth={setWidth}
             history={history} setHistory={setHistory} />
           <button type="button" className={BTN_SOLID} onClick={() => onDone?.()}>Done</button>
         </div>

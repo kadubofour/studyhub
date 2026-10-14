@@ -1,54 +1,70 @@
-import { HIGHLIGHT_ALPHA, HIGHLIGHT_FACTOR, strokeWidth, textSize, type Mark, type Pt } from './marks'
+import { BRUSH_REACH, type Mark, type Pt } from './marks'
 
 type Ctx = CanvasRenderingContext2D
 
-function arrowHead(ctx: Ctx, from: Pt, to: Pt, width: number) {
-  const angle = Math.atan2(to[1] - from[1], to[0] - from[0]), len = width * 4.5
+// A small repeatable random number for a stroke, so the pencil's grain is the same each time the stroke is drawn
+function seeded(id: string) {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619)
+  return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h ^= h >>> 13; return ((h >>> 0) % 10000) / 10000 }
+}
+
+function path(ctx: Ctx, pts: Pt[]) {
   ctx.beginPath()
-  ctx.moveTo(to[0], to[1])
-  ctx.lineTo(to[0] - len * Math.cos(angle - Math.PI / 7), to[1] - len * Math.sin(angle - Math.PI / 7))
-  ctx.moveTo(to[0], to[1])
-  ctx.lineTo(to[0] - len * Math.cos(angle + Math.PI / 7), to[1] - len * Math.sin(angle + Math.PI / 7))
+  ctx.moveTo(pts[0][0], pts[0][1])
+  for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1])
   ctx.stroke()
 }
 
-/** Draws one mark; `imageWidth` is the picture's own width, which sizes strokes and text */
-export function drawMark(ctx: Ctx, m: Mark, imageWidth: number) {
-  const w = strokeWidth(m.size, imageWidth)
+function dot(ctx: Ctx, p: Pt, width: number) {
+  ctx.beginPath(); ctx.arc(p[0], p[1], width / 2, 0, Math.PI * 2); ctx.fill()
+}
+
+/** Draws one stroke in its brush. Everything is in the drawing's own units; the caller scales the canvas. */
+export function drawMark(ctx: Ctx, m: Mark) {
+  const w = m.width * BRUSH_REACH[m.brush]
+  const pts = m.points
   ctx.save()
   ctx.strokeStyle = m.color; ctx.fillStyle = m.color; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  switch (m.kind) {
-    case 'pen': case 'highlighter': {
-      if (m.kind === 'highlighter') { ctx.globalAlpha = HIGHLIGHT_ALPHA; ctx.lineWidth = w * HIGHLIGHT_FACTOR; ctx.lineCap = 'butt' }
-      if (m.points.length === 1) {
-        ctx.beginPath(); ctx.arc(m.points[0][0], m.points[0][1], ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill()
-      } else {
-        ctx.beginPath(); ctx.moveTo(m.points[0][0], m.points[0][1])
-        for (const p of m.points.slice(1)) ctx.lineTo(p[0], p[1])
-        ctx.stroke()
+  switch (m.brush) {
+    case 'pen':
+    case 'marker':
+      if (m.brush === 'marker') ctx.globalAlpha = 0.85
+      if (pts.length === 1) dot(ctx, pts[0], w); else path(ctx, pts)
+      break
+    case 'highlighter':
+      ctx.globalAlpha = 0.35; ctx.lineCap = 'butt'
+      if (pts.length === 1) dot(ctx, pts[0], w); else path(ctx, pts)
+      break
+    case 'pencil': {
+      // A soft, slightly uneven line: a pale body and two thinner passes that wander a little either side
+      const rand = seeded(m.id)
+      ctx.globalAlpha = 0.5; ctx.lineWidth = w * 0.8
+      if (pts.length === 1) dot(ctx, pts[0], w * 0.8); else path(ctx, pts)
+      for (let pass = 0; pass < 2 && pts.length > 1; pass++) {
+        ctx.globalAlpha = 0.35; ctx.lineWidth = Math.max(0.5, w * 0.45)
+        path(ctx, pts.map(p => [p[0] + (rand() - 0.5) * w * 0.5, p[1] + (rand() - 0.5) * w * 0.5] as Pt))
       }
       break
     }
-    case 'line': case 'arrow':
-      ctx.beginPath(); ctx.moveTo(m.from[0], m.from[1]); ctx.lineTo(m.to[0], m.to[1]); ctx.stroke()
-      if (m.kind === 'arrow') arrowHead(ctx, m.from, m.to, w)
+    case 'calligraphy': {
+      // A flat nib held at 45 degrees: thick across the nib, thin along it
+      if (pts.length === 1) { dot(ctx, pts[0], w * 0.6); break }
+      for (let i = 1; i < pts.length; i++) {
+        const angle = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0])
+        ctx.lineWidth = Math.max(0.5, w * (0.18 + 0.82 * Math.abs(Math.sin(angle - Math.PI / 4))))
+        ctx.beginPath(); ctx.moveTo(pts[i - 1][0], pts[i - 1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke()
+      }
       break
-    case 'rect':
-      ctx.strokeRect(Math.min(m.from[0], m.to[0]), Math.min(m.from[1], m.to[1]), Math.abs(m.to[0] - m.from[0]), Math.abs(m.to[1] - m.from[1]))
-      break
-    case 'ellipse':
-      ctx.beginPath()
-      ctx.ellipse((m.from[0] + m.to[0]) / 2, (m.from[1] + m.to[1]) / 2, Math.abs(m.to[0] - m.from[0]) / 2, Math.abs(m.to[1] - m.from[1]) / 2, 0, 0, Math.PI * 2)
-      ctx.stroke()
-      break
-    case 'text':
-      ctx.font = `600 ${textSize(m.size, imageWidth)}px system-ui, sans-serif`; ctx.textBaseline = 'top'
-      ctx.fillText(m.text, m.at[0], m.at[1])
+    }
+    case 'dotted':
+      ctx.setLineDash([0, w * 2.2])
+      if (pts.length === 1) dot(ctx, pts[0], w); else path(ctx, pts)
       break
   }
   ctx.restore()
 }
 
-export function drawMarks(ctx: Ctx, marks: Mark[], imageWidth: number) {
-  for (const m of marks) drawMark(ctx, m, imageWidth)
+export function drawMarks(ctx: Ctx, marks: Mark[]) {
+  for (const m of marks) drawMark(ctx, m)
 }

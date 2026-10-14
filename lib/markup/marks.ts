@@ -1,6 +1,19 @@
 export type Pt = [number, number]
-export type SizeKey = 'S' | 'M' | 'L'
-export type ToolKey = 'pen' | 'highlighter' | 'line' | 'arrow' | 'rect' | 'ellipse' | 'text' | 'eraser'
+
+/** The brushes. Each one draws the same path of points in its own way (see draw.ts). */
+export const BRUSHES = [
+  { key: 'pen', label: 'Pen' },
+  { key: 'pencil', label: 'Pencil' },
+  { key: 'marker', label: 'Marker' },
+  { key: 'highlighter', label: 'Highlighter' },
+  { key: 'calligraphy', label: 'Calligraphy pen' },
+  { key: 'dotted', label: 'Dotted line' },
+] as const
+export type BrushKind = (typeof BRUSHES)[number]['key']
+export const isBrush = (v: unknown): v is BrushKind => BRUSHES.some(b => b.key === v)
+
+/** What the drawing tool is set to: a brush, or one of the two erasers */
+export type ToolKey = BrushKind | 'eraser' | 'rubber'
 
 export const COLORS = [
   { name: 'Black', value: '#111827' },
@@ -11,20 +24,16 @@ export const COLORS = [
   { name: 'Purple', value: '#9333ea' },
 ] as const
 
-type Base = { id: string; color: string; size: SizeKey }
-export type Mark =
-  | (Base & { kind: 'pen' | 'highlighter'; points: Pt[] })
-  | (Base & { kind: 'line' | 'arrow' | 'rect' | 'ellipse'; from: Pt; to: Pt })
-  | (Base & { kind: 'text'; at: Pt; text: string })
+/** Thickness is any number from MIN_WIDTH to MAX_WIDTH, in the drawing's own units (the note is 1000 units wide) */
+export const MIN_WIDTH = 1
+export const MAX_WIDTH = 40
+export const DEFAULT_WIDTH = 4
 
-/** Marks are kept in the picture's own pixels, so a mark sits in the same place whatever size it is shown at or saved at */
-export function strokeWidth(size: SizeKey, imageWidth: number): number {
-  const unit = Math.max(2, imageWidth / 300)
-  return unit * { S: 1, M: 2.5, L: 5 }[size]
-}
-export const textSize = (size: SizeKey, imageWidth: number) => strokeWidth(size, imageWidth) * 5 + 10
-export const HIGHLIGHT_ALPHA = 0.35
-export const HIGHLIGHT_FACTOR = 4 // a highlighter is this many times thicker than the pen of the same size
+/** One stroke: a brush, a colour, a thickness and the points it passes through */
+export type Mark = { id: string; brush: BrushKind; color: string; width: number; points: Pt[] }
+
+/** How much thicker than its width setting each brush draws, so the same slider setting suits every brush */
+export const BRUSH_REACH: Record<BrushKind, number> = { pen: 1, pencil: 1, marker: 1.6, highlighter: 3, calligraphy: 1.4, dotted: 1 }
 
 let counter = 0
 export const newId = () => `m${Date.now().toString(36)}${(counter++).toString(36)}`

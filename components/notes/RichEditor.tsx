@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, Sigma, Table } from 'lucide-react'
+import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilLine, Sigma, Table } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
 import { TableTools } from './TableTools'
@@ -72,7 +72,7 @@ function onlyPicture(data: DataTransfer | null): boolean {
 // The description a picture gets from its file name: "Krebs cycle.png" -> "Krebs cycle"; a screenshot's "image.png" gets none
 const altFrom = (name: string) => { const n = name.replace(/\.[^.]+$/, '').trim(); return /^(image|screenshot|untitled)\d*$/i.test(n) ? '' : n.slice(0, 120) }
 
-export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, autoMath = true }: {
+export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, drawing = false, onDraw, autoMath = true }: {
   markdown: string
   onChange: (md: string) => void
   /** Hands the editor to the page (menu bar commands, find); null when it goes away. */
@@ -80,6 +80,10 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   /** Clicking an equation opens it for editing. Must only call stable setters: it is read once. */
   onEditMath?: EditMath
   onInsertEquation?: () => void
+  /** The Draw tool is on: the note is being drawn on */
+  drawing?: boolean
+  /** The Draw button in the toolbar */
+  onDraw?: () => void
   /** Profile > Preferences > Turn typed maths into equations */
   autoMath?: boolean
 }) {
@@ -202,6 +206,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         <TableButton editor={editor} on={active('table')} />
         {tool('Equation', Sigma, () => onInsertEquation?.())}
         <PictureButton input={pictureInput} />
+        {tool('Draw', PencilLine, () => onDraw?.(), drawing)}
         {active('table') && <><span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-line" /><TableTools editor={editor} /></>}
       </div>
       <input ref={pictureInput} type="file" hidden aria-label="Choose pictures" accept={ACCEPTED.join(',')} multiple

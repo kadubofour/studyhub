@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { newUser } from './helpers'
 
-const stroke = { id: 'm1', kind: 'pen', color: '#dc2626', size: 'M', points: [[10, 10], [200, 80]] }
+const stroke = { id: 'm1', brush: 'pen', color: '#dc2626', width: 4, points: [[10, 10], [200, 80]] }
 
 describe('ink drawn on a note', () => {
   it('starts empty and keeps the marks the student draws', async () => {

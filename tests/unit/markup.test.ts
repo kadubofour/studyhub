@@ -1,21 +1,22 @@
 import { describe, it, expect } from 'vitest'
-import { addMark, canRedo, canUndo, clearMarks, emptyHistory, eraseMark, redo, undo } from '@/lib/markup/history'
+import { addMark, canRedo, canUndo, clearMarks, emptyHistory, eraseMark, redo, replaceMarks, undo } from '@/lib/markup/history'
 import { hitTest } from '@/lib/markup/hit'
+import { rubOut, rubberRadius } from '@/lib/markup/rub'
 import { drawMark } from '@/lib/markup/draw'
-import { strokeWidth, textSize, type Mark } from '@/lib/markup/marks'
+import { BRUSHES, BRUSH_REACH, type BrushKind, type Mark, type Pt } from '@/lib/markup/marks'
 
-const line = (id: string, from: [number, number], to: [number, number]): Mark => ({ id, kind: 'line', color: '#000', size: 'M', from, to })
-const pen = (id: string): Mark => ({ id, kind: 'pen', color: '#000', size: 'S', points: [[0, 0], [100, 0]] })
+const stroke = (id: string, points: Pt[], over: Partial<Mark> = {}): Mark => ({ id, brush: 'pen', color: '#000000', width: 4, points, ...over })
+const across = (id: string, y = 0, x2 = 100) => stroke(id, [[0, y], [x2, y]])
 
 describe('history', () => {
-  it('adds, erases and clears marks', () => {
-    let h = addMark(addMark(emptyHistory(), pen('a')), pen('b'))
+  it('adds, erases and clears strokes', () => {
+    let h = addMark(addMark(emptyHistory(), across('a')), across('b'))
     expect(h.marks.map(m => m.id)).toEqual(['a', 'b'])
     h = eraseMark(h, 'a'); expect(h.marks.map(m => m.id)).toEqual(['b'])
     h = clearMarks(h); expect(h.marks).toEqual([])
   })
-  it('steps back and forth with undo and redo, including a clear', () => {
-    let h = addMark(addMark(emptyHistory(), pen('a')), pen('b'))
+  it('steps back and forth with undo and redo', () => {
+    let h = addMark(addMark(emptyHistory(), across('a')), across('b'))
     h = clearMarks(h)
     h = undo(h); expect(h.marks.map(m => m.id)).toEqual(['a', 'b'])
     h = undo(h); expect(h.marks.map(m => m.id)).toEqual(['a'])
@@ -24,6 +25,13 @@ describe('history', () => {
     h = eraseMark(h, 'a'); expect(canRedo(h)).toBe(false) // a new change drops what could have been redone
     expect(canUndo(h)).toBe(true)
   })
+  it('swaps the whole drawing in one step, and does nothing for the same drawing', () => {
+    const h = addMark(emptyHistory(), across('a'))
+    const swapped = replaceMarks(h, [across('x')])
+    expect(swapped.marks.map(m => m.id)).toEqual(['x'])
+    expect(undo(swapped).marks.map(m => m.id)).toEqual(['a'])
+    expect(replaceMarks(h, h.marks)).toBe(h)
+  })
   it('does nothing when there is nothing to undo, redo, erase or clear', () => {
     const h = emptyHistory()
     expect(undo(h)).toBe(h); expect(redo(h)).toBe(h); expect(clearMarks(h)).toBe(h); expect(eraseMark(h, 'x')).toBe(h)
@@ -31,29 +39,50 @@ describe('history', () => {
   })
 })
 
-describe('hit test for the eraser', () => {
-  it('finds a mark near its line and nothing far from it', () => {
-    const marks = [line('l', [0, 0], [100, 0])]
-    expect(hitTest(marks, [50, 3], 1000, 8)).toBe('l')
-    expect(hitTest(marks, [50, 60], 1000, 8)).toBeNull()
+describe('the stroke eraser', () => {
+  it('finds a stroke near its line and nothing far from it', () => {
+    expect(hitTest([across('l')], [50, 3], 3)).toBe('l')
+    expect(hitTest([across('l')], [50, 60], 3)).toBeNull()
   })
-  it('takes the topmost of two marks that overlap', () => {
-    expect(hitTest([line('under', [0, 0], [100, 0]), line('over', [0, 0], [100, 0])], [50, 0], 1000, 8)).toBe('over')
+  it('allows for how broad the brush is', () => {
+    const broad = stroke('h', [[0, 0], [100, 0]], { brush: 'highlighter', width: 20 }) // 60 units wide, so 30 either side
+    expect(hitTest([broad], [50, 25], 0)).toBe('h')
+    expect(hitTest([across('thin')], [50, 25], 0)).toBeNull()
   })
-  it('finds a rectangle by its edge and not its empty middle, and an ellipse by its ring', () => {
-    const rect: Mark = { id: 'r', kind: 'rect', color: '#000', size: 'S', from: [0, 0], to: [200, 100] }
-    expect(hitTest([rect], [100, 1], 1000, 6)).toBe('r')
-    expect(hitTest([rect], [100, 50], 1000, 6)).toBeNull()
-    const oval: Mark = { id: 'o', kind: 'ellipse', color: '#000', size: 'S', from: [0, 0], to: [200, 100] }
-    expect(hitTest([oval], [100, 0], 1000, 6)).toBe('o')
-    expect(hitTest([oval], [100, 50], 1000, 6)).toBeNull()
+  it('takes the topmost of two strokes that overlap, and finds a single-dot stroke', () => {
+    expect(hitTest([across('under'), across('over')], [50, 0], 3)).toBe('over')
+    expect(hitTest([stroke('d', [[5, 5]])], [6, 5], 2)).toBe('d')
   })
-  it('finds a text mark anywhere inside its box and a single-dot pen mark', () => {
-    const text: Mark = { id: 't', kind: 'text', color: '#000', size: 'M', at: [10, 10], text: 'ATP' }
-    expect(hitTest([text], [20, 20], 1000, 4)).toBe('t')
-    expect(hitTest([text], [400, 400], 1000, 4)).toBeNull()
-    const dot: Mark = { id: 'd', kind: 'pen', color: '#000', size: 'S', points: [[5, 5]] }
-    expect(hitTest([dot], [6, 5], 1000, 4)).toBe('d')
+})
+
+describe('the rubber', () => {
+  it('cuts a stroke in two where it crosses, and keeps both ends', () => {
+    const out = rubOut([across('a', 0, 200)], [100, 0], 10)
+    expect(out).toHaveLength(2)
+    const xs = out.map(m => [m.points[0][0], m.points[m.points.length - 1][0]])
+    expect(xs[0][0]).toBe(0); expect(xs[0][1]).toBeLessThan(100); expect(xs[0][1]).toBeGreaterThan(80)
+    expect(xs[1][0]).toBeGreaterThan(100); expect(xs[1][1]).toBe(200)
+    expect(out[0].id).not.toBe(out[1].id)
+    expect(out.every(m => m.brush === 'pen' && m.width === 4 && m.color === '#000000')).toBe(true)
+  })
+  it('does not skip a stretch between two far-apart points', () => {
+    const out = rubOut([stroke('a', [[0, 0], [400, 0]])], [200, 0], 10) // there is no point anywhere near x = 200
+    expect(out).toHaveLength(2)
+  })
+  it('takes away a stroke it covers, and shortens one it touches at the end', () => {
+    expect(rubOut([across('a', 0, 10)], [5, 0], 30)).toEqual([])
+    const out = rubOut([across('a', 0, 200)], [195, 0], 10)
+    expect(out).toHaveLength(1)
+    expect(out[0].points[out[0].points.length - 1][0]).toBeLessThan(190)
+  })
+  it('leaves strokes it does not touch exactly as they were, and returns the same list when nothing changed', () => {
+    const marks = [across('a', 0), across('b', 300)]
+    expect(rubOut(marks, [50, 150], 10)).toBe(marks)
+    const out = rubOut(marks, [50, 0], 10)
+    expect(out[out.length - 1]).toBe(marks[1])
+  })
+  it('gets bigger with the size setting', () => {
+    expect(rubberRadius(40)).toBeGreaterThan(rubberRadius(1))
   })
 })
 
@@ -62,42 +91,67 @@ function fakeCtx() {
   const calls: string[] = []
   const state: Record<string, unknown> = {}
   const ctx = new Proxy(state, {
-    get: (t, k: string) => (k in t ? t[k] : (...a: unknown[]) => { calls.push(`${k}(${a.map(x => (typeof x === 'number' ? Math.round(x) : typeof x === 'object' ? 'obj' : String(x))).join(',')})`) }),
-    set: (t, k: string, v) => { t[k] = v; if (k === 'globalAlpha') calls.push(`alpha=${v}`); return true },
+    get: (t, k: string) => (k in t ? t[k] : (...a: unknown[]) => { calls.push(`${k}(${a.map(x => (typeof x === 'number' ? Math.round(x * 10) / 10 : Array.isArray(x) ? `[${x.join(',')}]` : String(x))).join(',')})`) }),
+    set: (t, k: string, v) => { t[k] = v; return true },
   })
   return { ctx: ctx as unknown as CanvasRenderingContext2D, calls, state }
 }
+const draw = (brush: BrushKind, over: Partial<Mark> = {}) => {
+  const f = fakeCtx()
+  const pts: Pt[] = [[0, 0], [10, 10], [20, 5]]
+  drawMark(f.ctx, stroke('p', pts, { brush, width: 6, ...over }))
+  return f
+}
 
-describe('drawing marks', () => {
-  it('draws a pen mark as a path through its points, in its colour and a width that grows with the size', () => {
-    const { ctx, calls, state } = fakeCtx()
-    drawMark(ctx, { id: 'p', kind: 'pen', color: '#dc2626', size: 'L', points: [[0, 0], [10, 10], [20, 5]] }, 1200)
-    expect(calls).toContain('moveTo(0,0)'); expect(calls).toContain('lineTo(20,5)'); expect(calls).toContain('stroke()')
-    expect(state.strokeStyle).toBe('#dc2626')
-    expect(strokeWidth('L', 1200)).toBeGreaterThan(strokeWidth('S', 1200))
-    expect(state.lineWidth).toBe(strokeWidth('L', 1200))
+describe('the brushes', () => {
+  it('has six brushes, each drawing a different way', () => {
+    expect(BRUSHES.map(b => b.key)).toEqual(['pen', 'pencil', 'marker', 'highlighter', 'calligraphy', 'dotted'])
   })
-  it('draws the highlighter see-through and thicker than a pen', () => {
-    const { ctx, calls, state } = fakeCtx()
-    drawMark(ctx, { id: 'h', kind: 'highlighter', color: '#ea580c', size: 'S', points: [[0, 0], [50, 0]] }, 1200)
-    expect(calls.some(c => c.startsWith('alpha=0.3'))).toBe(true)
-    expect(Number(state.lineWidth)).toBeGreaterThan(strokeWidth('S', 1200))
+  it('the pen is one solid line in its colour and exactly its thickness', () => {
+    const { calls, state } = draw('pen', { color: '#dc2626' })
+    expect(calls).toContain('moveTo(0,0)'); expect(calls).toContain('lineTo(20,5)')
+    expect(state.strokeStyle).toBe('#dc2626'); expect(state.lineWidth).toBe(6)
   })
-  it('draws an arrow with a head, a rectangle and an ellipse, and text at its place', () => {
-    const cases: [Mark, string][] = [
-      [{ id: 'a', kind: 'arrow', color: '#000', size: 'M', from: [0, 0], to: [100, 0] }, 'lineTo'],
-      [{ id: 'r', kind: 'rect', color: '#000', size: 'M', from: [100, 80], to: [10, 20] }, 'strokeRect(10,20,90,60)'],
-      [{ id: 'e', kind: 'ellipse', color: '#000', size: 'M', from: [0, 0], to: [100, 50] }, 'ellipse(50,25,50,25,0,0,6)'],
-      [{ id: 't', kind: 'text', color: '#000', size: 'M', at: [30, 40], text: 'ATP' }, 'fillText(ATP,30,40)'],
-    ]
-    for (const [mark, expected] of cases) {
-      const { ctx, calls } = fakeCtx()
-      drawMark(ctx, mark, 1200)
-      expect(calls.some(c => c.startsWith(expected))).toBe(true)
+  it('thickness is any number, and the line follows it', () => {
+    expect(draw('pen', { width: 1 }).state.lineWidth).toBe(1)
+    expect(draw('pen', { width: 17.5 }).state.lineWidth).toBe(17.5)
+    expect(draw('pen', { width: 40 }).state.lineWidth).toBe(40)
+  })
+  it('the highlighter is see-through and broader than the pen', () => {
+    const { state } = draw('highlighter')
+    expect(Number(state.globalAlpha)).toBeLessThan(0.5)
+    expect(Number(state.lineWidth)).toBe(6 * BRUSH_REACH.highlighter)
+  })
+  it('the marker is broader than the pen and nearly solid', () => {
+    const { state } = draw('marker')
+    expect(Number(state.lineWidth)).toBeGreaterThan(6)
+    expect(Number(state.globalAlpha)).toBeGreaterThan(0.7)
+  })
+  it('the pencil is a pale line with thinner, wandering passes over it, the same each time it is drawn', () => {
+    const a = draw('pencil').calls, b = draw('pencil').calls
+    expect(a.filter(c => c === 'stroke()').length).toBe(3)
+    expect(a).toEqual(b)
+    expect(draw('pencil', { id: 'other' }).calls).not.toEqual(a)
+  })
+  it('the calligraphy pen is thick across its nib and thin along it', () => {
+    const widths: number[] = []
+    const f = fakeCtx()
+    const stateRef = f.state
+    const origStroke = f.ctx.stroke.bind(f.ctx)
+    f.ctx.stroke = () => { widths.push(Number(stateRef.lineWidth)); origStroke() }
+    drawMark(f.ctx, stroke('c', [[0, 0], [50, 50], [100, 0]], { brush: 'calligraphy', width: 10 }))
+    expect(widths).toHaveLength(2)
+    expect(widths[0]).toBeLessThan(widths[1]) // along the nib at 45 degrees is thin; across it is thick
+  })
+  it('the dotted brush draws dots spaced by its thickness', () => {
+    const { calls } = draw('dotted', { width: 5 })
+    expect(calls).toContain('setLineDash([0,11])')
+  })
+  it('a single touch makes a dot in every brush', () => {
+    for (const b of BRUSHES) {
+      const f = fakeCtx()
+      drawMark(f.ctx, stroke('d', [[5, 5]], { brush: b.key }))
+      expect(f.calls.some(c => c.startsWith('arc(')), b.key).toBe(true)
     }
-    const { ctx, calls } = fakeCtx()
-    drawMark(ctx, cases[0][0], 1200)
-    expect(calls.filter(c => c.startsWith('lineTo')).length).toBe(3) // the shaft and the two sides of the head
-    expect(textSize('L', 1200)).toBeGreaterThan(textSize('S', 1200))
   })
 })
