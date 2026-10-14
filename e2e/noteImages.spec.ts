@@ -87,10 +87,10 @@ test('mark up a picture: Done saves it as the note\'s picture, and Cancel change
   expect(after).not.toBe(before)
 })
 
-test('the Sketch button makes a sketch on a blank page and puts it in the note', async ({ page }) => {
+test('the Draw button makes a sketch on a blank page and puts it in the note', async ({ page }) => {
   await signUp(page)
   await newNote(page, 'Sketch')
-  await page.getByRole('button', { name: 'Sketch' }).click()
+  await page.getByRole('button', { name: 'Draw' }).click()
   const dialog = page.getByRole('group', { name: 'Marking up the picture' })
   await expect(dialog).toBeVisible()
   await scribble(page)
@@ -103,7 +103,7 @@ test('the Sketch button makes a sketch on a blank page and puts it in the note',
 test('the markup tool has no serious accessibility problems', async ({ page }) => {
   await signUp(page)
   await newNote(page, 'A11y')
-  await page.getByRole('button', { name: 'Sketch' }).click()
+  await page.getByRole('button', { name: 'Draw' }).click()
   await expect(page.getByRole('group', { name: 'Marking up the picture' })).toBeVisible()
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
   expect(r.violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(v => `${v.id}: ${v.nodes[0].target.join(' ')}`)).toEqual([])
@@ -136,59 +136,4 @@ test('highlight and underline words in a note: they stay after a reload and show
   await page.getByRole('menuitemcheckbox', { name: /Reading mode/ }).click()
   await expect(page.getByRole('article').locator('mark.hl-green')).toContainText('Krebs')
   await expect(page.getByRole('article').locator('u')).toContainText('Krebs')
-})
-
-// How many pixels of the ink layer have been drawn on
-const inkPixels = (page: Page) => page.evaluate(() => {
-  const c = document.querySelector('canvas[data-ink]') as HTMLCanvasElement | null
-  if (!c || !c.width) return 0
-  const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data
-  let n = 0
-  for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++
-  return n
-})
-
-test('draw directly on a note: the ink stays where it was drawn after a reload, and the note can still be edited', async ({ page }) => {
-  await signUp(page)
-  await newNote(page, 'Inked')
-  await page.getByLabel('Note', { exact: true }).click()
-  await page.keyboard.type('The Krebs cycle runs in the matrix')
-  await expect(page.getByText('Saved')).toBeVisible()
-  await page.getByRole('button', { name: 'Draw on note' }).click()
-  const bar = page.getByRole('group', { name: 'Draw on the note' })
-  await expect(bar).toBeVisible()
-  const ink = page.locator('canvas[data-ink]')
-  const box = (await ink.boundingBox())!
-  await bar.getByRole('radio', { name: 'Blue' }).click()
-  await page.mouse.move(box.x + 40, box.y + 60)
-  await page.mouse.down()
-  await page.mouse.move(box.x + 200, box.y + 100, { steps: 8 })
-  await page.mouse.move(box.x + 120, box.y + 40, { steps: 8 })
-  await page.mouse.up()
-  await expect.poll(() => inkPixels(page)).toBeGreaterThan(200)
-  await bar.getByRole('button', { name: 'Done' }).click()
-  await expect(bar).toBeHidden()
-  await expect(page.getByText('Saved')).toBeVisible()
-  const before = await inkPixels(page)
-  await page.reload()
-  await expect.poll(() => inkPixels(page), { timeout: 20_000 }).toBeGreaterThan(before * 0.6)
-  // Not drawing: the note underneath can be typed in again
-  await page.getByLabel('Note', { exact: true }).click()
-  await page.keyboard.type(' and more')
-  await expect(page.locator('.ProseMirror')).toContainText('and more')
-})
-
-test('ink on a note can be undone and cleared', async ({ page }) => {
-  await signUp(page)
-  await newNote(page, 'Undo ink')
-  await page.getByRole('button', { name: 'Draw on note' }).click()
-  const bar = page.getByRole('group', { name: 'Draw on the note' })
-  await expect(bar).toBeVisible()
-  const found = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  expect(found.violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(v => `${v.id}: ${v.nodes[0].target.join(' ')}`)).toEqual([])
-  const box = (await page.locator('canvas[data-ink]').boundingBox())!
-  await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 100, { steps: 8 }); await page.mouse.up()
-  await expect.poll(() => inkPixels(page)).toBeGreaterThan(100)
-  await bar.getByRole('button', { name: 'Undo' }).click()
-  await expect.poll(() => inkPixels(page)).toBe(0)
 })

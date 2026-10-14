@@ -1,14 +1,12 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, PencilLine } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
 import { RichEditor, insertTable } from '@/components/notes/RichEditor'
 import { MarkdownView } from '@/components/notes/MarkdownView'
-import { InkLayer } from '@/components/notes/InkLayer'
-import { sanitizeInk } from '@/lib/markup/ink'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
 import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
@@ -33,7 +31,7 @@ import type { Course, EditorMode, Note } from '@/lib/types'
 
 const notifyList = () => { window.dispatchEvent(new Event(NOTES_CHANGED)) }
 
-type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id' | 'ink'>>
+type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id'>>
 const STATUS_TEXT = {
   idle: '', pending: '', saving: 'Saving…', saved: 'Saved', error: 'Not saved — will retry',
   failed: 'Couldn\'t save this change. Check the course still exists, then edit again.',
@@ -62,7 +60,6 @@ function NoteEditor({ id }: { id: string }) {
   const { profile, setProfile } = useProfile()
   const confirm = useConfirm()
   const [note, setNote] = useState<Note | null>(null)
-  const inkAtOpen = useMemo(() => sanitizeInk(note?.ink), [note])
   const [courses, setCourses] = useState<Course[]>([])
   const [mode, setMode] = useState<EditorMode>(profile.default_editor_mode)
   const [reading, setReading] = useState(false)
@@ -76,7 +73,6 @@ function NoteEditor({ id }: { id: string }) {
   useEffect(() => { if (studyParam) router.replace(`/notes/${id}`) }, [studyParam, id, router])
   const [equation, setEquation] = useState<EquationEdit | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [inking, setInking] = useState(false) // drawing straight onto the note
   const [draft, setDraft] = useState<Note | null>(null)
   // Ref holds the latest draft: the Tiptap onUpdate callback is created once, so reading
   // `draft` state from it would merge onto a stale copy and drop title/course edits.
@@ -98,7 +94,7 @@ function NoteEditor({ id }: { id: string }) {
     draftRef.current = next
     setDraft(next)
     // Always save the full editable state so the latest value of every field wins
-    update({ title: next.title, content_md: next.content_md, course_id: next.course_id, ink: next.ink })
+    update({ title: next.title, content_md: next.content_md, course_id: next.course_id })
   }
 
   // Change the whole note text from outside the editor (e.g. adding a summary). `update` gets the
@@ -263,12 +259,10 @@ function NoteEditor({ id }: { id: string }) {
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} /></span>
-        {mode === 'rich' && <button type="button" className={`btn ${inking ? 'bg-accent-soft text-accent' : ''}`} aria-pressed={inking} onClick={() => setInking(i => !i)}><PencilLine size={15} aria-hidden />Draw on note</button>}
         <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦ Study</button>
         {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>
-      <div className={`relative mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
-        {mode === 'rich' && <InkLayer key={note.id} marks={inkAtOpen} active={inking && !reading} onChange={marks => change({ ink: marks })} onDone={() => setInking(false)} />}
+      <div className={`mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
         {reading ? (
           <article>
             <h1 className="mb-4 text-3xl font-semibold">{draft.title || 'Untitled'}</h1>

@@ -1,12 +1,23 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MarkupToolbar } from './MarkupToolbar'
+import { ArrowUpRight, Circle, Eraser, Highlighter, Minus, PenLine, Redo2, Square, Trash2, Type, Undo2, type LucideIcon } from 'lucide-react'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { COLORS, newId, type Mark, type Pt, type SizeKey, type ToolKey } from '@/lib/markup/marks'
-import { addMark, emptyHistory, eraseMark, redo, undo, type History } from '@/lib/markup/history'
+import { addMark, canRedo, canUndo, clearMarks, emptyHistory, eraseMark, redo, undo, type History } from '@/lib/markup/history'
 import { hitTest } from '@/lib/markup/hit'
 import { drawMarks, flatten } from '@/lib/markup/draw'
 
+const TOOLS: { key: ToolKey; label: string; icon: LucideIcon }[] = [
+  { key: 'pen', label: 'Pen', icon: PenLine },
+  { key: 'highlighter', label: 'Highlighter', icon: Highlighter },
+  { key: 'line', label: 'Line', icon: Minus },
+  { key: 'arrow', label: 'Arrow', icon: ArrowUpRight },
+  { key: 'rect', label: 'Rectangle', icon: Square },
+  { key: 'ellipse', label: 'Ellipse', icon: Circle },
+  { key: 'text', label: 'Text', icon: Type },
+  { key: 'eraser', label: 'Eraser', icon: Eraser },
+]
 const BLANK = { width: 1200, height: 800 }
 const ERASE_REACH = 10 // screen pixels
 
@@ -121,8 +132,29 @@ function Editor({ source, onCancel, onDone }: {
         <p role="alert" className="rounded-lg bg-surface p-4 text-sm text-muted">That picture could not be opened for markup. Close this and try again.</p>
       ) : (
         <>
-          <MarkupToolbar tool={tool} setTool={setTool} color={color} setColor={setColor} size={size} setSize={setSize}
-            history={history} setHistory={setHistory} text={text} setText={setText} textHint="Type, then click the picture" />
+          <div role="toolbar" aria-label="Markup tools" className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex gap-1">
+              {TOOLS.map(t => (
+                <button key={t.key} type="button" aria-label={t.label} aria-pressed={tool === t.key} title={t.label} onClick={() => setTool(t.key)}
+                  className={`inline-flex size-9 items-center justify-center rounded-lg transition ${tool === t.key ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                  <t.icon size={17} aria-hidden />
+                </button>
+              ))}
+            </div>
+            <ChoiceChips label="Colour" size="sm" value={color} onChange={setColor} options={COLORS.map(c => ({ value: c.value, label: c.name, color: c.value }))} />
+            <ChoiceChips label="Size" size="sm" value={size} onChange={v => setSize(v as SizeKey)} options={[{ value: 'S', label: 'Thin' }, { value: 'M', label: 'Medium' }, { value: 'L', label: 'Thick' }]} />
+            <div className="flex gap-1">
+              <button type="button" aria-label="Undo" title="Undo" disabled={!canUndo(history)} onClick={() => setHistory(undo)} className="inline-flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-fg disabled:opacity-40"><Undo2 size={17} aria-hidden /></button>
+              <button type="button" aria-label="Redo" title="Redo" disabled={!canRedo(history)} onClick={() => setHistory(redo)} className="inline-flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-fg disabled:opacity-40"><Redo2 size={17} aria-hidden /></button>
+              <button type="button" aria-label="Clear all" title="Clear all" disabled={!history.marks.length} onClick={() => setHistory(clearMarks)} className="inline-flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-danger disabled:opacity-40"><Trash2 size={17} aria-hidden /></button>
+            </div>
+          </div>
+          {tool === 'text' && (
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted">Text to place</span>
+              <input value={text} onChange={e => setText(e.target.value)} maxLength={120} placeholder="Type, then click the picture" className="min-w-0 flex-1 rounded-lg border border-line bg-raised px-3 py-1.5" />
+            </label>
+          )}
           <div className="rounded-lg border border-line bg-surface p-2">
             {loaded ? (
               <canvas ref={canvasRef} width={loaded.width} height={loaded.height} aria-label="Picture being marked up" role="img"
