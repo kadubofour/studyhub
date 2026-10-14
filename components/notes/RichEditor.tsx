@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { Bold, Italic, Heading2, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilRuler, Sigma, Table } from 'lucide-react'
+import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilRuler, Sigma, Table } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
 import { TableTools } from './TableTools'
@@ -18,6 +18,7 @@ import { insertNoteImage, noteImages } from './noteImage'
 import { supabase } from '@/lib/supabase/client'
 import { makeImageResolver } from '@/lib/notes/images'
 import { HIGHLIGHTS } from '@/lib/notes/markup'
+import { MarkerLayer } from './MarkerLayer'
 import { ACCEPTED, IMAGE_ERROR_TEXT, ImageError, prepareImage, uploadNoteImage } from '@/lib/notes/prepareImage'
 
 export const insertTable = (editor: Editor, rows: number, cols: number) =>
@@ -91,6 +92,8 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   const resolver = useMemo(() => makeImageResolver(supabase(), profile.id), [profile.id])
   // The picture being marked up: it becomes the drawing surface where it sits in the note
   const [editing, setEditing] = useState<NoteImageEditing | null>(null)
+  const [marking, setMarking] = useState(false) // the marker is on: dragging across the words marks them
+  const stopMarking = useCallback(() => setMarking(false), [])
   const pictureInput = useRef<HTMLInputElement>(null)
   const editorRef = useRef<Editor | null>(null)
   const addRef = useRef<(files: File[]) => void>(() => {})
@@ -223,6 +226,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         {tool('Italic', Italic, () => editor.chain().focus().toggleItalic().run(), active('italic'))}
         {tool('Underline', UnderlineIcon, () => editor.chain().focus().toggleUnderline().run(), active('underline'))}
         {tool('Strikethrough', Strikethrough, () => editor.chain().focus().toggleStrike().run(), active('strike'))}
+        {tool('Marker', Highlighter, () => setMarking(m => !m), marking)}
         <span role="group" aria-label="Highlight" className="mx-1 flex shrink-0 items-center gap-1">
           {HIGHLIGHTS.map(h => {
             const on = editor.isActive('highlight', { color: h.name })
@@ -246,7 +250,9 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
       <input ref={pictureInput} type="file" hidden aria-label="Choose pictures" accept={ACCEPTED.join(',')} multiple
         onChange={e => { const files = Array.from(e.target.files ?? []); e.target.value = ''; if (files.length) addRef.current(files) }} />
       <NoteImagesContext.Provider value={imagesCtx}>
-        <EditorContent editor={editor} onContextMenu={openQuickActions} />
+        <MarkerLayer editor={editor} active={marking} onDone={stopMarking}>
+          <EditorContent editor={editor} onContextMenu={openQuickActions} />
+        </MarkerLayer>
       </NoteImagesContext.Provider>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} label="Quick actions" onClose={closeMenu}
         footer="Shift + right-click for the browser menu" />}

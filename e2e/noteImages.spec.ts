@@ -137,3 +137,60 @@ test('highlight and underline words in a note: they stay after a reload and show
   await expect(page.getByRole('article').locator('mark.hl-green')).toContainText('Krebs')
   await expect(page.getByRole('article').locator('u')).toContainText('Krebs')
 })
+
+test('the marker: drag across words to highlight them, click a word to underline it, and the marks stay with the words', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Marker')
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.type('The Krebs cycle runs in the mitochondrial matrix')
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.getByRole('button', { name: 'Marker' }).click()
+  const bar = page.getByRole('group', { name: 'Mark up the text' })
+  await expect(bar).toBeVisible()
+
+  // Drag a green marker from the start of "Krebs" to the end of "cycle"
+  await bar.getByRole('radio', { name: 'Green marker' }).click()
+  // Where the n-th character of the first paragraph is on screen, whatever marks split it into pieces
+  const at = (n: number) => page.evaluate(count => {
+    const walker = document.createTreeWalker(document.querySelector('.ProseMirror p')!, NodeFilter.SHOW_TEXT)
+    let left = count
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      if (left < node.length) {
+        const r = document.createRange(); r.setStart(node, left); r.setEnd(node, left + 1)
+        const b = r.getBoundingClientRect()
+        return { x: b.left, y: b.top + b.height / 2 }
+      }
+      left -= node.length
+    }
+    throw new Error('no such character')
+  }, n)
+  const start = await at(4), end = await at(15) // "K" of Krebs ... just after "cycle"
+  await page.mouse.move(start.x + 1, start.y)
+  await page.mouse.down()
+  await page.mouse.move((start.x + end.x) / 2, start.y, { steps: 6 })
+  await page.mouse.move(end.x - 1, end.y, { steps: 6 })
+  await page.mouse.up()
+  await expect(page.locator('.ProseMirror mark.hl-green')).toHaveText('Krebs cycle')
+
+  // Click a word with the underline tool
+  await bar.getByRole('button', { name: 'Underline' }).click()
+  const matrix = await at(42) // inside "matrix"
+  await page.mouse.click(matrix.x, matrix.y)
+  await expect(page.locator('.ProseMirror u')).toHaveText('matrix')
+
+  // The eraser takes the highlight off again
+  await bar.getByRole('button', { name: 'Remove markup' }).click()
+  await page.mouse.click(start.x + 2, start.y)
+  await bar.getByRole('button', { name: 'Done' }).click()
+  await expect(bar).toBeHidden()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.reload()
+  await expect(page.locator('.ProseMirror u')).toHaveText('matrix')
+  await expect(page.locator('.ProseMirror mark.hl-green')).toHaveText('cycle') // "Krebs" was cleared, "cycle" kept
+
+  // Typing works again, and the markup moves with its words
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.press('Control+Home')
+  await page.keyboard.type('Intro. ')
+  await expect(page.locator('.ProseMirror mark.hl-green')).toHaveText('cycle')
+})
