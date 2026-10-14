@@ -1,18 +1,36 @@
 import { supabase } from '@/lib/supabase/client'
 import { getNotesForExport } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
+import { makeImageResolver, toToken } from '@/lib/notes/images'
+import type { ImageLoader } from '@/lib/export/notesToDocx'
 
 const fileSafe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 80) || 'Notes'
+
+// Word cannot show WebP, so each picture is fetched through its signed link and redrawn as PNG
+function imageLoader(userId: string): ImageLoader {
+  const resolve = makeImageResolver(supabase(), userId)
+  return async file => {
+    const url = await resolve(toToken(file))
+    if (!url) return null
+    const bitmap = await createImageBitmap(await (await fetch(url)).blob())
+    const canvas = document.createElement('canvas')
+    canvas.width = bitmap.width; canvas.height = bitmap.height
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0)
+    bitmap.close()
+    const png = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/png'))
+    return png ? { data: new Uint8Array(await png.arrayBuffer()), width: bitmap.width, height: bitmap.height, type: 'png' } : null
+  }
+}
 
 /** Download notes (some ids, or all when omitted) as a Word document. False when there was nothing to export. */
 export async function exportNotesToWord(ids?: string[], fileName?: string): Promise<boolean> {
   const sb = supabase()
-  const [notes, courses] = await Promise.all([getNotesForExport(sb, ids), listCourses(sb)])
+  const [notes, courses, { data: auth }] = await Promise.all([getNotesForExport(sb, ids), listCourses(sb), sb.auth.getUser()])
   if (!notes.length) return false
   const { notesToDocx } = await import('@/lib/export/notesToDocx')
   const blob = await notesToDocx(notes.map(n => ({
     title: n.title, content_md: n.content_md, course: courses.find(c => c.id === n.course_id)?.name ?? null,
-  })))
+  })), auth.user ? imageLoader(auth.user.id) : undefined)
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   a.download = `${fileSafe(fileName ?? (notes.length === 1 ? notes[0].title : 'Studyhub notes'))}.docx`

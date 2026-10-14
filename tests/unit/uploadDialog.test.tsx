@@ -167,4 +167,19 @@ describe('UploadDialog', () => {
     expect(screen.getByRole('alert').textContent).toContain('read that file')
     expect(screen.getByLabelText('File to upload')).toBeTruthy()
   })
+
+  it('takes a file dropped on it, like one that was chosen', async () => {
+    render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
+    const zone = screen.getByRole('group', { name: 'Drop a file here' })
+    fireEvent.dragEnter(zone, { dataTransfer: { types: ['Files'] } })
+    expect(zone.getAttribute('data-dragging')).toBe('true')
+    await act(async () => { fireEvent.drop(zone, { dataTransfer: { types: ['Files'], files: [file('board.jpg')] } }) })
+    expect(onScan).toHaveBeenCalledTimes(1) // a dropped photo goes to Scan
+  })
+
+  it('offers Scan for photos and Lectures for recordings from the first screen', async () => {
+    render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Photos of notes or slides/ })) })
+    expect(onScan).toHaveBeenCalledWith([])
+  })
 })

@@ -1,4 +1,6 @@
 'use client'
+import { DialogFooter } from '@/components/ui/Dialog'
+import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { createCards } from '@/lib/data/cards'
@@ -36,14 +38,14 @@ export function CardsReview({ result, deckName, onSaved, onScanAgain }: {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted">{cards.length} cards found. Edit or untick any before saving.</p>
+      <p className="rounded-lg bg-surface px-3 py-2 text-sm">{cards.length} cards found. Edit or untick any before saving.</p>
       <CardReviewList cards={cards} onChange={setCards} />
       <DeckPicker value={deck} onChange={choice => { madeDeck.current = null; setDeck(choice) }} />
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-      <div className="flex justify-between gap-2">
-        <button type="button" className="btn" onClick={onScanAgain}>↺ Scan again</button>
-        <button type="button" className="btn-primary" disabled={saving || !keep.length} onClick={save}>Save {keep.length} card{keep.length === 1 ? '' : 's'}</button>
-      </div>
+      <DialogFooter>
+        <button type="button" className={`${BTN_OUTLINE} mr-auto`} onClick={onScanAgain}>↺ Scan again</button>
+        <button type="button" className={BTN_SOLID} disabled={saving || !keep.length} onClick={save}>Save {keep.length} card{keep.length === 1 ? '' : 's'}</button>
+      </DialogFooter>
     </div>
   )
 }

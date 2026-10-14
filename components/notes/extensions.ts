@@ -5,6 +5,10 @@ import { TableKit } from '@tiptap/extension-table'
 import { Markdown } from '@tiptap/markdown'
 import Mathematics from '@tiptap/extension-mathematics'
 import { mathToken } from './autoMath'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { NoteImage } from './noteImage'
+import { NoteImageView } from './NoteImageView'
+import { Highlight, NoteUnderline } from './markupMarks'
 
 // The Mathematics extension's typing shortcut is $$x$$, but notes store inline math as $x$.
 // This lets $x$ typed in Rich mode render immediately, matching the Markdown syntax.
@@ -86,9 +90,13 @@ export function noteExtensions(opts: {
   onEditMath?: EditMath
   /** Read on every keystroke; without it, editor.commands.setAutoMath() decides */
   autoMath?: () => boolean
+  /** Draw pictures with the React node view (the editor on the page); the plain node is for tests and anything without a page */
+  imageView?: boolean
 } = {}) {
   return [
-    StarterKit.configure({ link: false }),
+    StarterKit.configure({ link: false, underline: false }),
+    NoteUnderline,
+    Highlight,
     TaskList,
     TaskItem.configure({ nested: true }),
     TableKit.configure({ table: { resizable: false } }),
@@ -100,6 +108,7 @@ export function noteExtensions(opts: {
       blockOptions: { onClick: (node, pos) => opts.onEditMath?.('block', node.attrs.latex, pos) },
     }),
     SingleDollarMath,
+    opts.imageView ? NoteImage.extend({ addNodeView: () => ReactNodeViewRenderer(NoteImageView) }) : NoteImage,
     AutoMath.configure({ enabled: opts.autoMath ?? null }),
     Markdown,
   ]

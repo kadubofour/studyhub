@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -7,6 +7,8 @@ import type { Editor } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
 import { RichEditor, insertTable } from '@/components/notes/RichEditor'
 import { MarkdownView } from '@/components/notes/MarkdownView'
+import { InkLayer } from '@/components/notes/InkLayer'
+import { sanitizeInk } from '@/lib/markup/ink'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
 import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
@@ -31,7 +33,7 @@ import type { Course, EditorMode, Note } from '@/lib/types'
 
 const notifyList = () => { window.dispatchEvent(new Event(NOTES_CHANGED)) }
 
-type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id'>>
+type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id' | 'ink'>>
 const STATUS_TEXT = {
   idle: '', pending: '', saving: 'Saving…', saved: 'Saved', error: 'Not saved — will retry',
   failed: 'Couldn\'t save this change. Check the course still exists, then edit again.',
@@ -60,6 +62,7 @@ function NoteEditor({ id }: { id: string }) {
   const { profile, setProfile } = useProfile()
   const confirm = useConfirm()
   const [note, setNote] = useState<Note | null>(null)
+  const inkAtOpen = useMemo(() => sanitizeInk(note?.ink), [note])
   const [courses, setCourses] = useState<Course[]>([])
   const [mode, setMode] = useState<EditorMode>(profile.default_editor_mode)
   const [reading, setReading] = useState(false)
@@ -73,6 +76,7 @@ function NoteEditor({ id }: { id: string }) {
   useEffect(() => { if (studyParam) router.replace(`/notes/${id}`) }, [studyParam, id, router])
   const [equation, setEquation] = useState<EquationEdit | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
+  const [inking, setInking] = useState(false) // drawing straight onto the note
   const [draft, setDraft] = useState<Note | null>(null)
   // Ref holds the latest draft: the Tiptap onUpdate callback is created once, so reading
   // `draft` state from it would merge onto a stale copy and drop title/course edits.
@@ -94,7 +98,7 @@ function NoteEditor({ id }: { id: string }) {
     draftRef.current = next
     setDraft(next)
     // Always save the full editable state so the latest value of every field wins
-    update({ title: next.title, content_md: next.content_md, course_id: next.course_id })
+    update({ title: next.title, content_md: next.content_md, course_id: next.course_id, ink: next.ink })
   }
 
   // Change the whole note text from outside the editor (e.g. adding a summary). `update` gets the
@@ -262,7 +266,8 @@ function NoteEditor({ id }: { id: string }) {
         <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦ Study</button>
         {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>
-      <div className={`mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
+      <div className={`relative mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
+        {mode === 'rich' && <InkLayer key={note.id} marks={inkAtOpen} active={inking && !reading} onChange={marks => change({ ink: marks })} onDone={() => setInking(false)} />}
         {reading ? (
           <article>
             <h1 className="mb-4 text-3xl font-semibold">{draft.title || 'Untitled'}</h1>
@@ -274,7 +279,7 @@ function NoteEditor({ id }: { id: string }) {
               onChange={e => change({ title: e.target.value })} aria-label="Title" />
             {mode === 'rich' ? (
               <RichEditor key={`rich-${note.id}`} markdown={draft.content_md} onChange={md => change({ content_md: md })}
-                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} autoMath={profile.auto_math} />
+                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} drawing={inking} onDraw={() => setInking(i => !i)} autoMath={profile.auto_math} />
             ) : (
               <div className="mt-4 grid gap-6 md:grid-cols-2">
                 <textarea ref={markdownRef} className="input min-h-[70vh] font-mono text-[13px]" value={draft.content_md} aria-label="Markdown"

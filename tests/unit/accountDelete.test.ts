@@ -49,12 +49,12 @@ describe('POST /api/account/delete', () => {
   })
   it('turns off renewal, removes files, deletes the sign-in, then signs out, in that order', async () => {
     ent = { subscription_code: 'SUB_1', email_token: 'tok', auto_renew: true }
-    tree = { imports: { u1: [{ name: 'a.pdf', id: 'f1' }] }, lectures: { u1: [{ name: 'lec1-0.webm', id: 'f2' }, { name: 'lec1-1.webm', id: 'f3' }] } }
+    tree = { imports: { u1: [{ name: 'a.pdf', id: 'f1' }] }, lectures: { u1: [{ name: 'lec1-0.webm', id: 'f2' }, { name: 'lec1-1.webm', id: 'f3' }] }, 'note-images': { u1: [{ name: 'p1.webp', id: 'f4' }] } }
     const res = await call()
     expect(res.status).toBe(200)
     expect(disableSubscription).toHaveBeenCalledWith('SUB_1', 'tok')
-    expect(steps).toEqual(['paystack', 'rpc set_subscription {"p_user":"u1","p_subscription_code":null,"p_email_token":null,"p_auto_renew":false}', 'remove imports', 'remove lectures', 'delete u1', 'signout'])
-    expect(removed).toEqual(['imports:u1/a.pdf', 'lectures:u1/lec1-0.webm', 'lectures:u1/lec1-1.webm'])
+    expect(steps).toEqual(['paystack', 'rpc set_subscription {"p_user":"u1","p_subscription_code":null,"p_email_token":null,"p_auto_renew":false}', 'remove imports', 'remove lectures', 'remove note-images', 'delete u1', 'signout'])
+    expect(removed).toEqual(['imports:u1/a.pdf', 'lectures:u1/lec1-0.webm', 'lectures:u1/lec1-1.webm', 'note-images:u1/p1.webp'])
   })
   it('does not touch Paystack when there is no subscription', async () => {
     await call()

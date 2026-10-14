@@ -1,8 +1,11 @@
 'use client'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileUp, Sparkles, Loader2 } from 'lucide-react'
-import { Dialog } from '@/components/ui/Dialog'
+import { Camera, FileUp, Loader2, Mic, Sparkles, UploadCloud } from 'lucide-react'
+import { Dialog, DialogFooter } from '@/components/ui/Dialog'
+import { DropZone } from '@/components/ui/DropZone'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -118,67 +121,90 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
     }
   }
 
+  const goToLectures = () => { void mayLeave().then(ok => { if (ok) { close(); router.push('/lectures') } }) }
+  const chosenCourse = courses.find(c => c.id === courseId)
+
   return (
-    <Dialog open={open} onClose={close} title="Upload material">
+    <Dialog open={open} onClose={close} title="Upload material" icon={FileUp} size="md"
+      subtitle={stage === 'review' ? 'Check it over, then save it as a note.' : 'Turn a PDF, slides or a document into a note you can study from.'}>
       {stage === 'pick' && (
-        <div className="space-y-3">
-          <button type="button" onClick={() => input.current?.click()}
-            className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-line px-4 py-8 text-center transition hover:border-accent hover:bg-accent-soft">
-            <FileUp size={26} className="text-accent" aria-hidden />
-            <span className="font-medium">Choose a file</span>
-            <span className="text-xs text-muted">PDF, Word, PowerPoint or a text file. PDFs are structured by AI (OpenAI), which uses AI actions: headings, lists, tables and equations, up to 24 MB and 100 pages. The others are read here for free.</span>
-          </button>
+        <div className="space-y-4">
+          <DropZone label="Drop a file here" onFiles={f => void pick(f[0])} className="px-5 py-8 text-center">
+            <span aria-hidden className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent"><UploadCloud size={24} /></span>
+            <p className="mt-3 text-base font-medium">Drop a file here</p>
+            <p className="mb-3 text-sm text-muted">or</p>
+            <button type="button" className={BTN_SOLID} onClick={() => input.current?.click()}>Choose a file</button>
+            <ul className="mt-4 flex flex-wrap justify-center gap-1.5" aria-label="Accepted files">
+              {['PDF', 'Word', 'PowerPoint', 'Text'].map(t => <li key={t} className="rounded-md bg-raised px-2 py-0.5 text-xs text-muted ring-1 ring-line">{t}</li>)}
+            </ul>
+          </DropZone>
           <input ref={input} type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.wav,.webm,.ogg,.mp4,.mov,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,image/*,audio/*,video/*"
             className="sr-only" aria-label="File to upload" onChange={e => { const f = e.target.files?.[0]; if (f) void pick(f) }} />
-          <p className="text-xs text-muted">Photos of notes or slides go through Scan. Recordings are made in Lectures.</p>
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-          <div className="flex justify-end"><button type="button" className="btn" onClick={close}>Cancel</button></div>
+          {error && <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
+          <p className="flex items-start gap-2 text-xs text-muted"><Sparkles size={13} className="mt-0.5 shrink-0 text-accent" aria-hidden />
+            <span>PDFs are structured by AI (OpenAI), which uses AI actions: headings, lists, tables and equations, up to 24 MB and 100 pages. Word, PowerPoint and text files are read here for free.</span></p>
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Something else?</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button type="button" onClick={() => { close(); (onScan ?? requestScan)([]) }}
+                className="flex items-center gap-3 rounded-xl border border-line bg-raised p-3 text-left transition hover:bg-surface">
+                <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-muted"><Camera size={17} /></span>
+                <span><span className="block text-sm font-medium">Photos of notes or slides</span><span className="block text-xs text-muted">Read them with Scan</span></span>
+              </button>
+              <button type="button" onClick={goToLectures}
+                className="flex items-center gap-3 rounded-xl border border-line bg-raised p-3 text-left transition hover:bg-surface">
+                <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-muted"><Mic size={17} /></span>
+                <span><span className="block text-sm font-medium">A lecture recording</span><span className="block text-xs text-muted">Record and transcribe in Lectures</span></span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {stage === 'recording' && (
         <div className="space-y-3">
-          <p className="text-sm">Audio and video files can&apos;t be uploaded yet. Lectures records live and transcribes as you go, and the transcript can become a note.</p>
-          <div className="flex justify-end gap-2">
-            <button type="button" className="btn" onClick={reset}>Choose another</button>
-            <button type="button" className="btn-primary" onClick={() => { void mayLeave().then(ok => { if (ok) { close(); router.push('/lectures') } }) }}>Go to Lectures</button>
+          <div className="flex items-start gap-3 rounded-xl bg-surface p-4">
+            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Mic size={17} /></span>
+            <p className="text-sm">Audio and video files can&apos;t be uploaded yet. Lectures records live and transcribes as you go, and the transcript can become a note.</p>
           </div>
+          <DialogFooter>
+            <button type="button" className={BTN_OUTLINE} onClick={reset}>Choose another</button>
+            <button type="button" className={BTN_SOLID} onClick={goToLectures}>Go to Lectures</button>
+          </DialogFooter>
         </div>
       )}
       {stage === 'working' && (
-        <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
-          <Loader2 size={26} className="animate-spin text-accent" aria-hidden />
-          <p className="text-sm text-muted">{working}</p>
-          <button type="button" className="btn mt-2" onClick={reset}>Cancel upload</button>
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center" role="status">
+          <Loader2 size={30} className="animate-spin text-accent" aria-hidden />
+          <p className="text-sm font-medium">{working}</p>
+          <p className="text-xs text-muted">You can cancel any time.</p>
+          <button type="button" className={`${BTN_OUTLINE} mt-1`} onClick={reset}>Cancel upload</button>
         </div>
       )}
       {stage === 'review' && draft && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {draft.via === 'ai' && <p className="flex items-center gap-1.5 text-xs text-accent"><Sparkles size={13} aria-hidden />Structured by AI — check it before saving.</p>}
           {draft.limit
             ? <LimitPrompt kind={draft.limit} title={draft.notice} />
             : draft.notice && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs">{draft.notice}</p>}
           <label className="field"><span>Title</span><input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label>
-          <label className="field"><span>Course</span>
-            <select value={courseId} onChange={e => setCourseId(e.target.value)}>
-              <option value="">No course</option>
-              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <fieldset className="field">
-            <legend className="text-sm">After saving</legend>
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {NEXT.map(([v, label]) => (
-                <label key={v} className="flex items-center gap-1.5 text-sm"><input type="radio" name="after-save" checked={next === v} onChange={() => setNext(v)} />{label}</label>
-              ))}
+          <div className="space-y-1.5">
+            <p className="text-sm">Course</p>
+            <ChoiceChips label="Course" size="sm" value={courseId} onChange={setCourseId} options={[{ value: '', label: 'No course' }, ...courses.map(c => ({ value: c.id, label: c.name }))]} />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-sm">After saving</p>
+            <ChoiceChips label="After saving" size="sm" value={next} onChange={v => setNext(v as Next)} options={NEXT.map(([value, label]) => ({ value, label }))} />
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Preview</p>
+            <div className="max-h-64 overflow-y-auto rounded-xl border border-line bg-raised px-3 py-2" aria-label="Preview" tabIndex={0} role="region">
+              <MarkdownView source={draft.content_md || '*This file had no text.*'} />
             </div>
-          </fieldset>
-          <div className="max-h-64 overflow-y-auto rounded-xl border border-line px-3 py-2" aria-label="Preview">
-            <MarkdownView source={draft.content_md || '*This file had no text.*'} />
           </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" className="btn" onClick={reset}>Choose another</button>
-            <button type="button" className="btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save note'}</button>
-          </div>
+          <DialogFooter note={chosenCourse ? `In ${chosenCourse.name}` : undefined}>
+            <button type="button" className={BTN_OUTLINE} onClick={reset}>Choose another</button>
+            <button type="button" className={BTN_SOLID} onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save note'}</button>
+          </DialogFooter>
         </div>
       )}
     </Dialog>

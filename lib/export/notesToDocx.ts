@@ -1,6 +1,6 @@
 import {
   AlignmentType, Document, ExternalHyperlink, HeadingLevel, ImportedXmlComponent, LevelFormat, Packer, PageBreak,
-  Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType, type ParagraphChild,
+  ImageRun, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType, type ParagraphChild,
 } from 'docx'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
@@ -8,10 +8,19 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import type { Root, RootContent, PhrasingContent, List } from 'mdast'
 import { latexToOmml, stripControl } from './mathToOmml'
+import { imageFilesIn, isImageToken, tokenFile } from '@/lib/notes/images'
+import { HIGHLIGHTS, remarkMarkup } from '@/lib/notes/markup'
 
 export interface ExportNote { title: string; course: string | null; content_md: string }
 
-type Marks = { bold?: boolean; italics?: boolean; strike?: boolean }
+/** A picture ready for the document: PNG/JPEG bytes and the size it was made at */
+export interface DocxImage { data: Uint8Array; width: number; height: number; type: 'png' | 'jpg' }
+/** Fetches the picture a studyhub-image token stands for; null when it cannot be had */
+export type ImageLoader = (file: string) => Promise<DocxImage | null>
+const MAX_WIDTH = 520 // points on a page with normal margins
+let loaded = new Map<string, DocxImage>()
+
+type Marks = { bold?: boolean; italics?: boolean; strike?: boolean; underline?: object; shading?: { type: typeof ShadingType.CLEAR; fill: string; color: string } }
 const HEADINGS = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6]
 const MONO = 'Consolas'
 
@@ -28,6 +37,12 @@ function mathXml(latex: string, display: boolean): ParagraphChild | null {
 function inline(nodes: PhrasingContent[], marks: Marks = {}): ParagraphChild[] {
   const out: ParagraphChild[] = []
   for (const n of nodes) {
+    if ((n.type as string) === 'noteMark') {
+      const m = n as unknown as { kind: string; color?: string; children: PhrasingContent[] }
+      const swatch = HIGHLIGHTS.find(h => h.name === m.color)?.swatch
+      out.push(...inline(m.children, m.kind === 'underline' ? { ...marks, underline: {} } : swatch ? { ...marks, shading: { type: ShadingType.CLEAR, fill: swatch.slice(1).toUpperCase(), color: 'auto' } } : marks))
+      continue
+    }
     switch (n.type) {
       case 'text': out.push(new TextRun({ text: n.value, ...marks })); break
       case 'strong': out.push(...inline(n.children, { ...marks, bold: true })); break
@@ -38,9 +53,17 @@ function inline(nodes: PhrasingContent[], marks: Marks = {}): ParagraphChild[] {
       case 'link':
         out.push(new ExternalHyperlink({ link: n.url, children: [new TextRun({ text: textOf(n.children), style: 'Hyperlink', ...marks })] }))
         break
-      case 'image':
+      case 'image': {
+        const pic = isImageToken(n.url) ? loaded.get(tokenFile(n.url) ?? '') : undefined
+        if (pic) {
+          const w = Math.min(pic.width, MAX_WIDTH)
+          out.push(new ImageRun({ type: pic.type, data: pic.data, transformation: { width: w, height: Math.round(pic.height * w / pic.width) }, altText: { name: n.alt || 'Picture', title: n.alt || 'Picture', description: n.alt || 'Picture' } }))
+          break
+        }
         out.push(new TextRun({ text: `[Image: ${n.alt || n.url}]`, italics: true, color: '6B6A65' }))
         break
+      }
+      case 'html': break // a tag that is not one of ours is not shown
       case 'inlineMath': out.push(mathXml(n.value, false) ?? new TextRun({ text: `$${n.value}$`, ...marks })); break
       default:
         if ('children' in n) out.push(...inline(n.children as PhrasingContent[], marks))
@@ -143,7 +166,8 @@ export function noteParagraphs(note: ExportNote): (Paragraph | Table)[] {
   const content = stripControl(note.content_md)
   const title = stripControl(note.title)
   const course = note.course ? stripControl(note.course) : null
-  const tree = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(content) as Root
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath).use(remarkMarkup)
+  const tree = processor.runSync(processor.parse(content)) as Root
   const head = [
     new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: title || 'Untitled' })] }),
     ...(course ? [new Paragraph({ children: [new TextRun({ text: course, italics: true, color: '6B6A65' })], spacing: { after: 240 } })] : []),
@@ -151,8 +175,17 @@ export function noteParagraphs(note: ExportNote): (Paragraph | Table)[] {
   return [...head, ...tree.children.flatMap(n => block(n, { level: 0 }))]
 }
 
-export async function notesToDocx(notes: ExportNote[]): Promise<Blob> {
+export async function notesToDocx(notes: ExportNote[], loadImage?: ImageLoader): Promise<Blob> {
   orderedLists = []
+  loaded = new Map()
+  if (loadImage) {
+    const files = [...new Set(notes.flatMap(n => imageFilesIn(n.content_md)))]
+    // A few at a time: every picture is decoded in memory while it waits
+    const queue = [...files]
+    await Promise.all(Array.from({ length: Math.min(3, files.length) }, async () => {
+      for (let f = queue.shift(); f !== undefined; f = queue.shift()) { const pic = await loadImage(f).catch(() => null); if (pic) loaded.set(f, pic) }
+    }))
+  }
   const children = notes.flatMap((n, i) => [
     ...(i > 0 ? [new Paragraph({ children: [new PageBreak()] })] : []),
     ...noteParagraphs(n),

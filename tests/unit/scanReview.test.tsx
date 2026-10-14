@@ -33,7 +33,7 @@ describe('NoteReview', () => {
     render(<NoteReview result={{ title: 'Cells', content_md: '## Parts', truncated: true }} courses={courses} onSaved={onSaved} onScanAgain={vi.fn()} />)
     expect(screen.getByText(/may be incomplete/)).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Cell parts' } })
-    fireEvent.change(screen.getByLabelText('Course'), { target: { value: 'c1' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'Biology' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit text' }))
     fireEvent.change(screen.getByLabelText('Note text'), { target: { value: '## Parts\n- Nucleus' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save note' })) })
