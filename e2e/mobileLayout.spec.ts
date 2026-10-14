@@ -1,0 +1,66 @@
+import { test, expect, type Page } from '@playwright/test'
+import path from 'node:path'
+import { signUp } from './helpers'
+
+// A small phone: nothing may run off the side, and what is tapped must be big enough to tap
+test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
+test.beforeEach(({}, info) => { test.skip(info.project.name !== 'mobile', 'phone layout only') })
+
+const PAGES = ['/home', '/planner', '/focus', '/progress', '/library', '/notes', '/lectures', '/flashcards', '/tutor', '/courses', '/settings', '/profile', '/plans']
+
+const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+// Buttons, links and fields on screen that are smaller than 36 px either way (inline text links and sliders excepted)
+const tooSmall = (page: Page, within?: string) => page.evaluate((root) => {
+  const scope = root ? document.querySelector(root) : document.body
+  return Array.from(scope?.querySelectorAll('button, [role="menuitem"], [role="tab"], [role="radio"], [role="switch"]') ?? [])
+    .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !el.closest('[aria-hidden="true"]') && !el.classList.contains('sr-only') && (r.height < 36 || r.width < 32) })
+    .map(el => `${el.getAttribute('aria-label') ?? el.textContent?.trim().slice(0, 24)} ${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}`)
+}, within ?? null)
+
+test('no page runs off the side of a phone', async ({ page }) => {
+  test.setTimeout(240_000)
+  await signUp(page)
+  for (const p of PAGES) {
+    await page.goto(p)
+    await page.waitForLoadState('networkidle')
+    expect(await sideways(page), p).toBeLessThanOrEqual(0)
+  }
+})
+
+test('the top bar, the note toolbar and the drawing tools can be tapped', async ({ page }) => {
+  test.setTimeout(120_000)
+  await signUp(page)
+  expect(await tooSmall(page, 'header[aria-label="Today at a glance"]')).toEqual([])
+  await page.goto('/notes')
+  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
+  await page.waitForLoadState('networkidle')
+  await page.getByLabel('Choose pictures').setInputFiles(path.join(__dirname, 'fixtures', 'cell.png'))
+  await expect(page.locator('.ProseMirror img')).toBeVisible()
+  await page.locator('.ProseMirror img').click()
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  expect(await tooSmall(page)).toEqual([])
+  await page.getByRole('button', { name: 'Draw', exact: true }).click()
+  const panel = page.getByRole('group', { name: 'Draw on the note' })
+  await expect(panel).toBeVisible()
+  const box = (await panel.boundingBox())!
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(375)
+  expect(await tooSmall(page, '[aria-label="Draw on the note"]')).toEqual([])
+})
+
+test('Upload and Scan open as a sheet from the bottom that fits the screen', async ({ page }) => {
+  await signUp(page)
+  for (const name of ['Upload', 'Scan']) {
+    await page.getByRole('button', { name }).first().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    const box = (await dialog.boundingBox())!
+    expect(box.x).toBeLessThanOrEqual(1)
+    expect(box.width).toBeGreaterThanOrEqual(373) // the full width
+    expect(box.y + box.height).toBeGreaterThanOrEqual(810) // sitting on the bottom edge
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+  }
+})

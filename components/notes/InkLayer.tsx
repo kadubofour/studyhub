@@ -130,10 +130,11 @@ export function InkLayer({ marks, active, onChange, onDone }: {
         className={`absolute inset-0 z-10 h-full w-full ${active ? 'touch-none' : 'pointer-events-none'}`}
         style={{ cursor: !active ? undefined : tool === 'eraser' || tool === 'rubber' ? 'cell' : 'crosshair' }} />
       {active && (
-        <div role="group" aria-label="Draw on the note" className="fixed inset-x-3 bottom-4 z-30 mx-auto flex max-w-fit flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-raised p-2.5 shadow-xl">
+        <div role="group" aria-label="Draw on the note" className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 mx-auto w-fit max-w-[calc(100vw-1rem)] rounded-2xl border border-line bg-raised p-2.5 shadow-xl">
           <MarkupToolbar tool={tool} setTool={setTool} color={color} setColor={setColor} width={width} setWidth={setWidth}
-            history={history} setHistory={setHistory} />
-          <button type="button" className={BTN_SOLID} onClick={() => onDone?.()}>Done</button>
+            history={history} setHistory={setHistory}>
+            <button type="button" className={`${BTN_SOLID} ml-auto`} onClick={() => onDone?.()}>Done</button>
+          </MarkupToolbar>
         </div>
       )}
     </>

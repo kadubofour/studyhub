@@ -18,16 +18,16 @@ export function CalendarToolbar({ title, view, onView, onToday, onPrev, onNext, 
       <div className="flex items-center gap-2">
         <button type="button" className={CAL_BTN} onClick={onToday}>Today</button>
         <div className="flex overflow-hidden rounded-lg border border-line bg-raised">
-          <button type="button" className="px-2 py-1.5 hover:bg-surface" aria-label="Previous" onClick={onPrev}><ChevronLeft size={16} aria-hidden /></button>
+          <button type="button" className="px-2 py-1.5 hover:bg-surface pointer-coarse:px-3 pointer-coarse:py-2.5" aria-label="Previous" onClick={onPrev}><ChevronLeft size={16} aria-hidden /></button>
           <span aria-hidden className="w-px bg-line" />
-          <button type="button" className="px-2 py-1.5 hover:bg-surface" aria-label="Next" onClick={onNext}><ChevronRight size={16} aria-hidden /></button>
+          <button type="button" className="px-2 py-1.5 hover:bg-surface pointer-coarse:px-3 pointer-coarse:py-2.5" aria-label="Next" onClick={onNext}><ChevronRight size={16} aria-hidden /></button>
         </div>
       </div>
       <h2 className="mr-auto text-base font-semibold" aria-live="polite">{title}</h2>
       <div role="group" aria-label="View" className="flex rounded-lg bg-surface p-0.5">
         {VIEWS.map(v => (
           <button key={v.id} type="button" aria-pressed={view === v.id} onClick={() => onView(v.id)}
-            className={`rounded-md px-3 py-1 text-sm transition ${view === v.id ? 'bg-raised font-medium shadow-sm' : 'text-muted hover:text-fg'}`}>{v.label}</button>
+            className={`rounded-md px-3 py-1 text-sm pointer-coarse:py-2 transition ${view === v.id ? 'bg-raised font-medium shadow-sm' : 'text-muted hover:text-fg'}`}>{v.label}</button>
         ))}
       </div>
       <div className="flex gap-1.5">

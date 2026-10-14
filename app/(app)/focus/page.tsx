@@ -40,7 +40,7 @@ export default function FocusPage() {
       <div role="tablist" className="flex justify-center gap-1">
         {(['focus', 'short', 'long'] as Mode[]).map(m => (
           <button key={m} role="tab" aria-selected={timer.mode === m} onClick={() => pickMode(m)}
-            className={`rounded-lg px-3 py-1 text-sm ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
+            className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
       </div>
       <div className="relative mx-auto my-8 size-64">
@@ -66,7 +66,7 @@ export default function FocusPage() {
         <Headphones size={16} aria-hidden className="text-muted" />
         {SOUNDS.map(s => (
           <button key={s.id} onClick={() => { setSoundError(false); setSound(s.id) }} aria-pressed={sound === s.id}
-            className={`rounded-lg px-2.5 py-1 ${sound === s.id ? 'bg-surface font-medium' : 'text-muted'}`}>{s.label}</button>
+            className={`rounded-lg px-2.5 py-1 pointer-coarse:py-2 ${sound === s.id ? 'bg-surface font-medium' : 'text-muted'}`}>{s.label}</button>
         ))}
         <input aria-label="Volume" type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(Number(e.target.value))} className="min-w-20 flex-1" />
         {soundError && <p className="w-full text-left text-xs text-danger">This sound isn&apos;t available.</p>}

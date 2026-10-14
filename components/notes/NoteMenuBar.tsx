@@ -136,7 +136,7 @@ export function NoteMenuBar({ actions: a, mode, reading, fullWidth, autoMath }: 
         <div key={m.name} className="relative" data-menu={i}>
           <button ref={el => { titles.current[i] = el }} type="button" role="menuitem" aria-haspopup="menu" aria-expanded={open === i}
             tabIndex={i === active ? 0 : -1}
-            className={`rounded-xl px-3 py-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-soft ${open === i ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}
+            className={`rounded-xl px-3 py-1.5 pointer-coarse:py-2.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-soft ${open === i ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}
             onClick={() => (open === i ? closeMenu(false) : openMenu(i, null))}
             onMouseEnter={() => { if (open !== null && open !== i) openMenu(i, null) }}
             onKeyDown={e => onTitleKey(e, i)}>

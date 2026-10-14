@@ -75,9 +75,9 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <section className="card overflow-hidden p-0" aria-labelledby="profile-name">
         <div aria-hidden="true" className="h-16" style={{ background: `linear-gradient(135deg, ${profile.avatar_color}, color-mix(in srgb, ${profile.avatar_color} 55%, #ffffff))` }} />
-        <div className="flex flex-wrap items-end gap-4 px-5 pb-5">
+        <div className="flex flex-col items-start gap-3 px-5 pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <span className="-mt-10 rounded-full p-1" style={{ background: 'var(--raised)' }}><Avatar name={profile.display_name} email={email} color={profile.avatar_color} size={80} /></span>
-          <div className="min-w-0 flex-1 pt-2">
+          <div className="min-w-0 w-full pt-1 sm:w-auto sm:flex-1 sm:pt-2">
             <h1 id="profile-name" className="truncate text-2xl font-semibold">{profile.display_name || 'Your profile'}</h1>
             {sub && <p className="text-sm">{sub}</p>}
             {email && <p className="text-sm text-muted">{email}</p>}

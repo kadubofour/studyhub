@@ -42,7 +42,7 @@ export function NoteImageView({ node, selected, deleteNode }: NodeViewProps) {
           : <div className="rounded-lg bg-surface px-4 py-8 text-sm text-muted">{alt || 'Picture'}</div>}
         {shown && (
           <div contentEditable={false} className="absolute right-2 top-2 flex gap-1 rounded-xl border border-line bg-raised p-1 shadow-md">
-            <button type="button" aria-label="Remove picture" onClick={() => deleteNode()} className="inline-flex size-7 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-danger"><Trash2 size={14} aria-hidden /></button>
+            <button type="button" aria-label="Remove picture" onClick={() => deleteNode()} className="inline-flex size-7 pointer-coarse:size-10 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-danger"><Trash2 size={14} aria-hidden /></button>
           </div>
         )}
       </div>

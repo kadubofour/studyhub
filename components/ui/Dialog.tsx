@@ -22,7 +22,7 @@ export function Dialog({ open, onClose, title, children, icon: Icon, subtitle, s
   }, [open])
   return (
     <dialog ref={ref} onClose={onClose} aria-labelledby={titleId}
-      className={`m-auto ${WIDTH[size]} max-h-[92vh] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-bg p-5 text-fg shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-[2px]`}>
+      className={`m-auto ${WIDTH[size]} max-h-[92vh] overflow-y-auto overscroll-contain max-sm:mx-0 max-sm:mb-0 max-sm:mt-auto max-sm:w-full max-sm:max-w-full max-sm:rounded-b-none max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] rounded-2xl border border-line bg-bg p-5 text-fg shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-[2px]`}>
       {Icon ? (
         <div className="mb-4 flex items-start gap-3">
           <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Icon size={20} /></span>
@@ -30,7 +30,7 @@ export function Dialog({ open, onClose, title, children, icon: Icon, subtitle, s
             <h2 id={titleId} className="text-base font-semibold leading-tight">{title}</h2>
             {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
           </div>
-          <button type="button" aria-label="Close" onClick={onClose} className="-mr-1 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-fg"><X size={17} aria-hidden /></button>
+          <button type="button" aria-label="Close" onClick={onClose} className="-mr-1 -mt-1 inline-flex size-8 pointer-coarse:size-10 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-fg"><X size={17} aria-hidden /></button>
         </div>
       ) : (
         <h2 id={titleId} className="mb-4 text-base font-medium">{title}</h2>

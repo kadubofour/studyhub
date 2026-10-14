@@ -21,7 +21,7 @@ const PAGES: [string, string][] = [
   ['/flashcards', 'Flashcards'], ['/review', 'Review'], ['/tutor', 'Tutor'], ['/settings', 'Settings'], ['/plans', 'Plans'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses', 'Courses'],
 ]
 const pageName = (path: string) => PAGES.find(([p]) => path === p || path.startsWith(p + '/'))?.[1]
-const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium'
+const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:py-2.5'
 
 // A strip above every page (Classic and Vivid looks): the focus timer, cards due, the streak and the level, so they are one glance away
 export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
@@ -85,9 +85,9 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
             {burst.levelUp ? `Level up! Level ${burst.levelUp}` : `+${burst.gained} XP`}
           </span>
         )}
-        <div className={`${chip} gap-2 bg-accent-soft py-1 pr-1 text-accent`}>
-          <Link href="/focus" aria-label={`${MODE_LABEL[timer.mode]} timer, ${clock} left`} className="font-mono tabular-nums">{clock}</Link>
-          <button type="button" onClick={toggle} aria-label={`${verb} ${label} timer`} className="flex size-7 items-center justify-center rounded-full bg-accent-solid text-white">
+        <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
+          <Link href="/focus" aria-label={`${MODE_LABEL[timer.mode]} timer, ${clock} left`} className="inline-flex min-h-9 items-center font-mono tabular-nums">{clock}</Link>
+          <button type="button" onClick={toggle} aria-label={`${verb} ${label} timer`} className="flex size-7 items-center justify-center rounded-full bg-accent-solid text-white pointer-coarse:size-9">
             {running ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
           </button>
         </div>
