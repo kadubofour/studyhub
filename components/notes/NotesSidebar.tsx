@@ -169,7 +169,7 @@ export function NotesSidebar() {
             <div key={n.id} className="group relative">
               <Link href={`/notes/${n.id}`} className={`${cls} h-full pr-10`} style={style} onContextMenu={e => openMenu(e, n)}>{body}</Link>
               <button type="button" aria-label={`More actions for ${n.title || 'Untitled'}`} aria-haspopup="menu"
-                className="absolute right-2 top-3 rounded-lg p-1 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                className="absolute right-2 top-3 rounded-lg p-1 pointer-coarse:p-2.5 pointer-coarse:top-1.5 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                 onClick={e => openMenu(e, n)}><MoreHorizontal size={16} aria-hidden /></button>
             </div>
           )

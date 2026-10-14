@@ -126,7 +126,7 @@ export default function LibraryPage() {
           <div className="mb-3 flex flex-wrap gap-1.5">
             {KINDS.map(k => (
               <button key={k} type="button" aria-pressed={view.kind === k} onClick={() => setView(v => ({ ...v, kind: v.kind === k ? null : k }))}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${view.kind === k ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm pointer-coarse:py-2 transition ${view.kind === k ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
                 {KIND[k].plural} <span className="text-muted">{counts![k]}</span>
               </button>
             ))}

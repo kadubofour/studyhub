@@ -47,7 +47,7 @@ function TableButton({ editor, on }: { editor: Editor; on: boolean }) {
     <>
       <button ref={button} type="button" aria-label="Table" title="Table" aria-haspopup="dialog" aria-expanded={!!at}
         onClick={toggle}
-        className={`shrink-0 rounded p-1.5 ${on || at ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}><Table size={16} aria-hidden /></button>
+        className={`shrink-0 rounded p-1.5 pointer-coarse:p-2.5 ${on || at ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}><Table size={16} aria-hidden /></button>
       {at && createPortal(
         <div ref={panel} role="dialog" aria-label="Insert table" className="menu-panel fixed mt-0" style={at}>
           <TableGridPicker autoFocus onPick={(r, c) => { setAt(null); insertTable(editor, r, c) }}
@@ -61,7 +61,7 @@ function TableButton({ editor, on }: { editor: Editor; on: boolean }) {
 
 // Toolbar Image button: opens the file picker
 function PictureButton({ input }: { input: React.RefObject<HTMLInputElement | null> }) {
-  return <button type="button" aria-label="Image" title="Image" onClick={() => input.current?.click()} className="shrink-0 rounded p-1.5 text-muted hover:text-fg"><ImagePlus size={16} aria-hidden /></button>
+  return <button type="button" aria-label="Image" title="Image" onClick={() => input.current?.click()} className="shrink-0 rounded p-1.5 pointer-coarse:p-2.5 text-muted hover:text-fg"><ImagePlus size={16} aria-hidden /></button>
 }
 
 // A coloured square in place of an icon, for the colours in the highlighter's menu
@@ -195,7 +195,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
 
   const tool = (label: string, Icon: typeof Bold, run: () => void, on = false) => (
     <button type="button" aria-label={label} title={label} onClick={run} aria-pressed={on}
-      className={`shrink-0 rounded p-1.5 ${on ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}><Icon size={16} aria-hidden /></button>
+      className={`shrink-0 rounded p-1.5 pointer-coarse:p-2.5 ${on ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}><Icon size={16} aria-hidden /></button>
   )
 
   return (
@@ -223,7 +223,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
               ],
             })
           }}
-          className={`relative shrink-0 rounded p-1.5 ${active('highlight') ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}>
+          className={`relative shrink-0 rounded p-1.5 pointer-coarse:p-2.5 pointer-coarse:p-2.5 ${active('highlight') ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}>
           <Highlighter size={16} aria-hidden />
           <span aria-hidden className="absolute inset-x-1.5 bottom-0.5 h-[3px] rounded-full" style={{ background: HIGHLIGHTS.find(h => h.name === highlightColor)?.swatch }} />
         </button>

@@ -167,7 +167,7 @@ export default function LecturesPage() {
               </span>
             </Link>
             <button type="button" aria-label={`More actions for ${l.title}`} aria-haspopup="menu"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 pointer-coarse:p-2.5 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
               onClick={e => openMenu(e, l)}><MoreHorizontal size={16} aria-hidden /></button>
           </li>
         ))}

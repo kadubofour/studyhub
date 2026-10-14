@@ -5,7 +5,7 @@ import { Pause, Play } from 'lucide-react'
 // The focus timer, in the right of Home's greeting card, so that side is useful and the timer is one tap from the top of the page
 export function HeroFocus({ mode, clock, running, resumable, onToggle }: { mode: string; clock: string; running: boolean; resumable: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-2xl bg-black/20 px-5 py-3.5 text-center">
+    <div className="w-full rounded-2xl bg-black/20 px-5 py-3.5 text-center sm:w-auto">
       <div className="text-xs font-medium uppercase tracking-wide opacity-85">{mode}</div>
       <div className="font-mono text-4xl font-semibold tracking-tight">{clock}</div>
       <div className="mt-2.5 flex justify-center gap-2">

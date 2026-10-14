@@ -8,7 +8,7 @@ export function ChoiceChips({ label, value, options, onChange, disabled = false,
   label: string; value: string; options: Choice[]; onChange: (v: string) => void; disabled?: boolean; size?: 'sm' | 'md'; className?: string
 }) {
   const current = Math.max(0, options.findIndex(o => o.value === value))
-  const pad = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'
+  const pad = size === 'sm' ? 'px-2.5 py-1 text-xs pointer-coarse:py-2' : 'px-3 py-1.5 text-sm pointer-coarse:py-2.5'
   return (
     <div role="radiogroup" aria-label={label} className={`flex flex-wrap gap-1.5 ${className}`}>
       {options.map((o, i) => {

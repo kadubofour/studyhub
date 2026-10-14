@@ -173,12 +173,12 @@ export default function PlannerPage() {
         <div role="tablist" className="flex gap-1">
           {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-1 text-sm ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
+              className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
-        <div className="ml-auto [&>div]:!mb-0">
+        <div className="w-full md:ml-auto md:w-auto [&>div]:!mb-0">
           <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
             setCourses(next)
             listOpenTasks(supabase()).then(setTasks) // course deletion may have changed tasks

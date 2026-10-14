@@ -124,17 +124,17 @@ export default function HomePage() {
   return (
     <div className="space-y-4">
       <section className="hero">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-sm opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMM d')}</p>
             <h1 className="mt-0.5 text-2xl font-semibold" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
-          <div className="flex gap-1 md:hidden">
-            <Link href="/courses" aria-label="Courses" className="rounded-lg p-1.5 hover:bg-white/15"><BookOpen size={17} aria-hidden /></Link>
-            <Link href="/library" aria-label="Library" className="rounded-lg p-1.5 hover:bg-white/15"><FolderOpen size={17} aria-hidden /></Link>
-            <Link href="/profile" aria-label="Profile" className="rounded-lg p-1.5 hover:bg-white/15"><User size={17} aria-hidden /></Link>
-            <Link href="/progress" aria-label="Progress" className="rounded-lg p-1.5 hover:bg-white/15"><BarChart3 size={17} aria-hidden /></Link>
-            <Link href="/settings" aria-label="Settings" className="rounded-lg p-1.5 hover:bg-white/15"><Settings size={17} aria-hidden /></Link>
+          <div className="-ml-2 flex gap-0.5 md:hidden">
+            <Link href="/courses" aria-label="Courses" className="rounded-lg p-2.5 hover:bg-white/15"><BookOpen size={17} aria-hidden /></Link>
+            <Link href="/library" aria-label="Library" className="rounded-lg p-2.5 hover:bg-white/15"><FolderOpen size={17} aria-hidden /></Link>
+            <Link href="/profile" aria-label="Profile" className="rounded-lg p-2.5 hover:bg-white/15"><User size={17} aria-hidden /></Link>
+            <Link href="/progress" aria-label="Progress" className="rounded-lg p-2.5 hover:bg-white/15"><BarChart3 size={17} aria-hidden /></Link>
+            <Link href="/settings" aria-label="Settings" className="rounded-lg p-2.5 hover:bg-white/15"><Settings size={17} aria-hidden /></Link>
           </div>
         </div>
         {bold ? (
