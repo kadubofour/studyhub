@@ -241,3 +241,12 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } }
 @media (pointer: coarse) { .menu-kbd { display: none; } }
+
+/* Highlights in the words of a note: soft colours with dark text, so they read the same in light and dark and print as they look */
+.prose-note mark.hl { color: #111827; border-radius: 3px; padding: 0 .12em; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.prose-note mark.hl-yellow { background: #fde047; }
+.prose-note mark.hl-green { background: #86efac; }
+.prose-note mark.hl-blue { background: #93c5fd; }
+.prose-note mark.hl-pink { background: #f9a8d4; }
+.prose-note mark.hl-orange { background: #fdba74; }
+.prose-note mark.hl-purple { background: #d8b4fe; }

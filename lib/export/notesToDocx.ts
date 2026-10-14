@@ -9,6 +9,7 @@ import remarkMath from 'remark-math'
 import type { Root, RootContent, PhrasingContent, List } from 'mdast'
 import { latexToOmml, stripControl } from './mathToOmml'
 import { imageFilesIn, isImageToken, tokenFile } from '@/lib/notes/images'
+import { HIGHLIGHTS, remarkMarkup } from '@/lib/notes/markup'
 
 export interface ExportNote { title: string; course: string | null; content_md: string }
 
@@ -19,7 +20,7 @@ export type ImageLoader = (file: string) => Promise<DocxImage | null>
 const MAX_WIDTH = 520 // points on a page with normal margins
 let loaded = new Map<string, DocxImage>()
 
-type Marks = { bold?: boolean; italics?: boolean; strike?: boolean }
+type Marks = { bold?: boolean; italics?: boolean; strike?: boolean; underline?: object; shading?: { type: typeof ShadingType.CLEAR; fill: string; color: string } }
 const HEADINGS = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6]
 const MONO = 'Consolas'
 
@@ -36,6 +37,12 @@ function mathXml(latex: string, display: boolean): ParagraphChild | null {
 function inline(nodes: PhrasingContent[], marks: Marks = {}): ParagraphChild[] {
   const out: ParagraphChild[] = []
   for (const n of nodes) {
+    if ((n.type as string) === 'noteMark') {
+      const m = n as unknown as { kind: string; color?: string; children: PhrasingContent[] }
+      const swatch = HIGHLIGHTS.find(h => h.name === m.color)?.swatch
+      out.push(...inline(m.children, m.kind === 'underline' ? { ...marks, underline: {} } : swatch ? { ...marks, shading: { type: ShadingType.CLEAR, fill: swatch.slice(1).toUpperCase(), color: 'auto' } } : marks))
+      continue
+    }
     switch (n.type) {
       case 'text': out.push(new TextRun({ text: n.value, ...marks })); break
       case 'strong': out.push(...inline(n.children, { ...marks, bold: true })); break
@@ -56,6 +63,7 @@ function inline(nodes: PhrasingContent[], marks: Marks = {}): ParagraphChild[] {
         out.push(new TextRun({ text: `[Image: ${n.alt || n.url}]`, italics: true, color: '6B6A65' }))
         break
       }
+      case 'html': break // a tag that is not one of ours is not shown
       case 'inlineMath': out.push(mathXml(n.value, false) ?? new TextRun({ text: `$${n.value}$`, ...marks })); break
       default:
         if ('children' in n) out.push(...inline(n.children as PhrasingContent[], marks))
@@ -158,7 +166,8 @@ export function noteParagraphs(note: ExportNote): (Paragraph | Table)[] {
   const content = stripControl(note.content_md)
   const title = stripControl(note.title)
   const course = note.course ? stripControl(note.course) : null
-  const tree = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(content) as Root
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath).use(remarkMarkup)
+  const tree = processor.runSync(processor.parse(content)) as Root
   const head = [
     new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: title || 'Untitled' })] }),
     ...(course ? [new Paragraph({ children: [new TextRun({ text: course, italics: true, color: '6B6A65' })], spacing: { after: 240 } })] : []),

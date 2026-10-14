@@ -8,6 +8,7 @@ import { mathToken } from './autoMath'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { NoteImage } from './noteImage'
 import { NoteImageView } from './NoteImageView'
+import { Highlight, NoteUnderline } from './markupMarks'
 
 // The Mathematics extension's typing shortcut is $$x$$, but notes store inline math as $x$.
 // This lets $x$ typed in Rich mode render immediately, matching the Markdown syntax.
@@ -93,7 +94,9 @@ export function noteExtensions(opts: {
   imageView?: boolean
 } = {}) {
   return [
-    StarterKit.configure({ link: false }),
+    StarterKit.configure({ link: false, underline: false }),
+    NoteUnderline,
+    Highlight,
     TaskList,
     TaskItem.configure({ nested: true }),
     TableKit.configure({ table: { resizable: false } }),

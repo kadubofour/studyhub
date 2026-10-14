@@ -4,6 +4,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
+import { remarkMarkup } from '@/lib/notes/markup'
 import { supabase } from '@/lib/supabase/client'
 import { isImageToken, makeImageResolver } from '@/lib/notes/images'
 
@@ -44,7 +45,7 @@ const COMPONENTS: Components = { img: ({ src, alt }) => <NotePicture src={typeof
 export function MarkdownView({ source, className = '' }: { source: string; className?: string }) {
   return (
     <div className={`prose-note ${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} urlTransform={urlTransform}
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath, remarkMarkup]} rehypePlugins={[rehypeKatex]} urlTransform={urlTransform}
         components={COMPONENTS}>{source}</ReactMarkdown>
     </div>
   )

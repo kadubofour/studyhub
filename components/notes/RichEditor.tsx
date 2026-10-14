@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { Bold, Italic, Heading2, ImagePlus, List, ListChecks, Code, PencilRuler, Sigma, Table } from 'lucide-react'
+import { Bold, Italic, Heading2, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilRuler, Sigma, Table } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
 import { TableTools } from './TableTools'
@@ -17,6 +17,7 @@ import { flatten } from '@/lib/markup/draw'
 import { insertNoteImage, noteImages } from './noteImage'
 import { supabase } from '@/lib/supabase/client'
 import { makeImageResolver } from '@/lib/notes/images'
+import { HIGHLIGHTS } from '@/lib/notes/markup'
 import { ACCEPTED, IMAGE_ERROR_TEXT, ImageError, prepareImage, uploadNoteImage } from '@/lib/notes/prepareImage'
 
 export const insertTable = (editor: Editor, rows: number, cols: number) =>
@@ -220,6 +221,18 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
       <div className="sticky top-[57px] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none]">
         {tool('Bold', Bold, () => editor.chain().focus().toggleBold().run(), active('bold'))}
         {tool('Italic', Italic, () => editor.chain().focus().toggleItalic().run(), active('italic'))}
+        {tool('Underline', UnderlineIcon, () => editor.chain().focus().toggleUnderline().run(), active('underline'))}
+        {tool('Strikethrough', Strikethrough, () => editor.chain().focus().toggleStrike().run(), active('strike'))}
+        <span role="group" aria-label="Highlight" className="mx-1 flex shrink-0 items-center gap-1">
+          {HIGHLIGHTS.map(h => {
+            const on = editor.isActive('highlight', { color: h.name })
+            return (
+              <button key={h.name} type="button" aria-label={`Highlight ${h.name}`} title={`Highlight ${h.label.toLowerCase()}`} aria-pressed={on}
+                onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().toggleHighlight(h.name).run()}
+                className={`size-5 shrink-0 rounded-md border transition ${on ? 'border-fg ring-2 ring-[var(--accent-solid)]' : 'border-black/10 hover:scale-110'}`} style={{ background: h.swatch }} />
+            )
+          })}
+        </span>
         {tool('Heading', Heading2, () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active('heading'))}
         {tool('Bulleted list', List, () => editor.chain().focus().toggleBulletList().run(), active('bulletList'))}
         {tool('Checklist', ListChecks, () => editor.chain().focus().toggleTaskList().run(), active('taskList'))}

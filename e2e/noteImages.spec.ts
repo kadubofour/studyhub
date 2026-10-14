@@ -117,3 +117,23 @@ test('a picture shows in the reading view', async ({ page }) => {
   await page.getByRole('menuitemcheckbox', { name: /Reading mode/ }).click()
   await expect(page.getByRole('article').locator('img[alt="cell"]')).toBeVisible()
 })
+
+test('highlight and underline words in a note: they stay after a reload and show in the reading view', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Marked words')
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.type('The Krebs cycle runs in the matrix')
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Control+ArrowRight')
+  await page.keyboard.press('Control+Shift+ArrowRight') // selects "Krebs "
+  await page.getByRole('button', { name: 'Highlight green' }).click()
+  await page.getByRole('button', { name: 'Underline' }).click()
+  await expect(page.locator('.ProseMirror mark.hl-green')).toContainText('Krebs')
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.reload()
+  await expect(page.locator('.ProseMirror mark.hl-green')).toContainText('Krebs')
+  await page.getByRole('menuitem', { name: 'View', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: /Reading mode/ }).click()
+  await expect(page.getByRole('article').locator('mark.hl-green')).toContainText('Krebs')
+  await expect(page.getByRole('article').locator('u')).toContainText('Krebs')
+})
