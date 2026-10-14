@@ -123,7 +123,7 @@ describe('Topics section', () => {
   it('switching course shows that course\'s topics', async () => {
     await open()
     stats = [stat({ name: 'Bonding' })]
-    await act(async () => { fireEvent.change(screen.getByLabelText('Topics course'), { target: { value: 'c2' } }) })
+    await act(async () => { fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Topics course' })).getByRole('radio', { name: 'Chemistry' })) })
     expect(screen.getByRole('listitem', { name: 'Bonding' })).toBeTruthy()
   })
   it('a student with no courses is pointed at the Planner', async () => {
@@ -146,11 +146,11 @@ describe('Topics section', () => {
     postAi.mockReturnValue(new Promise(res => { finish = res }))
     await open()
     fireEvent.click(screen.getByRole('button', { name: 'Draft topics' }))
-    expect((screen.getByLabelText('Topics course') as HTMLSelectElement).disabled).toBe(true)
+    expect((within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement).disabled).toBe(true)
     await act(async () => { finish({ ok: true, value: { topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }] } }) })
     expect(screen.getByLabelText('Topic 1 name')).toBeTruthy()
-    expect((screen.getByLabelText('Topics course') as HTMLSelectElement).disabled).toBe(true) // still editing
+    expect((within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement).disabled).toBe(true) // still editing
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect((screen.getByLabelText('Topics course') as HTMLSelectElement).disabled).toBe(false)
+    expect((within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement).disabled).toBe(false)
   })
 })

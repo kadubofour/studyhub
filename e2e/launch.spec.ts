@@ -40,7 +40,7 @@ test('Download my data gives a file with the student\'s own things in it', async
   await page.getByLabel('Add a task').fill('Revise the Krebs cycle')
   await page.getByLabel('Add a task').press('Enter')
   await expect(page.getByText('Revise the Krebs cycle')).toBeVisible()
-  await page.goto('/settings')
+  await page.goto('/settings?section=data')
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download my data' }).click()
   const d = await download
@@ -53,7 +53,7 @@ test('Download my data gives a file with the student\'s own things in it', async
 
 test('Delete my account signs the student out and the sign-in stops working', async ({ page }) => {
   const email = await signUp(page)
-  await page.goto('/settings')
+  await page.goto('/settings?section=data')
   await page.getByRole('button', { name: 'Delete my account' }).click()
   const confirm = page.getByRole('button', { name: 'Delete everything' })
   await expect(confirm).toBeDisabled()

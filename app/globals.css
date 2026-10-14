@@ -84,6 +84,18 @@ body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
 body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
 .dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
 
+/* With the top bar showing the page name, the page's own title is for screen readers only (it would say the name twice) */
+.app-root[data-topbar] .page-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Classic is calm: the tinted tiles become plain raised cards with a hairline (unlayered, so they beat the tile's own tint) */
+.app-root[data-look="classic"] [data-tint], .dark .app-root[data-look="paper"] [data-tint] { background: var(--raised); border: 1px solid var(--line); }
+.app-root[data-look="classic"] [data-tint-icon], .dark .app-root[data-look="paper"] [data-tint-icon] { background: var(--surface); }
+.app-root[data-look="classic"] [data-block], .dark .app-root[data-look="paper"] [data-block] { background: var(--surface); color: var(--fg); box-shadow: inset 4px 0 0 var(--c); }
+
+/* A scrollable area without its scrollbar: it still scrolls (wheel, touch, keyboard) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 @theme inline {
   --color-bg: var(--bg); --color-raised: var(--raised); --color-surface: var(--surface); --color-line: var(--line);
   --color-fg: var(--fg); --color-muted: var(--muted); --color-accent: var(--accent); --color-accent-solid: var(--accent-solid);
@@ -135,8 +147,6 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .tile-a { background: var(--tile-a); }
   .tile-b { background: var(--tile-b); }
   .tile-c { background: var(--tile-c); }
-  .tile-label { @apply flex items-center gap-1.5 text-xs text-muted; }
-  .tile-value { @apply mt-0.5 text-xl font-medium; }
   .hero { @apply rounded-2xl px-5 py-4 text-white; background: linear-gradient(135deg, var(--accent-solid), var(--accent-glow)); box-shadow: var(--shadow); }
   .section-label { @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-muted; }
 }
@@ -146,8 +156,6 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; }
 .app-root[data-look="vivid"] .card { padding: 1.25rem; }
 .app-root[data-look="vivid"] .tile { padding: 1rem 1.25rem; border-color: transparent; }
-.app-root[data-look="vivid"] .tile-label { font-size: .8125rem; font-weight: 500; color: var(--fg); }
-.app-root[data-look="vivid"] .tile-value { font-size: 1.875rem; font-weight: 600; line-height: 1.15; }
 .app-root[data-look="vivid"] .section-label { color: var(--accent); font-weight: 600; letter-spacing: .06em; }
 .app-root[data-look="vivid"] .hero { border-radius: 1.75rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
 .app-root[data-look="vivid"] .hero h1 { font-size: 2rem; line-height: 1.15; }
@@ -162,8 +170,6 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card, .app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { border-radius: 1.25rem; }
 .app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card { padding: 1.25rem; }
 .app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { padding: 1rem 1.25rem; }
-.app-root[data-look="classic"] .tile-label, .dark .app-root[data-look="paper"] .tile-label { font-size: .8125rem; font-weight: 500; }
-.app-root[data-look="classic"] .tile-value, .dark .app-root[data-look="paper"] .tile-value { font-size: 1.625rem; font-weight: 600; line-height: 1.15; }
 .app-root[data-look="classic"] .section-label, .dark .app-root[data-look="paper"] .section-label { color: var(--muted); font-weight: 600; letter-spacing: .06em; }
 .app-root[data-look="classic"] .hero, .dark .app-root[data-look="paper"] .hero { border-radius: 1.5rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
 .app-root[data-look="classic"] .btn, .dark .app-root[data-look="paper"] .btn, .app-root[data-look="classic"] .btn-primary, .dark .app-root[data-look="paper"] .btn-primary, .app-root[data-look="classic"] .btn-danger, .dark .app-root[data-look="paper"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
@@ -177,8 +183,6 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 /* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
 .app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }
 .app-root[data-look="playful"] .card { padding: 1.125rem; }
-.app-root[data-look="playful"] .tile-label { font-size: .8125rem; font-weight: 600; color: var(--fg); }
-.app-root[data-look="playful"] .tile-value { font-size: 1.75rem; font-weight: 700; }
 .app-root[data-look="playful"] .section-label { color: var(--fg); font-weight: 700; letter-spacing: .08em; }
 .app-root[data-look="playful"] .hero { background: var(--accent-solid); border-radius: 1.5rem; padding: 1.25rem 1.5rem; box-shadow: none; border-bottom: 5px solid color-mix(in srgb, #000 22%, var(--accent-solid)); }
 .app-root[data-look="playful"] .hero h1 { font-size: 1.75rem; font-weight: 700; }

@@ -38,6 +38,24 @@ describe('day boundaries', () => {
   })
 })
 
+describe('bucketTasks same-moment order', () => {
+  it('puts high priority first when two tasks are due at the same moment written differently', () => {
+    const a = { id: 'normal', due_at: '2026-10-15T03:59:59+00:00', done_at: null, priority: 'normal' }
+    const b = { id: 'high', due_at: '2026-10-15T03:59:59.000Z', done_at: null, priority: 'high' }
+    expect(bucketTasks([a, b], 'UTC', new Date('2026-10-01T00:00:00Z')).upcoming.map(t => t.id)).toEqual(['high', 'normal'])
+  })
+  it('does not depend on which task carries which timestamp format', () => {
+    const a = { id: 'normal', due_at: '2026-10-15T03:59:59.000Z', done_at: null, priority: 'normal' }
+    const b = { id: 'high', due_at: '2026-10-15T03:59:59+00:00', done_at: null, priority: 'high' }
+    expect(bucketTasks([a, b], 'UTC', new Date('2026-10-01T00:00:00Z')).upcoming.map(t => t.id)).toEqual(['high', 'normal'])
+  })
+  it('still puts the earlier task first whatever its priority', () => {
+    const early = { id: 'early', due_at: '2026-10-14T10:00:00Z', done_at: null, priority: 'normal' }
+    const late = { id: 'late', due_at: '2026-10-14T12:00:00Z', done_at: null, priority: 'high' }
+    expect(bucketTasks([late, early], 'UTC', new Date('2026-10-01T00:00:00Z')).upcoming.map(t => t.id)).toEqual(['early', 'late'])
+  })
+})
+
 describe('bucketTasks', () => {
   const now = new Date('2026-10-01T03:30:00Z') // Sep 30, 23:30 in NY
   it('puts a task due later the same local evening in today, even though UTC is already the next day', () => {

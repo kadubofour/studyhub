@@ -3,8 +3,8 @@ export type Priority = 'low' | 'normal' | 'high'
 export type ClassKind = 'lecture' | 'lab' | 'tutorial' | 'seminar' | 'other'
 export type EditorMode = 'rich' | 'markdown'
 export type ThemePref = 'light' | 'dark' | 'system'
-export type { AccentName, FontName, LookName } from './appearance'
-import type { AccentName, FontName, LookName } from './appearance'
+export type { AccentName, ContentWidth, FontName, LookName } from './appearance'
+import type { AccentName, ContentWidth, FontName, LookName } from './appearance'
 
 export interface Profile {
   id: string
@@ -25,6 +25,8 @@ export interface Profile {
   accent: AccentName
   font: FontName
   look: LookName
+  /** How wide the content is: 'focused', 'wide' or 'full' */
+  content_width: ContentWidth
   /** Turn maths typed without dollars (x^2) into equations as you type */
   auto_math: boolean
   onboarded: boolean

@@ -174,6 +174,41 @@ describe('Scan in the app shell', () => {
     expect(screen.queryByRole('group', { name: 'Courses' })).toBeNull()
   })
 
+  it('marks the shell when the top bar shows the page name, so the page does not say it twice', () => {
+    path = '/home'
+    const withBar = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(withBar.container.querySelector('.app-root')!.hasAttribute('data-topbar')).toBe(true)
+    withBar.unmount()
+    const without = render(<ProfileProvider initial={{ ...profile, look: 'paper' }}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    expect(without.container.querySelector('.app-root')!.hasAttribute('data-topbar')).toBe(false)
+  })
+
+  it('sizes the content by the student\'s width choice, and the planner always uses the whole screen', () => {
+    const main = (path_: string, width?: string) => {
+      path = path_
+      const r = render(<ProfileProvider initial={{ ...profile, ...(width ? { content_width: width } : {}) } as Profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+      const cls = r.container.querySelector('main')!.className
+      r.unmount()
+      return cls
+    }
+    expect(main('/home', 'focused')).toContain('max-w-5xl')
+    expect(main('/home', 'wide')).toContain('max-w-[1400px]')
+    expect(main('/home', 'full')).toContain('max-w-none')
+    expect(main('/home')).toContain('max-w-[1400px]') // an old profile without a choice is wide
+    expect(main('/planner', 'focused')).toContain('max-w-none')
+  })
+
+  it('Upload and Scan are solid and darker than the sidebar, with no dashed outline', () => {
+    path = '/home'
+    const { container } = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+    const side = container.querySelector('.app-sidebar') as HTMLElement
+    for (const name of ['Upload', 'Scan']) {
+      const b = within(side).getByRole('button', { name })
+      expect(b.className, name).not.toContain('dashed')
+      expect(b.className, name).toContain('bg-black/')
+    }
+  })
+
   it('marks the sidebar so the Vivid styles reach it and nothing else, and tells the top bar when the sidebar is hidden', () => {
     path = '/home'
     const shown = render(<ProfileProvider initial={{ ...profile, look: 'vivid' }}><AppShell><p>page</p></AppShell></ProfileProvider>)

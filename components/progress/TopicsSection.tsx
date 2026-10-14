@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Circle, CircleCheck, CircleDot } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { postAi } from '@/components/ai/aiFetch'
 import { TopicEditor } from '@/components/progress/TopicEditor'
 import { TopicResources } from '@/components/progress/TopicResources'
@@ -98,9 +99,7 @@ export function TopicsSection() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Topics</h2>
         {/* Not while drafting, saving or editing: a result for one course must not land in another, and edits must not vanish */}
-        <select className="input max-w-52" aria-label="Topics course" value={courseId ?? ''} disabled={busy || saving || !!editing} onChange={e => pickCourse(e.target.value)}>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <ChoiceChips label="Topics course" value={courseId ?? ''} disabled={busy || saving || !!editing} options={courses.map(c => ({ value: c.id, label: c.name, color: c.color }))} onChange={pickCourse} size="sm" />
         {courseId && <Link href={`/courses/${courseId}`} className="btn-ghost text-accent">Open course page</Link>}
       </div>
 

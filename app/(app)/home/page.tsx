@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine, FolderOpen, User, BookOpen, Mic, MessagesSquare } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -11,6 +11,15 @@ import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProv
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
+import { TintTile } from '@/components/ui/cards'
+import { HeroFocus } from '@/components/home/HeroFocus'
+import { CourseAccess } from '@/components/home/CourseAccess'
+import { NewNoteButton } from '@/components/quick/NewNoteButton'
+import { QuickActions } from '@/components/quick/QuickActions'
+import { homeMaterial, type Recent, type CourseCounts } from '@/lib/home/material'
+import { listNotes } from '@/lib/data/notes'
+import { listDecks } from '@/lib/data/decks'
+import { listLectures } from '@/lib/data/lectures'
 import { useLook } from '@/components/providers/useLook'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
@@ -46,6 +55,7 @@ export default function HomePage() {
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [due, setDue] = useState(0)
   const [week, setWeek] = useState<Map<string, number>>(new Map())
+  const [material, setMaterial] = useState<{ counts: CourseCounts; recent: Recent[] }>({ counts: {}, recent: [] })
   const { xp, reload: reloadXp } = useXp(focus.todayMinutes)
   const plans = usePlans(reloadXp)
   const warmup = useWarmup()
@@ -61,6 +71,11 @@ export default function HomePage() {
       setCourses(c); setTasks(t); setClasses(cl); setDue(d); setDoneBefore(done); setWeek(dailyMinutes(sessions, tz))
     })
   }, [tz])
+  // Course material is read on its own, so a slow list never holds up the rest of Home
+  useEffect(() => {
+    const sb = supabase()
+    Promise.all([listNotes(sb), listDecks(sb), listLectures(sb)]).then(([n, d, l]) => setMaterial(homeMaterial(n, d, l))).catch(() => {})
+  }, [])
 
   const now = new Date()
   const todayKey = localDayKey(now, tz)
@@ -125,6 +140,7 @@ export default function HomePage() {
         {bold ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
+            <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} />
             {xp && look === 'playful' && ( // the top bar (Classic, Vivid) shows these
               <div className="flex flex-wrap gap-2 text-sm font-medium">
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
@@ -145,34 +161,29 @@ export default function HomePage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <div className="tile tile-a">
-          <div className="tile-label"><ListChecks size={14} className="text-success" aria-hidden />Tasks today</div>
-          <div className="tile-value">{doneToday} <span className="text-sm font-normal text-muted">/ {doneToday + list.length - doneIds.size}</span></div>
-        </div>
-        <Link href={due > 0 ? '/review' : '/flashcards'} className="tile tile-b transition hover:border-accent">
-          <div className="tile-label"><Layers size={14} className="text-[#D4537E]" aria-hidden />Cards due</div>
-          <div className="tile-value flex items-center gap-1">{due}{due > 0 && <ArrowRight size={15} className="text-muted" aria-hidden />}</div>
-        </Link>
-        <Link href="/planner" className="tile tile-c col-span-2 transition hover:border-accent md:col-span-1">
-          <div className="tile-label"><School size={14} className="text-[#BA7517]" aria-hidden />Next class</div>
-          <div className="mt-1 truncate font-medium">
-            {nextCourse ? <><span style={{ color: nextCourse.color }}>{nextCourse.name}</span> · {nextLabel}</> : <span className="text-muted">No classes yet</span>}
-          </div>
-        </Link>
+        <TintTile color="#1D9E75" icon={ListChecks} label="Tasks today">
+          {doneToday} <span className="text-sm font-normal text-muted">/ {doneToday + list.length - doneIds.size}</span>
+        </TintTile>
+        <TintTile color="#D4537E" icon={Layers} label="Cards due" href={due > 0 ? '/review' : '/flashcards'}>
+          <span className="flex items-center gap-1">{due}{due > 0 && <ArrowRight size={15} className="text-muted" aria-hidden />}</span>
+        </TintTile>
+        <TintTile color="#BA7517" icon={School} label="Next class" href="/planner" className="col-span-2 md:col-span-1">
+          <span className="block truncate text-lg">
+            {nextCourse ? <>{nextCourse.name} · {nextLabel}</> : <span className="text-muted">No classes yet</span>}
+          </span>
+        </TintTile>
       </section>
 
-      {bold && (
-        <section aria-label="Start from your material" className="tile tile-a flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-base font-semibold">Start from your material</div>
-            <p className="text-sm">Slides, PDFs, notes or a photo become notes, flashcards and a quiz.</p>
-          </div>
-          <div className="flex gap-2">
-            <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={15} aria-hidden />Upload</button>
-            <button type="button" className="btn" onClick={() => requestScan()}><ScanLine size={15} aria-hidden />Scan</button>
-          </div>
-        </section>
-      )}
+      <QuickActions label="Quick actions" actions={[
+        { node: <NewNoteButton /> },
+        { label: 'New deck', icon: Layers, href: '/flashcards?new=1' },
+        { label: 'Record lecture', icon: Mic, href: '/lectures/record' },
+        { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
+        { label: 'Upload', icon: Upload, onClick: requestUpload },
+        { label: 'Scan', icon: ScanLine, onClick: () => requestScan() },
+      ]} />
+
+      <CourseAccess courses={courses} counts={material.counts} recent={material.recent} />
 
       <WeakSpotsCard courses={courses} />
 
@@ -192,7 +203,7 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-4">
-          <div className="card text-center">
+          {!bold && <div className="card text-center">
             <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
             <div className="font-mono text-4xl font-semibold tracking-tight">{fmtClock(remainingMs(focus.timer, focus.now))}</div>
             <div className="mt-3 flex justify-center gap-2">
@@ -201,7 +212,7 @@ export default function HomePage() {
               </button>
               <Link href="/focus" className="btn">Open</Link>
             </div>
-          </div>
+          </div>}
           <div className="card">
             <h2 className="section-label">This week</h2>
             <div className="flex h-24 items-end gap-2" role="img" aria-label="Focus minutes per day this week">

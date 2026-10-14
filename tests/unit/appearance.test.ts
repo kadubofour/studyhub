@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ACCENTS, FONTS, LOOKS, contrastRatio, effectiveLook, greetingFont, isAccent, isFont, isLook, lookChoices, lookOf } from '@/lib/appearance'
+import { CONTENT_WIDTHS, contentWidthOf, ACCENTS, FONTS, LOOKS, contrastRatio, effectiveLook, greetingFont, isAccent, isFont, isLook, lookChoices, lookOf } from '@/lib/appearance'
 
 describe('accent presets', () => {
   it('offers the six agreed colours', () => {
@@ -81,5 +81,15 @@ describe('looks', () => {
     expect(greetingFont('paper', 'rounded')).toBeUndefined()
     expect(greetingFont('classic', 'sans')).toBeUndefined()
     expect(greetingFont(undefined, undefined)).toBeUndefined()
+  })
+})
+
+describe('content width', () => {
+  it('offers focused, wide and full, wide being the default', () => {
+    expect(CONTENT_WIDTHS.map(w => w.id)).toEqual(['focused', 'wide', 'full'])
+    expect(contentWidthOf('full')).toBe('full')
+    expect(contentWidthOf('focused')).toBe('focused')
+    expect(contentWidthOf('huge')).toBe('wide')
+    expect(contentWidthOf(undefined)).toBe('wide')
   })
 })

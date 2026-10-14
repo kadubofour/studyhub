@@ -20,7 +20,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
   await expect(page.getByText('2 items')).toBeVisible()
   await page.getByRole('checkbox', { name: 'Select all shown' }).check()
   await expect(page.getByText('2 selected')).toBeVisible()
-  await page.getByLabel('Move to').selectOption({ label: 'Biology' })
+  await page.getByRole('radiogroup', { name: 'Move to' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('button', { name: 'Move', exact: true }).click()
   await expect(page.getByText('Moved 2 items.')).toBeVisible()
   await expect(page.getByText('Everything is in a course.')).toBeVisible()

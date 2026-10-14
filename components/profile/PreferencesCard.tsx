@@ -1,6 +1,7 @@
 'use client'
 import { useState, useSyncExternalStore } from 'react'
 import { useTheme } from 'next-themes'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { Switch } from '@/components/ui/Switch'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -86,17 +87,13 @@ export function PreferencesCard() {
         {num('long_break_minutes', 'Long break (min)')}
         {num('long_break_every', 'Long break every N sessions')}
       </section>
-      <section className="grid grid-cols-2 gap-3">
-        <label className="field"><span>Default note editor</span>
-          <select value={form.default_editor_mode} onChange={e => set('default_editor_mode', e.target.value as EditorMode)}>
-            <option value="rich">Rich</option><option value="markdown">Markdown</option>
-          </select>
-        </label>
-        <label className="field"><span>Theme</span>
-          <select value={form.theme} onChange={e => set('theme', e.target.value as ThemePref)}>
-            <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
-          </select>
-        </label>
+      <section className="space-y-3">
+        <div className="field"><span>Default note editor</span>
+          <ChoiceChips label="Default note editor" value={form.default_editor_mode} options={[{ value: 'rich', label: 'Rich' }, { value: 'markdown', label: 'Markdown' }]} onChange={v => set('default_editor_mode', v as EditorMode)} />
+        </div>
+        <div className="field"><span>Theme</span>
+          <ChoiceChips label="Theme" value={form.theme} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} onChange={v => set('theme', v as ThemePref)} />
+        </div>
       </section>
       <div className="flex items-start justify-between gap-4 rounded-xl bg-surface px-3.5 py-3">
         <div>

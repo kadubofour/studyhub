@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Layers } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
@@ -17,9 +18,11 @@ export default function FlashcardsPage() {
   const toast = useToast()
   const [decks, setDecks] = useState<DeckWithDue[] | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
-  const [open, setOpen] = useState(false)
+  // A quick action can open this page with the new deck form ready, and a course chosen
+  const params = useSearchParams()
+  const [open, setOpen] = useState(() => params.get('new') === '1')
   const [name, setName] = useState('')
-  const [courseId, setCourseId] = useState('')
+  const [courseId, setCourseId] = useState(() => params.get('course') ?? '')
 
   useEffect(() => {
     const sb = supabase()

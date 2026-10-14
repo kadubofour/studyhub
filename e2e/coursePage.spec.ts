@@ -13,7 +13,7 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
   await page.goto('/library')
   await page.getByRole('button', { name: 'Unsorted' }).click()
   await page.getByRole('checkbox', { name: 'Select all shown' }).check()
-  await page.getByLabel('Move to').selectOption({ label: 'Biology' })
+  await page.getByRole('radiogroup', { name: 'Move to' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('button', { name: 'Move', exact: true }).click()
   await expect(page.getByText('Moved 2 items.')).toBeVisible()
 
@@ -71,7 +71,7 @@ test('Preferences are on the Profile page now, and Settings keeps Sign out', asy
   await expect(page.getByText('Settings saved')).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Focus length (min)')).toHaveValue('30')
-  await page.goto('/settings')
+  await page.goto('/settings?section=account')
   await expect(page.getByLabel('Focus length (min)')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
 })

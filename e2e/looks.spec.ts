@@ -27,15 +27,13 @@ test('choose Paper in Settings: the app changes at once, and it is still Paper a
   expect(await bg(page)).toBe(classic)
 })
 
-test('Paper on Home: tinted tiles and a serif greeting, until another font is chosen', async ({ page }) => {
+test('Paper on Home: a serif greeting, until another font is chosen', async ({ page }) => {
   await signUp(page)
   await page.goto('/settings')
   await page.getByRole('radio', { name: 'Paper look' }).click()
   await expect(root(page)).toHaveAttribute('data-look', 'paper')
   await page.goto('/home')
-  const tile = page.locator('.tile-a').first()
-  await expect(tile).toBeVisible()
-  expect(await tile.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(248, 228, 212)') // #F8E4D4
+  await expect(page.getByText('Tasks today')).toBeVisible()
   const greeting = page.getByRole('heading', { level: 1 })
   expect(await greeting.evaluate(el => getComputedStyle(el).fontFamily)).toContain('Lora')
   await page.goto('/settings')

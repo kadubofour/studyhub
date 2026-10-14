@@ -64,7 +64,7 @@ test('the Upload and Delete-account dialogs have no serious accessibility proble
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   const found = await problems(page, 'upload dialog')
   await page.keyboard.press('Escape')
-  await page.goto('/settings')
+  await page.goto('/settings?section=data')
   await settle(page)
   await page.getByRole('button', { name: 'Delete my account' }).click()
   await expect(page.getByRole('heading', { name: 'Delete your account?' })).toBeVisible()

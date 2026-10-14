@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { AlertTriangle, Circle, CircleCheck, CircleDot, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Upload, type LucideIcon } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -97,6 +98,8 @@ export default function CoursePageRoute() {
           <p className="text-sm text-muted">{items ? summaryLine(items) : ''}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <NewNoteButton courseId={course.id} className="btn" />
+          <Link href={`/flashcards?new=1&course=${course.id}`} className="btn"><Layers size={14} aria-hidden />New deck</Link>
           <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
           <button type="button" className="btn" disabled={busy !== null} onClick={() => { void ask() }}><MessagesSquare size={14} aria-hidden />Ask the tutor</button>
           <Link href={`/library?course=${course.id}`} className="btn-ghost text-accent">Open in Library</Link>

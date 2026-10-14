@@ -15,6 +15,30 @@ describe('QuickAdd', () => {
     expect(screen.getByText('Due Fri, Oct 9')).toBeTruthy()
   })
 
+  it('as a card, keeps every control and the Add button', () => {
+    const onAdd = vi.fn()
+    render(<QuickAdd variant="card" courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)
+    fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Essay fri' } })
+    expect(screen.getByRole('radiogroup', { name: 'Course' })).toBeTruthy()
+    expect(screen.getByRole('radiogroup', { name: 'Type' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onAdd).toHaveBeenCalledTimes(1)
+  })
+  it('sends high priority when the text ends with !', () => {
+    const onAdd = vi.fn()
+    render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)
+    fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Essay fri !' } })
+    expect(screen.getByText('High priority')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onAdd.mock.calls[0][0]).toMatchObject({ title: 'Essay', priority: 'high' })
+  })
+  it('sends no priority otherwise, so the task stays normal', () => {
+    const onAdd = vi.fn()
+    render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={onAdd} />)
+    fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Essay fri' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onAdd.mock.calls[0][0].priority).toBeUndefined()
+  })
   it('shows the implicit default due date when no date word is typed', () => {
     render(<QuickAdd courses={courses} defaultCourseId={null} tz="America/New_York" onAdd={() => {}} compact implicitDue="Today" />)
     fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Read chapter 4' } })
@@ -24,7 +48,7 @@ describe('QuickAdd', () => {
   it('lets the user choose "No course" even while a course filter is active', () => {
     const onAdd = vi.fn()
     render(<QuickAdd courses={courses} defaultCourseId="c1" tz="UTC" onAdd={onAdd} />)
-    fireEvent.change(screen.getByLabelText('Course'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'No course' }))
     fireEvent.change(screen.getByLabelText('Add a task'), { target: { value: 'Loose task' } })
     fireEvent.submit(screen.getByLabelText('Add a task').closest('form')!)
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Loose task', course_id: null }))

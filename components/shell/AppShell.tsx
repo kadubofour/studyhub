@@ -21,7 +21,7 @@ import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { isRecording } from '@/lib/lectures/recordingGuard'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, FONTS } from '@/lib/appearance'
+import { ACCENTS, FONTS, contentWidthOf } from '@/lib/appearance'
 import { useLook } from '@/components/providers/useLook'
 import { useCoursesChanged } from '@/lib/course/events'
 import { listCourses } from '@/lib/data/courses'
@@ -114,7 +114,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   } as React.CSSProperties
 
   return (
-    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={look}>
+    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={look} data-topbar={(look === 'vivid' || look === 'classic') && !immersive ? '' : undefined}>
       {sidebar && (
         <aside className="app-sidebar no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
           <div className="mb-6 flex items-center justify-between px-1">
@@ -138,11 +138,11 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 {g.scan && (
                   <>
                     <button type="button" onClick={() => setUploading(true)}
-                      className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                      className="mt-1 flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <Upload size={17} aria-hidden />Upload
                     </button>
                     <button type="button" onClick={() => { setScanFiles(undefined); setScanning(true) }}
-                      className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent">
+                      className="flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <ScanLine size={17} aria-hidden />Scan
                     </button>
                   </>
@@ -184,7 +184,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <PanelLeftOpen size={18} aria-hidden />
           </button>
         )}
-        <main className={immersive ? 'w-full' : 'mx-auto w-full max-w-5xl px-4 py-5 md:px-10 md:py-9'}>{!immersive && <EndingBanner />}{children}</main>
+        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">
