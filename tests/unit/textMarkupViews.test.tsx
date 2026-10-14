@@ -66,4 +66,29 @@ describe('the highlight tools in the editor', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight' })) })
     expect(md).not.toContain('<mark')
   })
+  it('right-clicking Highlight offers the colours: choosing one recolours the selected words and is used for the next highlight', async () => {
+    let md = ''
+    let editor: Editor | null = null
+    await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RichEditor markdown="Alpha beta gamma" onChange={m => { md = m }} onReady={e => { editor = e }} /></ToastProvider></ProfileProvider>) })
+    await act(async () => { editor!.commands.setTextSelection({ from: 7, to: 11 }) }) // "beta"
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight' })) })
+    expect(md).toContain('hl-yellow">beta')
+    await act(async () => { fireEvent.contextMenu(screen.getByRole('button', { name: 'Highlight' })) })
+    const menu = screen.getByRole('menu', { name: 'Quick actions' })
+    expect(Array.from(menu.querySelectorAll('[role="menuitem"]')).map(i => i.textContent)).toEqual(['Yellow', 'Green', 'Blue', 'Pink', 'Orange', 'Purple', 'Remove highlight'])
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Green' })) })
+    expect(md).toBe('Alpha <mark class="hl hl-green">beta</mark> gamma') // the selected word changed colour
+    await act(async () => { editor!.commands.setTextSelection({ from: 12, to: 17 }) }) // "gamma", not yet highlighted
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Highlight' })) })
+    expect(md).toContain('<mark class="hl hl-green">gamma</mark>') // the button now highlights in green
+  })
+  it('Remove highlight in that menu takes the highlight off the selection', async () => {
+    let md = ''
+    let editor: Editor | null = null
+    await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RichEditor markdown='Alpha <mark class="hl hl-pink">beta</mark> gamma' onChange={m => { md = m }} onReady={e => { editor = e }} /></ToastProvider></ProfileProvider>) })
+    await act(async () => { editor!.commands.setTextSelection({ from: 7, to: 11 }) })
+    await act(async () => { fireEvent.contextMenu(screen.getByRole('button', { name: 'Highlight' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Remove highlight' })) })
+    expect(md).toBe('Alpha beta gamma')
+  })
 })

@@ -163,3 +163,24 @@ test('draw with another brush and a custom thickness, and rub out part of a stro
   await page.mouse.click(box.x + 100, box.y + 320)
   await expect.poll(() => inkPixels(page)).toBe(0)
 })
+
+test('right-click the Highlight button to change its colour', async ({ page }) => {
+  await signUp(page)
+  await newNote(page, 'Colours')
+  await page.getByLabel('Note', { exact: true }).click()
+  await page.keyboard.type('The Krebs cycle runs in the matrix')
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Control+ArrowRight')
+  await page.keyboard.press('Control+Shift+ArrowRight') // selects "Krebs "
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Pink' }).click()
+  await expect(page.locator('.ProseMirror mark.hl-pink')).toContainText('Krebs')
+  // The next highlight is pink too
+  await page.keyboard.press('End')
+  await page.keyboard.press('Control+Shift+ArrowLeft') // selects "matrix"
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click()
+  await expect(page.locator('.ProseMirror mark.hl-pink')).toHaveCount(2)
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.reload()
+  await expect(page.locator('.ProseMirror mark.hl-pink')).toHaveCount(2)
+})

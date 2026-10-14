@@ -2,13 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilLine, Sigma, Table } from 'lucide-react'
+import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilLine, Sigma, Table, type LucideIcon } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
 import { TableTools } from './TableTools'
 import { TableGridPicker } from './TableGridPicker'
 import { editorQuickActions } from './editorQuickActions'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
+import { HIGHLIGHTS, type HighlightName } from '@/lib/notes/markup'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { NoteImagesContext } from './NoteImagesContext'
@@ -63,6 +64,11 @@ function PictureButton({ input }: { input: React.RefObject<HTMLInputElement | nu
   return <button type="button" aria-label="Image" title="Image" onClick={() => input.current?.click()} className="shrink-0 rounded p-1.5 text-muted hover:text-fg"><ImagePlus size={16} aria-hidden /></button>
 }
 
+// A coloured square in place of an icon, for the colours in the highlighter's menu
+const SWATCHES = Object.fromEntries(HIGHLIGHTS.map(h => [h.name, (({ size = 15 }: { size?: number | string }) => (
+  <span aria-hidden className="inline-block rounded-[4px] border border-black/10" style={{ width: size, height: size, background: h.swatch }} />
+)) as unknown as LucideIcon])) as Record<HighlightName, LucideIcon>
+
 const isPicture = (f: File) => ACCEPTED.includes(f.type)
 function onlyPicture(data: DataTransfer | null): boolean {
   const html = (data?.getData('text/html') ?? '').replace(/<!--[\s\S]*?-->|<meta[^>]*>/gi, '').trim()
@@ -96,6 +102,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   const addRef = useRef<(files: File[]) => void>(() => {})
   // Built once: a new array each render would make Tiptap reconfigure the editor every time
   const [extensions] = useState(() => [...noteExtensions({ onEditMath, imageView: true }), FindHighlight])
+  const [highlightColor, setHighlightColor] = useState<HighlightName>('yellow') // what the Highlight button uses; right-click it to change
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
   const editor = useEditor({
@@ -198,7 +205,28 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         {tool('Italic', Italic, () => editor.chain().focus().toggleItalic().run(), active('italic'))}
         {tool('Underline', UnderlineIcon, () => editor.chain().focus().toggleUnderline().run(), active('underline'))}
         {tool('Strikethrough', Strikethrough, () => editor.chain().focus().toggleStrike().run(), active('strike'))}
-        {tool('Highlight', Highlighter, () => (editor.isActive('highlight') ? editor.chain().focus().unsetMark('highlight').run() : editor.chain().focus().setMark('highlight', { color: 'yellow' }).run()), active('highlight'))}
+        <button type="button" aria-label="Highlight" title="Highlight (right-click to change the colour)" aria-pressed={active('highlight')}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => (editor.isActive('highlight') ? editor.chain().focus().unsetMark('highlight').run() : editor.chain().focus().setMark('highlight', { color: highlightColor }).run())}
+          onContextMenu={e => {
+            e.preventDefault()
+            const pick = (c: HighlightName) => {
+              setHighlightColor(c)
+              if (!editor.state.selection.empty) editor.chain().focus().setMark('highlight', { color: c }).run() // recolours what is selected
+            }
+            setMenu({
+              x: e.clientX, y: e.clientY,
+              items: [
+                ...HIGHLIGHTS.map(h => ({ label: h.label, icon: SWATCHES[h.name], onSelect: () => pick(h.name) })),
+                'sep' as const,
+                { label: 'Remove highlight', icon: Highlighter, onSelect: () => { editor.chain().focus().unsetMark('highlight').run() } },
+              ],
+            })
+          }}
+          className={`relative shrink-0 rounded p-1.5 ${active('highlight') ? 'bg-surface text-fg' : 'text-muted hover:text-fg'}`}>
+          <Highlighter size={16} aria-hidden />
+          <span aria-hidden className="absolute inset-x-1.5 bottom-0.5 h-[3px] rounded-full" style={{ background: HIGHLIGHTS.find(h => h.name === highlightColor)?.swatch }} />
+        </button>
         {tool('Heading', Heading2, () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active('heading'))}
         {tool('Bulleted list', List, () => editor.chain().focus().toggleBulletList().run(), active('bulletList'))}
         {tool('Checklist', ListChecks, () => editor.chain().focus().toggleTaskList().run(), active('taskList'))}
