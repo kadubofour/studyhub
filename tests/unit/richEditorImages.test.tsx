@@ -38,10 +38,10 @@ beforeEach(() => { md = ''; editor = null; prepare.mockClear().mockImplementatio
 afterEach(cleanup)
 
 describe('adding pictures', () => {
-  it('has Image and Draw buttons in the toolbar', async () => {
+  it('has Image and Sketch buttons in the toolbar', async () => {
     await open()
     expect(screen.getByRole('button', { name: 'Image' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Draw' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Sketch' })).toBeTruthy()
   })
   it('puts in the pictures chosen with the file picker, named after the file', async () => {
     await open('Hello')

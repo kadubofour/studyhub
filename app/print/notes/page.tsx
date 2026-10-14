@@ -3,6 +3,8 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Printer } from 'lucide-react'
 import { MarkdownView } from '@/components/notes/MarkdownView'
+import { InkLayer } from '@/components/notes/InkLayer'
+import { sanitizeInk } from '@/lib/markup/ink'
 import { supabase } from '@/lib/supabase/client'
 import { getNotesForExport } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
@@ -54,7 +56,10 @@ function PrintNotes() {
           {courses.find(c => c.id === n.course_id) && (
             <p className="mb-6 mt-1 text-sm italic text-muted">{courses.find(c => c.id === n.course_id)!.name}</p>
           )}
-          <MarkdownView source={n.content_md} />
+          <div className="relative">
+            <MarkdownView source={n.content_md} />
+            <InkLayer marks={sanitizeInk(n.ink)} active={false} />
+          </div>
         </article>
       ))}
     </div>

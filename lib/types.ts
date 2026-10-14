@@ -41,7 +41,7 @@ export interface ClassSlot {
   location: string | null; kind: ClassKind
 }
 export interface NoteSummary { id: string; course_id: string | null; title: string; updated_at: string }
-export interface Note extends NoteSummary { content_md: string }
+export interface Note extends NoteSummary { content_md: string; /** Pen and highlighter drawn on the note, in the note's own coordinates (see lib/markup/ink) */ ink?: import('./markup/marks').Mark[] }
 export interface Deck { id: string; course_id: string | null; name: string; created_at?: string }
 export interface DeckWithDue extends Deck { due: number; total: number }
 export interface Card {

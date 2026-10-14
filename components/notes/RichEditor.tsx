@@ -244,7 +244,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         <TableButton editor={editor} on={active('table')} />
         {tool('Equation', Sigma, () => onInsertEquation?.())}
         <PictureButton input={pictureInput} />
-        {tool('Draw', PencilRuler, () => void draw())}
+        {tool('Sketch', PencilRuler, () => void draw())}
         {active('table') && <><span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-line" /><TableTools editor={editor} /></>}
       </div>
       <input ref={pictureInput} type="file" hidden aria-label="Choose pictures" accept={ACCEPTED.join(',')} multiple
