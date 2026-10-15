@@ -36,3 +36,17 @@ describe('Home quick actions', () => {
     for (const hint of ['Quiz yourself on a note', 'Record and write it up', 'Get help with a topic', 'A PDF, slides or a file']) expect(screen.getByText(hint)).toBeTruthy()
   })
 })
+
+describe('Home quick actions in the accent colour', () => {
+  it('are tinted with the accent and have an accent icon, in every look (no per-look neutralising)', () => {
+    render(<HomeActions />)
+    const tiles = [...screen.getByRole('group', { name: 'Quick actions' }).querySelectorAll('a, button')]
+    expect(tiles).toHaveLength(4)
+    for (const t of tiles) {
+      expect(t.className).toContain('bg-accent-soft')
+      expect(t.className).toContain('border-accent')
+      expect(t.hasAttribute('data-tint')).toBe(false) // Classic turns data-tint tiles plain
+      expect(t.querySelector('span[aria-hidden]')!.className).toContain('bg-accent-solid')
+    }
+  })
+})

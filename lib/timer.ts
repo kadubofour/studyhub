@@ -24,6 +24,17 @@ export function pauseTimer(s: TimerState, now: number): TimerState {
   return { ...s, startedAt: null, accumulatedMs: s.accumulatedMs + (now - s.startedAt) }
 }
 
+/** Starts the current session over from the full time: still running if it was running, still stopped if it was stopped */
+export function restartTimer(s: TimerState, now: number): TimerState {
+  const running = s.startedAt !== null
+  return { ...createTimer(s.mode, s.durationMs), startedAt: running ? now : null, firstStartedAt: running ? now : null }
+}
+
+/** Whether there is anything to start over: some of the time has gone */
+export function canRestart(s: TimerState, now: number): boolean {
+  return elapsedMs(s, now) > 0
+}
+
 export function elapsedMs(s: TimerState, now: number): number {
   const running = s.startedAt === null ? 0 : Math.max(0, now - s.startedAt)
   return Math.min(s.durationMs, s.accumulatedMs + running)

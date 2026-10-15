@@ -138,7 +138,7 @@ export default function HomePage() {
         {bold ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
-            <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} />
+            <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
             {xp && look === 'playful' && ( // the top bar (Classic, Vivid) shows these
               <div className="flex flex-wrap gap-2 text-sm font-medium">
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
