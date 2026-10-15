@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, Upload, ScanLine, FolderOpen, User, BookOpen, Mic, MessagesSquare } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -14,8 +14,7 @@ import { greetingFont } from '@/lib/appearance'
 import { TintTile } from '@/components/ui/cards'
 import { HeroFocus } from '@/components/home/HeroFocus'
 import { CourseAccess } from '@/components/home/CourseAccess'
-import { NewNoteButton } from '@/components/quick/NewNoteButton'
-import { QuickActions } from '@/components/quick/QuickActions'
+import { HomeActions } from '@/components/home/HomeActions'
 import { homeMaterial, type Recent, type CourseCounts } from '@/lib/home/material'
 import { listNotes } from '@/lib/data/notes'
 import { listDecks } from '@/lib/data/decks'
@@ -24,8 +23,6 @@ import { useLook } from '@/components/providers/useLook'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
 import { GoalRing } from '@/components/home/GoalRing'
-import { requestScan, requestUpload } from '@/lib/scan/events'
-import { requestQuiz } from '@/lib/quiz/events'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
@@ -175,15 +172,7 @@ export default function HomePage() {
         </TintTile>
       </section>
 
-      <QuickActions label="Quick actions" actions={[
-        { node: <NewNoteButton /> },
-        { label: 'Take a quiz', icon: ListChecks, onClick: requestQuiz },
-        { label: 'New deck', icon: Layers, href: '/flashcards?new=1' },
-        { label: 'Record lecture', icon: Mic, href: '/lectures/record' },
-        { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
-        { label: 'Upload', icon: Upload, onClick: requestUpload },
-        { label: 'Scan', icon: ScanLine, onClick: () => requestScan() },
-      ]} />
+      <HomeActions />
 
       <CourseAccess courses={courses} counts={material.counts} recent={material.recent} />
 
