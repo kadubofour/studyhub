@@ -7,7 +7,7 @@ import { listSessionsSince, logFocusSession } from '@/lib/data/focus'
 import { dailyMinutes } from '@/lib/streak'
 import { localDayKey, startOfLocalDay } from '@/lib/dates'
 import {
-  createTimer, durationFor, elapsedMs, isFinished, markLogged, nextMode, pauseTimer, remainingMs,
+  createTimer, durationFor, elapsedMs, isFinished, markLogged, nextMode, pauseTimer, remainingMs, restartTimer,
   shouldLogSession, startTimer, type Mode, type TimerState,
 } from '@/lib/timer'
 import { usePersistedTimer } from '@/lib/ui/usePersistedTimer'
@@ -21,6 +21,7 @@ interface FocusCtx {
   completedFocus: number
   todayMinutes: number
   toggle: () => void
+  restart: () => void
   skip: () => void
   pickMode: (mode: Mode) => void
 }
@@ -94,6 +95,14 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     advance(timer, completedFocus) // a skipped focus session doesn't count toward the long break
   }, [timer, log, advance, completedFocus])
 
+  // Start this session over from the full time. What was done so far is logged first (as a session not completed), like skipping.
+  const restart = useCallback(() => {
+    const t = Date.now()
+    if (elapsedMs(timer, t) === 0) return
+    if (shouldLogSession(timer, t)) void log(markLogged(timer), t, false)
+    setTimer(restartTimer(timer, t))
+  }, [timer, log, setTimer])
+
   const pickMode = useCallback((mode: Mode) => {
     if (mode === timer.mode) return // re-clicking the current mode must not wipe the session
     const t = Date.now()
@@ -108,7 +117,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
   }, [running, remaining, timer.mode])
 
   return (
-    <Ctx.Provider value={{ timer, now, completedFocus, todayMinutes, toggle, skip, pickMode }}>
+    <Ctx.Provider value={{ timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode }}>
       {children}
     </Ctx.Provider>
   )

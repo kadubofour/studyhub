@@ -72,3 +72,23 @@ describe('durationFor', () => {
     expect(durationFor('long', p)).toBe(15 * MIN)
   })
 })
+
+describe('restarting a session', () => {
+  it('starts over from the full time, and keeps running if it was running', async () => {
+    const { createTimer, startTimer, pauseTimer, restartTimer, canRestart, remainingMs } = await import('@/lib/timer')
+    const running = startTimer(createTimer('focus', 25 * 60_000), 1_000)
+    expect(canRestart(running, 1_000)).toBe(false) // nothing has gone yet
+    expect(canRestart(running, 61_000)).toBe(true)
+    const again = restartTimer(running, 61_000)
+    expect(again).toMatchObject({ mode: 'focus', durationMs: 25 * 60_000, startedAt: 61_000, accumulatedMs: 0, firstStartedAt: 61_000, logged: false })
+    expect(remainingMs(again, 61_000)).toBe(25 * 60_000)
+    const paused = pauseTimer(running, 121_000)
+    const stopped = restartTimer(paused, 200_000)
+    expect(stopped).toMatchObject({ startedAt: null, accumulatedMs: 0, firstStartedAt: null })
+    expect(canRestart(stopped, 300_000)).toBe(false)
+  })
+  it('keeps the mode: a break restarts as a break', async () => {
+    const { createTimer, restartTimer } = await import('@/lib/timer')
+    expect(restartTimer(createTimer('short', 300_000), 5).mode).toBe('short')
+  })
+})

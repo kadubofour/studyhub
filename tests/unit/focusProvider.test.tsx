@@ -74,3 +74,50 @@ describe('FocusProvider', () => {
     expect(logFocusSession.mock.calls[0][1]).toMatchObject({ minutes: 1, completed: true })
   })
 })
+
+describe('FocusProvider restart', () => {
+  const mount = () => render(
+    <ProfileProvider initial={profile}>
+      <ToastProvider><FocusProvider><Grab onApi={v => { api = v }} /></FocusProvider></ToastProvider>
+    </ProfileProvider>,
+  )
+  it('does nothing before any time has gone', async () => {
+    mount()
+    const before = api!.timer
+    await act(async () => { api!.restart() })
+    expect(api!.timer).toEqual(before)
+    expect(logFocusSession).not.toHaveBeenCalled()
+  })
+  it('starts a running session over from the full time and still running, without logging a session shorter than five minutes', async () => {
+    mount()
+    await act(async () => { api!.toggle() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(20_000) })
+    await act(async () => { api!.restart() })
+    expect(api!.timer.accumulatedMs).toBe(0)
+    expect(api!.timer.startedAt).not.toBeNull()
+    expect(logFocusSession).not.toHaveBeenCalled()
+  })
+  it('keeps a paused session paused when it starts over', async () => {
+    mount()
+    await act(async () => { api!.toggle() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
+    await act(async () => { api!.toggle() })
+    expect(api!.timer.accumulatedMs).toBeGreaterThan(0)
+    await act(async () => { api!.restart() })
+    expect(api!.timer).toMatchObject({ startedAt: null, accumulatedMs: 0 })
+  })
+  it('logs the time already done, as a session not completed, when five minutes or more had gone', async () => {
+    render(
+      <ProfileProvider initial={{ ...profile, focus_minutes: 25 }}>
+        <ToastProvider><FocusProvider><Grab onApi={v => { api = v }} /></FocusProvider></ToastProvider>
+      </ProfileProvider>,
+    )
+    await act(async () => { api!.toggle() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(6 * 60_000) })
+    await act(async () => { api!.restart() })
+    expect(logFocusSession).toHaveBeenCalledTimes(1)
+    expect(logFocusSession.mock.calls[0][1]).toMatchObject({ minutes: 6, completed: false })
+    expect(api!.timer.accumulatedMs).toBe(0)
+    expect(api!.timer.logged).toBe(false) // the new session can be logged in its turn
+  })
+})

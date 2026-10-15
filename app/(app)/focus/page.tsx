@@ -1,15 +1,15 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Pause, Play, SkipForward, Headphones } from 'lucide-react'
+import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
-import { remainingMs, type Mode } from '@/lib/timer'
+import { canRestart, remainingMs, type Mode } from '@/lib/timer'
 
 const SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }]
 
 export default function FocusPage() {
   const { profile } = useProfile()
-  const { timer, now, completedFocus, todayMinutes, toggle, skip, pickMode } = useFocus()
+  const { timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode } = useFocus()
   const [sound, setSound] = useState('off')
   const [volume, setVolume] = useState(0.6)
   const [soundError, setSoundError] = useState(false)
@@ -59,6 +59,7 @@ export default function FocusPage() {
         <button className="btn-primary min-w-28" onClick={toggle}>
           {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
         </button>
+        <button className="btn" onClick={restart} disabled={!canRestart(timer, now)} title="Start this session over"><RotateCcw size={14} aria-hidden />Restart</button>
         <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
       </div>
 
