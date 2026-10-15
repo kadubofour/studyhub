@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary, moveItems } from '@/lib/data/library'
 import { requestUpload } from '@/lib/scan/events'
+import { requestQuiz } from '@/lib/quiz/events'
 import { countsByKind, isMovable, visible, type Kind, type LibraryItem, type View } from '@/lib/library/items'
 import type { Course } from '@/lib/types'
 
@@ -100,6 +101,7 @@ export default function LibraryPage() {
         <>
           {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
           <NewNoteButton className="btn" />
+          <button type="button" className="btn" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
           <Link href="/flashcards?new=1" className="btn"><Layers size={14} aria-hidden />New deck</Link>
           <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
         </>

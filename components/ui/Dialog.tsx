@@ -44,7 +44,7 @@ export function Dialog({ open, onClose, title, children, icon: Icon, subtitle, s
 export function DialogFooter({ children, note }: { children: React.ReactNode; note?: React.ReactNode }) {
   return (
     <div className="sticky -bottom-5 -mx-5 -mb-5 mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-bg/95 px-5 py-3 backdrop-blur">
-      {note && <div className="mr-auto text-xs text-muted">{note}</div>}
+      {note && <div className="w-full text-xs text-muted sm:mr-auto sm:w-auto">{note}</div>}
       {children}
     </div>
   )

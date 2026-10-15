@@ -4,8 +4,10 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
-  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload, FolderOpen,
+  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload, FolderOpen, ListChecks,
 } from 'lucide-react'
+import { QuizStartDialog } from '@/components/quiz/QuizStartDialog'
+import { useOpenQuiz } from '@/lib/quiz/events'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { UploadMaterial } from '@/components/notes/UploadMaterial'
 import { TopBar } from './TopBar'
@@ -81,9 +83,11 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }, [coursesVersion])
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [quizzing, setQuizzing] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
   useOpenUpload(() => setUploading(true))
+  useOpenQuiz(() => setQuizzing(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const dark = mounted && resolvedTheme === 'dark'
@@ -137,6 +141,10 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 {g.items.map(link)}
                 {g.scan && (
                   <>
+                    <button type="button" onClick={() => setQuizzing(true)}
+                      className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-muted transition hover:bg-surface hover:text-fg">
+                      <ListChecks size={17} aria-hidden />Quiz
+                    </button>
                     <button type="button" onClick={() => setUploading(true)}
                       className="mt-1 flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <Upload size={17} aria-hidden />Upload
@@ -207,6 +215,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           })}
         </nav>
       )}
+      {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
       <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
       {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>

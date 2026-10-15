@@ -99,7 +99,20 @@ describe('Scan in the app shell', () => {
     const names = (g: HTMLElement) => [...g.querySelectorAll('a, button')].map(x => x.textContent)
     expect(side.querySelector('a')!.textContent).toBe('Home')
     expect(names(within(side).getByRole('group', { name: 'Plan' }))).toEqual(['Planner', 'Focus', 'Progress'])
-    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Library', 'Notes', 'Lectures', 'Flashcards', 'Tutor', 'Upload', 'Scan'])
+    expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Library', 'Notes', 'Lectures', 'Flashcards', 'Tutor', 'Quiz', 'Upload', 'Scan'])
+  })
+
+  it('has a Quiz button in the sidebar, and the Quiz request from any page opens the Quiz dialog', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+    path = '/flashcards'
+    renderShell()
+    fireEvent.click(within(screen.getAllByRole('navigation')[0]).getByRole('button', { name: 'Quiz' }))
+    expect(await screen.findByRole('heading', { name: 'Quiz yourself' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('heading', { name: 'Quiz yourself' })).toBeNull()
+    await act(async () => { window.dispatchEvent(new Event('studyhub:open-quiz')) })
+    expect(await screen.findByRole('heading', { name: 'Quiz yourself' })).toBeTruthy()
   })
 
   it('has an Upload button in the sidebar that opens the upload dialog from any page', async () => {
