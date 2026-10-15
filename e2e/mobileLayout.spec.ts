@@ -64,3 +64,34 @@ test('Upload and Scan open as a sheet from the bottom that fits the screen', asy
     await expect(dialog).toBeHidden()
   }
 })
+
+test('the planner on a phone: tasks start as one line, and the calendar fits with its add button', async ({ page }) => {
+  test.setTimeout(120_000)
+  await signUp(page)
+  await page.goto('/planner')
+  await page.waitForLoadState('networkidle')
+  // Tasks: only the one line to type in until it is used, then the course and type choices appear
+  await expect(page.getByRole('radiogroup', { name: 'Course', exact: true })).toBeHidden()
+  await page.getByLabel('Add a task').click()
+  await expect(page.getByRole('radiogroup', { name: 'Type' })).toBeVisible()
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+
+  // Calendar: Day / Week / Month in one full-width switch, and the Add buttons behind one round button
+  await page.getByRole('tab', { name: 'Week' }).click()
+  await expect(page.getByRole('button', { name: 'Add task', exact: true })).toBeHidden()
+  await page.getByRole('button', { name: 'Add to calendar' }).click()
+  for (const n of ['Add task', 'Add exam', 'Add class']) await expect(page.getByRole('menuitem', { name: n })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Add class' }).click()
+  await expect(page.getByRole('heading', { name: 'Add class' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  const group = page.getByRole('group', { name: 'View' })
+  const box = (await group.boundingBox())!
+  expect(box.width).toBeGreaterThan(300)
+
+  // Month: tapping a day opens it
+  await group.getByRole('button', { name: 'Month' }).click()
+  const today = page.locator('[data-day][aria-current], [data-day]').first()
+  await today.click({ position: { x: 20, y: 60 } })
+  await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
+})

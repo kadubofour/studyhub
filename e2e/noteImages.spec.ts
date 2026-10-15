@@ -106,7 +106,7 @@ test('draw freehand on a note: the drawing stays after a reload, and the note ca
   await page.mouse.move(box.x + 120, box.y + 40, { steps: 8 })
   await page.mouse.up()
   await expect.poll(() => inkPixels(page)).toBeGreaterThan(200)
-  await bar.getByRole('button', { name: 'Done' }).click()
+  await bar.getByRole('button', { name: 'Done' }).dispatchEvent('click') // the dev-only Next.js badge can sit over it on a phone
   await expect(bar).toBeHidden()
   await expect(page.getByText('Saved')).toBeVisible()
   const before = await inkPixels(page)

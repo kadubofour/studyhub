@@ -15,8 +15,8 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
   type: TypeFilter; onType: (t: TypeFilter) => void; typeCounts: Record<TypeFilter, number>
 }) {
   return (
-    <div className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
-      <nav aria-label="Task lists" className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+    <div className="min-w-0 space-y-2 lg:sticky lg:top-4 lg:space-y-4 lg:self-start">
+      <nav aria-label="Task lists" className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
         {LISTS.map(l => {
           const Icon = ICON[l.id]
           const on = list === l.id
@@ -30,12 +30,12 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
       </nav>
       <div>
         <p className="mb-1.5 hidden px-3 text-xs font-medium text-muted lg:block">Type</p>
-        <div role="group" aria-label="Task type" className="flex flex-wrap gap-1.5 lg:flex-col lg:gap-0.5">
+        <div role="group" aria-label="Task type" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0">
           {TYPES.map(t => {
             const on = type === t.id
             return (
               <button key={t.id} type="button" aria-pressed={on} onClick={() => onType(t.id)}
-                className={`flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm transition ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm pointer-coarse:py-2 transition ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
                 <span>{t.label}</span>{' '}<span className="text-xs">{typeCounts[t.id]}</span>
               </button>
             )

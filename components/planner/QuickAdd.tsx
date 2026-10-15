@@ -18,6 +18,10 @@ export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false,
   implicitDue?: string
 }) {
   const [text, setText] = useState('')
+  // On a phone the composer is a single line until it is first used: then the course and type choices appear, and stay (a composer that
+  // folded away when you tapped elsewhere would move the page under the tap)
+  const [used, setUsed] = useState(false)
+  const showOptions = used || !!text.trim()
   // undefined = not chosen yet (follow the course filter); null = explicitly "No course"
   const [courseId, setCourseId] = useState<string | null | undefined>(undefined)
   const [type, setType] = useState<TaskType>('other')
@@ -35,19 +39,22 @@ export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false,
 
   if (variant === 'card') {
     return (
-      <form onSubmit={submit} className="mb-4 rounded-2xl border border-line bg-raised p-3 shadow-sm">
-        <input aria-label="Add a task" className="w-full bg-transparent px-1 py-1.5 text-base outline-none placeholder:text-muted" value={text} onChange={e => setText(e.target.value)}
-          placeholder="Add a task: Calc problem set fri" />
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <form onSubmit={submit} onFocus={() => setUsed(true)}
+        className="mb-4 rounded-2xl border border-line bg-raised p-2.5 shadow-sm md:p-3">
+        <div className="flex items-center gap-2">
+          <input aria-label="Add a task" className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-base outline-none placeholder:text-muted" value={text} onChange={e => setText(e.target.value)}
+            placeholder="Add a task: Calc problem set fri" />
+          <button className={`${BTN_SOLID} shrink-0`} disabled={!text.trim()}>Add</button>
+        </div>
+        <div className={`mt-2 flex-col gap-2 border-t border-line pt-2.5 md:flex md:flex-row md:flex-wrap md:items-center md:gap-x-4 md:border-0 md:pt-0 ${showOptions ? 'flex' : 'hidden'}`}>
           {!compact && (
             <>
-              <ChoiceChips size="sm" label="Course" value={effectiveCourse ?? ''} options={courseOptions} onChange={v => setCourseId(v || null)} />
-              <ChoiceChips size="sm" label="Type" value={type} options={TYPE_OPTIONS} onChange={v => setType(v as TaskType)} />
+              <ChoiceChips size="sm" label="Course" value={effectiveCourse ?? ''} options={courseOptions} onChange={v => setCourseId(v || null)} className="max-md:no-scrollbar max-md:flex-nowrap max-md:overflow-x-auto" />
+              <ChoiceChips size="sm" label="Type" value={type} options={TYPE_OPTIONS} onChange={v => setType(v as TaskType)} className="max-md:no-scrollbar max-md:flex-nowrap max-md:overflow-x-auto" />
             </>
           )}
           {dueLabel && text.trim() && <span className="inline-flex items-center gap-1 text-xs font-medium text-accent" aria-live="polite"><CalendarDays size={13} aria-hidden />Due {dueLabel}</span>}
           {parsed.priority && text.trim() && <span className="inline-flex items-center gap-1 text-xs font-medium text-danger"><Flag size={13} aria-hidden />High priority</span>}
-          <button className={`${BTN_SOLID} ml-auto`} disabled={!text.trim()}>Add</button>
         </div>
       </form>
     )
