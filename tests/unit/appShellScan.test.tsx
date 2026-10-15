@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest'
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 
@@ -27,6 +27,11 @@ import { setRecording } from '@/lib/lectures/recordingGuard'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true } as Profile
 const renderShell = () => render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+// jsdom has no <dialog> methods
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+})
 afterEach(() => cleanup())
 
 describe('Scan in the app shell', () => {
@@ -58,16 +63,33 @@ describe('Scan in the app shell', () => {
     window.removeEventListener(SCAN_SAVED, heard)
   })
 
-  it('has Lectures in the sidebar after Notes, and in the phone tab bar instead of Focus', () => {
+  it('has Lectures in the sidebar after Notes', () => {
     path = '/home'
     renderShell()
     const links = screen.getAllByRole('link', { name: 'Lectures' })
-    expect(links).toHaveLength(2)
+    expect(links).toHaveLength(1) // the sidebar only: the phone bar has five places
     expect(links[0].getAttribute('href')).toBe('/lectures')
     const sidebar = screen.getAllByRole('navigation')[0]
     const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
     expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
-    expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(1) // sidebar only
+  })
+
+  it('the phone bar has five places with Scan in the middle, and leaves out what Home already links to', () => {
+    path = '/home'
+    renderShell()
+    const bar = screen.getByRole('navigation', { name: 'Main' })
+    expect([...bar.querySelectorAll('a, button')].map(e => e.textContent)).toEqual(['Home', 'Planner', 'Scan', 'Notes', 'Flashcards'])
+    for (const left of ['Lectures', 'Tutor', 'Focus', 'Progress', 'Library', 'Courses', 'Profile', 'Settings', 'More']) expect(within(bar).queryByRole('link', { name: left }), left).toBeNull()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('marks the page you are on in the phone bar', () => {
+    path = '/notes'
+    renderShell()
+    const bar = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(bar).getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBe('page')
+    expect(within(bar).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBeNull()
+    path = '/home'
   })
 
   it('groups the sidebar: Home on its own, then Plan and Study, with Scan inside Study', () => {
@@ -242,11 +264,11 @@ describe('Scan in the app shell', () => {
     expect(screen.getAllByRole('link', { name: 'Library' })[0].getAttribute('href')).toBe('/library')
   })
 
-  it('has Tutor in the sidebar and the phone tab bar', () => {
+  it('has Tutor in the sidebar', () => {
     path = '/home'
     renderShell()
     const links = screen.getAllByRole('link', { name: 'Tutor' })
-    expect(links).toHaveLength(2)
+    expect(links).toHaveLength(1)
     expect(links[0].getAttribute('href')).toBe('/tutor')
   })
 

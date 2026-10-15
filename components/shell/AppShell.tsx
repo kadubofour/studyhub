@@ -45,9 +45,9 @@ const GROUPS = [
   ] },
 ]
 const ALL = [HOME, ...GROUPS.flatMap(g => g.items)]
-// Phones: recording happens there, so Lectures takes Focus's place (Focus stays on Home)
-const MOBILE_ORDER = ['/home', '/planner', '/flashcards', '/notes', '/lectures', '/tutor']
-const MOBILE = MOBILE_ORDER.map(h => ALL.find(n => n.href === h)!)
+// Phones: five places, with Scan in the middle in the accent colour. Everything else (Lectures, Tutor, Upload, Focus, Progress, Library, Courses,
+// Profile, Settings) is one tap from Home.
+const PHONE_BAR = ['/home', '/planner', 'scan', '/notes', '/flashcards']
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
 const scanTargetFor = (path: string): ScanTarget =>
@@ -175,7 +175,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           </div>
         </aside>
       )}
-      <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-16 md:pb-0'}`}>
+      <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0'}`}>
         <OfflineBanner />
         {(look === 'vivid' || look === 'classic') && !immersive && <TopBar sidebarHidden={!sidebar} />}
         {!sidebar && !immersive && (
@@ -187,20 +187,24 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
-        <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">
-          {MOBILE.map(({ href, label, icon: Icon }, i) => (
-            <span key={href} className="contents">
-              {i === 2 && (
-                <button type="button" onClick={() => setScanning(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] text-muted">
-                  <ScanLine size={19} aria-hidden />Scan
+        <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-raised/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+          {PHONE_BAR.map(key => {
+            if (key === 'scan') {
+              return (
+                <button key="scan" type="button" onClick={() => setScanning(true)} className="flex min-w-0 flex-col items-center gap-1 pb-2 pt-2.5 text-xs font-medium text-accent">
+                  <span className="grid h-8 w-14 place-items-center rounded-full bg-accent-solid text-white"><ScanLine size={20} aria-hidden /></span>Scan
                 </button>
-              )}
-              <Link href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] ${active(href) ? 'text-accent' : 'text-muted'}`}>
-                <Icon size={19} aria-hidden />{label}
+              )
+            }
+            const { label, icon: Icon } = ALL.find(n => n.href === key)!
+            const on = active(key)
+            return (
+              <Link key={key} href={key} onClick={e => guard(e, key)} aria-current={on ? 'page' : undefined}
+                className={`flex min-w-0 flex-col items-center gap-1 pb-2 pt-2.5 text-xs ${on ? 'font-medium text-accent' : 'text-muted'}`}>
+                <span className={`flex h-8 w-14 items-center justify-center rounded-full transition ${on ? 'bg-accent-soft' : ''}`}><Icon size={21} aria-hidden /></span>{label}
               </Link>
-            </span>
-          ))}
+            )
+          })}
         </nav>
       )}
       <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />

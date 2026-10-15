@@ -95,3 +95,25 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await today.click({ position: { x: 20, y: 60 } })
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
+
+test('the top bar names the page, and the bottom bar has five places with room around them', async ({ page }) => {
+  await signUp(page)
+  await expect(page.getByRole('banner')).toContainText('Home')
+  const bar = page.getByRole('navigation', { name: 'Main' })
+  await expect(bar.locator('a, button')).toHaveText(['Home', 'Planner', 'Scan', 'Notes', 'Flashcards'])
+  const box = (await bar.boundingBox())!
+  expect(box.y + box.height).toBeGreaterThanOrEqual(740)
+  expect(box.width).toBeGreaterThanOrEqual(373)
+  // Each place has at least 70 px across and its name fits
+  const items = await bar.locator('a, button').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, w: r.width, scroll: (e as HTMLElement).scrollWidth, label: e.textContent } }))
+  for (const i of items) { expect(i.w, i.label ?? '').toBeGreaterThanOrEqual(70); expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label ?? '').toBeLessThanOrEqual(Math.ceil(i.w)) }
+  await bar.getByRole('link', { name: 'Flashcards' }).dispatchEvent('click')
+  await expect(page).toHaveURL(/\/flashcards/)
+  await expect(page.getByRole('banner')).toContainText('Flashcards')
+  await expect(bar.getByRole('link', { name: 'Flashcards' })).toHaveAttribute('aria-current', 'page')
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  // What the bar leaves out is one tap from Home
+  await page.goto('/home')
+  for (const n of ['Courses', 'Library', 'Profile', 'Progress', 'Settings', 'Record lecture', 'Ask the tutor']) await expect(page.getByRole('link', { name: n, exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open' })).toBeVisible() // the focus timer's way in
+})
