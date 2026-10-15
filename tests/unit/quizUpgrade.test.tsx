@@ -89,12 +89,49 @@ describe('the quiz player', () => {
     expect(screen.getByText('Correct.')).toBeTruthy()
   })
 
-  it('leaves typing alone: keys in the answer box do not pick an answer or move on', async () => {
+  it('ignores a held key, a key with Ctrl or Cmd, and Enter on a link', async () => {
+    render(<QuizPlayer quiz={quiz} attempt={attempt()} onFinished={vi.fn()} />)
+    await act(async () => { fireEvent.keyDown(window, { key: 'b', repeat: true }); fireEvent.keyDown(window, { key: 'b', ctrlKey: true }); fireEvent.keyDown(window, { key: 'b', metaKey: true }) })
+    expect(saveAttempt).not.toHaveBeenCalled()
+    await act(async () => { fireEvent.keyDown(window, { key: 'b' }) })
+    expect(saveAttempt).toHaveBeenCalledTimes(1)
+    const link = document.body.appendChild(document.createElement('a'))
+    await act(async () => { fireEvent.keyDown(link, { key: 'Enter' }) })
+    expect(screen.getByText('Question 1 of 3')).toBeTruthy() // Enter on a link did not move on
+    await act(async () => { fireEvent.keyDown(window, { key: 'Enter', repeat: true }) })
+    expect(screen.getByText('Question 1 of 3')).toBeTruthy() // a held Enter does not skip the explanation
+    link.remove()
+  })
+
+  it('leaves the answer box alone on a short-answer question', async () => {
     render(<QuizPlayer quiz={quiz} attempt={attempt({ q1: { given: 'Matrix', correct: true, feedback: null }, q2: { given: 'false', correct: true, feedback: null } })} onFinished={vi.fn()} />)
     const box = screen.getByLabelText('Your answer')
-    await act(async () => { fireEvent.keyDown(box, { key: 'a' }); fireEvent.keyDown(box, { key: 'Enter' }) })
+    await act(async () => { fireEvent.keyDown(box, { key: 'Enter' }); fireEvent.keyDown(box, { key: 'a' }) })
     expect(saveAttempt).not.toHaveBeenCalled()
     expect(screen.getByText('Question 3 of 3')).toBeTruthy()
+  })
+
+  it('moves focus onto the question, then onto Next once it is answered, and announces the result', async () => {
+    render(<QuizPlayer quiz={quiz} attempt={attempt()} onFinished={vi.fn()} />)
+    expect(document.activeElement).toBe(screen.getByLabelText('Question 1', { selector: 'section' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Matrix' })) })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByRole('status').textContent).toBe('Answer marked right.')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Next' })) })
+    expect(document.activeElement).toBe(screen.getByLabelText('Question 2', { selector: 'section' }))
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('finishes once even if Enter is pressed again while it is saving', async () => {
+    let release = () => {}
+    finishAttempt.mockImplementationOnce(() => new Promise(r => { release = () => r({ id: 'a1', quiz_id: 'qz', answers: {}, correct: 3, total: 3, started_at: '', finished_at: 'x' }) }))
+    const onFinished = vi.fn()
+    render(<QuizPlayer quiz={quiz} attempt={attempt({ q1: { given: 'Matrix', correct: true, feedback: null }, q2: { given: 'false', correct: true, feedback: null }, q3: { given: 'nadh', correct: true, feedback: null } })} onFinished={onFinished} />)
+    await act(async () => { fireEvent.keyDown(window, { key: 'Enter' }) })
+    await act(async () => { fireEvent.keyDown(window, { key: 'Enter' }) })
+    expect(finishAttempt).toHaveBeenCalledTimes(1)
+    await act(async () => { release() })
+    expect(onFinished).toHaveBeenCalledTimes(1)
   })
 
   it('marks right and wrong with an icon and words, not colour alone, and colours the progress segments', async () => {
@@ -103,8 +140,9 @@ describe('the quiz player', () => {
     expect(screen.getByText('Your answer, not correct')).toBeTruthy()
     expect(screen.getByText('Correct answer')).toBeTruthy()
     expect(screen.getByText(/Not quite\. The answer is Matrix\./)).toBeTruthy()
-    const segs = [...screen.getByRole('progressbar', { name: 'Quiz progress' }).children]
+    const segs = [...screen.getByRole('progressbar', { name: 'Quiz progress' }).children] as HTMLElement[]
     expect(segs[0].className).toContain('bg-danger'); expect(segs[1].className).toContain('bg-line')
+    expect(segs[0].style.backgroundImage).toContain('repeating-linear-gradient') // striped, so it is not only colour
   })
 
   it('finishes from the last question with Enter', async () => {
@@ -182,7 +220,7 @@ describe('the Quiz dialog', () => {
     fireEvent.click(screen.getByRole('radio', { name: '5' }))
     fireEvent.click(screen.getByRole('button', { name: 'Short answer' })) // off
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Start quiz/ })) })
-    expect(postAi).toHaveBeenCalledWith('/api/ai/quiz', { noteId: 'n2', count: 5, types: ['mcq', 'true_false'] })
+    expect(postAi).toHaveBeenCalledWith('/api/ai/quiz', { noteId: 'n2', count: 5, types: ['mcq', 'true_false'] }, expect.any(AbortSignal))
     expect(push).toHaveBeenCalledWith('/quiz/new-quiz')
   })
 
@@ -209,6 +247,58 @@ describe('the Quiz dialog', () => {
     expect(within(screen.getByRole('radiogroup', { name: 'Note' })).getAllByRole('radio')).toHaveLength(1)
     fireEvent.change(screen.getByLabelText('Search notes'), { target: { value: 'zzz' } })
     expect(screen.getByText(/No note matches/)).toBeTruthy()
+  })
+
+  it('stops a quiz that is still being written when the dialog is closed, and goes nowhere', async () => {
+    let signal: AbortSignal | undefined
+    let answer: (v: unknown) => void = () => {}
+    postAi.mockImplementation((_u: string, _b: object, s?: AbortSignal) => { signal = s; return new Promise(r => { answer = r }) })
+    const view = render(<QuizStartDialog open onClose={vi.fn()} />)
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('radio', { name: /Krebs cycle/ }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Start quiz/ })) })
+    expect(signal?.aborted).toBe(false)
+    view.rerender(<QuizStartDialog open={false} onClose={vi.fn()} />) // closed
+    expect(signal?.aborted).toBe(true)
+    await act(async () => { answer({ ok: true, value: { id: 'late' } }) })
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('does not start a second quiz while one is being written', async () => {
+    postAi.mockImplementation(() => new Promise(() => {}))
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: /Krebs cycle/ }))
+    const start = screen.getByRole('button', { name: /Start quiz/ })
+    await act(async () => { fireEvent.click(start); fireEvent.click(start) })
+    expect(postAi).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not quiz a note the search has hidden, and clears an old error when another note is chosen', async () => {
+    notes = Array.from({ length: 8 }, (_, i) => ({ id: `n${i}`, title: i === 3 ? 'Photosynthesis' : `Note ${i}`, course_id: null, updated_at: '' }))
+    postAi.mockResolvedValue({ ok: false, error: 'too_short', message: 'That note is too short to quiz on.' })
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: /Note 1/ }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Start quiz/ })) })
+    expect(screen.getByText(/too short/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /Note 2/ }))
+    expect(screen.queryByText(/too short/)).toBeNull()
+    fireEvent.change(screen.getByLabelText('Search notes'), { target: { value: 'photo' } })
+    expect((screen.getByRole('button', { name: /Start quiz/ }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('moves between notes with the arrow keys', async () => {
+    await open()
+    const first = screen.getByRole('radio', { name: /Krebs cycle/ })
+    first.focus()
+    fireEvent.keyDown(first, { key: 'ArrowDown' })
+    expect(screen.getByRole('radio', { name: /Glycolysis/ }).getAttribute('aria-checked')).toBe('true')
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: /Glycolysis/ }))
+  })
+
+  it('tells you when only the latest notes are listed', async () => {
+    notes = Array.from({ length: 40 }, (_, i) => ({ id: `n${i}`, title: `Note ${i}`, course_id: null, updated_at: '' }))
+    await open()
+    expect(screen.getByText(/Showing your 30 latest notes/)).toBeTruthy()
   })
 
   it('invites you to write a note when there are none', async () => {

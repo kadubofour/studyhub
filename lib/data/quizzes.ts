@@ -24,7 +24,8 @@ export async function listQuizSummaries(sb: SupabaseClient, noteId: string) {
 
 /** A quiz of just these questions (the ones missed), on the same note. Nothing is written by AI: the questions are copied. */
 export async function createRetryQuiz(sb: SupabaseClient, quiz: Quiz, questions: Quiz['questions']): Promise<Quiz> {
-  const title = `${quiz.title.replace(/ · missed$/, '')} · missed`
+  const suffix = ' · missed'
+  const title = `${quiz.title.replace(/ · missed$/, '').slice(0, 200 - suffix.length)}${suffix}` // the title column holds 200 characters
   return must(await sb.from('quizzes').insert({ note_id: quiz.note_id, title, questions }).select(QUIZ).single())
 }
 

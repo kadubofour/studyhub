@@ -40,7 +40,7 @@ test('start a quiz from Home, answer with the keyboard, review the results and r
   // Results: the ring and fraction, every question reviewed, and the missed one open
   await expect(page.getByText('3 / 4')).toBeVisible()
   await expect(page.getByText('75%')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Good effort' })).toBeVisible().catch(() => {})
+  await expect(page.getByRole('heading', { name: 'Good effort' })).toBeVisible()
   const review = page.getByRole('list').filter({ hasText: 'Your answer:' })
   await expect(review.locator('details')).toHaveCount(4)
   await expect(review.locator('details[open]')).toHaveCount(1)

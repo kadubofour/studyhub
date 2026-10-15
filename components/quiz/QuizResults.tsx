@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Check, RotateCcw, Target, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
@@ -26,6 +26,9 @@ export function QuizResults({ quiz, attempt, previous, onRetake, onRetryMissed }
   const diff = previous ? attempt.correct - previous.correct : 0
   const pct = percent(attempt.correct, attempt.total)
   const { circumference, offset } = ringDash(pct, R)
+  // the ring fills in once the screen is up, rather than appearing already full
+  const [drawn, setDrawn] = useState(false)
+  useEffect(() => { const t = requestAnimationFrame(() => setDrawn(true)); return () => cancelAnimationFrame(t) }, [])
   const cards = wrong.map(q => ({
     front: q.prompt,
     back: `${answerText(q, q.answer)}. ${q.explanation}`.trim(),
@@ -53,8 +56,8 @@ export function QuizResults({ quiz, attempt, previous, onRetake, onRetryMissed }
         <div className="relative mx-auto mt-4 size-40">
           <svg viewBox="0 0 120 120" className="size-full -rotate-90" aria-hidden>
             <circle cx="60" cy="60" r={R} fill="none" strokeWidth="10" className="stroke-line" />
-            <circle cx="60" cy="60" r={R} fill="none" strokeWidth="10" strokeLinecap="round" className={pct >= 60 ? 'stroke-success' : pct >= 40 ? 'stroke-accent-solid' : 'stroke-danger'}
-              strokeDasharray={circumference} strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .8s ease-out' }} />
+            <circle cx="60" cy="60" r={R} fill="none" strokeWidth="10" strokeLinecap="round"
+              strokeDasharray={circumference} strokeDashoffset={drawn ? offset : circumference} className={`${pct >= 60 ? 'stroke-success' : pct >= 40 ? 'stroke-accent-solid' : 'stroke-danger'} transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none`} />
           </svg>
           <div className="absolute inset-0 grid place-content-center">
             <span className="text-4xl font-bold leading-none">{attempt.correct} / {attempt.total}</span>

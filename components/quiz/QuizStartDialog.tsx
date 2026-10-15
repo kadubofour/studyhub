@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ListChecks, Search } from 'lucide-react'
@@ -9,6 +9,7 @@ import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { AiError } from '@/components/ai/AiError'
 import { postAi } from '@/components/ai/aiFetch'
 import { freeAllowanceText, usePlan } from '@/components/billing/usePlan'
+import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 import { supabase } from '@/lib/supabase/client'
 import { listNotes } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
@@ -40,6 +41,10 @@ function Body({ onClose }: { onClose: () => void }) {
   const [types, setTypes] = useState<QuestionType[]>(['mcq', 'true_false', 'short'])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<{ code: string; message: string } | null>(null)
+  // Closing the dialog stops a quiz that is still being written, so the student is not taken to it later
+  const request = useRef<AbortController | null>(null)
+  const starting = useRef(false) // set at once, so two clicks in the same instant start one quiz
+  useEffect(() => () => request.current?.abort(), [])
 
   useEffect(() => {
     let live = true
@@ -55,14 +60,28 @@ function Body({ onClose }: { onClose: () => void }) {
     return (notes ?? []).filter(n => !q || (n.title || 'Untitled').toLowerCase().includes(q)).slice(0, 30)
   }, [notes, query])
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
+  // A chosen note the search has hidden is not chosen any more: Start must not quiz something that cannot be seen
+  const chosen = noteId && shown.some(n => n.id === noteId) ? noteId : null
+  const hiddenCount = (notes?.length ?? 0) - shown.length
 
   async function start() {
-    if (!noteId) return
+    if (!chosen || starting.current) return
+    starting.current = true
+    const controller = new AbortController()
+    request.current = controller
     setBusy(true); setError(null)
-    const r = await postAi<Quiz>('/api/ai/quiz', { noteId, count: Number(count), types })
-    setBusy(false)
-    if (r.ok) { onClose(); router.push(`/quiz/${r.value.id}`) }
-    else setError({ code: r.error, message: r.message })
+    try {
+      const r = await postAi<Quiz>('/api/ai/quiz', { noteId: chosen, count: Number(count), types }, controller.signal)
+      if (controller.signal.aborted) return
+      starting.current = false
+      setBusy(false)
+      if (r.ok) { onClose(); router.push(`/quiz/${r.value.id}`) }
+      else setError({ code: r.error, message: r.message })
+    } catch (e) {
+      if ((e as { name?: string }).name === 'AbortError') return // closed meanwhile
+      starting.current = false
+      setBusy(false); setError({ code: 'ai_failed', message: 'Couldn\'t reach the AI. Try again.' })
+    }
   }
 
   return (
@@ -80,11 +99,18 @@ function Body({ onClose }: { onClose: () => void }) {
           : shown.length === 0 ? <p className="rounded-xl bg-surface px-4 py-6 text-center text-sm text-muted">No note matches “{query}”.</p>
           : (
             <div role="radiogroup" aria-label="Note" className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl">
-              {shown.map(n => {
+              {shown.map((n, i) => {
                 const c = courseOf(n.course_id)
-                const on = noteId === n.id
+                const on = chosen === n.id
+                const tab = on || (!chosen && i === 0)
                 return (
-                  <button key={n.id} type="button" role="radio" aria-checked={on} onClick={() => setNoteId(n.id)}
+                  <button key={n.id} type="button" role="radio" aria-checked={on} tabIndex={tab ? 0 : -1}
+                    onClick={() => { setNoteId(n.id); setError(null) }}
+                    onKeyDown={e => {
+                      const to = radioKeyTarget(e.key, i, shown.length)
+                      if (to === null) return
+                      e.preventDefault(); setNoteId(shown[to].id); setError(null); focusRadio(e.currentTarget, to)
+                    }}
                     className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition ${on ? 'border-accent bg-accent-soft' : 'border-line bg-raised hover:bg-surface'}`}>
                     <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-accent' : 'border-line'}`}>{on && <span className="size-2 rounded-full bg-accent-solid" />}</span>
                     <span className="min-w-0 flex-1 truncate font-medium">{n.title || 'Untitled'}</span>
@@ -94,6 +120,7 @@ function Body({ onClose }: { onClose: () => void }) {
               })}
             </div>
           )}
+        {hiddenCount > 0 && !query.trim() && <p className="text-xs text-muted">Showing your {shown.length} latest notes. Search to find the others.</p>}
       </div>
 
       <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
@@ -133,7 +160,7 @@ function Body({ onClose }: { onClose: () => void }) {
 
       <DialogFooter note={plan.billing && !plan.loading && !plan.isPremium ? freeAllowanceText(plan.usedToday) : undefined}>
         <button type="button" className={BTN_OUTLINE} onClick={onClose}>Cancel</button>
-        <button type="button" className={BTN_SOLID} disabled={!noteId || !types.length || busy} onClick={start}>{busy ? 'Writing quiz…' : '✦ Start quiz'}</button>
+        <button type="button" className={BTN_SOLID} disabled={!chosen || !types.length || busy} onClick={start}>{busy ? 'Writing quiz…' : '✦ Start quiz'}</button>
       </DialogFooter>
     </div>
   )

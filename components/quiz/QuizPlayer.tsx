@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { finishAttempt, saveAttempt } from '@/lib/data/quizzes'
@@ -24,6 +24,9 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
   const [checking, setChecking] = useState(false)
   const [selfMark, setSelfMark] = useState<string | null>(null) // answer awaiting "I was right/wrong"
   const [error, setError] = useState<string | null>(null)
+  const cardRef = useRef<HTMLElement>(null)
+  const goOn = useRef<HTMLButtonElement>(null)
+  const finishing = useRef(false)
   const q = quiz.questions[index]
   const done = answers[q.id]
   const last = index === quiz.questions.length - 1
@@ -64,20 +67,28 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
   }
 
   async function finish() {
+    if (finishing.current) return
+    finishing.current = true
     setError(null)
     try {
       onFinished(await finishAttempt(supabase(), attempt.id, answers, scoreOf(answers)))
     } catch {
+      finishing.current = false
       setError('Couldn\'t finish the quiz. Check your connection and try again.')
     }
   }
 
   function next() { setTyped(''); setIndex(i => i + 1) }
 
+  // Focus follows the quiz: onto the question when it appears, then onto the way on once it is answered, so a keyboard or screen reader
+  // does not start again from the top of the page after every answer
+  useEffect(() => { cardRef.current?.focus({ preventScroll: true }) }, [index])
+  useEffect(() => { if (done) goOn.current?.focus({ preventScroll: true }) }, [done])
+
   // Keys: A to D (or 1 to 4) answer a choice question, Enter goes on once it is answered. Typing in the answer box is left alone.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement || e.target instanceof HTMLAnchorElement) return
       if (done) {
         if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); if (last) void finish(); else next() }
         return
@@ -105,11 +116,13 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
         className="mt-3 flex gap-1">
         {quiz.questions.map((x, i) => {
           const a = answers[x.id]
-          return <span key={x.id} className={`h-1.5 flex-1 rounded-full ${a ? (a.correct ? 'bg-success' : 'bg-danger') : i === index ? 'bg-accent-solid' : 'bg-line'}`} />
+          // a wrong answer is striped as well as red, so the difference does not rest on colour
+        return <span key={x.id} className={`h-1.5 flex-1 rounded-full ${a ? (a.correct ? 'bg-success' : 'bg-danger') : i === index ? 'bg-accent-solid' : 'bg-line'}`}
+          style={a && !a.correct ? { backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 2px, transparent 2px 5px)' } : undefined} />
         })}
       </div>
 
-      <section className="mt-6 rounded-2xl border border-line bg-raised p-5 shadow-sm md:p-7">
+      <section ref={cardRef} tabIndex={-1} aria-label={`Question ${index + 1}`} className="mt-6 rounded-2xl border border-line bg-raised p-5 shadow-sm outline-none md:p-7">
         <span className="inline-block rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-muted">{TYPE_LABEL[q.type]}</span>
         <div className="mt-3 text-xl font-semibold leading-snug md:text-2xl"><MarkdownView source={q.prompt} /></div>
       </section>
@@ -158,7 +171,7 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
       )}
 
       {done && (
-        <div className={`mt-4 rounded-2xl border p-4 text-sm md:p-5 ${done.correct ? 'border-success/40 bg-success/10' : 'border-danger/40 bg-danger-soft'}`} aria-live="polite">
+        <div className={`mt-4 rounded-2xl border p-4 text-sm md:p-5 ${done.correct ? 'border-success/40 bg-success/10' : 'border-danger/40 bg-danger-soft'}`}>
           <p className="flex items-center gap-2 text-base font-semibold">
             {done.correct ? <Check size={18} className="text-success" aria-hidden /> : <X size={18} className="text-danger" aria-hidden />}
             {done.correct ? 'Correct.' : `Not quite. The answer is ${answerText(q, q.answer)}.`}
@@ -167,11 +180,13 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
           {q.explanation && <p className="mt-2 text-muted">{q.explanation}</p>}
           <div className="mt-4 flex items-center justify-end gap-3">
             <span className="hidden text-xs text-muted md:inline">Press Enter</span>
-            {last ? <button type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={finish}>See results</button>
-              : <button type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={next}>Next</button>}
+            {last ? <button ref={goOn} type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={finish}>See results</button>
+              : <button ref={goOn} type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={next}>Next</button>}
           </div>
         </div>
       )}
+      {/* always on the page, so a screen reader announces the result as soon as it is marked */}
+      <p role="status" className="sr-only">{done ? (done.correct ? 'Answer marked right.' : 'Answer marked wrong.') : ''}</p>
       {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
     </div>
   )
