@@ -21,7 +21,7 @@ export function ChoiceChips({ label, value, options, onChange, disabled = false,
               if (to === null) return
               e.preventDefault(); onChange(options[to].value); focusRadio(e.currentTarget, to)
             }}
-            className={`inline-flex items-center gap-1.5 rounded-lg ${pad} transition disabled:opacity-50 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-fg hover:brightness-95'}`}>
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg ${pad} transition disabled:opacity-50 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-fg hover:brightness-95'}`}>
             {o.color && <span data-dot aria-hidden className="size-2 shrink-0 rounded-[3px]" style={{ background: o.color }} />}{o.label}
           </button>
         )

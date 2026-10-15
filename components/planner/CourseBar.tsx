@@ -53,7 +53,7 @@ export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
   const tint = (color: string, active: boolean) => (active ? { background: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined)
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+    <div className="no-scrollbar -mx-4 mb-3 flex items-center gap-1.5 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 [&>button]:shrink-0 [&>button]:whitespace-nowrap">
       <button className={chip(selected === null && !none)} aria-pressed={selected === null && !none} style={tint('var(--accent)', selected === null && !none)} onClick={() => onSelect(null)}>All</button>
       {unsorted && <button className={chip(none)} aria-pressed={none} style={tint('var(--muted)', none)} onClick={unsorted.onClick}>Unsorted</button>}
       {courses.map(c => (

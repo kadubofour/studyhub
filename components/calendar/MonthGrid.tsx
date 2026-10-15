@@ -39,16 +39,27 @@ export function MonthGrid({ keys, anchor, todayKey, classes, courses, itemsByDay
             ...(itemsByDay[k] ?? []).map(it => ({ id: `${it.kind}-${it.id}`, node: <ItemChip item={it} course={courseOf(it.courseId)} compact onClick={() => onItemClick(it)} /> })),
           ]
           const hidden = entries.length - SHOWN
+          const dots = [
+            ...classes.filter(c => c.day_of_week === dow).map(c => courseOf(c.course_id)?.color ?? '#888780'),
+            ...(itemsByDay[k] ?? []).map(it => courseOf(it.courseId)?.color ?? '#888780'),
+          ]
           return (
-            <div key={k} data-day={k} className={`min-w-0 space-y-0.5 overflow-hidden border-line p-1 ${i >= 7 ? 'border-t' : ''} ${i % 7 !== 0 ? 'border-l' : ''} ${outside ? 'bg-surface/50' : ''}`}>
+            <div key={k} data-day={k} onClick={e => { if (!(e.target as HTMLElement).closest('button')) onDayClick(k) }}
+              className={`min-w-0 space-y-0.5 overflow-hidden border-line p-1 max-md:cursor-pointer max-md:text-center ${i >= 7 ? 'border-t' : ''} ${i % 7 !== 0 ? 'border-l' : ''} ${outside ? 'bg-surface/50' : ''}`}>
               <button type="button" aria-label={longDay(k)} aria-current={k === todayKey ? 'date' : undefined} data-outside={outside ? 'true' : undefined} onClick={() => onDayClick(k)}
-                className={`flex size-5 items-center justify-center rounded-full text-xs hover:bg-surface ${k === todayKey ? 'bg-accent-solid font-semibold text-white hover:bg-accent-solid' : outside ? 'text-muted' : ''}`}>
+                className={`flex size-5 items-center justify-center rounded-full text-xs max-md:mx-auto max-md:size-7 max-md:text-sm hover:bg-surface ${k === todayKey ? 'bg-accent-solid font-semibold text-white hover:bg-accent-solid' : outside ? 'text-muted' : ''}`}>
                 {Number(k.slice(8))}
               </button>
+              <div aria-hidden className="flex flex-wrap justify-center gap-[3px] pt-0.5 md:hidden">
+                {dots.slice(0, 4).map((c, n) => <span key={n} className="size-1.5 rounded-full" style={{ background: c }} />)}
+                {dots.length > 4 && <span className="text-[9px] leading-none text-muted">+</span>}
+              </div>
+              <div className="space-y-0.5 max-md:sr-only">
               {entries.slice(0, SHOWN).map(e => <div key={e.id}>{e.node}</div>)}
               {hidden > 0 && (
                 <button type="button" aria-label={`${hidden} more on ${longDay(k)}`} onClick={() => onDayClick(k)} className="px-1.5 text-[11px] leading-4 text-muted hover:text-fg">+{hidden} more</button>
               )}
+              </div>
             </div>
           )
         })}

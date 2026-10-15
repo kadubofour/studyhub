@@ -39,6 +39,9 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
   useEffect(() => {
     const el = scroller.current
     if (el && fraction !== null) el.scrollTop = Math.max(0, fraction * (el.scrollHeight - HEADER_H - stripH) - 140)
+    // a week wider than the screen opens on today's column
+    const col = el?.querySelector<HTMLElement>('[data-today="true"]')
+    if (el && col && el.scrollWidth > el.clientWidth) el.scrollLeft = Math.max(0, col.offsetLeft - 56 - 8)
     // only when the grid first appears or its day/hours change, not every minute the line moves
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keys[0], keys.length, START_H])
@@ -46,8 +49,8 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
   return (
     <div ref={scroller} tabIndex={0} role="region" aria-label={showStrip ? 'Schedule' : 'Weekly timetable'}
       className="no-scrollbar overflow-auto rounded-2xl border border-line bg-raised" style={{ height: 'calc(100dvh - 12rem)', minHeight: HEADER_H + stripH + minHours }}>
-      <div className="flex min-h-full">
-        <div className="flex w-14 shrink-0 flex-col" aria-hidden>
+      <div className={`flex min-h-full ${keys.length > 1 ? 'max-md:min-w-[46rem]' : ''}`}>
+        <div className="sticky left-0 z-30 flex w-14 shrink-0 flex-col border-r border-line bg-raised" aria-hidden>
           <div className="sticky top-0 z-20 border-b border-line bg-raised" style={{ height: HEADER_H }} />
           {showStrip && <div className="sticky z-10 flex items-center justify-end border-b border-line bg-raised pr-2 text-[10px] text-muted" style={{ height: stripH, top: HEADER_H }}>all-day</div>}
           <div className="relative flex-1" style={{ minHeight: minHours }}>
@@ -61,7 +64,7 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
           const lanes = classLanes(dayClasses)
           const items = itemsByDay[k] ?? []
           return (
-            <div key={k} role="group" aria-label={longDay(k)} data-day={k} data-today={today ? 'true' : undefined} className="relative flex min-w-0 flex-1 flex-col border-l border-line">
+            <div key={k} role="group" aria-label={longDay(k)} data-day={k} data-today={today ? 'true' : undefined} className="relative flex min-w-0 flex-1 flex-col border-l border-line first:border-l-0">
               <div className="sticky top-0 z-20 flex flex-col items-center justify-center gap-0.5 border-b border-line bg-raised" style={{ height: HEADER_H }}>
                 <span className={`text-[11px] font-medium tracking-wide ${today ? 'text-accent' : 'text-muted'}`}>{DAYS[dow].slice(0, 3).toUpperCase()}</span>
                 {showStrip && <span className={`flex size-8 items-center justify-center rounded-full text-lg leading-none ${today ? 'bg-accent-solid font-semibold text-white' : ''}`}>{n}</span>}

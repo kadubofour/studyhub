@@ -36,7 +36,11 @@ test('Week: add a class (from an empty hour on a computer), and click the class 
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   const block = page.getByRole('button', { name: /^Biology \d/ })
   await expect(block).toBeVisible()
-  await block.click()
+  // a class still being saved cannot be opened yet, so the click is repeated until it opens
+  await expect(async () => {
+    await block.click()
+    await expect(page.getByRole('button', { name: 'Delete', exact: true })).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 20_000 })
   await page.getByRole('button', { name: 'Delete', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Biology \d/ })).toHaveCount(0)
 })
@@ -123,7 +127,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await check('week')
     await page.getByRole('button', { name: 'Month', exact: true }).click()
     await check('month')
-    await page.getByRole('button', { name: 'Add exam' }).click()
+    const fab = page.getByRole('button', { name: 'Add to calendar' }) // on a phone the Add buttons are behind a round button
+    if (await fab.isVisible()) { await fab.click(); await page.getByRole('menuitem', { name: 'Add exam' }).click() } else await page.getByRole('button', { name: 'Add exam' }).click()
     await check('exam dialog')
     await page.keyboard.press('Escape')
     await page.getByRole('tab', { name: 'Timetable' }).click()
