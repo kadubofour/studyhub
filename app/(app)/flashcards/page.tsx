@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Layers } from 'lucide-react'
+import { ListChecks, Plus, Layers } from 'lucide-react'
+import { requestQuiz } from '@/lib/quiz/events'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -48,6 +49,7 @@ export default function FlashcardsPage() {
     <div>
       <PageHeader title="Flashcards" actions={<>
         {totalDue > 0 && <Link href="/review" className="btn-primary">Review all ({totalDue})</Link>}
+        <button className="btn" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
         <button className="btn" onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
       </>} />
       {decks?.length === 0 && (

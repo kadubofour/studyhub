@@ -25,6 +25,7 @@ import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
 import { GoalRing } from '@/components/home/GoalRing'
 import { requestScan, requestUpload } from '@/lib/scan/events'
+import { requestQuiz } from '@/lib/quiz/events'
 import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
@@ -176,6 +177,7 @@ export default function HomePage() {
 
       <QuickActions label="Quick actions" actions={[
         { node: <NewNoteButton /> },
+        { label: 'Take a quiz', icon: ListChecks, onClick: requestQuiz },
         { label: 'New deck', icon: Layers, href: '/flashcards?new=1' },
         { label: 'Record lecture', icon: Mic, href: '/lectures/record' },
         { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },

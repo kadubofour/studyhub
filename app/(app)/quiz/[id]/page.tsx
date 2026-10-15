@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
-import { getOpenAttempt, getQuiz, latestFinishedAttempt, startAttempt } from '@/lib/data/quizzes'
+import { createRetryQuiz, getOpenAttempt, getQuiz, latestFinishedAttempt, startAttempt } from '@/lib/data/quizzes'
+import { missedQuestions } from '@/lib/quiz/summary'
 import { QuizPlayer } from '@/components/quiz/QuizPlayer'
 import { QuizResults } from '@/components/quiz/QuizResults'
 import type { Quiz, QuizAttempt } from '@/lib/quiz/types'
@@ -37,6 +38,14 @@ export default function QuizPage() {
     setPrevious(null); setAttempt(await startAttempt(supabase(), quiz))
   }
 
+  // A new quiz of only the questions that were missed: copied, so nothing is written by AI
+  async function retryMissed() {
+    if (!quiz || !attempt) return
+    const sb = supabase()
+    const again = await createRetryQuiz(sb, quiz, missedQuestions(quiz, attempt))
+    router.push(`/quiz/${again.id}`)
+  }
+
   if (!quiz || !attempt) return null
   return (
     <div className="min-h-dvh">
@@ -45,7 +54,7 @@ export default function QuizPage() {
         <span className="font-medium">{quiz.title}</span>
       </header>
       {attempt.finished_at
-        ? <QuizResults quiz={quiz} attempt={attempt} previous={previous} onRetake={retake} />
+        ? <QuizResults quiz={quiz} attempt={attempt} previous={previous} onRetake={retake} onRetryMissed={retryMissed} />
         : <QuizPlayer key={attempt.id} quiz={quiz} attempt={attempt} onFinished={finished} />}
     </div>
   )

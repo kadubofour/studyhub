@@ -22,6 +22,25 @@ export async function listQuizSummaries(sb: SupabaseClient, noteId: string) {
   })
 }
 
+/** A quiz of just these questions (the ones missed), on the same note. Nothing is written by AI: the questions are copied. */
+export async function createRetryQuiz(sb: SupabaseClient, quiz: Quiz, questions: Quiz['questions']): Promise<Quiz> {
+  const suffix = ' · missed'
+  const title = `${quiz.title.replace(/ · missed$/, '').slice(0, 200 - suffix.length)}${suffix}` // the title column holds 200 characters
+  return must(await sb.from('quizzes').insert({ note_id: quiz.note_id, title, questions }).select(QUIZ).single())
+}
+
+/** The latest quizzes across every note, with the best score and how many times each was finished */
+export async function listRecentQuizzes(sb: SupabaseClient, limit = 8) {
+  const quizzes: Quiz[] = must(await sb.from('quizzes').select(QUIZ).order('created_at', { ascending: false }).limit(limit))
+  if (!quizzes.length) return []
+  const attempts: QuizAttempt[] = must(await sb.from('quiz_attempts').select(ATTEMPT).in('quiz_id', quizzes.map(q => q.id)).not('finished_at', 'is', null))
+  return quizzes.map(quiz => {
+    const mine = attempts.filter(a => a.quiz_id === quiz.id)
+    const best = mine.reduce<QuizAttempt | null>((b, a) => (!b || a.correct / a.total > b.correct / b.total ? a : b), null)
+    return { quiz, attempts: mine.length, best: best && { correct: best.correct, total: best.total } }
+  })
+}
+
 export async function getOpenAttempt(sb: SupabaseClient, quizId: string): Promise<QuizAttempt | null> {
   return must(await sb.from('quiz_attempts').select(ATTEMPT).eq('quiz_id', quizId).is('finished_at', null)
     .order('started_at', { ascending: false }).limit(1).maybeSingle())
