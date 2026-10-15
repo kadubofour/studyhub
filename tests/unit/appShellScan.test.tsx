@@ -63,31 +63,31 @@ describe('Scan in the app shell', () => {
     window.removeEventListener(SCAN_SAVED, heard)
   })
 
-  it('has Lectures in the sidebar after Notes, and in the phone bar', () => {
+  it('has Lectures in the sidebar after Notes', () => {
     path = '/home'
     renderShell()
     const links = screen.getAllByRole('link', { name: 'Lectures' })
-    expect(links).toHaveLength(2) // the sidebar and the phone bar
+    expect(links).toHaveLength(1) // the sidebar only: the phone bar has five places
     expect(links[0].getAttribute('href')).toBe('/lectures')
     const sidebar = screen.getAllByRole('navigation')[0]
     const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
     expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
   })
 
-  it('the phone bar has the everyday places with Scan in the middle, and leaves out what Home already links to', () => {
+  it('the phone bar has five places with Scan in the middle, and leaves out what Home already links to', () => {
     path = '/home'
     renderShell()
     const bar = screen.getByRole('navigation', { name: 'Main' })
-    expect([...bar.querySelectorAll('a, button')].map(e => e.textContent)).toEqual(['Home', 'Planner', 'Notes', 'Scan', 'Flashcards', 'Lectures', 'Tutor'])
-    for (const left of ['Focus', 'Progress', 'Library', 'Courses', 'Profile', 'Settings', 'More']) expect(within(bar).queryByRole('link', { name: left }), left).toBeNull()
+    expect([...bar.querySelectorAll('a, button')].map(e => e.textContent)).toEqual(['Home', 'Planner', 'Scan', 'Notes', 'Flashcards'])
+    for (const left of ['Lectures', 'Tutor', 'Focus', 'Progress', 'Library', 'Courses', 'Profile', 'Settings', 'More']) expect(within(bar).queryByRole('link', { name: left }), left).toBeNull()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('marks the page you are on in the phone bar', () => {
-    path = '/lectures'
+    path = '/notes'
     renderShell()
     const bar = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(bar).getByRole('link', { name: 'Lectures' }).getAttribute('aria-current')).toBe('page')
+    expect(within(bar).getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBe('page')
     expect(within(bar).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBeNull()
     path = '/home'
   })
@@ -264,11 +264,11 @@ describe('Scan in the app shell', () => {
     expect(screen.getAllByRole('link', { name: 'Library' })[0].getAttribute('href')).toBe('/library')
   })
 
-  it('has Tutor in the sidebar and the phone bar', () => {
+  it('has Tutor in the sidebar', () => {
     path = '/home'
     renderShell()
     const links = screen.getAllByRole('link', { name: 'Tutor' })
-    expect(links).toHaveLength(2)
+    expect(links).toHaveLength(1)
     expect(links[0].getAttribute('href')).toBe('/tutor')
   })
 
