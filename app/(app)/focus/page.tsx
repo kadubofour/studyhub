@@ -3,13 +3,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
-import { canRestart, remainingMs, type Mode } from '@/lib/timer'
+import { canRestart, durationFor, elapsedMs, remainingMs, type Mode } from '@/lib/timer'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
+import { FocusAlerts } from '@/components/focus/FocusAlerts'
 
+// Quick lengths for the session about to start (Settings still decides the default)
+const PRESETS: Record<Mode, number[]> = { focus: [15, 25, 45, 50], short: [5, 10], long: [15, 20, 30] }
 const SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }]
 
 export default function FocusPage() {
   const { profile } = useProfile()
-  const { timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode } = useFocus()
+  const { timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode, setDuration, task } = useFocus()
   const [sound, setSound] = useState('off')
   const [volume, setVolume] = useState(0.6)
   const [soundError, setSoundError] = useState(false)
@@ -33,6 +38,9 @@ export default function FocusPage() {
   const R = 88, C = 2 * Math.PI * R
   const running = timer.startedAt !== null
   const goal = profile.daily_goal_minutes
+  const minutes = Math.round(timer.durationMs / 60_000)
+  const lengths = [...new Set([...PRESETS[timer.mode], Math.round(durationFor(timer.mode, profile) / 60_000), minutes])].sort((a, b) => a - b) // the length now in use is always one of the choices
+  const begun = running || elapsedMs(timer, now) > 0
   const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 
   return (
@@ -42,6 +50,10 @@ export default function FocusPage() {
           <button key={m} role="tab" aria-selected={timer.mode === m} onClick={() => pickMode(m)}
             className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
+      </div>
+      <div className="mt-4 flex justify-center">
+        <ChoiceChips label="Session length" size="sm" value={String(minutes)} disabled={begun} onChange={v => setDuration(Number(v))}
+          options={lengths.map(m => ({ value: String(m), label: `${m} min` }))} />
       </div>
       <div className="relative mx-auto my-8 size-64">
         <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>
@@ -53,8 +65,10 @@ export default function FocusPage() {
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
           {timer.mode === 'focus' && <div className="text-sm text-muted">Session {(completedFocus % profile.long_break_every) + 1} of {profile.long_break_every}</div>}
+          {timer.mode === 'focus' && task && <div className="mt-1 max-w-[11rem] truncate text-xs font-medium text-accent">{task.title}</div>}
         </div>
       </div>
+      {timer.mode === 'focus' && <div className="mb-5"><FocusTaskPicker /></div>}
       <div className="flex justify-center gap-2">
         <button className="btn-primary min-w-28" onClick={toggle}>
           {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
@@ -63,7 +77,9 @@ export default function FocusPage() {
         <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
       </div>
 
-      <div className="card mx-auto mt-6 flex flex-wrap items-center gap-2 text-sm">
+      <FocusAlerts />
+
+      <div className="card mx-auto mt-4 flex flex-wrap items-center gap-2 text-sm">
         <Headphones size={16} aria-hidden className="text-muted" />
         {SOUNDS.map(s => (
           <button key={s.id} onClick={() => { setSoundError(false); setSound(s.id) }} aria-pressed={sound === s.id}

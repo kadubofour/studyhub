@@ -11,7 +11,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const show = useCallback<ToastFn>((message, action) => {
     const id = Date.now()
     setToast({ id, message, action })
-    setTimeout(() => setToast(t => (t?.id === id ? null : t)), 6000)
+    setTimeout(() => setToast(t => (t?.id === id ? null : t)), action ? 20_000 : 6000) // a message with something to tap stays longer: the student may be coming back to it
   }, [])
   return (
     <Ctx.Provider value={show}>
