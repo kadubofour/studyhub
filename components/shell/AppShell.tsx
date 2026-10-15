@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, CalendarDays, Layers, Timer, NotebookPen, BarChart3, Settings, Moon, Sun, GraduationCap,
-  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload, FolderOpen,
+  PanelLeftClose, PanelLeftOpen, ScanLine, Mic, MessagesSquare, Upload, FolderOpen, Grid2x2, type LucideIcon,
 } from 'lucide-react'
+import { Dialog } from '@/components/ui/Dialog'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { UploadMaterial } from '@/components/notes/UploadMaterial'
 import { TopBar } from './TopBar'
@@ -45,9 +46,14 @@ const GROUPS = [
   ] },
 ]
 const ALL = [HOME, ...GROUPS.flatMap(g => g.items)]
-// Phones: recording happens there, so Lectures takes Focus's place (Focus stays on Home)
-const MOBILE_ORDER = ['/home', '/planner', '/flashcards', '/notes', '/lectures', '/tutor']
+// Phones: four places and a raised Scan button in the bar (Home, Planner, Scan, Notes), and a More sheet for everything else
+const MOBILE_ORDER = ['/home', '/planner', '/notes']
 const MOBILE = MOBILE_ORDER.map(h => ALL.find(n => n.href === h)!)
+const MORE: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/flashcards', label: 'Flashcards', icon: Layers }, { href: '/lectures', label: 'Lectures', icon: Mic }, { href: '/tutor', label: 'Tutor', icon: MessagesSquare },
+  { href: '/focus', label: 'Focus', icon: Timer }, { href: '/library', label: 'Library', icon: FolderOpen }, { href: '/progress', label: 'Progress', icon: BarChart3 },
+  { href: '/courses', label: 'Courses', icon: GraduationCap }, { href: '/profile', label: 'Profile', icon: Home }, { href: '/settings', label: 'Settings', icon: Settings },
+]
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
 const scanTargetFor = (path: string): ScanTarget =>
@@ -81,6 +87,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }, [coursesVersion])
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [more, setMore] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
   useOpenUpload(() => setUploading(true))
@@ -175,7 +182,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           </div>
         </aside>
       )}
-      <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-16 md:pb-0'}`}>
+      <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0'}`}>
         <OfflineBanner />
         {(look === 'vivid' || look === 'classic') && !immersive && <TopBar sidebarHidden={!sidebar} />}
         {!sidebar && !immersive && (
@@ -187,21 +194,46 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
-        <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised/95 backdrop-blur md:hidden">
-          {MOBILE.map(({ href, label, icon: Icon }, i) => (
-            <span key={href} className="contents">
-              {i === 2 && (
-                <button type="button" onClick={() => setScanning(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] text-muted">
-                  <ScanLine size={19} aria-hidden />Scan
-                </button>
-              )}
-              <Link href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] ${active(href) ? 'text-accent' : 'text-muted'}`}>
-                <Icon size={19} aria-hidden />{label}
-              </Link>
-            </span>
+        <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-end border-t border-line bg-raised/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+          {MOBILE.slice(0, 2).map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
+              className={`flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] ${active(href) ? 'font-medium text-accent' : 'text-muted'}`}>
+              <span className={`flex h-7 w-14 items-center justify-center rounded-full transition ${active(href) ? 'bg-accent-soft' : ''}`}><Icon size={20} aria-hidden /></span>{label}
+            </Link>
           ))}
+          <button type="button" onClick={() => setScanning(true)} className="flex flex-col items-center gap-0.5 pb-1.5 text-[11px] font-medium text-accent">
+            <span className="-mt-5 grid size-14 place-items-center rounded-full bg-accent-solid text-white shadow-lg ring-4 ring-[var(--raised)]"><ScanLine size={24} aria-hidden /></span>Scan
+          </button>
+          {MOBILE.slice(2).map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
+              className={`flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] ${active(href) ? 'font-medium text-accent' : 'text-muted'}`}>
+              <span className={`flex h-7 w-14 items-center justify-center rounded-full transition ${active(href) ? 'bg-accent-soft' : ''}`}><Icon size={20} aria-hidden /></span>{label}
+            </Link>
+          ))}
+          <button type="button" aria-haspopup="dialog" onClick={() => setMore(true)}
+            className={`flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] ${MORE.some(m => active(m.href)) ? 'font-medium text-accent' : 'text-muted'}`}>
+            <span className={`flex h-7 w-14 items-center justify-center rounded-full transition ${MORE.some(m => active(m.href)) ? 'bg-accent-soft' : ''}`}><Grid2x2 size={20} aria-hidden /></span>More
+          </button>
         </nav>
+      )}
+      {more && (
+        <Dialog open onClose={() => setMore(false)} title="More">
+          <div className="grid grid-cols-3 gap-2">
+            {MORE.map(({ href, label, icon: Icon }) => (
+              <Link key={href} href={href} onClick={e => { setMore(false); guard(e, href) }} aria-current={active(href) ? 'page' : undefined}
+                className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-sm transition ${active(href) ? 'bg-accent-soft font-medium text-accent' : 'bg-surface hover:brightness-95'}`}>
+                {href === '/profile'
+                  ? <Avatar name={profile.display_name} color={profile.avatar_color} size={26} />
+                  : <Icon size={22} aria-hidden />}
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" className="btn justify-center" onClick={() => { setMore(false); setUploading(true) }}><Upload size={16} aria-hidden />Upload</button>
+            <button type="button" className="btn justify-center" onClick={toggleTheme}>{dark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}{dark ? 'Light mode' : 'Dark mode'}</button>
+          </div>
+        </Dialog>
       )}
       <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
       {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}

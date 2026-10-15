@@ -85,10 +85,7 @@ body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
 .dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
 
 /* With the top bar showing the page name, the page's own title is for screen readers only (it would say the name twice) */
-/* The top bar names the page from tablet width up; on a phone it has no room, so the page keeps its own title */
-@media (min-width: 640px) {
-  .app-root[data-topbar] .page-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-}
+.app-root[data-topbar] .page-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 /* Classic is calm: the tinted tiles become plain raised cards with a hairline (unlayered, so they beat the tile's own tint) */
 .app-root[data-look="classic"] [data-tint], .dark .app-root[data-look="paper"] [data-tint] { background: var(--raised); border: 1px solid var(--line); }

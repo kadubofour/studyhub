@@ -77,8 +77,8 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
   const name = pageName(path)
 
   return (
-    <header aria-label="Today at a glance" className={`no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-raised/95 px-4 py-2 backdrop-blur md:px-8 ${sidebarHidden ? 'md:pl-16' : ''}`}>
-      {name && <span data-page className="hidden text-base font-semibold sm:block">{name}</span>}
+    <header aria-label="Today at a glance" className={`no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-raised/95 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] backdrop-blur md:px-8 ${sidebarHidden ? 'md:pl-16' : ''}`}>
+      {name && <span data-page className="shrink-0 text-lg font-semibold sm:text-base">{name}</span>}
       <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto">
         {burst && (
           <span className={`${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>
@@ -110,7 +110,7 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
           <span className={`${chip} bg-surface text-fg`}>
             <Zap size={15} className="text-accent" aria-hidden /><span className="sm:hidden">Lv {xp.level.level}</span><span className="hidden sm:inline">Level {xp.level.level}</span>
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
-              className="block h-1.5 w-8 overflow-hidden rounded-full bg-line sm:w-14">
+              className="hidden h-1.5 w-8 overflow-hidden rounded-full bg-line min-[420px]:block sm:w-14">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
             </span>
           </span>

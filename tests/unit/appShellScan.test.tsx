@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest'
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 
@@ -27,6 +27,11 @@ import { setRecording } from '@/lib/lectures/recordingGuard'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true } as Profile
 const renderShell = () => render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
+// jsdom has no <dialog> methods
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+})
 afterEach(() => cleanup())
 
 describe('Scan in the app shell', () => {
@@ -58,16 +63,42 @@ describe('Scan in the app shell', () => {
     window.removeEventListener(SCAN_SAVED, heard)
   })
 
-  it('has Lectures in the sidebar after Notes, and in the phone tab bar instead of Focus', () => {
+  it('has Lectures in the sidebar after Notes, and behind More on a phone', () => {
     path = '/home'
     renderShell()
     const links = screen.getAllByRole('link', { name: 'Lectures' })
-    expect(links).toHaveLength(2)
+    expect(links).toHaveLength(1)
     expect(links[0].getAttribute('href')).toBe('/lectures')
     const sidebar = screen.getAllByRole('navigation')[0]
     const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
     expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
-    expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(1) // sidebar only
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(screen.getAllByRole('link', { name: 'Lectures' })).toHaveLength(2) // the sidebar and the sheet
+    expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(2)
+  })
+
+  it('the phone bar has Home, Planner, a raised Scan button, Notes and More, and More opens a sheet with the rest', () => {
+    path = '/home'
+    renderShell()
+    const bar = screen.getByRole('navigation', { name: 'Main' })
+    expect([...bar.querySelectorAll('a, button')].map(e => e.textContent)).toEqual(['Home', 'Planner', 'Scan', 'Notes', 'More'])
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(within(bar).getByRole('button', { name: 'More' }))
+    const sheet = screen.getByRole('dialog', { name: 'More' })
+    const names = within(sheet).getAllByRole('link').map(a => a.textContent)
+    expect(names).toEqual(['Flashcards', 'Lectures', 'Tutor', 'Focus', 'Library', 'Progress', 'Courses', 'Profile', 'Settings'])
+    expect(within(sheet).getByRole('button', { name: 'Upload' })).toBeTruthy()
+    expect(within(sheet).getByRole('button', { name: /mode/ })).toBeTruthy()
+    fireEvent.click(within(sheet).getByRole('link', { name: 'Tutor' }))
+    expect(screen.queryByRole('dialog', { name: 'More' })).toBeNull() // choosing a place closes it
+  })
+
+  it('marks More as current when the page is one of the places inside it', () => {
+    path = '/lectures'
+    renderShell()
+    const more = within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'More' })
+    expect(more.className).toContain('text-accent')
+    path = '/home'
   })
 
   it('groups the sidebar: Home on its own, then Plan and Study, with Scan inside Study', () => {
@@ -242,12 +273,14 @@ describe('Scan in the app shell', () => {
     expect(screen.getAllByRole('link', { name: 'Library' })[0].getAttribute('href')).toBe('/library')
   })
 
-  it('has Tutor in the sidebar and the phone tab bar', () => {
+  it('has Tutor in the sidebar, and behind More on a phone', () => {
     path = '/home'
     renderShell()
     const links = screen.getAllByRole('link', { name: 'Tutor' })
-    expect(links).toHaveLength(2)
+    expect(links).toHaveLength(1)
     expect(links[0].getAttribute('href')).toBe('/tutor')
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(screen.getAllByRole('link', { name: 'Tutor' })).toHaveLength(2)
   })
 
   it('marks the shell with the student\'s look, and shows Classic for an old profile without one', () => {

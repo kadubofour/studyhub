@@ -95,3 +95,23 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await today.click({ position: { x: 20, y: 60 } })
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
+
+test('the top bar names the page, and the bottom bar has five places with More opening the rest', async ({ page }) => {
+  await signUp(page)
+  const top = page.getByRole('banner')
+  await expect(top).toContainText('Home')
+  const bar = page.getByRole('navigation', { name: 'Main' })
+  await expect(bar.locator('a, button')).toHaveText(['Home', 'Planner', 'Scan', 'Notes', 'More'])
+  const box = (await bar.boundingBox())!
+  expect(box.y + box.height).toBeGreaterThanOrEqual(810) // on the bottom edge
+  // The dev-only Next.js badge can sit over More, so it is pressed directly
+  await bar.getByRole('button', { name: 'More' }).dispatchEvent('click')
+  const sheet = page.getByRole('dialog', { name: 'More' })
+  await expect(sheet.getByRole('link')).toHaveText(['Flashcards', 'Lectures', 'Tutor', 'Focus', 'Library', 'Progress', 'Courses', /Profile/, 'Settings'])
+  const s = (await sheet.boundingBox())!
+  expect(s.width).toBeGreaterThanOrEqual(373)
+  await sheet.getByRole('link', { name: 'Flashcards' }).click()
+  await expect(page).toHaveURL(/\/flashcards/)
+  await expect(page.getByRole('banner')).toContainText('Flashcards')
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+})
