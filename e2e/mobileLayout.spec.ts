@@ -96,21 +96,24 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the top bar names the page, and the bottom bar has every place in it with the current one in view', async ({ page }) => {
+test('the top bar names the page, and the bottom bar has the everyday places in equal columns', async ({ page }) => {
   await signUp(page)
   await expect(page.getByRole('banner')).toContainText('Home')
   const bar = page.getByRole('navigation', { name: 'Main' })
-  await expect(bar.locator('a, button')).toHaveText(['Home', 'Planner', 'Notes', 'Scan', 'Flashcards', 'Lectures', 'Tutor', 'Library', 'Focus', 'Progress', 'Courses', /Profile/, 'Settings'])
-  await expect(bar.getByRole('button', { name: 'More' })).toHaveCount(0)
+  await expect(bar.locator('a, button')).toHaveText(['Home', 'Planner', 'Notes', 'Scan', 'Flashcards', 'Lectures', 'Tutor'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
-  // A place far along the bar is reached by sliding it, and the page you land on is brought into view
-  await bar.getByRole('link', { name: 'Settings' }).scrollIntoViewIfNeeded()
-  await bar.getByRole('link', { name: 'Settings' }).dispatchEvent('click')
-  await expect(page).toHaveURL(/\/settings/)
-  await expect(page.getByRole('banner')).toContainText('Settings')
-  const here = (await bar.getByRole('link', { name: 'Settings' }).boundingBox())!
-  expect(here.x).toBeGreaterThanOrEqual(0)
-  expect(here.x + here.width).toBeLessThanOrEqual(375)
+  expect(box.width).toBeGreaterThanOrEqual(373)
+  // All seven fit on the screen with room for their names, and none runs past the edge
+  const items = await bar.locator('a, button').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); const t = (e.lastChild as Text).textContent ?? ''; return { x: r.x, right: r.right, w: r.width, scroll: (e as HTMLElement).scrollWidth, label: t } }))
+  for (const i of items) { expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label).toBeLessThanOrEqual(Math.ceil(i.w)) }
+  await bar.getByRole('link', { name: 'Tutor' }).dispatchEvent('click')
+  await expect(page).toHaveURL(/\/tutor/)
+  await expect(page.getByRole('banner')).toContainText('Tutor')
+  await expect(bar.getByRole('link', { name: 'Tutor' })).toHaveAttribute('aria-current', 'page')
   expect(await sideways(page)).toBeLessThanOrEqual(0)
+  // What the bar leaves out is on Home
+  await page.goto('/home')
+  for (const n of ['Courses', 'Library', 'Profile', 'Progress', 'Settings']) await expect(page.getByRole('link', { name: n, exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open' })).toBeVisible() // the focus timer's way in
 })

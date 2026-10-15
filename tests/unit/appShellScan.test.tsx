@@ -72,17 +72,14 @@ describe('Scan in the app shell', () => {
     const sidebar = screen.getAllByRole('navigation')[0]
     const labels = [...sidebar.querySelectorAll('a')].map(a => a.textContent)
     expect(labels.indexOf('Lectures')).toBe(labels.indexOf('Notes') + 1)
-    expect(screen.getAllByRole('link', { name: 'Focus' })).toHaveLength(2)
   })
 
-  it('the phone bar has every place in it, with Scan among them and no More button', () => {
+  it('the phone bar has the everyday places with Scan in the middle, and leaves out what Home already links to', () => {
     path = '/home'
     renderShell()
     const bar = screen.getByRole('navigation', { name: 'Main' })
-    expect([...bar.querySelectorAll('a, button')].map(e => (e.textContent ?? '').replace(/^.(?=Profile)/, ''))).toEqual(
-      ['Home', 'Planner', 'Notes', 'Scan', 'Flashcards', 'Lectures', 'Tutor', 'Library', 'Focus', 'Progress', 'Courses', 'Profile', 'Settings'],
-    )
-    expect(within(bar).queryByRole('button', { name: 'More' })).toBeNull()
+    expect([...bar.querySelectorAll('a, button')].map(e => e.textContent)).toEqual(['Home', 'Planner', 'Notes', 'Scan', 'Flashcards', 'Lectures', 'Tutor'])
+    for (const left of ['Focus', 'Progress', 'Library', 'Courses', 'Profile', 'Settings', 'More']) expect(within(bar).queryByRole('link', { name: left }), left).toBeNull()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 

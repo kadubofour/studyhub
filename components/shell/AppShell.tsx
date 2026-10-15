@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -45,11 +45,9 @@ const GROUPS = [
   ] },
 ]
 const ALL = [HOME, ...GROUPS.flatMap(g => g.items)]
-// Phones: one bar with every place in it, side by side and scrolling sideways, centred on the page you are on. Scan sits among them in the
-// accent colour. (Upload and the light/dark choice are on the pages that use them, and in Settings.)
-const PHONE_BAR = ['/home', '/planner', '/notes', 'scan', '/flashcards', '/lectures', '/tutor', '/library', '/focus', '/progress', '/courses', '/profile', '/settings']
-const PHONE_LABEL: Record<string, string> = { '/courses': 'Courses', '/profile': 'Profile', '/settings': 'Settings' }
-const PHONE_ICON: Record<string, typeof Home> = { '/courses': GraduationCap, '/profile': Home }
+// Phones: the places used every day, in equal columns with Scan in the middle in the accent colour. The rest (Focus, Progress, Library, Courses,
+// Profile, Settings) are on Home, and Upload is on the pages that use it.
+const PHONE_BAR = ['/home', '/planner', '/notes', 'scan', '/flashcards', '/lectures', '/tutor']
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
 const scanTargetFor = (path: string): ScanTarget =>
@@ -83,7 +81,6 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }, [coursesVersion])
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const phoneBar = useRef<HTMLElement>(null)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
   useOpenUpload(() => setUploading(true))
@@ -101,12 +98,6 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     setProfile(p => ({ ...p, theme: next }))
     updateProfile(supabase(), profile.id, { theme: next }).catch(() => {})
   }
-  // The phone bar opens with the current page in the middle of it
-  useEffect(() => {
-    const bar = phoneBar.current
-    const here = bar?.querySelector<HTMLElement>('[aria-current="page"]')
-    if (bar && here) bar.scrollLeft = here.offsetLeft - (bar.clientWidth - here.offsetWidth) / 2
-  }, [path])
   const active = (href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review'))
 
   const link = ({ href, label, icon: Icon }: { href: string; label: string; icon: typeof Home }) => (
@@ -196,33 +187,25 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
-        <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-          <nav ref={phoneBar} aria-label="Main" className="no-scrollbar flex snap-x overflow-x-auto px-1">
-            {PHONE_BAR.map(key => {
-              if (key === 'scan') {
-                return (
-                  <button key="scan" type="button" onClick={() => setScanning(true)} className="flex w-[4.6rem] shrink-0 snap-center flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium text-accent">
-                    <span className="grid h-7 w-14 place-items-center rounded-full bg-accent-solid text-white"><ScanLine size={19} aria-hidden /></span>Scan
-                  </button>
-                )
-              }
-              const item = ALL.find(n => n.href === key)
-              const label = item?.label ?? PHONE_LABEL[key] ?? key.slice(1)
-              const Icon = item?.icon ?? PHONE_ICON[key] ?? Settings
-              const on = active(key)
+        <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-line bg-raised/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+          {PHONE_BAR.map(key => {
+            if (key === 'scan') {
               return (
-                <Link key={key} href={key} onClick={e => guard(e, key)} aria-current={on ? 'page' : undefined}
-                  className={`flex w-[4.6rem] shrink-0 snap-center flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] ${on ? 'font-medium text-accent' : 'text-muted'}`}>
-                  <span className={`flex h-7 w-14 items-center justify-center rounded-full transition ${on ? 'bg-accent-soft' : ''}`}>
-                    {key === '/profile' ? <Avatar name={profile.display_name} color={profile.avatar_color} size={22} /> : <Icon size={20} aria-hidden />}
-                  </span>{label}
-                </Link>
+                <button key="scan" type="button" onClick={() => setScanning(true)} className="flex min-w-0 flex-col items-center gap-0.5 pb-1.5 pt-2 text-[10px] font-medium text-accent">
+                  <span className="grid h-7 w-10 place-items-center rounded-full bg-accent-solid text-white"><ScanLine size={18} aria-hidden /></span>Scan
+                </button>
               )
-            })}
-          </nav>
-          <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-[var(--raised)] to-transparent" />
-          <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--raised)] to-transparent" />
-        </div>
+            }
+            const { label, icon: Icon } = ALL.find(n => n.href === key)!
+            const on = active(key)
+            return (
+              <Link key={key} href={key} onClick={e => guard(e, key)} aria-current={on ? 'page' : undefined}
+                className={`flex min-w-0 flex-col items-center gap-0.5 pb-1.5 pt-2 text-[10px] ${on ? 'font-medium text-accent' : 'text-muted'}`}>
+                <span className={`flex h-7 w-10 items-center justify-center rounded-full transition ${on ? 'bg-accent-soft' : ''}`}><Icon size={19} aria-hidden /></span>{label}
+              </Link>
+            )
+          })}
+        </nav>
       )}
       <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
       {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
