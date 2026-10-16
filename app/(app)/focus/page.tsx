@@ -1,15 +1,18 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
-import { canRestart, remainingMs, type Mode } from '@/lib/timer'
+import { canRestart, durationFor, elapsedMs, remainingMs, type Mode } from '@/lib/timer'
+import { LengthWheel } from '@/components/focus/LengthWheel'
+import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
 
 const SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }]
 
 export default function FocusPage() {
   const { profile } = useProfile()
-  const { timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode } = useFocus()
+  const { timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode, setDuration, task } = useFocus()
   const [sound, setSound] = useState('off')
   const [volume, setVolume] = useState(0.6)
   const [soundError, setSoundError] = useState(false)
@@ -33,6 +36,9 @@ export default function FocusPage() {
   const R = 88, C = 2 * Math.PI * R
   const running = timer.startedAt !== null
   const goal = profile.daily_goal_minutes
+  const minutes = Math.round(timer.durationMs / 60_000)
+  const usual = Math.round(durationFor(timer.mode, profile) / 60_000) // what the student set in Settings: where every session starts
+  const begun = running || elapsedMs(timer, now) > 0
   const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 
   return (
@@ -43,18 +49,38 @@ export default function FocusPage() {
             className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
       </div>
-      <div className="relative mx-auto my-8 size-64">
-        <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>
-          <circle cx="100" cy="100" r={R} fill="none" stroke="var(--surface)" strokeWidth="10" />
-          <defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--accent-solid)" /><stop offset="100%" stopColor="var(--accent-glow)" /></linearGradient></defs>
-          <circle cx="100" cy="100" r={R} fill="none" stroke="url(#ring)" strokeWidth="10" strokeLinecap="round"
-            strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
-          {timer.mode === 'focus' && <div className="text-sm text-muted">Session {(completedFocus % profile.long_break_every) + 1} of {profile.long_break_every}</div>}
+      {timer.mode === 'focus' && (
+        <div className="mt-5 flex flex-col items-center gap-1.5">
+          <div className="text-sm text-muted">Session {(completedFocus % profile.long_break_every) + 1} of {profile.long_break_every}</div>
+          <div aria-hidden className="flex gap-1.5">
+            {Array.from({ length: profile.long_break_every }, (_, i) => (
+              <span key={i} className={`size-1.5 rounded-full ${i <= completedFocus % profile.long_break_every ? 'bg-accent-solid' : 'bg-line'}`} />
+            ))}
+          </div>
         </div>
+      )}
+      <div className="relative mx-auto my-6 size-64">
+        {begun ? (
+          <>
+            <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>
+              <circle cx="100" cy="100" r={R} fill="none" stroke="var(--surface)" strokeWidth="10" />
+              <defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--accent-solid)" /><stop offset="100%" stopColor="var(--accent-glow)" /></linearGradient></defs>
+              <circle cx="100" cy="100" r={R} fill="none" stroke="url(#ring)" strokeWidth="10" strokeLinecap="round"
+                strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
+              {timer.mode === 'focus' && task && <div className="mt-1 max-w-[11rem] truncate text-xs font-medium text-accent">{task.title}</div>}
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center"><LengthWheel minutes={minutes} onChange={setDuration} /></div>
+        )}
       </div>
+      {!begun && minutes !== usual && (
+        <button type="button" onClick={() => setDuration(usual)} className="mb-4 rounded-lg px-2 py-1 text-xs text-muted underline-offset-2 hover:text-fg hover:underline">Back to {usual} min</button>
+      )}
+      {timer.mode === 'focus' && <div className="mb-5"><FocusTaskPicker /></div>}
       <div className="flex justify-center gap-2">
         <button className="btn-primary min-w-28" onClick={toggle}>
           {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
@@ -63,7 +89,9 @@ export default function FocusPage() {
         <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
       </div>
 
-      <div className="card mx-auto mt-6 flex flex-wrap items-center gap-2 text-sm">
+      <p className="mt-6 text-center text-xs text-muted">Chime, notification and auto-start are in <Link href="/settings?section=reminders" className="underline underline-offset-2 hover:text-fg">Settings</Link>.</p>
+
+      <div className="card mx-auto mt-4 flex flex-wrap items-center gap-2 text-sm">
         <Headphones size={16} aria-hidden className="text-muted" />
         {SOUNDS.map(s => (
           <button key={s.id} onClick={() => { setSoundError(false); setSound(s.id) }} aria-pressed={sound === s.id}

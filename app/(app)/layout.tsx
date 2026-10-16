@@ -7,6 +7,7 @@ import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { AppShell } from '@/components/shell/AppShell'
 import { FocusProvider } from '@/components/providers/FocusProvider'
+import { ReminderProvider } from '@/components/providers/ReminderProvider'
 import type { Profile } from '@/lib/types'
 import type { Metadata } from 'next'
 
@@ -28,7 +29,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <ToastProvider>
         <ConfirmProvider>
           <FocusProvider>
-            <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
+            <ReminderProvider>
+              <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
+            </ReminderProvider>
           </FocusProvider>
         </ConfirmProvider>
       </ToastProvider>

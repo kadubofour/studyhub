@@ -132,7 +132,7 @@ test('focus timer runs and pauses', async ({ page }) => {
   await signUp(page)
   await page.goto('/focus')
   const main = page.getByRole('main') // the top bar shows the clock too
-  await expect(main.getByText('25:00')).toBeVisible()
+  await expect(main.getByRole('spinbutton', { name: 'Minutes' })).toHaveAttribute('aria-valuenow', '25')
   await main.getByRole('button', { name: 'Start', exact: true }).click()
   await page.waitForTimeout(1500)
   await main.getByRole('button', { name: 'Pause' }).click()
