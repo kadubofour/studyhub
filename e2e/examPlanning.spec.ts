@@ -26,12 +26,16 @@ test('Add task and Add exam are different dialogs, and an exam is planned with a
   const dialog = page.getByRole('dialog', { name: 'Add exam' })
   await expect(dialog.getByLabel('Due date')).toHaveCount(0)
   await dialog.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click()
+  await expect(dialog.getByLabel('Title')).toHaveValue('Biology exam') // from the course; the rest of what an exam is sits behind More details
+  await expect(dialog.getByLabel('What it covers')).toBeHidden()
+  await dialog.getByText('More details').click()
   await dialog.getByRole('radio', { name: 'Midterm' }).click()
   await expect(dialog.getByLabel('Title')).toHaveValue('Biology midterm')
   const today = await page.evaluate(() => new Date().toLocaleDateString('en-CA'))
   await dialog.getByLabel('Day').fill(today)
   await dialog.getByLabel('Starts at').fill('14:00')
-  await dialog.getByRole('radio', { name: '2 h', exact: true }).click()
+  await dialog.getByLabel('Hours').fill('2')
+  await dialog.getByLabel('Minutes').fill('15') // any length: typed, not picked from a list
   await dialog.getByLabel('Where').fill('Hall B')
   await dialog.getByLabel('What it covers').fill('Chapters 1 to 5')
   await dialog.getByLabel('Counts for (% of the grade)').fill('30')
@@ -44,9 +48,9 @@ test('Add task and Add exam are different dialogs, and an exam is planned with a
   await expect(page.getByRole('tab', { name: 'Tasks' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Week' }).click()
 
-  // On the calendar it is a block from 14:00 to 16:00 with the room
+  // On the calendar it is a block from 14:00 to 16:15 with the room
   const block = page.locator('[data-exam="true"]', { hasText: 'Biology midterm' })
-  await expect(block).toContainText('14:00–16:00')
+  await expect(block).toContainText('14:00–16:15')
   await expect(block).toContainText('Hall B')
 
   // Reopened, it is as it was saved, and a change shows
@@ -55,6 +59,8 @@ test('Add task and Add exam are different dialogs, and an exam is planned with a
   await expect(edit).toBeVisible()
   await expect(edit.getByLabel('Starts at')).toHaveValue('14:00')
   await expect(edit.getByLabel('Where')).toHaveValue('Hall B')
+  await expect(edit.getByLabel('Hours')).toHaveValue('2')
+  await expect(edit.getByLabel('Minutes')).toHaveValue('15')
   await edit.getByLabel('Where').fill('Gym')
   await edit.getByRole('button', { name: 'Save' }).click()
   await expect(page.locator('[data-exam="true"]', { hasText: 'Biology midterm' })).toContainText('Gym')
@@ -62,7 +68,7 @@ test('Add task and Add exam are different dialogs, and an exam is planned with a
   // In the Tasks list it says when, where, how far, what it covers and counts for
   await page.getByRole('tab', { name: 'Tasks' }).click()
   const row = page.getByRole('region', { name: /Today|Overdue/ }).filter({ hasText: 'Biology midterm' })
-  await expect(row).toContainText('14:00 to 16:00 · Gym')
+  await expect(row).toContainText('14:00 to 16:15 · Gym')
   await expect(row).toContainText('today')
   await expect(row).toContainText('Covers: Chapters 1 to 5')
   await expect(row).toContainText('30% of the grade')
@@ -71,6 +77,6 @@ test('Add task and Add exam are different dialogs, and an exam is planned with a
   await row.getByRole('button', { name: 'Move Biology midterm' }).click()
   await page.getByRole('menuitem', { name: 'Tomorrow' }).click()
   const moved = page.getByRole('region', { name: 'Tomorrow' }).filter({ hasText: 'Biology midterm' })
-  await expect(moved).toContainText('14:00 to 16:00 · Gym')
+  await expect(moved).toContainText('14:00 to 16:15 · Gym')
   await expect(moved).toContainText('tomorrow')
 })

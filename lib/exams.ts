@@ -6,8 +6,6 @@ export const EXAM_KINDS: { id: ExamKind; label: string }[] = [
   { id: 'quiz', label: 'Quiz' }, { id: 'test', label: 'Test' }, { id: 'midterm', label: 'Midterm' }, { id: 'final', label: 'Final' },
   { id: 'practical', label: 'Practical' }, { id: 'oral', label: 'Oral' },
 ]
-/** The lengths offered as choices, in minutes */
-export const EXAM_LENGTHS = [30, 45, 60, 90, 120, 150, 180, 240]
 
 /** An exam with a time on its day. One due at the very end of the day is how a date with no time yet is kept. */
 export const examHasTime = (dueAt: string | null, tz: string): boolean => !!dueAt && localTimeHHMM(new Date(dueAt), tz) !== '23:59'
