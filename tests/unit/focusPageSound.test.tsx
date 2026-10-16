@@ -85,9 +85,9 @@ describe('Focus page keyboard shortcuts', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toBeTruthy()
   })
 
-  it('shows what the keys are', async () => {
+  it('does not put a list of the keys on the page', async () => {
     await act(async () => { page() })
-    expect(screen.getByText(/Space start or pause/)).toBeTruthy()
+    expect(screen.queryByText(/Space start or pause/)).toBeNull()
   })
 })
 

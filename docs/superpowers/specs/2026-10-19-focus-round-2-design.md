@@ -13,8 +13,8 @@
 | Ambient sound | Plays from the app layout, so it carries on when the student leaves the Focus page. The choice and volume are kept on the device. After a reload it resumes at the first tap (a browser will not play sound before one). |
 | Volume slider | Drawn in the accent colour. |
 | Ring on a phone | The ring is up to 86% of the screen width (at most 22rem) and the countdown is larger. Desktop is unchanged. |
-| Shortcuts | Space start or pause, R restart, S skip, F full screen. Ignored while typing or on a control that uses those keys, and with Ctrl, Alt or Cmd held. A one-line hint is shown on devices with a keyboard. |
-| Full screen | A button (and F) opens a full-window view with a large countdown, the session dots and the task, Pause, Restart, Skip and Exit. It also asks the browser for real full screen where that is allowed. Escape or leaving browser full screen closes it. |
+| Shortcuts | Space start or pause, R restart, S skip, F full screen. Ignored while typing or on a control that uses those keys, and with Ctrl, Alt or Cmd held. Nothing on the page lists them. |
+| Full screen | A button (and F) opens a full-window view with a large countdown, the session dots and the task, Pause, Restart, Skip and Exit. It also asks the browser for real full screen where that is allowed. Escape or leaving browser full screen closes it. A calm animation plays behind the countdown (slow drifting colour, a breathing glow, soft specks rising); it holds still for people who ask their device to reduce motion. |
 | Screen awake | While a session runs, the screen is kept on (Screen Wake Lock), re-taken when the student returns to the tab, released when it stops. A switch in Settings, "Keep the screen on during a session", turns it off. Browsers without the feature do nothing. |
 
 ## Parts

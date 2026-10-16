@@ -92,7 +92,6 @@ export default function FocusPage() {
         <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
         <button className="btn !px-3" onClick={() => setFull(true)} aria-label="Full screen" title="Full screen (F)"><Maximize2 size={14} aria-hidden /></button>
       </div>
-      <p className="mt-3 hidden text-xs text-muted pointer-fine:block">Space start or pause · R restart · S skip · F full screen</p>
 
       <p className="mt-6 text-center text-xs text-muted">Chime, notification and auto-start are in <Link href="/settings?section=reminders" className="underline underline-offset-2 hover:text-fg">Settings</Link>.</p>
 

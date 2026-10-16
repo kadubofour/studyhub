@@ -4,6 +4,7 @@ import { Minimize2, Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { canRestart, remainingMs } from '@/lib/timer'
+import { ChillBackdrop } from '@/components/focus/ChillBackdrop'
 
 // The timer filling the window: a big countdown for a laptop propped up or a phone on the desk. It also asks the browser for real full screen where
 // that is allowed, and closes when the student leaves it (Escape, or the browser's own way out).
@@ -52,13 +53,14 @@ export function FocusFullscreen({ onClose }: { onClose: () => void }) {
   const btn = 'inline-flex items-center gap-2 rounded-full border border-line bg-raised px-5 py-3 text-base transition hover:bg-surface disabled:opacity-40'
   return (
     <div ref={view} role="dialog" aria-modal="true" aria-label="Full screen timer" className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-bg px-6 text-center">
+      <ChillBackdrop />
       <button type="button" onClick={onClose} aria-label="Exit full screen" title="Exit full screen" className="absolute right-4 top-4 inline-flex size-11 items-center justify-center rounded-full border border-line bg-raised text-muted hover:text-fg">
         <Minimize2 size={18} aria-hidden />
       </button>
-      <div className="text-lg text-muted">{MODE_LABEL[timer.mode]}</div>
-      <div className="font-mono text-[clamp(4rem,22vmin,16rem)] font-semibold leading-none tracking-tight" aria-live="off">{fmtClock(remainingMs(timer, now))}</div>
+      <div className="relative text-lg text-muted">{MODE_LABEL[timer.mode]}</div>
+      <div className="relative font-mono text-[clamp(4rem,22vmin,16rem)] font-semibold leading-none tracking-tight" aria-live="off">{fmtClock(remainingMs(timer, now))}</div>
       {timer.mode === 'focus' && (
-        <div className="flex flex-col items-center gap-2">
+        <div className="relative flex flex-col items-center gap-2">
           <div className="text-base text-muted">Session {inSet + 1} of {every}</div>
           <div aria-hidden className="flex gap-2">
             {Array.from({ length: every }, (_, i) => <span key={i} className={`size-2 rounded-full ${i <= inSet ? 'bg-accent-solid' : 'bg-line'}`} />)}
@@ -66,7 +68,7 @@ export function FocusFullscreen({ onClose }: { onClose: () => void }) {
           {task && <div className="mt-1 max-w-[80vw] truncate text-lg font-medium text-accent">{task.title}</div>}
         </div>
       )}
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="relative flex flex-wrap justify-center gap-3">
         <button type="button" className="btn-primary min-w-36 !py-3 !text-base" onClick={toggle} autoFocus>
           {running ? <><Pause size={16} aria-hidden />Pause</> : <><Play size={16} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
         </button>
