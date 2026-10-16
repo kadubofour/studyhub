@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { canRestart, durationFor, elapsedMs, remainingMs, type Mode } from '@/lib/timer'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
-import { FocusAlerts } from '@/components/focus/FocusAlerts'
 
 // Quick lengths for the session about to start (Settings still decides the default)
 const PRESETS: Record<Mode, number[]> = { focus: [15, 25, 45, 50], short: [5, 10], long: [15, 20, 30] }
@@ -77,7 +77,7 @@ export default function FocusPage() {
         <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
       </div>
 
-      <FocusAlerts />
+      <p className="mt-6 text-center text-xs text-muted">Chime, notification and auto-start are in <Link href="/settings?section=reminders" className="underline underline-offset-2 hover:text-fg">Settings</Link>.</p>
 
       <div className="card mx-auto mt-4 flex flex-wrap items-center gap-2 text-sm">
         <Headphones size={16} aria-hidden className="text-muted" />

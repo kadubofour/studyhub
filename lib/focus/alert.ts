@@ -51,10 +51,10 @@ export async function askNotificationPermission(): Promise<NotificationPermissio
 }
 
 /** A notification, but only when the student is not looking at the page (when they are, the page itself says it) */
-export function notify(title: string, body: string) {
+export function notify(title: string, body: string, opts: { tag?: string; onClick?: () => void } = {}) {
   try {
     if (!notificationsAvailable() || Notification.permission !== 'granted' || document.visibilityState === 'visible') return
-    const n = new Notification(title, { body, tag: 'studyhub-focus', icon: '/favicon.ico' })
-    n.onclick = () => { window.focus(); n.close() }
+    const n = new Notification(title, { body, tag: opts.tag ?? 'studyhub-focus', icon: '/favicon.ico' })
+    n.onclick = () => { window.focus(); opts.onClick?.(); n.close() }
   } catch { /* some phones only allow notifications from a service worker */ }
 }

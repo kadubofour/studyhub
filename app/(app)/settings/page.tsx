@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { BTN_OUTLINE } from '@/components/ui/buttonStyles'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
+import { RemindersCard } from '@/components/settings/RemindersCard'
 import { PlanCard } from '@/components/settings/PlanCard'
 import { StorageCard } from '@/components/settings/StorageCard'
 import { DataCard } from '@/components/settings/DataCard'
@@ -44,6 +45,7 @@ export default function SettingsPage() {
           <h2 className="text-2xl font-semibold">{current.label}</h2>
           <p className="mb-4 text-sm text-muted">{current.blurb}</p>
           {section === 'appearance' && <AppearanceCard />}
+          {section === 'reminders' && <RemindersCard />}
           {section === 'plan' && <PlanCard />}
           {section === 'storage' && <StorageCard />}
           {section === 'data' && <DataCard />}

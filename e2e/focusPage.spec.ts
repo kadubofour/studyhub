@@ -26,6 +26,11 @@ test('a focus session on a task: pick a length and a task, time runs out with an
   await page.waitForLoadState('networkidle')
 
   await page.clock.install()
+  // Alerts live in Settings: notifications on (the browser says yes)
+  await page.goto('/settings?section=reminders')
+  await page.getByRole('switch', { name: 'Notification' }).click()
+  await expect(page.getByRole('switch', { name: 'Notification' })).toHaveAttribute('aria-checked', 'true')
+
   await page.goto('/focus')
   await page.waitForLoadState('networkidle')
   const clock = page.locator('.font-mono.text-5xl')
@@ -36,10 +41,6 @@ test('a focus session on a task: pick a length and a task, time runs out with an
   await page.getByRole('button', { name: /What are you working on/ }).click()
   await page.getByRole('option', { name: /Read chapter 7/ }).click()
   await expect(page.getByRole('button', { name: /Working on/ })).toContainText('Read chapter 7')
-
-  // Alerts: notifications on (the browser says yes)
-  await page.getByRole('switch', { name: 'Notification' }).click()
-  await expect(page.getByRole('switch', { name: 'Notification' })).toHaveAttribute('aria-checked', 'true')
 
   // Start, then the student leaves the page and time runs out
   await page.getByRole('button', { name: 'Start', exact: true }).click()
@@ -68,9 +69,9 @@ test('a focus session on a task: pick a length and a task, time runs out with an
   expect(rows[0].task_id).toBeTruthy()
 })
 
-test('the Focus page remembers its alert choices after a reload', async ({ page }) => {
+test('Settings remembers the focus alert choices after a reload', async ({ page }) => {
   await signUp(page)
-  await page.goto('/focus')
+  await page.goto('/settings?section=reminders')
   const auto = page.getByRole('switch', { name: 'Start the next one automatically' })
   await expect(auto).toHaveAttribute('aria-checked', 'false')
   await expect(page.getByRole('switch', { name: 'Sound and vibration' })).toHaveAttribute('aria-checked', 'true')

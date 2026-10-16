@@ -9,7 +9,7 @@ describe('SettingsRail', () => {
   it('lists the sections, marking the one shown', () => {
     render(<SettingsRail section="storage" onSection={() => {}} billing />)
     const nav = screen.getByRole('navigation', { name: 'Settings sections' })
-    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Appearance', 'Plan', 'Storage', 'Your data', 'Account'])
+    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Appearance', 'Reminders', 'Plan', 'Storage', 'Your data', 'Account'])
     expect(within(nav).getByRole('button', { name: 'Storage' }).getAttribute('aria-current')).toBe('true')
     expect(within(nav).getByRole('button', { name: 'Appearance' }).getAttribute('aria-current')).toBeNull()
   })
@@ -24,6 +24,6 @@ describe('SettingsRail', () => {
     expect(onSection).toHaveBeenCalledWith('data')
   })
   it('knows its section ids', () => {
-    expect(SETTINGS_SECTIONS.map(s => s.id)).toEqual(['appearance', 'plan', 'storage', 'data', 'account'])
+    expect(SETTINGS_SECTIONS.map(s => s.id)).toEqual(['appearance', 'reminders', 'plan', 'storage', 'data', 'account'])
   })
 })
