@@ -134,6 +134,17 @@ describe('the message box', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
     expect(calls).toEqual(['Why?'])
   })
+  it('Ctrl+Enter sends on a touch screen too, and Enter that picks a word while composing does not send', async () => {
+    const calls: string[] = []
+    send = async (_c, msg) => { calls.push(msg); return { ok: true, lines: lines([{ t: 'done', proposals: [] }]) } }
+    await open()
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Why?' } })
+    await act(async () => { press('Enter', { isComposing: true }) })
+    expect(calls).toEqual([])
+    pointer(true)
+    await act(async () => { press('Enter', { ctrlKey: true }) })
+    expect(calls).toEqual(['Why?'])
+  })
   it('shows how much is left only near the limit', async () => {
     await open()
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'a'.repeat(3000) } })
@@ -184,6 +195,25 @@ describe('following a reply', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Jump to latest' })) })
     expect(into).toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Jump to latest' })).toBeNull()
+  })
+
+  it('a small scroll upward is enough to stop following, even close to the bottom', async () => {
+    messages = [m('1', 'user', 'Earlier?'), m('2', 'assistant', 'Earlier.')]
+    await open()
+    await act(async () => { scrollTo(2300) })
+    expect(screen.queryByRole('button', { name: 'Jump to latest' })).toBeNull()
+    await act(async () => { scrollTo(2240) }) // 60 up: still within sight of the end, but going up
+    expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeTruthy()
+  })
+
+  it('a reader scrolled up is not carried down when the reply finishes and is saved', async () => {
+    send = async () => ({ ok: true, lines: (async function* () { yield { t: 'delta', text: 'one ' }; await new Promise(r => setTimeout(r, 20)); yield { t: 'done', proposals: [] } })() })
+    await open()
+    await ask('Why?')
+    await act(async () => { scrollTo(300) })
+    into.mockClear()
+    await act(async () => { await new Promise(r => setTimeout(r, 60)) })
+    expect(into).not.toHaveBeenCalled()
   })
 
   it('sending a message always goes to the bottom, even from further up', async () => {

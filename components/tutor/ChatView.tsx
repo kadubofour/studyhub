@@ -51,6 +51,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [partial, setPartial] = useState<string | null>(null) // what was written when the student stopped, until the saved reply is there to show
   const end = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
+  const lastY = useRef(0)
   const pinned = useRef(true) // the student is reading the newest text, so a reply is followed; scrolled up, the page stays where they put it
   const [away, setAway] = useState(false) // scrolled up from the newest text: offer a way back
   const [today] = useState(() => new Date(nowMs())) // for the day headings
@@ -78,7 +79,10 @@ export function ChatView({ chatId }: { chatId: string }) {
   useEffect(() => { if (pinned.current) end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
   useEffect(() => {
     const onScroll = () => {
-      const near = nearBottom({ scrollY: window.scrollY, viewport: window.innerHeight, endY: (end.current?.getBoundingClientRect().top ?? 0) + window.scrollY })
+      const y = window.scrollY
+      const up = y < lastY.current - 2 // any scroll upward is the student leaving, however near the bottom they still are
+      lastY.current = y
+      const near = !up && nearBottom({ scrollY: y, viewport: window.innerHeight, endY: (end.current?.getBoundingClientRect().top ?? 0) + y })
       pinned.current = near; setAway(!near)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -123,8 +127,10 @@ export function ChatView({ chatId }: { chatId: string }) {
     } catch { if (!stopped.current) setProblem(cutOff) } finally {
       // Stopped: keep what was written on the page, because the server saves the partial reply a moment after it hears the stop
       if (stopped.current) { setPartial(liveText.current.trim() ? liveText.current : null); window.dispatchEvent(new Event(AI_USED)) } // that message was used
+      // The saved reply replaces the streamed one in a single update: the page must not shrink in between, or a reader scrolled up is carried to the bottom
+      try { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) } catch { /* the next load shows it */ }
       setLive(null)
-      try { await reload(); const fresh = await getChat(supabase(), chatId); setChat(c => (c ? { ...fresh, guided: c.guided } : fresh)) } catch { /* the next load shows it */ }
+      try { const fresh = await getChat(supabase(), chatId); setChat(c => (c ? { ...fresh, guided: c.guided } : fresh)) } catch { /* the next load shows it */ }
     }
   }
 
@@ -170,7 +176,8 @@ export function ChatView({ chatId }: { chatId: string }) {
   function jumpToLatest() { pinned.current = true; setAway(false); end.current?.scrollIntoView?.({ block: 'end' }) }
   // A touch screen has no Shift key to start a new line with, so there Enter does that and the Send button sends
   function enterSends(e: React.KeyboardEvent) {
-    return e.key === 'Enter' && !e.shiftKey && !window.matchMedia?.('(pointer: coarse)').matches
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return false // Enter that picks a word while typing Chinese, Japanese or Korean is not Send
+    return e.ctrlKey || e.metaKey || (!e.shiftKey && !window.matchMedia?.('(pointer: coarse)').matches)
   }
   async function aboutPicked(t: TutorTarget | null) {
     setPicking(false)
