@@ -13,7 +13,7 @@ for (const [button, file] of [['Rain', 'rain'], ['Ocean', 'sea'], ['Lo-fi', 'lof
     const loaded = page.waitForResponse(r => (file === 'lofi' ? /\/sounds\/lofi-\d\.ogg$/.test(r.url()) : r.url().endsWith(`/sounds/${file}.ogg`)))
     await page.getByRole('button', { name: button, exact: true }).click()
     const res = await loaded
-    expect(res.status()).toBe(200)
+    expect([200, 206]).toContain(res.status()) // streamed tracks are fetched in ranges
     expect(res.headers()['content-type']).toContain('ogg')
     if (file !== 'lofi') expect((await res.body()).length).toBeGreaterThan(100_000)
     await page.waitForTimeout(800)
