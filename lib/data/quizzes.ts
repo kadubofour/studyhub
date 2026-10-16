@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AnswerRecord, Quiz, QuizAttempt } from '../types'
-import { check, must } from './util'
+import { check, fetchAll, must } from './util'
 import { announceProgressChanged } from '@/lib/xp/events'
 
 const QUIZ = 'id,note_id,title,questions,created_at'
@@ -76,4 +76,22 @@ export async function listFinishedAttemptsSince(sb: SupabaseClient, since: Date)
     id: r.id, correct: r.correct, total: r.total, finished_at: r.finished_at,
     quiz_title: r.quizzes?.title ?? 'Quiz', course_id: r.quizzes?.notes?.course_id ?? null,
   }))
+}
+
+/** Everything the Quiz page shows: every quiz, every finished attempt, and the notes and courses they belong to */
+export async function listQuizHub(sb: SupabaseClient) {
+  const coursesQuery = sb.from('courses').select('id,name,color') // started with the others, answered after them
+  const [quizzes, attempts, notes, courseRows] = await Promise.all([
+    fetchAll<Quiz>((from, to) => sb.from('quizzes').select(QUIZ).order('created_at', { ascending: false }).order('id').range(from, to)),
+    fetchAll<{ id: string; quiz_id: string; correct: number; total: number; finished_at: string }>((from, to) =>
+      sb.from('quiz_attempts').select('id,quiz_id,correct,total,finished_at').not('finished_at', 'is', null).order('finished_at').order('id').range(from, to)),
+    fetchAll<{ id: string; title: string; course_id: string | null }>((from, to) => sb.from('notes').select('id,title,course_id').order('id').range(from, to)),
+    Promise.resolve(coursesQuery).then(r => must(r) as { id: string; name: string; color: string }[]),
+  ])
+  return { quizzes, attempts, notes, courses: courseRows }
+}
+
+export async function deleteQuiz(sb: SupabaseClient, id: string): Promise<void> {
+  check(await sb.from('quizzes').delete().eq('id', id))
+  announceProgressChanged()
 }

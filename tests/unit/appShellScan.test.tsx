@@ -102,14 +102,14 @@ describe('Scan in the app shell', () => {
     expect(names(within(side).getByRole('group', { name: 'Study' }))).toEqual(['Library', 'Notes', 'Lectures', 'Flashcards', 'Tutor', 'Quiz', 'Upload', 'Scan'])
   })
 
-  it('has a Quiz button in the sidebar, and the Quiz request from any page opens the Quiz dialog', async () => {
+  it('has a Quiz page in the sidebar, marked when you are on it, and the Quiz request from any page opens the Quiz dialog', async () => {
     HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
     HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
-    path = '/flashcards'
+    path = '/quiz'
     renderShell()
-    fireEvent.click(within(screen.getAllByRole('navigation')[0]).getByRole('button', { name: 'Quiz' }))
-    expect(await screen.findByRole('heading', { name: 'Quiz yourself' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    const link = within(screen.getAllByRole('navigation')[0]).getByRole('link', { name: 'Quiz' })
+    expect(link.getAttribute('href')).toBe('/quiz')
+    expect(link.getAttribute('aria-current')).toBe('page')
     expect(screen.queryByRole('heading', { name: 'Quiz yourself' })).toBeNull()
     await act(async () => { window.dispatchEvent(new Event('studyhub:open-quiz')) })
     expect(await screen.findByRole('heading', { name: 'Quiz yourself' })).toBeTruthy()
