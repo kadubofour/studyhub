@@ -1,14 +1,59 @@
 import { audioContext } from './alert'
 import type { AmbientId } from './ambientPrefs'
 
-// Background sounds made in the browser (Web Audio), so there are no files to ship. They are soft synthetic sounds, not recordings.
+// Background sounds. Each plays a recording from public/sounds when there is one (a seamless loop), and otherwise makes a soft stand-in in the browser
+// (Web Audio), so the buttons always do something. See public/sounds/README.md for where the recordings come from.
 
 type Kind = Exclude<AmbientId, 'off'>
 type Stops = (() => void)[]
 interface Playing { kind: Kind; master: GainNode; stop: () => void }
 let playing: Playing | null = null
+let token = 0 // each start takes the next number; a recording that arrives for an older one is dropped
 
 const LEVEL = 0.5 // the slider's top is a comfortable level, not the loudest the speakers can do
+
+/** How each recording is played: slower is lower in pitch, a low-pass takes the brightness off, and the blend hides the loop point */
+const FILES: Record<Kind, { src: string; rate: number; lowpass: number | null; gain: number; blend: number }> = {
+  rain: { src: '/sounds/rain.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
+  sea: { src: '/sounds/sea.ogg', rate: 0.82, lowpass: 1800, gain: 1, blend: 3 },
+  lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.9, blend: 2 },
+}
+
+/**
+ * The same recording with its last few seconds blended into its first, so that when it starts over there is no click and no gap: the end of the new
+ * version runs straight into what came before its start. A little shorter than the original.
+ */
+export function makeSeamless(ctx: AudioContext, buf: AudioBuffer, seconds: number): AudioBuffer {
+  const n = Math.min(Math.floor(seconds * buf.sampleRate), Math.floor(buf.length / 3))
+  const tail = buf.length - n
+  const out = ctx.createBuffer(buf.numberOfChannels, tail, buf.sampleRate)
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const from = buf.getChannelData(c), to = out.getChannelData(c)
+    to.set(from.subarray(0, tail))
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * (Math.PI / 2) // equal power: the blend does not dip in loudness
+      to[i] = from[tail + i] * Math.cos(t) + from[i] * Math.sin(t)
+    }
+  }
+  return out
+}
+
+const recordings = new Map<Kind, Promise<AudioBuffer | null>>()
+export const resetAmbientCache = () => recordings.clear()
+
+function recording(ctx: AudioContext, kind: Kind): Promise<AudioBuffer | null> {
+  let p = recordings.get(kind)
+  if (!p) {
+    const f = FILES[kind]
+    p = fetch(f.src)
+      .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('missing'))))
+      .then(bytes => ctx.decodeAudioData(bytes))
+      .then(buf => makeSeamless(ctx, buf, f.blend))
+      .catch(() => { recordings.delete(kind); return null }) // missing or unreadable: the made sound plays, and the next pick tries again
+    recordings.set(kind, p)
+  }
+  return p
+}
 
 function noise(ctx: AudioContext, color: 'white' | 'brown', seconds = 4): AudioBufferSourceNode {
   const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate)
@@ -48,28 +93,19 @@ function layer(ctx: AudioContext, out: AudioNode, stops: Stops, color: 'white' |
   return g
 }
 
+// The made sounds, for when a recording is not there
+
 function rain(ctx: AudioContext, out: AudioNode, stops: Stops) {
   const hiss = layer(ctx, out, stops, 'white', 0.35, filter(ctx, 'highpass', 600), filter(ctx, 'lowpass', 7500))
   wobble(ctx, hiss.gain, 0.17, 0.06, stops)
   layer(ctx, out, stops, 'brown', 0.5, filter(ctx, 'lowpass', 420)) // the far, low part of rain
 }
 
-function cafe(ctx: AudioContext, out: AudioNode, stops: Stops) {
-  const murmur = layer(ctx, out, stops, 'brown', 0.9, filter(ctx, 'bandpass', 520, 0.8))
-  wobble(ctx, murmur.gain, 0.31, 0.3, stops) // voices rising and falling
-  layer(ctx, out, stops, 'brown', 0.6, filter(ctx, 'lowpass', 260))
-  // now and then a cup against a saucer
-  let timer: ReturnType<typeof setTimeout>
-  const clink = () => {
-    timer = setTimeout(clink, 3000 + Math.random() * 7000)
-    if (ctx.state !== 'running') return // not allowed to make sound yet: nothing is saved up to burst out together
-    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain()
-    o.type = 'sine'; o.frequency.value = 2200 + Math.random() * 1400
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
-    o.connect(g).connect(out); o.start(t); o.stop(t + 0.4)
-  }
-  timer = setTimeout(clink, 2500)
-  stops.push(() => clearTimeout(timer))
+function sea(ctx: AudioContext, out: AudioNode, stops: Stops) {
+  const swell = layer(ctx, out, stops, 'brown', 0.8, filter(ctx, 'lowpass', 700)) // the body of the sea, rising and falling like waves
+  wobble(ctx, swell.gain, 0.1, 0.35, stops)
+  const foam = layer(ctx, out, stops, 'white', 0.06, filter(ctx, 'bandpass', 1500, 0.6)) // the hiss as each wave breaks
+  wobble(ctx, foam.gain, 0.1, 0.05, stops)
 }
 
 const CHORDS = [[261.63, 329.63, 392, 493.88], [220, 261.63, 329.63, 392], [174.61, 220, 261.63, 329.63], [196, 246.94, 293.66, 349.23]] // Cmaj7 Am7 Fmaj7 G7
@@ -98,7 +134,16 @@ function lofi(ctx: AudioContext, out: AudioNode, stops: Stops) {
   wobble(ctx, crackle.gain, 7, 0.012, stops)
 }
 
-const MAKERS: Record<Kind, (ctx: AudioContext, out: AudioNode, stops: Stops) => void> = { rain, cafe, lofi }
+const MAKERS: Record<Kind, (ctx: AudioContext, out: AudioNode, stops: Stops) => void> = { rain, sea, lofi }
+
+function playRecording(ctx: AudioContext, kind: Kind, buf: AudioBuffer, out: AudioNode, stops: Stops) {
+  const f = FILES[kind]
+  const src = ctx.createBufferSource()
+  src.buffer = buf; src.loop = true; src.playbackRate.value = f.rate
+  const level = gainOf(ctx, f.gain)
+  ;(f.lowpass ? src.connect(filter(ctx, 'lowpass', f.lowpass)) : src).connect(level).connect(out)
+  src.start(); stops.push(() => src.stop())
+}
 
 /** Starts a sound (replacing the one playing). False when this browser cannot make sound. */
 export function startAmbient(kind: Kind, volume: number): boolean {
@@ -106,12 +151,12 @@ export function startAmbient(kind: Kind, volume: number): boolean {
   try {
     const ctx = audioContext()
     if (!ctx) return false
+    const mine = ++token
     const master = ctx.createGain()
     master.gain.value = 0
     master.gain.setTargetAtTime(volume * LEVEL, ctx.currentTime, 0.4) // fades in
     master.connect(ctx.destination)
     const stops: Stops = []
-    MAKERS[kind](ctx, master, stops)
     playing = {
       kind, master,
       stop: () => {
@@ -119,6 +164,10 @@ export function startAmbient(kind: Kind, volume: number): boolean {
         setTimeout(() => { stops.forEach(s => { try { s() } catch { /* already stopped */ } }); master.disconnect() }, 500)
       },
     }
+    void recording(ctx, kind).then(buf => {
+      if (mine !== token) return // stopped, or another sound picked, while it loaded
+      try { if (buf) playRecording(ctx, kind, buf, master, stops); else MAKERS[kind](ctx, master, stops) } catch { /* no sound this time */ }
+    })
     return true
   } catch { return false }
 }
@@ -129,6 +178,7 @@ export function setAmbientVolume(volume: number) {
 }
 
 export function stopAmbient() {
+  token++
   playing?.stop()
   playing = null
 }
