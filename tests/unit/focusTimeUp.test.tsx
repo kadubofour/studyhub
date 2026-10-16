@@ -199,31 +199,33 @@ describe('what the student is working on', () => {
 describe('the length of the session', () => {
   it('can be changed before the session begins, for that session only', async () => {
     mount()
-    await act(async () => { api!.setDuration(45) })
+    await act(async () => { api!.setDuration(45 * 60) })
     expect(api!.timer.durationMs).toBe(45 * 60_000); expect(api!.timer.mode).toBe('focus')
   })
-  it('can be any length, kept between one minute and three hours', async () => {
+  it('can be any length down to the second, kept between five seconds and three hours', async () => {
     mount()
-    await act(async () => { api!.setDuration(37) })
+    await act(async () => { api!.setDuration(37 * 60) })
     expect(api!.timer.durationMs).toBe(37 * 60_000)
-    await act(async () => { api!.setDuration(999) })
+    await act(async () => { api!.setDuration(90) })
+    expect(api!.timer.durationMs).toBe(90_000)
+    await act(async () => { api!.setDuration(999 * 60) })
     expect(api!.timer.durationMs).toBe(180 * 60_000)
     await act(async () => { api!.setDuration(0) })
-    expect(api!.timer.durationMs).toBe(60_000)
+    expect(api!.timer.durationMs).toBe(5_000)
   })
   it('cannot be changed once it is running, or once part of it has gone', async () => {
     mount()
     await act(async () => { api!.toggle() })
-    await act(async () => { api!.setDuration(45) })
+    await act(async () => { api!.setDuration(45 * 60) })
     expect(api!.timer.durationMs).toBe(60_000)
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
     await act(async () => { api!.toggle() }) // paused with some time gone
-    await act(async () => { api!.setDuration(45) })
+    await act(async () => { api!.setDuration(45 * 60) })
     expect(api!.timer.durationMs).toBe(60_000)
   })
   it('goes back to the Settings length for the next session', async () => {
     mount({ ...profile, short_break_minutes: 5 })
-    await act(async () => { api!.setDuration(15) })
+    await act(async () => { api!.setDuration(15 * 60) })
     await runOut(15)
     expect(api!.timer.mode).toBe('short'); expect(api!.timer.durationMs).toBe(5 * 60_000)
   })

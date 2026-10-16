@@ -181,6 +181,19 @@ describe('the Focus page', () => {
     expect(mins().getAttribute('aria-valuenow')).toBe('5')
   })
 
+  it('colours the page by the kind of session: the accent colour for focus, green for a short break, amber for a long one', async () => {
+    await act(async () => { page() })
+    const root = () => screen.getByRole('tablist').parentElement!
+    expect(root().className).not.toMatch(/mode-/)
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Short break' })) })
+    expect(root().className).toContain('mode-short')
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Long break' })) })
+    expect(root().className).toContain('mode-long')
+    expect(root().className).not.toContain('mode-short')
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Focus' })) })
+    expect(root().className).not.toMatch(/mode-/)
+  })
+
   it('lets the student choose a task, shows it under the clock, and clears it', async () => {
     await act(async () => { page() })
     fireEvent.click(screen.getByRole('button', { name: /What are you working on/ }))
