@@ -15,7 +15,7 @@ const LEVEL = 0.5 // the slider's top is a comfortable level, not the loudest th
 /** How each recording is played: slower is lower in pitch, a low-pass takes the brightness off, and the blend hides the loop point */
 const FILES: Record<Kind, { src: string; rate: number; lowpass: number | null; gain: number; blend: number }> = {
   rain: { src: '/sounds/rain.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
-  sea: { src: '/sounds/sea.ogg', rate: 0.82, lowpass: 1800, gain: 1, blend: 3 },
+  sea: { src: '/sounds/sea.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
   lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.9, blend: 2 },
 }
 

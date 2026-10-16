@@ -114,13 +114,13 @@ describe('the recordings', () => {
     expect(made.loops.find(l => l.loop)!.length).toBeLessThan(8000 * 10)
   })
 
-  it('plays the ocean lower and softer', async () => {
+  it('plays the ocean as it was recorded: its own pitch, nothing taken off it', async () => {
     files['/sounds/sea.ogg'] = true
     startAmbient('sea', 0.6)
     await flush()
-    const loop = made.loops.find(l => l.loop)!
-    expect(loop.rate).toBeLessThan(0.9) // slower, so lower in pitch
-    expect(made.filters.some(f => f.type === 'lowpass' && f.frequency <= 2000)).toBe(true) // and less bright
+    const loop = made.loops.find(l => l.loop && l.length > RECORDING)!
+    expect(loop.rate).toBe(1)
+    expect(made.filters).toEqual([]) // no filter between the recording and the speakers
   })
 
   it('does not ask for the same recording twice', async () => {

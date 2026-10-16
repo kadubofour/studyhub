@@ -11,5 +11,5 @@ If a file is missing or cannot be read, the app makes a soft stand-in sound in t
 
 The three are set to the same loudness. All CC0 (public domain): no credit is needed, but it is given here.
 
-How they are played is set in `lib/focus/ambient.ts`: the ocean is played slower (lower in pitch) and with the brightness taken off.
+How each is played (speed, filter) is set in `lib/focus/ambient.ts`; all three play as recorded.
 Keep each file under about 3 MB: they load when a student first picks the sound.
