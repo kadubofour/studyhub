@@ -11,6 +11,7 @@
 | Part | Behaviour |
 |---|---|
 | Ambient sound | Plays from the app layout, so it carries on when the student leaves the Focus page. The choice and volume are kept on the device. After a reload it resumes at the first tap (a browser will not play sound before one). |
+| Lo-fi | A shuffled playlist (never the same track twice in a row), each track fading into the next over 4 seconds, streamed one at a time so a long session does not hear one song on repeat or hold it all in memory. |
 | Volume slider | Drawn in the accent colour. |
 | Ring on a phone | The ring is up to 86% of the screen width (at most 22rem) and the countdown is larger. Desktop is unchanged. |
 | Shortcuts | Space start or pause, R restart, S skip, F full screen. Ignored while typing or on a control that uses those keys, and with Ctrl, Alt or Cmd held. Nothing on the page lists them. |

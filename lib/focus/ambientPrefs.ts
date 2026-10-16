@@ -1,6 +1,6 @@
 import { localStore, useLocalStore } from '@/lib/ui/localStore'
 
-export const AMBIENT_SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }] as const
+export const AMBIENT_SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'sea', label: 'Ocean' }, { id: 'lofi', label: 'Lo-fi' }] as const
 export type AmbientId = (typeof AMBIENT_SOUNDS)[number]['id']
 
 /** The background sound and how loud: kept on this device, and playing wherever the student is in the app */
