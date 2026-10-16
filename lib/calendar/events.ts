@@ -1,4 +1,5 @@
 import { localDayKey, localTimeHHMM, type DayKey } from '@/lib/dates'
+import { examHasTime } from '@/lib/exams'
 import type { Priority, Task, TaskType } from '@/lib/types'
 
 const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
@@ -30,14 +31,32 @@ export function classLanes(slots: { id: string; start_time: string; end_time: st
   return out
 }
 
-export type DayItem = { kind: 'task' | 'session'; id: string; title: string; type?: TaskType; priority?: Priority; courseId: string | null }
+export type DayItem = { kind: 'task' | 'session'; id: string; title: string; type?: TaskType; priority?: Priority; courseId: string | null; /** An exam with a start time: when it starts */ time?: string }
 
 // What goes in a day's all-day strip: the tasks due that day (exams first, then high priority, then by title), then study sessions
-export function dayItems(day: DayKey, tasks: Task[], sessions: { id: string; title: string; courseId: string | null }[], tz: string): DayItem[] {
+export function dayItems(
+  day: DayKey, tasks: Task[], sessions: { id: string; title: string; courseId: string | null }[], tz: string,
+  opts: { /** The grid draws an exam that has a start time as a block, so it is left out of the all-day row */ timedExamsAreBlocks?: boolean } = {},
+): DayItem[] {
   const rank = (t: Task) => (t.type === 'exam' ? 0 : t.priority === 'high' ? 1 : 2)
+  const timed = (t: Task) => t.type === 'exam' && examHasTime(t.due_at, tz)
   const due = tasks
-    .filter(t => !t.done_at && t.due_at && localDayKey(t.due_at, tz) === day)
+    .filter(t => !t.done_at && t.due_at && localDayKey(t.due_at, tz) === day && !(opts.timedExamsAreBlocks && timed(t)))
     .sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
-    .map(t => ({ kind: 'task' as const, id: t.id, title: t.title, type: t.type, priority: t.priority, courseId: t.course_id }))
+    .map(t => ({ kind: 'task' as const, id: t.id, title: t.title, type: t.type, priority: t.priority, courseId: t.course_id, ...(timed(t) ? { time: localTimeHHMM(new Date(t.due_at!), tz) } : {}) }))
   return [...due, ...sessions.map(s => ({ kind: 'session' as const, id: s.id, title: s.title, courseId: s.courseId }))]
+}
+
+export type ExamBlock = { id: string; title: string; courseId: string | null; start: string; end: string; location: string | null }
+
+/** The exams that start at a time on this day, as blocks for the hours grid: start to end (an hour when no length is known, and never past midnight) */
+export function examBlocks(day: DayKey, tasks: Task[], tz: string): ExamBlock[] {
+  return tasks
+    .filter(t => t.type === 'exam' && !t.done_at && t.due_at && examHasTime(t.due_at, tz) && localDayKey(t.due_at, tz) === day)
+    .map(t => {
+      const start = localTimeHHMM(new Date(t.due_at!), tz)
+      const end = Math.min(toMin(start) + (t.duration_min ?? 60), 24 * 60 - 1)
+      return { id: t.id, title: t.title, courseId: t.course_id, start, end: `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`, location: t.location ?? null }
+    })
+    .sort((a, b) => a.start.localeCompare(b.start))
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classLanes, dayItems, nowFraction } from '@/lib/calendar/events'
+import { classLanes, dayItems, examBlocks, nowFraction } from '@/lib/calendar/events'
 import type { Task } from '@/lib/types'
 
 describe('nowFraction', () => {
@@ -61,5 +61,39 @@ describe('dayItems', () => {
     // 23:30 UTC on the 12th is already the 13th in Paris
     const items = dayItems('2026-10-13', [task('a', 'Late', { due_at: '2026-10-12T23:30:00Z' })], [], 'Europe/Paris')
     expect(items.map(i => i.title)).toEqual(['Late'])
+  })
+})
+
+describe('exams with a time', () => {
+  const tz = 'Africa/Accra'
+  const exam = (id: string, title: string, over: Partial<Task> = {}): Task =>
+    ({ id, course_id: 'bio', title, type: 'exam', due_at: '2026-10-12T14:00:00Z', priority: 'normal', done_at: null, created_at: '', duration_min: 120, location: 'Hall B', ...over })
+
+  it('is a block from its start to its end, with where it is', () => {
+    const blocks = examBlocks('2026-10-12', [exam('e1', 'Midterm')], tz)
+    expect(blocks).toEqual([{ id: 'e1', title: 'Midterm', courseId: 'bio', start: '14:00', end: '16:00', location: 'Hall B' }])
+  })
+  it('without a length it is an hour, and it stops at midnight', () => {
+    expect(examBlocks('2026-10-12', [exam('e1', 'Quiz', { duration_min: null })], tz)[0]).toMatchObject({ start: '14:00', end: '15:00' })
+    expect(examBlocks('2026-10-12', [exam('e1', 'Late', { due_at: '2026-10-12T22:30:00Z', duration_min: 240 })], tz)[0]).toMatchObject({ start: '22:30', end: '23:59' })
+  })
+  it('uses the time zone of the student for the day and the hours', () => {
+    expect(examBlocks('2026-10-12', [exam('e1', 'X', { due_at: '2026-10-12T13:00:00Z' })], 'Africa/Lagos')[0]).toMatchObject({ start: '14:00', end: '16:00' })
+    expect(examBlocks('2026-10-13', [exam('e1', 'X', { due_at: '2026-10-12T23:30:00Z' })], 'Europe/Paris')[0]).toMatchObject({ start: '01:30' })
+  })
+  it('leaves out an exam with no time yet, a finished one, other days and things that are not exams', () => {
+    expect(examBlocks('2026-10-12', [
+      exam('a', 'No time', { due_at: '2026-10-12T23:59:59Z' }), exam('b', 'Done', { done_at: '2026-10-01T00:00:00Z' }),
+      exam('c', 'Another day', { due_at: '2026-10-13T10:00:00Z' }), exam('d', 'Essay', { type: 'assignment' }),
+    ], tz)).toEqual([])
+  })
+  it('stays in the all-day row only when it has no time, if the grid shows its blocks; the month keeps every one', () => {
+    const tasks = [exam('a', 'Timed'), exam('b', 'No time', { due_at: '2026-10-12T23:59:59Z' })]
+    expect(dayItems('2026-10-12', tasks, [], tz).map(i => i.title)).toEqual(['No time', 'Timed'])
+    expect(dayItems('2026-10-12', tasks, [], tz, { timedExamsAreBlocks: true }).map(i => i.title)).toEqual(['No time'])
+  })
+  it('a chip for a timed exam says when it starts', () => {
+    const chip = dayItems('2026-10-12', [exam('a', 'Timed')], [], tz)[0]
+    expect(chip.time).toBe('14:00')
   })
 })

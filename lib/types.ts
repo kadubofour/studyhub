@@ -1,5 +1,6 @@
 export type TaskType = 'assignment' | 'exam' | 'reading' | 'other'
 export type Priority = 'low' | 'normal' | 'high'
+export type ExamKind = 'quiz' | 'test' | 'midterm' | 'final' | 'practical' | 'oral'
 export type ClassKind = 'lecture' | 'lab' | 'tutorial' | 'seminar' | 'other'
 export type EditorMode = 'rich' | 'markdown'
 export type ThemePref = 'light' | 'dark' | 'system'
@@ -35,6 +36,8 @@ export interface Course { id: string; name: string; color: string }
 export interface Task {
   id: string; course_id: string | null; title: string; type: TaskType
   due_at: string | null; priority: Priority; done_at: string | null; created_at: string
+  /** Only exams have these (all optional): see lib/exams.ts */
+  exam_kind?: ExamKind | null; duration_min?: number | null; location?: string | null; covers?: string | null; weight_pct?: number | null
 }
 export interface ClassSlot {
   id: string; course_id: string; day_of_week: number; start_time: string; end_time: string

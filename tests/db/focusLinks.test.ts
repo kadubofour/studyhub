@@ -21,11 +21,18 @@ describe('focus sessions linked to a task and a course', () => {
     const row = (await A.sb.from('focus_sessions').select('task_id,course_id').eq('started_at', at(40).toISOString()).single()).data!
     expect(row).toEqual({ task_id: null, course_id: null })
   })
-  it('cannot be linked to another student\'s task or course', async () => {
+  it('cannot be linked to the task or course of another student: the database refuses the link, and the session is saved without it', async () => {
     const theirCourse = (await B.sb.from('courses').insert({ name: 'Theirs', color: '#1D9E75' }).select('id').single()).data!
     const theirTask = (await B.sb.from('tasks').insert({ title: 'Theirs' }).select('id').single()).data!
-    await expect(logFocusSession(A.sb, { startedAt: at(90), endedAt: at(115), minutes: 25, completed: true, taskId: theirTask.id })).rejects.toBeTruthy()
-    await expect(logFocusSession(A.sb, { startedAt: at(120), endedAt: at(145), minutes: 25, completed: true, courseId: theirCourse.id })).rejects.toBeTruthy()
+    // asked straight, the database says no
+    const direct = await A.sb.from('focus_sessions').insert({ started_at: at(300).toISOString(), ended_at: at(325).toISOString(), minutes: 25, completed: true, task_id: theirTask.id })
+    expect(direct.error).toBeTruthy()
+    const directCourse = await A.sb.from('focus_sessions').insert({ started_at: at(300).toISOString(), ended_at: at(325).toISOString(), minutes: 25, completed: true, course_id: theirCourse.id })
+    expect(directCourse.error).toBeTruthy()
+    // the app still keeps the minutes, with no link to what does not belong to the student
+    await logFocusSession(A.sb, { startedAt: at(90), endedAt: at(115), minutes: 25, completed: true, taskId: theirTask.id, courseId: theirCourse.id })
+    const row = (await A.sb.from('focus_sessions').select('task_id,course_id,minutes').eq('started_at', at(90).toISOString()).single()).data!
+    expect(row).toEqual({ task_id: null, course_id: null, minutes: 25 })
   })
   it('keeps the session when its task or course is deleted, with the link cleared', async () => {
     const course = (await A.sb.from('courses').insert({ name: 'Gone', color: '#1D9E75' }).select('id').single()).data!

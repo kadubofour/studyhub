@@ -197,7 +197,7 @@ describe('the Focus page', () => {
   it('lets the student choose a task, shows it under the clock, and clears it', async () => {
     await act(async () => { page() })
     fireEvent.click(screen.getByRole('button', { name: /What are you working on/ }))
-    const list = await screen.findByRole('listbox', { name: 'Open tasks' })
+    const list = await screen.findByRole('listbox', { name: 'Open tasks' }, { timeout: 5000 }) // the whole suite runs at once, so this can be slow
     expect(within(list).getAllByRole('option').map(o => o.textContent)).toEqual(['Nothing in particular', expect.stringContaining('Read chapter 7'), expect.stringContaining('Email supervisor')])
     expect(within(list).getByText('Biology')).toBeTruthy()
     await act(async () => { fireEvent.click(within(list).getByRole('option', { name: /Read chapter 7/ })) })

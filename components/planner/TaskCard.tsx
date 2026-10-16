@@ -4,6 +4,7 @@ import { CalendarClock, Flag, FileText, GraduationCap, BookOpenText, Trash2 } fr
 import { CourseTag } from '@/components/ui/CourseTag'
 import { BTN_ICON } from '@/components/ui/buttonStyles'
 import { formatDue, localDayKey } from '@/lib/dates'
+import { countdown, examLine } from '@/lib/exams'
 import type { MoveChoice } from '@/lib/tasks/board'
 import type { Course, Task, TaskType } from '@/lib/types'
 
@@ -42,13 +43,20 @@ export function TaskCard({ task, course, tz, now, onToggle, onEdit, onMove, onDe
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
           <CourseTag course={course} />
           {type && <span className="inline-flex items-center gap-1"><type.icon size={12} aria-hidden />{type.label}</span>}
-          {task.due_at && (
+          {task.type === 'exam' ? (
+            <>
+              <span>{examLine(task, tz)}</span>
+              {task.due_at && <span className={overdue ? 'font-medium text-danger' : 'font-medium text-accent'}>{countdown(task.due_at, now, tz, task.duration_min)}</span>}
+              {task.weight_pct != null && <span>{task.weight_pct}% of the grade</span>}
+            </>
+          ) : task.due_at && (
             <span className="inline-flex items-center gap-1">
               {overdue && <span className="font-medium text-danger">Overdue</span>}
               <span>{formatDue(task.due_at, tz, now)}</span>
             </span>
           )}
         </div>
+        {task.type === 'exam' && task.covers && <p className="mt-0.5 line-clamp-2 text-xs text-muted">Covers: {task.covers}</p>}
       </div>
       <div ref={box} className="relative flex shrink-0 items-center gap-0.5 opacity-100 transition lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
         <button type="button" aria-label={`Move ${task.title}`} aria-haspopup="menu" aria-expanded={menu} disabled={saving} onClick={() => setMenu(m => !m)} className={BTN_ICON}><CalendarClock size={16} aria-hidden /></button>

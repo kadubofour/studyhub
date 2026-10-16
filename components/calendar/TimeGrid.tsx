@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useRef } from 'react'
 import { ItemChip } from './ItemChip'
-import { classLanes, nowFraction, type DayItem } from '@/lib/calendar/events'
+import { GraduationCap } from 'lucide-react'
+import { classLanes, nowFraction, type DayItem, type ExamBlock } from '@/lib/calendar/events'
 import { weekdayOfKey, type DayKey } from '@/lib/dates'
 import { gridHours } from '@/lib/timetable'
 import type { ClassSlot, Course } from '@/lib/types'
@@ -20,13 +21,17 @@ export const tint = (color: string, pct: number) => `color-mix(in srgb, ${color}
 // Day and Week, laid out like a phone calendar: weekday and date on top (today in a filled circle), an all-day row, then the hours with
 // thin lines and the classes as soft blocks with a colour bar. The hours stretch to fill the screen, so there is no scrollbar to speak of.
 // `showStrip` and `showNow` are off for the weekly timetable, which has no dates.
-export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay, onClassClick, onSlotClick, onItemClick, showStrip = true, showNow = true }: {
+export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay, examsByDay = {}, onClassClick, onSlotClick, onItemClick, showStrip = true, showNow = true }: {
   keys: DayKey[]; todayKey: DayKey; now: Date; tz: string; classes: ClassSlot[]; courses: Course[]
   itemsByDay: Record<DayKey, DayItem[]>
+  /** Exams with a start time, drawn as blocks in the hours */
+  examsByDay?: Record<DayKey, ExamBlock[]>
   onClassClick: (c: ClassSlot) => void; onSlotClick: (key: DayKey, hour: number) => void; onItemClick: (i: DayItem) => void
   showStrip?: boolean; showNow?: boolean
 }) {
-  const { start: START_H, end: END_H } = gridHours(classes)
+  // the hours shown stretch to take in an exam that starts early or ends late
+  const examSlots = keys.flatMap(k => (examsByDay[k] ?? []).map(b => ({ start_time: b.start, end_time: b.end })))
+  const { start: START_H, end: END_H } = gridHours([...classes, ...examSlots])
   const hours = Array.from({ length: END_H - START_H }, (_, i) => START_H + i)
   const totalMin = (END_H - START_H) * 60
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
@@ -92,6 +97,19 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
                       style={{ top: `${top}%`, height: `${h}%`, minHeight: 18, left: `calc(${(lane / count) * 100}% + 2px)`, width: `calc(${100 / count}% - 4px)`, borderLeftColor: color, background: tint(color, 20) }}>
                       <span className="block font-semibold">{course?.name ?? 'Class'}</span>
                       <span className="block">{c.start_time.slice(0, 5)}–{c.end_time.slice(0, 5)}{c.location ? ` · ${c.location}` : ''}</span>
+                    </button>
+                  )
+                })}
+                {(examsByDay[k] ?? []).map(b => {
+                  const top = ((toMin(b.start) - START_H * 60) / totalMin) * 100
+                  const h = ((toMin(b.end) - toMin(b.start)) / totalMin) * 100
+                  const color = courseOf(b.courseId)?.color ?? '#888780'
+                  return (
+                    <button key={b.id} type="button" data-exam="true" onClick={() => onItemClick({ kind: 'task', id: b.id, title: b.title, type: 'exam', courseId: b.courseId })}
+                      className="absolute z-[4] overflow-hidden rounded-md border-l-[4px] px-1.5 py-1 text-left text-[11px] leading-tight text-fg shadow-sm"
+                      style={{ top: `${top}%`, height: `${h}%`, minHeight: 22, left: 2, right: 2, borderLeftColor: color, background: tint(color, 34), outline: `1px solid ${tint(color, 55)}` }}>
+                      <span className="flex items-center gap-1 font-semibold"><GraduationCap size={11} className="shrink-0" aria-hidden /><span className="truncate">{b.title}</span></span>
+                      <span className="block">{b.start}–{b.end}{b.location ? ` · ${b.location}` : ''}</span>
                     </button>
                   )
                 })}

@@ -8,7 +8,7 @@ import { ClassDialog } from '@/components/planner/ClassDialog'
 import { TaskDialog } from '@/components/planner/TaskDialog'
 import { KIND_LABEL } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
-import { dayItems, type DayItem } from '@/lib/calendar/events'
+import { dayItems, examBlocks, type DayItem, type ExamBlock } from '@/lib/calendar/events'
 import { rangeTitle, shiftAnchor, visibleKeys, type CalView } from '@/lib/calendar/range'
 import { endOfLocalDay, localDayKey, weekdayOfKey, type DayKey } from '@/lib/dates'
 import type { NewTask } from '@/lib/data/tasks'
@@ -55,10 +55,14 @@ export function CalendarView({ classes, courses, tasks, tz, empty, courseId = nu
     }
     return out
   }, [plans.views, todayKey, courseId])
-  const itemsByDay = useMemo(() => {
-    const out: Record<DayKey, DayItem[]> = {}
-    for (const k of keys) out[k] = dayItems(k, tasks, sessionsByDay[k] ?? [], tz)
-    return out
+  // Day and Week draw an exam with a start time as a block in the hours; the month shows every exam as a chip
+  const { itemsByDay, examsByDay } = useMemo(() => {
+    const items: Record<DayKey, DayItem[]> = {}, exams: Record<DayKey, ExamBlock[]> = {}
+    for (const k of keys) {
+      items[k] = dayItems(k, tasks, sessionsByDay[k] ?? [], tz, { timedExamsAreBlocks: view !== 'month' })
+      if (view !== 'month') exams[k] = examBlocks(k, tasks, tz)
+    }
+    return { itemsByDay: items, examsByDay: exams }
     // keys is rebuilt each render from view and anchor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, anchor, tasks, sessionsByDay, tz])
@@ -97,7 +101,7 @@ export function CalendarView({ classes, courses, tasks, tz, empty, courseId = nu
       {view === 'month'
         ? <MonthGrid keys={keys} anchor={anchor} todayKey={todayKey} classes={classes} courses={courses} itemsByDay={itemsByDay}
             onDayClick={k => { setAnchor(k); setView('day') }} onItemClick={openItem} onClassClick={openClass} />
-        : <TimeGrid keys={keys} todayKey={todayKey} now={now} tz={tz} classes={classes} courses={courses} itemsByDay={itemsByDay}
+        : <TimeGrid keys={keys} todayKey={todayKey} now={now} tz={tz} classes={classes} courses={courses} itemsByDay={itemsByDay} examsByDay={examsByDay}
             onClassClick={openClass} onItemClick={openItem}
             onSlotClick={(k, h) => {
               if (courses.length === 0) { setNotice('Add a course first, then add its classes.'); return }

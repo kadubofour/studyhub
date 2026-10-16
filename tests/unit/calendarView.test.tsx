@@ -65,9 +65,11 @@ describe('CalendarView', () => {
       const h = setup()
       fireEvent.click(screen.getByRole('button', { name: 'Add exam' }))
       expect(screen.getByRole('heading', { name: 'Add exam' })).toBeTruthy()
+      fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Course' })).getAllByRole('radio')[0])
       fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Finals' } })
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-      expect(h.onAddTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Finals', type: 'exam', due_at: '2026-10-12T23:59:59.000Z' }))
+      // the day the calendar was on, at the usual nine in the morning
+      expect(h.onAddTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Finals', type: 'exam', due_at: '2026-10-12T09:00:00.000Z' }))
     })
     it('Add task opens a plain task dialog', () => {
       setup()
@@ -160,6 +162,7 @@ describe('CalendarView', () => {
       expect(screen.getByRole('button', { name: 'Add a class' })).toBeTruthy()
       fireEvent.click(screen.getByRole('button', { name: 'Add an exam' }))
       expect(screen.getByRole('heading', { name: 'Add exam' })).toBeTruthy()
+      fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Course' })).getAllByRole('radio')[0])
       fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Midterm' } })
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       expect(h.onAddTask).toHaveBeenCalledWith(expect.objectContaining({ type: 'exam' }))

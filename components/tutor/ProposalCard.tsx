@@ -71,7 +71,7 @@ export function ProposalCard({ proposal, onAdd, onDiscard }: { proposal: Proposa
       <>
         <p className="section-label">Task · {d.args.type}</p>
         <input className="input w-full" aria-label="Task title" maxLength={300} value={d.args.title} onChange={e => setDraft({ ...d, args: { ...d.args, title: e.target.value } })} />
-        <p className="text-xs text-muted">{d.args.due_at ? `Due ${new Date(d.args.due_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No due date'}</p>
+        <p className="text-xs text-muted">{d.args.due_at ? `Due ${new Date(/^\d{4}-\d{2}-\d{2}$/.test(d.args.due_at) ? `${d.args.due_at}T12:00:00` : d.args.due_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No due date'}</p>
       </>
     )
   }

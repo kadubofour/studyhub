@@ -14,6 +14,7 @@ test('Week: add an exam, see it in the week and the month, and it is still there
   await openCalendar(page)
   await expect(page.getByText('Nothing planned yet')).toBeVisible()
   await page.getByRole('button', { name: 'Add an exam' }).click()
+  await page.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click() // an exam is for a course; the day is the one the calendar was on
   await page.getByLabel('Title').fill('Finals')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page.getByText('Nothing planned yet')).toHaveCount(0)
