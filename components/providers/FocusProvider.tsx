@@ -5,7 +5,8 @@ import { useToast } from './ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listSessionsSince, logFocusSession } from '@/lib/data/focus'
 import { setTaskDone } from '@/lib/data/tasks'
-import { focusPrefs } from '@/lib/focus/prefs'
+import { focusPrefs, useFocusPrefs } from '@/lib/focus/prefs'
+import { useWakeLock } from '@/lib/focus/wakeLock'
 import { setFocusTask, useFocusTask, type FocusTask } from '@/lib/focus/task'
 import { chime, notify, primeAudio, vibrate } from '@/lib/focus/alert'
 import { dailyMinutes } from '@/lib/streak'
@@ -159,6 +160,8 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
   }, [timer, log, setTimer, profile])
 
   const running = timer.startedAt !== null
+  const keepAwake = useFocusPrefs().keepAwake
+  useWakeLock(running && keepAwake) // the screen stays on while a session counts down
   const remaining = remainingMs(timer, now)
   // After a reload nothing has been tapped, and a page cannot make sound until something is: the first tap anywhere unlocks the chime
   useEffect(() => {

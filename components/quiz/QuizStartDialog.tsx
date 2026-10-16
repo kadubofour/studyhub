@@ -146,7 +146,10 @@ function Body({ onClose }: { onClose: () => void }) {
 
       {past.length > 0 && (
         <div>
-          <p className="mb-1.5 text-sm font-medium">Your quizzes</p>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">Your quizzes</p>
+            <Link href="/quiz" onClick={onClose} className="text-sm font-medium text-accent">All quizzes and scores</Link>
+          </div>
           <ul className="divide-y divide-line rounded-xl border border-line bg-raised text-sm">
             {past.map(({ quiz, best, attempts }) => (
               <li key={quiz.id} className="flex items-center justify-between gap-3 px-3 py-2.5">

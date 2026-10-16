@@ -53,13 +53,12 @@ test('start a quiz from Home, answer with the keyboard, review the results and r
   await expect(page.getByText('Krebs cycle quiz · missed')).toBeVisible()
 })
 
-test('the Quiz dialog opens from the sidebar, Flashcards and Library too', async ({ page, isMobile }) => {
+test('the Quiz dialog opens from the Quiz page, Flashcards and Library too', async ({ page }) => {
   await signUp(page)
-  if (!isMobile) {
-    await page.getByRole('navigation').first().getByRole('button', { name: 'Quiz' }).click()
-    await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()
-    await page.keyboard.press('Escape')
-  }
+  await page.goto('/quiz')
+  await page.getByRole('button', { name: 'Make your first quiz' }).click()
+  await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()
+  await page.keyboard.press('Escape')
   await page.goto('/flashcards')
   await page.getByRole('main').getByRole('button', { name: 'Quiz' }).click()
   await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()

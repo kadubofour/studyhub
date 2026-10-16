@@ -26,6 +26,7 @@ export function FocusAlerts() {
   const rows = [
     { id: 'alert-sound', label: 'Sound and vibration', hint: 'A short chime when time is up', checked: prefs.sound, onChange: (v: boolean) => { setFocusPrefs({ sound: v }); if (v) chime(0.25) } },
     { id: 'alert-notify', label: 'Notification', hint: blocked ? 'Blocked in this browser' : 'Tells you when you are on another tab or app', checked: prefs.notify, onChange: (v: boolean) => void setNotify(v) },
+    { id: 'alert-awake', label: 'Keep the screen on during a session', hint: 'So the phone does not go to sleep while you focus', checked: prefs.keepAwake, onChange: (v: boolean) => setFocusPrefs({ keepAwake: v }) },
     { id: 'alert-auto', label: 'Start the next one automatically', hint: 'A finished session rolls into its break, and a break into the next session', checked: prefs.autoStart, onChange: (v: boolean) => setFocusPrefs({ autoStart: v }) },
   ]
 

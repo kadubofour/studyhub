@@ -63,10 +63,10 @@ describe('localStore', () => {
 })
 
 describe('the focus preferences', () => {
-  it('start with sound on, notifications off and no automatic start, and ignore junk in storage', () => {
-    expect(focusPrefs.get()).toEqual({ sound: true, notify: false, autoStart: false })
+  it('start with sound on, notifications off, no automatic start and the screen kept on, and ignore junk in storage', () => {
+    expect(focusPrefs.get()).toEqual({ sound: true, notify: false, autoStart: false, keepAwake: true })
     window.localStorage.setItem('studyhub.focus.prefs', JSON.stringify({ sound: 'yes', notify: true, extra: 1 }))
-    expect(focusPrefs.get()).toEqual({ sound: true, notify: true, autoStart: false })
+    expect(focusPrefs.get()).toEqual({ sound: true, notify: true, autoStart: false, keepAwake: true })
   })
 })
 

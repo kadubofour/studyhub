@@ -31,6 +31,7 @@ export default function SettingsPage() {
   async function signOut() {
     // A shared device must not hand this student's running focus session to the next person
     clearTimer(window.localStorage, profile.id)
+    window.localStorage.removeItem('studyhub.focus.ambient')
     await supabase().auth.signOut()
     router.replace('/login')
     router.refresh()
