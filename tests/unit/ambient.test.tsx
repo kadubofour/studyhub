@@ -142,6 +142,22 @@ describe('the recordings', () => {
   })
 })
 
+describe('when the code is loaded again while a sound plays (as when it is edited in development)', () => {
+  it('the new copy stops the sound the old copy started, instead of playing over it', async () => {
+    startAmbient('sea', 0.6)
+    await flush()
+    const before = made.stopped
+    vi.resetModules()
+    const again = await import('@/lib/focus/ambient') // a second copy of the module, with its own variables
+    again.startAmbient('rain', 0.6)
+    await flush()
+    vi.advanceTimersByTime(600)
+    expect(made.stopped).toBeGreaterThan(before) // the first sound was stopped, not left running underneath
+    expect(again.ambientPlaying()).toBe('rain')
+    again.stopAmbient()
+  })
+})
+
 describe('how loud', () => {
   it('a recording plays at its own level when the slider is full: nothing takes it down, so it sounds as it did when downloaded', async () => {
     files['/sounds/sea.ogg'] = true

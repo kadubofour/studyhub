@@ -7,8 +7,10 @@ import type { AmbientId } from './ambientPrefs'
 type Kind = Exclude<AmbientId, 'off'>
 type Stops = (() => void)[]
 interface Playing { kind: Kind; master: GainNode; stop: () => void }
-let playing: Playing | null = null
-let token = 0 // each start takes the next number; a recording that arrives for an older one is dropped
+// What is playing is kept on the page itself, not in this module: if the module is loaded again (when it is edited in development), the new copy
+// must still be able to stop what the old copy started, or the two would play over each other
+interface Shared { playing: Playing | null; token: number } // each start takes the next token; a recording that arrives for an older one is dropped
+const shared = ((globalThis as unknown as { __studyhubAmbient?: Shared }).__studyhubAmbient ??= { playing: null, token: 0 })
 
 const STAND_IN = 0.5 // the made sounds are noise and tones at full scale, so they sit lower than a recording
 
@@ -157,13 +159,13 @@ export function startAmbient(kind: Kind, volume: number): boolean {
   try {
     const ctx = audioContext()
     if (!ctx) return false
-    const mine = ++token
+    const mine = ++shared.token
     const master = ctx.createGain()
     master.gain.value = 0
     master.gain.setTargetAtTime(volume, ctx.currentTime, 0.4) // fades in
     master.connect(ctx.destination)
     const stops: Stops = []
-    playing = {
+    shared.playing = {
       kind, master,
       stop: () => {
         master.gain.setTargetAtTime(0, ctx.currentTime, 0.1)
@@ -171,7 +173,7 @@ export function startAmbient(kind: Kind, volume: number): boolean {
       },
     }
     void recording(ctx, kind).then(buf => {
-      if (mine !== token) return // stopped, or another sound picked, while it loaded
+      if (mine !== shared.token) return // stopped, or another sound picked, while it loaded
       try { if (buf) playRecording(ctx, kind, buf, master, stops); else MAKERS[kind](ctx, standIn(ctx, master), stops) } catch { /* no sound this time */ }
     })
     return true
@@ -179,14 +181,14 @@ export function startAmbient(kind: Kind, volume: number): boolean {
 }
 
 export function setAmbientVolume(volume: number) {
-  if (!playing) return
-  playing.master.gain.setTargetAtTime(volume, playing.master.context.currentTime, 0.05)
+  const p = shared.playing
+  if (p) p.master.gain.setTargetAtTime(volume, p.master.context.currentTime, 0.05)
 }
 
 export function stopAmbient() {
-  token++
-  playing?.stop()
-  playing = null
+  shared.token++
+  shared.playing?.stop()
+  shared.playing = null
 }
 
-export const ambientPlaying = (): Kind | null => playing?.kind ?? null
+export const ambientPlaying = (): Kind | null => shared.playing?.kind ?? null
