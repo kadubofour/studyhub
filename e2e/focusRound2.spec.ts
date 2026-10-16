@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 import { signUp } from './helpers'
 
 test('keyboard shortcuts and full screen on the Focus page', async ({ page, isMobile }) => {
@@ -50,4 +51,33 @@ test('the running ring fills a phone screen, and nothing runs off the side', asy
   const width = page.viewportSize()!.width
   expect(ring!.width).toBeGreaterThan(width * 0.8)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('the length can be set to the second, and each kind of session has its own colour without losing contrast', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/focus')
+  await page.waitForLoadState('networkidle')
+  const secs = page.getByRole('spinbutton', { name: 'Seconds' })
+  await expect(secs).toHaveAttribute('aria-valuenow', '0')
+  await secs.focus()
+  await page.keyboard.press('PageDown'); await page.keyboard.press('PageDown') // ten seconds
+  await expect(page.getByRole('button', { name: 'Back to 25 min' })).toBeVisible()
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.getByText(/^25:0[0-9]$|^25:10$|^25:09$/).first()).toBeVisible() // 25:10 counting down
+
+  // Each kind of session is its own colour: read what the button's colour actually is, and check the page for contrast problems
+  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  const button = page.getByRole('main').getByRole('button', { name: /Resume|Start/ }).first()
+  const colourOf = () => button.evaluate(b => getComputedStyle(b).backgroundColor)
+  const focus = await colourOf()
+  await page.getByRole('tab', { name: 'Short break' }).click()
+  const short = await colourOf()
+  await page.getByRole('tab', { name: 'Long break' }).click()
+  const long = await colourOf()
+  expect(new Set([focus, short, long]).size).toBe(3)
+  for (const tab of ['Short break', 'Long break', 'Focus']) {
+    await page.getByRole('tab', { name: tab }).click()
+    const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+    expect(axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical'), tab).toEqual([])
+  }
 })

@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { MAX_MINUTES, MIN_MINUTES } from '@/lib/timer'
+import { MAX_SECONDS, MIN_SECONDS } from '@/lib/timer'
 
 const ROW = 44 // px per number
 const ROWS = 5 // numbers in view: the one chosen, and two either side
-const clamp = (m: number) => Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(m)))
+const clamp = (n: number) => Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, Math.round(n)))
 
 // One drum: numbers that scroll and snap, the one in the middle band is the choice. A spinbutton for keyboards and screen readers.
 function Drum({ label, unit, value, min, max, step, onChange }: { label: string; unit: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
@@ -37,7 +37,7 @@ function Drum({ label, unit, value, min, max, step, onChange }: { label: string;
   }
 
   return (
-    <div className="relative w-28">
+    <div className="relative w-[5.5rem]">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-xl bg-surface" style={{ height: ROW }} />
       <div ref={box} role="spinbutton" tabIndex={0} aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={`${value} ${unit}`}
         onScroll={onScroll} onKeyDown={onKeyDown} style={{ height: ROW * ROWS }}
@@ -45,7 +45,7 @@ function Drum({ label, unit, value, min, max, step, onChange }: { label: string;
         <div style={{ height: ROW * 2 }} aria-hidden />
         {numbers.map(n => (
           <div key={n} aria-hidden onClick={() => box.current?.scrollTo({ top: (n - min) * ROW, behavior: 'smooth' })}
-            style={{ height: ROW }} className={`flex cursor-pointer snap-center items-center justify-center pr-7 font-mono text-3xl tabular-nums ${n === value ? 'font-semibold text-fg' : 'text-muted'}`}>
+            style={{ height: ROW }} className={`flex cursor-pointer snap-center items-center justify-center pr-6 font-mono text-3xl tabular-nums ${n === value ? 'font-semibold text-fg' : 'text-muted'}`}>
             {String(n).padStart(2, '0')}
           </div>
         ))}
@@ -56,14 +56,16 @@ function Drum({ label, unit, value, min, max, step, onChange }: { label: string;
   )
 }
 
-// How long the session about to start is, set like the timer on a phone: hours and minutes on two drums.
-export function LengthWheel({ minutes, onChange }: { minutes: number; onChange: (minutes: number) => void }) {
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
+// How long the session about to start is, set like the timer on a phone: hours, minutes and seconds on three drums. The length is in seconds.
+export function LengthWheel({ seconds, onChange }: { seconds: number; onChange: (seconds: number) => void }) {
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
   return (
     <div role="group" aria-label="Session length" className="flex items-center justify-center gap-1">
-      <Drum label="Hours" unit="hr" value={hours} min={0} max={Math.floor(MAX_MINUTES / 60)} step={1} onChange={h => onChange(clamp(h * 60 + rest))} />
-      <Drum label="Minutes" unit="min" value={rest} min={0} max={59} step={5} onChange={m => onChange(clamp(hours * 60 + m))} />
+      <Drum label="Hours" unit="hr" value={hours} min={0} max={Math.floor(MAX_SECONDS / 3600)} step={1} onChange={h => onChange(clamp(h * 3600 + mins * 60 + secs))} />
+      <Drum label="Minutes" unit="min" value={mins} min={0} max={59} step={5} onChange={m => onChange(clamp(hours * 3600 + m * 60 + secs))} />
+      <Drum label="Seconds" unit="sec" value={secs} min={0} max={59} step={5} onChange={x => onChange(clamp(hours * 3600 + mins * 60 + x))} />
     </div>
   )
 }

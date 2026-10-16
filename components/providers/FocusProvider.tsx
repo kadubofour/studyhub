@@ -12,7 +12,7 @@ import { chime, notify, primeAudio, vibrate } from '@/lib/focus/alert'
 import { dailyMinutes } from '@/lib/streak'
 import { localDayKey, startOfLocalDay } from '@/lib/dates'
 import {
-  createTimer, durationFor, MAX_MINUTES, MIN_MINUTES, elapsedMs, isFinished, markLogged, nextMode, pauseTimer, remainingMs, restartTimer,
+  createTimer, durationFor, MAX_SECONDS, MIN_SECONDS, elapsedMs, isFinished, markLogged, nextMode, pauseTimer, remainingMs, restartTimer,
   shouldLogSession, startTimer, type Mode, type TimerState,
 } from '@/lib/timer'
 import { usePersistedTimer } from '@/lib/ui/usePersistedTimer'
@@ -27,8 +27,8 @@ interface FocusCtx {
   todayMinutes: number
   toggle: () => void
   restart: () => void
-  /** Change the length of the session about to start (only before any of it has gone) */
-  setDuration: (minutes: number) => void
+  /** Change the length of the session about to start, in seconds (only before any of it has gone) */
+  setDuration: (seconds: number) => void
   /** What the student is working on, if they said */
   task: FocusTask | null
   skip: () => void
@@ -147,9 +147,9 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     setTimer(restartTimer(timer, t))
   }, [timer, log, setTimer])
 
-  const setDuration = useCallback((minutes: number) => {
+  const setDuration = useCallback((seconds: number) => {
     if (timer.startedAt !== null || elapsedMs(timer, Date.now()) > 0) return // not once it has begun
-    setTimer(createTimer(timer.mode, Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(minutes))) * 60_000))
+    setTimer(createTimer(timer.mode, Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, Math.round(seconds))) * 1000))
   }, [timer, setTimer])
 
   const pickMode = useCallback((mode: Mode) => {

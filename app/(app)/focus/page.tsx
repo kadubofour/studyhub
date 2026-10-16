@@ -10,6 +10,7 @@ import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
 import { FocusFullscreen } from '@/components/focus/FocusFullscreen'
 import { AMBIENT_SOUNDS, setAmbientPrefs, useAmbientPrefs } from '@/lib/focus/ambientPrefs'
 import { focusShortcut } from '@/lib/focus/shortcuts'
+import { modeClass } from '@/lib/focus/modeColors'
 
 export default function FocusPage() {
   const { profile } = useProfile()
@@ -39,17 +40,18 @@ export default function FocusPage() {
   const R = 88, C = 2 * Math.PI * R
   const running = timer.startedAt !== null
   const goal = profile.daily_goal_minutes
-  const minutes = Math.round(timer.durationMs / 60_000)
-  const usual = Math.round(durationFor(timer.mode, profile) / 60_000) // what the student set in Settings: where every session starts
+  const seconds = Math.round(timer.durationMs / 1000)
+  const usual = Math.round(durationFor(timer.mode, profile) / 1000) // what the student set in Settings: where every session starts
+  const usualWords = usual % 60 === 0 ? `${usual / 60} min` : `${Math.floor(usual / 60)}:${String(usual % 60).padStart(2, '0')}`
   const begun = running || elapsedMs(timer, now) > 0
   const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 
   return (
-    <div className="mx-auto max-w-md text-center">
+    <div className={`mx-auto max-w-md text-center ${modeClass(timer.mode)}`}>
       <div role="tablist" className="flex justify-center gap-1">
         {(['focus', 'short', 'long'] as Mode[]).map(m => (
           <button key={m} role="tab" aria-selected={timer.mode === m} onClick={() => pickMode(m)}
-            className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
+            className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-accent-soft font-medium text-accent' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
       </div>
       {timer.mode === 'focus' && (
@@ -77,20 +79,20 @@ export default function FocusPage() {
             </div>
           </>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center"><LengthWheel minutes={minutes} onChange={setDuration} /></div>
+          <div className="absolute inset-0 flex items-center justify-center"><LengthWheel seconds={seconds} onChange={setDuration} /></div>
         )}
       </div>
-      {!begun && minutes !== usual && (
-        <button type="button" onClick={() => setDuration(usual)} className="mb-4 rounded-lg px-2 py-1 text-xs text-muted underline-offset-2 hover:text-fg hover:underline">Back to {usual} min</button>
+      {!begun && seconds !== usual && (
+        <button type="button" onClick={() => setDuration(usual)} className="mb-4 rounded-lg px-2 py-1 text-xs text-muted underline-offset-2 hover:text-fg hover:underline">Back to {usualWords}</button>
       )}
       {timer.mode === 'focus' && <div className="mb-5"><FocusTaskPicker /></div>}
-      <div className="flex flex-wrap justify-center gap-2 px-3">
-        <button className="btn-primary min-w-24 sm:min-w-28" onClick={toggle}>
+      <div className="flex flex-wrap justify-center gap-1.5 px-1 sm:gap-2 sm:px-3">
+        <button className="btn-primary min-w-24 max-sm:!px-3 sm:min-w-28" onClick={toggle}>
           {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
         </button>
-        <button className="btn" onClick={restart} disabled={!canRestart(timer, now)} title="Start this session over"><RotateCcw size={14} aria-hidden />Restart</button>
-        <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
-        <button className="btn !px-3" onClick={() => setFull(true)} aria-label="Full screen" title="Full screen (F)"><Maximize2 size={14} aria-hidden /></button>
+        <button className="btn max-sm:!px-2.5" onClick={restart} disabled={!canRestart(timer, now)} title="Start this session over"><RotateCcw size={14} aria-hidden />Restart</button>
+        <button className="btn max-sm:!px-2.5" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
+        <button className="btn !px-2.5" onClick={() => setFull(true)} aria-label="Full screen" title="Full screen (F)"><Maximize2 size={14} aria-hidden /></button>
       </div>
 
       <p className="mt-6 text-center text-xs text-muted">Chime, notification and auto-start are in <Link href="/settings?section=reminders" className="underline underline-offset-2 hover:text-fg">Settings</Link>.</p>

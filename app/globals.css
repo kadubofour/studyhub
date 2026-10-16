@@ -269,3 +269,9 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 .chill-breathe { animation: chill-breathe 9s ease-in-out infinite; }
 .chill-speck { position: absolute; bottom: -2vh; border-radius: 9999px; background: var(--accent-solid); animation: chill-rise linear infinite; will-change: transform; }
 @media (prefers-reduced-motion: reduce) { .chill-a, .chill-b, .chill-c, .chill-breathe, .chill-speck { animation: none; } .chill-speck { display: none; } }
+
+/* The Focus page's breaks have their own colour, so a glance says which kind of session it is (values from lib/focus/modeColors.ts); a focus session keeps the student's accent */
+.mode-short { --accent-solid: #0b8574; --accent-glow: #34c9ae; --accent: #0a6e60; --accent-soft: #e1f5f0; }
+.dark .mode-short { --accent: #5fe0c8; --accent-soft: #10332d; }
+.mode-long { --accent-solid: #b45f06; --accent-glow: #f2a33b; --accent: #8f4a00; --accent-soft: #fdefd9; }
+.dark .mode-long { --accent: #ffb454; --accent-soft: #3a2810; }
