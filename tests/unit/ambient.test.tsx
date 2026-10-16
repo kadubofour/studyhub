@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, cleanup, act } from '@testing-library/react'
 
 // A stand-in for the browser's audio: it records what was made and started, so the sounds can be checked without speakers
-const made = { sources: 0, started: 0, stopped: 0, oscillators: 0, disconnected: 0, loops: [] as { loop: boolean; rate: number; length: number }[], filters: [] as { type: string; frequency: number }[] }
+const made = { sources: 0, started: 0, stopped: 0, oscillators: 0, disconnected: 0, loops: [] as { loop: boolean; rate: number; length: number }[], gains: [] as { value: number; setTargetAtTime: ReturnType<typeof vi.fn> }[], filters: [] as { type: string; frequency: number }[] }
 const param = (v = 0) => ({ value: v, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() })
 function node(extra: Record<string, unknown> = {}) {
   const n: Record<string, unknown> = { context: { currentTime: 0 }, connect: (to: unknown) => to, disconnect: () => { made.disconnected++ }, ...extra }
@@ -24,7 +24,7 @@ const fakeCtx = () => ({
     return s
   },
   createBiquadFilter: () => { const f = node({ type: '', frequency: param(), Q: param() }); made.filters.push({ get type() { return f.type as string }, get frequency() { return (f.frequency as { value: number }).value } }); return f },
-  createGain: () => node({ gain: param() }),
+  createGain: () => { const g = param(1); made.gains.push(g); return node({ gain: g }) },
   createOscillator: () => { made.oscillators++; return node({ type: '', frequency: param(), detune: param(), start: () => { made.started++ }, stop: () => { made.stopped++ } }) },
 })
 let ctx: ReturnType<typeof fakeCtx> | null = null
@@ -43,7 +43,7 @@ const RECORDING = 40_000 // longer than the short noise the made sounds loop, sh
 const flush = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(0) }) }
 
 beforeEach(() => {
-  Object.assign(made, { sources: 0, started: 0, stopped: 0, oscillators: 0, disconnected: 0, loops: [], filters: [] })
+  Object.assign(made, { sources: 0, started: 0, stopped: 0, oscillators: 0, disconnected: 0, loops: [], filters: [], gains: [] })
   ctx = fakeCtx(); primeAudio.mockClear(); window.localStorage.clear(); ambientPrefs.set(DEFAULT_AMBIENT)
   files = {}; fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock); resetAmbientCache()
   vi.useFakeTimers()
@@ -139,6 +139,25 @@ describe('the recordings', () => {
     startAmbient('rain', 0.6); await flush()
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(made.loops.some(l => l.loop && l.length > RECORDING)).toBe(true)
+  })
+})
+
+describe('how loud', () => {
+  it('a recording plays at its own level when the slider is full: nothing takes it down, so it sounds as it did when downloaded', async () => {
+    files['/sounds/sea.ogg'] = true
+    startAmbient('sea', 1)
+    await flush()
+    const [master, level] = made.gains // the master level, then the recording's own level
+    expect(master.setTargetAtTime.mock.calls[0][0]).toBe(1)
+    expect(level.value).toBe(1)
+  })
+  it('the slider scales it, and the made stand-ins are kept quieter than a recording so they are not a shock', async () => {
+    startAmbient('rain', 0.5)
+    await flush()
+    expect(made.gains[0].setTargetAtTime.mock.calls[0][0]).toBe(0.5)
+    expect(made.gains[1].value).toBe(0.5) // the stand-in's own level, ahead of its layers
+    setAmbientVolume(0.25)
+    expect(made.gains[0].setTargetAtTime.mock.calls.at(-1)![0]).toBe(0.25)
   })
 })
 

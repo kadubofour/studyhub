@@ -10,13 +10,13 @@ interface Playing { kind: Kind; master: GainNode; stop: () => void }
 let playing: Playing | null = null
 let token = 0 // each start takes the next number; a recording that arrives for an older one is dropped
 
-const LEVEL = 0.5 // the slider's top is a comfortable level, not the loudest the speakers can do
+const STAND_IN = 0.5 // the made sounds are noise and tones at full scale, so they sit lower than a recording
 
 /** How each recording is played: slower is lower in pitch, a low-pass takes the brightness off, and the blend hides the loop point */
 const FILES: Record<Kind, { src: string; rate: number; lowpass: number | null; gain: number; blend: number }> = {
-  rain: { src: '/sounds/rain.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
+  rain: { src: '/sounds/rain.ogg', rate: 1, lowpass: null, gain: 0.8, blend: 3 }, // steady hiss sounds louder than waves at the same level
   sea: { src: '/sounds/sea.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
-  lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.7, blend: 2 }, // music is heard louder than waves at the same level, so it sits a little lower
+  lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.5, blend: 2 }, // music is heard louder than waves at the same level, so it sits lower
 }
 
 /**
@@ -136,6 +136,12 @@ function lofi(ctx: AudioContext, out: AudioNode, stops: Stops) {
 
 const MAKERS: Record<Kind, (ctx: AudioContext, out: AudioNode, stops: Stops) => void> = { rain, sea, lofi }
 
+function standIn(ctx: AudioContext, out: AudioNode): GainNode {
+  const g = gainOf(ctx, STAND_IN)
+  g.connect(out)
+  return g
+}
+
 function playRecording(ctx: AudioContext, kind: Kind, buf: AudioBuffer, out: AudioNode, stops: Stops) {
   const f = FILES[kind]
   const src = ctx.createBufferSource()
@@ -154,7 +160,7 @@ export function startAmbient(kind: Kind, volume: number): boolean {
     const mine = ++token
     const master = ctx.createGain()
     master.gain.value = 0
-    master.gain.setTargetAtTime(volume * LEVEL, ctx.currentTime, 0.4) // fades in
+    master.gain.setTargetAtTime(volume, ctx.currentTime, 0.4) // fades in
     master.connect(ctx.destination)
     const stops: Stops = []
     playing = {
@@ -166,7 +172,7 @@ export function startAmbient(kind: Kind, volume: number): boolean {
     }
     void recording(ctx, kind).then(buf => {
       if (mine !== token) return // stopped, or another sound picked, while it loaded
-      try { if (buf) playRecording(ctx, kind, buf, master, stops); else MAKERS[kind](ctx, master, stops) } catch { /* no sound this time */ }
+      try { if (buf) playRecording(ctx, kind, buf, master, stops); else MAKERS[kind](ctx, standIn(ctx, master), stops) } catch { /* no sound this time */ }
     })
     return true
   } catch { return false }
@@ -174,7 +180,7 @@ export function startAmbient(kind: Kind, volume: number): boolean {
 
 export function setAmbientVolume(volume: number) {
   if (!playing) return
-  playing.master.gain.setTargetAtTime(volume * LEVEL, playing.master.context.currentTime, 0.05)
+  playing.master.gain.setTargetAtTime(volume, playing.master.context.currentTime, 0.05)
 }
 
 export function stopAmbient() {
