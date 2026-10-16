@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { MODE_COLORS, modeClass } from '@/lib/focus/modeColors'
+import { ACCENTS } from '@/lib/appearance'
 
 const css = readFileSync('app/globals.css', 'utf8')
 const channel = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
@@ -14,6 +15,36 @@ describe('modeClass', () => {
     expect(modeClass('focus')).toBe('')
     expect(modeClass('short')).toBe('mode-short')
     expect(modeClass('long')).toBe('mode-long')
+  })
+})
+
+const hue = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255
+  const max = Math.max(r, g, b), d = max - Math.min(r, g, b)
+  if (d === 0) return 0
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return (h * 60 + 360) % 360
+}
+const apart = (a: number, b: number) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d) }
+
+describe('the break colours are not colours a student can pick as their accent', () => {
+  for (const [mode, c] of Object.entries(MODE_COLORS)) {
+    it(`${mode}: a different colour from every accent, by at least 25 degrees of hue`, () => {
+      for (const [name, a] of Object.entries(ACCENTS)) {
+        expect(c.solid.toLowerCase()).not.toBe(a.solid.toLowerCase())
+        expect(apart(hue(c.solid), hue(a.solid)), `${mode} against ${name}`).toBeGreaterThanOrEqual(25)
+      }
+    })
+  }
+  it('and the two breaks differ from each other', () => {
+    expect(apart(hue(MODE_COLORS.short.solid), hue(MODE_COLORS.long.solid))).toBeGreaterThanOrEqual(60)
+  })
+})
+
+describe('the accent a student picked stays available on a break page', () => {
+  it('app.css keeps it under its own names, which a break does not change', () => {
+    expect(css).toMatch(/\.app-root\s*\{[^}]*--user-solid: var\(--a-solid\)[^}]*--user-glow: var\(--a-glow\)/)
+    expect(css.match(/\.mode-(short|long)\s*\{[^}]*\}/g)!.join('')).not.toContain('--user-')
   })
 })
 
