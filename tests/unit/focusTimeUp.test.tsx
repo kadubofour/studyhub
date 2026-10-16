@@ -98,6 +98,25 @@ describe('when time is up', () => {
   })
 })
 
+describe('keeping the screen on', () => {
+  const request = vi.fn(async (_t: string) => ({ release: async () => {} }))
+  beforeEach(() => { request.mockClear(); Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request } }) })
+  afterEach(() => { Reflect.deleteProperty(navigator, 'wakeLock') })
+  it('holds the screen while a session runs, and not while it is stopped', async () => {
+    mount()
+    await act(async () => {})
+    expect(request).not.toHaveBeenCalled()
+    await act(async () => { api!.toggle() })
+    expect(request).toHaveBeenCalledWith('screen')
+  })
+  it('does not when the student turned it off', async () => {
+    setFocusPrefs({ keepAwake: false })
+    mount()
+    await act(async () => { api!.toggle() })
+    expect(request).not.toHaveBeenCalled()
+  })
+})
+
 describe('starting the next one automatically', () => {
   it('is off by default: the break waits to be started', async () => {
     mount()

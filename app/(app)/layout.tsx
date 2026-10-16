@@ -8,6 +8,7 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { AppShell } from '@/components/shell/AppShell'
 import { FocusProvider } from '@/components/providers/FocusProvider'
 import { ReminderProvider } from '@/components/providers/ReminderProvider'
+import { AmbientPlayer } from '@/components/focus/AmbientPlayer'
 import type { Profile } from '@/lib/types'
 import type { Metadata } from 'next'
 
@@ -30,6 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <ConfirmProvider>
           <FocusProvider>
             <ReminderProvider>
+              <AmbientPlayer />
               <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
             </ReminderProvider>
           </FocusProvider>

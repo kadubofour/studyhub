@@ -8,14 +8,16 @@ export interface FocusPrefs {
   notify: boolean
   /** A finished session rolls straight into the next one, already running */
   autoStart: boolean
+  /** Keep the screen on while a session runs */
+  keepAwake: boolean
 }
 
-export const DEFAULT_PREFS: FocusPrefs = { sound: true, notify: false, autoStart: false }
+export const DEFAULT_PREFS: FocusPrefs = { sound: true, notify: false, autoStart: false, keepAwake: true }
 
 const parse = (v: unknown): FocusPrefs => {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
   const flag = (k: keyof FocusPrefs) => (typeof o[k] === 'boolean' ? (o[k] as boolean) : DEFAULT_PREFS[k])
-  return { sound: flag('sound'), notify: flag('notify'), autoStart: flag('autoStart') }
+  return { sound: flag('sound'), notify: flag('notify'), autoStart: flag('autoStart'), keepAwake: flag('keepAwake') }
 }
 
 export const focusPrefs = localStore<FocusPrefs>('studyhub.focus.prefs', DEFAULT_PREFS, parse)

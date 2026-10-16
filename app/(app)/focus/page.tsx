@@ -1,35 +1,38 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
+import { Pause, Play, RotateCcw, SkipForward, Headphones, Maximize2 } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { canRestart, durationFor, elapsedMs, remainingMs, type Mode } from '@/lib/timer'
 import { LengthWheel } from '@/components/focus/LengthWheel'
 import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
-
-const SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }]
+import { FocusFullscreen } from '@/components/focus/FocusFullscreen'
+import { AMBIENT_SOUNDS, setAmbientPrefs, useAmbientPrefs } from '@/lib/focus/ambientPrefs'
+import { focusShortcut } from '@/lib/focus/shortcuts'
 
 export default function FocusPage() {
   const { profile } = useProfile()
   const { timer, now, completedFocus, todayMinutes, toggle, restart, skip, pickMode, setDuration, task } = useFocus()
-  const [sound, setSound] = useState('off')
-  const [volume, setVolume] = useState(0.6)
-  const [soundError, setSoundError] = useState(false)
-  const audio = useRef<HTMLAudioElement>(null)
+  const { sound, volume } = useAmbientPrefs() // played by the app layout, so it carries on when the student leaves this page
+  const [full, setFull] = useState(false)
 
-  // Picking a sound (re)loads the loop; the volume effect below only adjusts the level
+  // Keyboard: Space starts or pauses, R restarts, S skips, F opens full screen
+  const keys = useRef({ toggle, restart, skip, canRestart: false })
+  useEffect(() => { keys.current = { toggle, restart, skip, canRestart: canRestart(timer, now) } })
   useEffect(() => {
-    const a = audio.current
-    if (!a) return
-    if (sound === 'off') { a.pause(); return }
-    a.src = `/sounds/${sound}.mp3`
-    a.play().catch(() => setSoundError(true))
-  }, [sound])
-
-  useEffect(() => {
-    if (audio.current) audio.current.volume = volume
-  }, [volume])
+    const onKey = (e: KeyboardEvent) => {
+      const k = focusShortcut(e)
+      if (!k) return
+      e.preventDefault()
+      if (k === 'toggle') keys.current.toggle()
+      else if (k === 'restart') { if (keys.current.canRestart) keys.current.restart() }
+      else if (k === 'skip') keys.current.skip()
+      else setFull(f => !f)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
 
   const remaining = remainingMs(timer, now)
   const pct = 1 - remaining / timer.durationMs
@@ -59,7 +62,7 @@ export default function FocusPage() {
           </div>
         </div>
       )}
-      <div className="relative mx-auto my-6 size-64">
+      <div className="relative mx-auto my-6 size-[min(86vw,22rem)] sm:size-64">
         {begun ? (
           <>
             <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>
@@ -69,7 +72,7 @@ export default function FocusPage() {
                 strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
+              <div className="font-mono text-5xl font-semibold tracking-tight max-sm:text-6xl" aria-live="off">{fmtClock(remaining)}</div>
               {timer.mode === 'focus' && task && <div className="mt-1 max-w-[11rem] truncate text-xs font-medium text-accent">{task.title}</div>}
             </div>
           </>
@@ -81,26 +84,27 @@ export default function FocusPage() {
         <button type="button" onClick={() => setDuration(usual)} className="mb-4 rounded-lg px-2 py-1 text-xs text-muted underline-offset-2 hover:text-fg hover:underline">Back to {usual} min</button>
       )}
       {timer.mode === 'focus' && <div className="mb-5"><FocusTaskPicker /></div>}
-      <div className="flex justify-center gap-2">
-        <button className="btn-primary min-w-28" onClick={toggle}>
+      <div className="flex flex-wrap justify-center gap-2 px-3">
+        <button className="btn-primary min-w-24 sm:min-w-28" onClick={toggle}>
           {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
         </button>
         <button className="btn" onClick={restart} disabled={!canRestart(timer, now)} title="Start this session over"><RotateCcw size={14} aria-hidden />Restart</button>
         <button className="btn" onClick={skip}><SkipForward size={14} aria-hidden />Skip</button>
+        <button className="btn !px-3" onClick={() => setFull(true)} aria-label="Full screen" title="Full screen (F)"><Maximize2 size={14} aria-hidden /></button>
       </div>
+      <p className="mt-3 hidden text-xs text-muted pointer-fine:block">Space start or pause · R restart · S skip · F full screen</p>
 
       <p className="mt-6 text-center text-xs text-muted">Chime, notification and auto-start are in <Link href="/settings?section=reminders" className="underline underline-offset-2 hover:text-fg">Settings</Link>.</p>
 
       <div className="card mx-auto mt-4 flex flex-wrap items-center gap-2 text-sm">
         <Headphones size={16} aria-hidden className="text-muted" />
-        {SOUNDS.map(s => (
-          <button key={s.id} onClick={() => { setSoundError(false); setSound(s.id) }} aria-pressed={sound === s.id}
+        {AMBIENT_SOUNDS.map(s => (
+          <button key={s.id} onClick={() => setAmbientPrefs({ sound: s.id })} aria-pressed={sound === s.id}
             className={`rounded-lg px-2.5 py-1 pointer-coarse:py-2 ${sound === s.id ? 'bg-surface font-medium' : 'text-muted'}`}>{s.label}</button>
         ))}
-        <input aria-label="Volume" type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(Number(e.target.value))} className="min-w-20 flex-1" />
-        {soundError && <p className="w-full text-left text-xs text-danger">This sound isn&apos;t available.</p>}
+        <input aria-label="Volume" type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setAmbientPrefs({ volume: Number(e.target.value) })} className="min-w-20 flex-1 accent-[var(--accent-solid)]" />
       </div>
-      <audio ref={audio} loop preload="none" />
+      {full && <FocusFullscreen onClose={() => setFull(false)} />}
       <p className="mt-4 text-sm text-muted">Today {fmtMin(todayMinutes)} of {fmtMin(goal)} goal</p>
     </div>
   )

@@ -17,6 +17,12 @@ export function primeAudio() {
   } catch { /* no audio */ }
 }
 
+/** The page's one audio context (made, and woken if it can be), for the chime and the ambient sounds; null where there is no audio */
+export function audioContext(): AudioContext | null {
+  primeAudio()
+  return ctx
+}
+
 /** Three soft notes going up, about a second and a half long */
 export function chime(volume = 0.4) {
   try {
