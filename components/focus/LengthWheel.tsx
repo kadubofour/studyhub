@@ -2,7 +2,8 @@
 import { useEffect, useRef } from 'react'
 import { MAX_MINUTES, MIN_MINUTES } from '@/lib/timer'
 
-const ROW = 40 // px per number
+const ROW = 44 // px per number
+const ROWS = 5 // numbers in view: the one chosen, and two either side
 const clamp = (m: number) => Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(m)))
 
 // One drum: numbers that scroll and snap, the one in the middle band is the choice. A spinbutton for keyboards and screen readers.
@@ -36,21 +37,21 @@ function Drum({ label, unit, value, min, max, step, onChange }: { label: string;
   }
 
   return (
-    <div className="relative w-[5.25rem]">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 h-10 -translate-y-1/2 rounded-xl bg-surface" />
+    <div className="relative w-28">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-xl bg-surface" style={{ height: ROW }} />
       <div ref={box} role="spinbutton" tabIndex={0} aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={`${value} ${unit}`}
-        onScroll={onScroll} onKeyDown={onKeyDown}
-        className="no-scrollbar relative h-[120px] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent [mask-image:linear-gradient(transparent,black_30%,black_70%,transparent)]">
-        <div style={{ height: ROW }} aria-hidden />
+        onScroll={onScroll} onKeyDown={onKeyDown} style={{ height: ROW * ROWS }}
+        className="no-scrollbar relative snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent [mask-image:linear-gradient(transparent,black_35%,black_65%,transparent)]" >
+        <div style={{ height: ROW * 2 }} aria-hidden />
         {numbers.map(n => (
           <div key={n} aria-hidden onClick={() => box.current?.scrollTo({ top: (n - min) * ROW, behavior: 'smooth' })}
-            style={{ height: ROW }} className={`flex cursor-pointer snap-center items-center justify-center pr-5 font-mono text-2xl tabular-nums ${n === value ? 'font-semibold text-fg' : 'text-muted'}`}>
+            style={{ height: ROW }} className={`flex cursor-pointer snap-center items-center justify-center pr-7 font-mono text-3xl tabular-nums ${n === value ? 'font-semibold text-fg' : 'text-muted'}`}>
             {String(n).padStart(2, '0')}
           </div>
         ))}
-        <div style={{ height: ROW }} aria-hidden />
+        <div style={{ height: ROW * 2 }} aria-hidden />
       </div>
-      <span aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted">{unit}</span>
+      <span aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted">{unit}</span>
     </div>
   )
 }

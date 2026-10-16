@@ -52,14 +52,14 @@ describe('LengthWheel', () => {
     const scrollTo = vi.fn()
     Element.prototype.scrollTo = scrollTo as never
     const { mins } = setup(25)
-    fireEvent.click(mins().querySelectorAll('div')[1 + 40]) // the number 40: one spacer row, then 00..
-    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 40 * 40 }))
+    fireEvent.click(mins().querySelectorAll('div')[1 + 40]) // the number 40: one spacer, then 00..
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 40 * 44 }))
   })
 
   it('settles on the number in the middle band when scrolling stops', () => {
     vi.useFakeTimers()
     const { onChange, mins } = setup(25)
-    Object.defineProperty(mins(), 'scrollTop', { configurable: true, value: 30 * 40 })
+    Object.defineProperty(mins(), 'scrollTop', { configurable: true, value: 30 * 44 })
     fireEvent.scroll(mins())
     vi.advanceTimersByTime(200)
     expect(onChange).toHaveBeenLastCalledWith(30)

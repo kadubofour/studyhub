@@ -190,7 +190,8 @@ describe('the Focus page', () => {
     await act(async () => { fireEvent.click(within(list).getByRole('option', { name: /Read chapter 7/ })) })
     expect(screen.queryByRole('listbox')).toBeNull()
     expect(focusTaskStore.get()).toMatchObject({ id: 't1', title: 'Read chapter 7', course_id: 'c1', uid: 'u' })
-    expect(screen.getAllByText('Read chapter 7').length).toBeGreaterThan(1) // in the picker button and under the clock
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
+    expect(screen.getAllByText('Read chapter 7').length).toBeGreaterThan(1) // in the picker button and, once running, under the clock
     fireEvent.click(screen.getByRole('button', { name: 'Clear the task' }))
     expect(focusTaskStore.get()).toBeNull()
     expect(screen.getByRole('button', { name: /What are you working on/ })).toBeTruthy()
