@@ -142,34 +142,43 @@ describe('the "When time is up" card', () => {
 })
 
 describe('the Focus page', () => {
+  const mins = () => screen.getByRole('spinbutton', { name: 'Minutes' })
+  const hrs = () => screen.getByRole('spinbutton', { name: 'Hours' })
+
   it('starts at the length from Settings, and changes it to any length before the session begins', async () => {
     await act(async () => { page() })
-    const box = () => screen.getByRole('spinbutton', { name: 'Session length in minutes' }) as HTMLInputElement
-    expect(box().value).toBe('25')
+    expect(mins().getAttribute('aria-valuenow')).toBe('25')
     expect(screen.queryByRole('button', { name: /Back to/ })).toBeNull()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Five minutes longer' })) })
-    expect(screen.getByText('30:00')).toBeTruthy()
-    await act(async () => { fireEvent.change(box(), { target: { value: '37' } }); fireEvent.blur(box()) })
-    expect(screen.getByText('37:00')).toBeTruthy()
+    await act(async () => { fireEvent.keyDown(mins(), { key: 'PageDown' }) })
+    expect(mins().getAttribute('aria-valuenow')).toBe('30')
+    await act(async () => { fireEvent.keyDown(hrs(), { key: 'ArrowDown' }) })
+    expect(hrs().getAttribute('aria-valuenow')).toBe('1')
+    expect(mins().getAttribute('aria-valuenow')).toBe('30')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Back to 25 min' })) })
-    expect(screen.getByText('25:00')).toBeTruthy()
+    expect(mins().getAttribute('aria-valuenow')).toBe('25')
+    expect(hrs().getAttribute('aria-valuenow')).toBe('0')
   })
 
   it('goes back to a Settings length that is not a multiple of five', async () => {
     render(<ProfileProvider initial={{ ...profile, focus_minutes: 33 }}><ToastProvider><FocusProvider><FocusPage /></FocusProvider></ToastProvider></ProfileProvider>)
     await act(async () => {})
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Five minutes shorter' })) })
-    expect(screen.getByText('30:00')).toBeTruthy()
+    await act(async () => { fireEvent.keyDown(mins(), { key: 'PageUp' }) })
+    expect(mins().getAttribute('aria-valuenow')).toBe('28')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Back to 33 min' })) })
-    expect(screen.getByText('33:00')).toBeTruthy()
+    expect(mins().getAttribute('aria-valuenow')).toBe('33')
   })
 
-  it('locks the length once the session is running, and starts a break at the break length', async () => {
+  it('swaps the drums for the countdown once the session runs', async () => {
     await act(async () => { page() })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
-    expect((screen.getByRole('spinbutton') as HTMLInputElement).disabled).toBe(true)
+    expect(screen.queryByRole('spinbutton')).toBeNull()
+    expect(screen.getByText('25:00')).toBeTruthy()
+  })
+
+  it('shows the break length on the drums when a break has not started', async () => {
+    await act(async () => { page() })
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Short break' })) })
-    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('5')
+    expect(mins().getAttribute('aria-valuenow')).toBe('5')
   })
 
   it('lets the student choose a task, shows it under the clock, and clears it', async () => {

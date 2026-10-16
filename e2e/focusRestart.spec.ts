@@ -8,7 +8,7 @@ test('the focus timer can be started over: from the Focus page and from Home, an
   const restart = page.getByRole('button', { name: 'Restart', exact: true })
   const clock = page.locator('.font-mono.text-5xl')
   await expect(restart).toBeDisabled() // nothing to start over yet
-  await expect(clock).toHaveText('25:00')
+  await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toHaveAttribute('aria-valuenow', '25')
 
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await expect(clock).not.toHaveText('25:00', { timeout: 10_000 })
@@ -22,7 +22,7 @@ test('the focus timer can be started over: from the Focus page and from Home, an
   await page.getByRole('button', { name: 'Pause', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeVisible()
   await restart.click()
-  await expect(clock).toHaveText('25:00')
+  await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toHaveAttribute('aria-valuenow', '25') // stopped at the full time: the drums are back
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
 
   // Home's timer card has it too once the timer is going

@@ -5,7 +5,7 @@ import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { canRestart, durationFor, elapsedMs, remainingMs, type Mode } from '@/lib/timer'
-import { LengthStepper } from '@/components/focus/LengthStepper'
+import { LengthWheel } from '@/components/focus/LengthWheel'
 import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
 
 const SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }]
@@ -49,9 +49,6 @@ export default function FocusPage() {
             className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-surface font-medium' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
       </div>
-      <div className="mt-4 flex justify-center">
-        <LengthStepper minutes={minutes} usual={usual} disabled={begun} onChange={setDuration} />
-      </div>
       <div className="relative mx-auto my-8 size-64">
         <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>
           <circle cx="100" cy="100" r={R} fill="none" stroke="var(--surface)" strokeWidth="10" />
@@ -60,11 +57,16 @@ export default function FocusPage() {
             strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
-          {timer.mode === 'focus' && <div className="text-sm text-muted">Session {(completedFocus % profile.long_break_every) + 1} of {profile.long_break_every}</div>}
+          {begun
+            ? <div className="font-mono text-5xl font-semibold tracking-tight" aria-live="off">{fmtClock(remaining)}</div>
+            : <LengthWheel minutes={minutes} onChange={setDuration} />}
+          {timer.mode === 'focus' && <div className="mt-1 text-sm text-muted">Session {(completedFocus % profile.long_break_every) + 1} of {profile.long_break_every}</div>}
           {timer.mode === 'focus' && task && <div className="mt-1 max-w-[11rem] truncate text-xs font-medium text-accent">{task.title}</div>}
         </div>
       </div>
+      {!begun && minutes !== usual && (
+        <button type="button" onClick={() => setDuration(usual)} className="mb-4 rounded-lg px-2 py-1 text-xs text-muted underline-offset-2 hover:text-fg hover:underline">Back to {usual} min</button>
+      )}
       {timer.mode === 'focus' && <div className="mb-5"><FocusTaskPicker /></div>}
       <div className="flex justify-center gap-2">
         <button className="btn-primary min-w-28" onClick={toggle}>

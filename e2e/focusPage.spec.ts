@@ -33,19 +33,18 @@ test('a focus session on a task: pick a length and a task, time runs out with an
 
   await page.goto('/focus')
   await page.waitForLoadState('networkidle')
-  const clock = page.locator('.font-mono.text-5xl')
 
   // Length and task
-  await page.getByRole('spinbutton', { name: 'Session length in minutes' }).fill('15')
-  await page.getByRole('spinbutton', { name: 'Session length in minutes' }).blur()
-  await expect(clock).toHaveText('15:00')
+  await page.getByRole('spinbutton', { name: 'Minutes' }).focus()
+  await page.keyboard.press('PageUp'); await page.keyboard.press('PageUp') // two steps of five: 25 down to 15
+  await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toHaveAttribute('aria-valuenow', '15')
   await page.getByRole('button', { name: /What are you working on/ }).click()
   await page.getByRole('option', { name: /Read chapter 7/ }).click()
   await expect(page.getByRole('button', { name: /Working on/ })).toContainText('Read chapter 7')
 
   // Start, then the student leaves the page and time runs out
   await page.getByRole('button', { name: 'Start', exact: true }).click()
-  await expect(page.getByRole('spinbutton', { name: 'Session length in minutes' })).toBeDisabled() // no changing the length now
+  await expect(page.getByRole('spinbutton')).toHaveCount(0) // the drums give way to the countdown: no changing the length now
   await page.evaluate(() => Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }))
   await page.clock.fastForward('15:02')
   await expect(page.getByText('Focus session done. Time for a break.')).toBeVisible()
