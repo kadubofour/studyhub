@@ -16,7 +16,7 @@ const LEVEL = 0.5 // the slider's top is a comfortable level, not the loudest th
 const FILES: Record<Kind, { src: string; rate: number; lowpass: number | null; gain: number; blend: number }> = {
   rain: { src: '/sounds/rain.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
   sea: { src: '/sounds/sea.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
-  lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.9, blend: 2 },
+  lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.7, blend: 2 }, // music is heard louder than waves at the same level, so it sits a little lower
 }
 
 /**
