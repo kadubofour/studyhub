@@ -71,6 +71,28 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   await expect(page.getByText('Not about a note or lecture')).toBeVisible()
 })
 
+test('in a chat: ideas to start with, times, copying, and a message box that grows', async ({ page, isMobile }) => {
+  test.setTimeout(120_000)
+  await signUp(page)
+  await page.goto('/tutor')
+  await page.getByRole('button', { name: 'New chat' }).click()
+  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
+  const message = page.getByLabel('Message')
+  await page.getByRole('group', { name: 'Ideas to start with' }).getByRole('button', { name: 'Quiz me' }).click()
+  await expect(message).toHaveValue('Quiz me on ')
+  const one = (await message.boundingBox())!.height
+  await message.fill('line one\nline two\nline three\nline four\nline five')
+  expect((await message.boundingBox())!.height).toBeGreaterThan(one)
+  if (!isMobile) {
+    await message.fill('Where does the Krebs cycle happen?')
+    await message.press('Enter')
+    await expect(page.getByText('Where does the Krebs cycle happen?')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Today' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Copy question' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Copy chat' })).toBeVisible()
+  }
+})
+
 test('the Tutor page lists chats with what they are about, and searches them', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')

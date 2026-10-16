@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Copy, Pencil, RefreshCw, Square, Trash2 } from 'lucide-react'
+import { ArrowDown, ClipboardCopy, Copy, Pencil, RefreshCw, Square, Trash2 } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
@@ -16,7 +16,8 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatContext, setChatCourse, setChatGuided, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
 import { FREE_DAILY_TUTOR_MESSAGES } from '@/lib/billing/plans'
-import { FOLLOW_UPS } from '@/lib/tutor/starters'
+import { FOLLOW_UPS, STARTERS, starterMessage } from '@/lib/tutor/starters'
+import { dayHeading, nearBottom, timeOf, transcript } from '@/lib/tutor/conversation'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
 import type { Proposal } from '@/lib/ai/tutorTools'
@@ -49,6 +50,10 @@ export function ChatView({ chatId }: { chatId: string }) {
   const renameSettled = useRef(false) // Enter or Escape has decided the rename: the box losing focus afterwards must not decide it again
   const [partial, setPartial] = useState<string | null>(null) // what was written when the student stopped, until the saved reply is there to show
   const end = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLTextAreaElement>(null)
+  const pinned = useRef(true) // the student is reading the newest text, so a reply is followed; scrolled up, the page stays where they put it
+  const [away, setAway] = useState(false) // scrolled up from the newest text: offer a way back
+  const [today] = useState(() => new Date(nowMs())) // for the day headings
   // The newest messages, read by proposal writes (a click's own render can be stale), and a queue so saves run one at a time
   const latest = useRef<TutorMessage[]>([])
   const writes = useRef<Promise<void>>(Promise.resolve())
@@ -70,7 +75,22 @@ export function ChatView({ chatId }: { chatId: string }) {
     }).catch(() => { if (current) router.push('/tutor') })
     return () => { current = false }
   }, [chatId, router])
-  useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
+  useEffect(() => { if (pinned.current) end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
+  useEffect(() => {
+    const onScroll = () => {
+      const near = nearBottom({ scrollY: window.scrollY, viewport: window.innerHeight, endY: (end.current?.getBoundingClientRect().top ?? 0) + window.scrollY })
+      pinned.current = near; setAway(!near)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  // The message box grows with what is typed, up to about eight lines
+  useEffect(() => {
+    const el = box.current
+    if (!el || !el.scrollHeight) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 192)}px`
+  }, [text, chat])
   // The message from a Revise button is taken once: drop it from the address so a reload or Back does not fill the box again
   useEffect(() => { if (ask) router.replace(`/tutor/${chatId}`) }, [ask, chatId, router])
 
@@ -79,6 +99,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   async function send(override?: string) {
     const message = (override ?? text).trim()
     if (!message || live !== null) return
+    pinned.current = true; setAway(false) // sending a message goes to the newest text
     setProblem(null); setPartial(null); if (override === undefined) setText(''); setLive('')
     const control = new AbortController()
     abort.current = control; stopped.current = false; liveText.current = ''; startedAt.current = nowMs(); setLastSent(message)
@@ -146,6 +167,11 @@ export function ChatView({ chatId }: { chatId: string }) {
     try { await navigator.clipboard.writeText(text); toast('Copied.') } catch { toast("Couldn't copy. Select the text instead.") }
   }
   // What the chat is about: a note or a lecture, or neither. The tutor reads it from the next message on.
+  function jumpToLatest() { pinned.current = true; setAway(false); end.current?.scrollIntoView?.({ block: 'end' }) }
+  // A touch screen has no Shift key to start a new line with, so there Enter does that and the Send button sends
+  function enterSends(e: React.KeyboardEvent) {
+    return e.key === 'Enter' && !e.shiftKey && !window.matchMedia?.('(pointer: coarse)').matches
+  }
   async function aboutPicked(t: TutorTarget | null) {
     setPicking(false)
     try {
@@ -187,6 +213,7 @@ export function ChatView({ chatId }: { chatId: string }) {
           <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
         </span>
         {renaming === null && <button type="button" className="btn" onClick={() => { renameSettled.current = false; setRenaming(chat.title) }}><Pencil size={14} aria-hidden />Rename</button>}
+        {messages.length > 0 && <button type="button" className="btn-ghost" aria-label="Copy chat" title="Copy the whole chat" onClick={() => { void copy(transcript(chat.title, messages)) }}><ClipboardCopy size={15} aria-hidden /></button>}
         <button type="button" className="btn-ghost text-danger" aria-label="Delete chat" onClick={remove}><Trash2 size={15} aria-hidden /></button>
       </div>
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
@@ -196,11 +223,39 @@ export function ChatView({ chatId }: { chatId: string }) {
       </p>
 
       <div className="space-y-3" aria-live="polite" aria-label="Conversation">
-        {messages.length === 0 && live === null && <p className="card py-8 text-center text-sm text-muted">Ask anything. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>}
-        {messages.map(m => m.role === 'user'
-          ? <p key={m.id} className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-2xl bg-accent-soft px-3 py-2 text-sm">{m.content}</p>
+        {messages.length === 0 && live === null && (
+          <div className="card space-y-3 py-6 text-center">
+            <p className="text-sm text-muted">Ask anything. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
+            {/* ideas put a message in the box to finish and send; nothing is sent from here */}
+            <div role="group" aria-label="Ideas to start with" className="flex flex-wrap justify-center gap-2">
+              {STARTERS.map(s => (
+                <button key={s.id} type="button" className="btn !text-xs pointer-coarse:!py-2.5"
+                  onClick={() => { setText(starterMessage(s, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }}>{s.title}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => {
+          const heading = dayHeading(m.created_at, today)
+          const newDay = !!heading && heading !== dayHeading(messages[i - 1]?.created_at ?? '', today)
+          const time = timeOf(m.created_at)
+          return (
+          <Fragment key={m.id}>
+          {newDay && <h2 className="pt-1 text-center text-xs text-muted">{heading}</h2>}
+          {m.role === 'user'
+          ? (
+            <div className="ml-auto flex max-w-[85%] flex-col items-end gap-0.5">
+              <p className="whitespace-pre-wrap rounded-2xl bg-accent-soft px-3 py-2 text-sm">{m.content}</p>
+              {m.id !== 'pending' && (
+                <div className="flex items-center gap-1 text-xs text-muted">
+                  {time && <span>{time}</span>}
+                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy question" onClick={() => { void copy(m.content) }}><Copy size={12} aria-hidden />Copy</button>
+                </div>
+              )}
+            </div>
+          )
           : (
-            <div key={m.id} className="max-w-[95%] space-y-2">
+            <div className="max-w-[95%] space-y-2">
               <MarkdownView source={m.content} />
               {m.status === 'cut_off' && <p className="text-xs text-muted">Reply was cut off.</p>}
               {m.sources.length > 0 && (
@@ -213,16 +268,20 @@ export function ChatView({ chatId }: { chatId: string }) {
                 {m === last && idle && !!lastAsked && m.status === 'ok' && (
                   <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Regenerate reply" onClick={() => { void send(lastAsked) }}><RefreshCw size={13} aria-hidden />Regenerate</button>
                 )}
+                {time && <span className="ml-auto self-center text-xs">{time}</span>}
               </div>
               {m.proposals.map(p => (
                 <ProposalCard key={p.id} proposal={p} onAdd={e => add(m.id, e)} onDiscard={() => { change(m.id, p.id, { state: 'discarded' }).catch(() => toast('Couldn\'t save that.')) }} />
               ))}
             </div>
-          ))}
+          )}
+          </Fragment>
+          )
+        })}
         {partial && last?.role === 'user' && idle && (
           <div className="max-w-[95%] space-y-1"><MarkdownView source={partial} /><p className="text-xs text-muted">Stopped.</p></div>
         )}
-        {live !== null && (live ? <MarkdownView source={live} /> : <p role="status" className="text-sm text-muted">Thinking…</p>)}
+        {live !== null && (live ? <MarkdownView source={live} /> : <p role="status" className="text-sm text-muted motion-safe:animate-pulse">Thinking…</p>)}
         <div ref={end} />
       </div>
 
@@ -240,8 +299,11 @@ export function ChatView({ chatId }: { chatId: string }) {
         </div>
       )}
       <form className="sticky bottom-0 flex gap-2 bg-bg pb-3 pt-1 max-md:bottom-[calc(4.5rem+env(safe-area-inset-bottom))]" onSubmit={e => { e.preventDefault(); void send() }}>
-        <textarea className="input min-h-11 flex-1" rows={2} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
-          onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }} />
+        {away && messages.length > 0 && (
+          <button type="button" aria-label="Jump to latest" className="btn absolute -top-11 left-1/2 -translate-x-1/2 shadow-md" onClick={jumpToLatest}><ArrowDown size={14} aria-hidden />Latest</button>
+        )}
+        <textarea ref={box} className="input max-h-48 min-h-11 flex-1 resize-none" rows={2} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
+          onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }} />
         {live !== null
           ? <button key="stop" type="button" className="btn self-end" onClick={() => {
             if (nowMs() - startedAt.current < 600) return // the second tap of a double tap on Send
@@ -250,6 +312,7 @@ export function ChatView({ chatId }: { chatId: string }) {
           }}><Square size={13} className="fill-current" aria-hidden />Stop</button>
           : <button key="send" className="btn-primary self-end" disabled={!text.trim()}>Send</button>}
       </form>
+      {text.length >= 3500 && <p className="-mt-1 pb-1 text-right text-xs text-muted">{text.length} / {4000}</p>}
       {left !== null && <p className="-mt-1 pb-2 text-center text-xs text-muted" aria-live="polite">{left} of {FREE_DAILY_TUTOR_MESSAGES} tutor messages left today</p>}
       <TutorPickDialog open={picking} onClose={() => setPicking(false)} onPick={t => { void aboutPicked(t) }} kinds={CHAT_KINDS} title="What is this chat about?" />
     </div>

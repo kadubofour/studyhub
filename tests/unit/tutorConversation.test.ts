@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { dayHeading, nearBottom, timeOf, transcript } from '@/lib/tutor/conversation'
 
 describe('nearBottom', () => {
-  it('is true at the bottom and within a little of it, false when scrolled up', () => {
-    expect(nearBottom({ scrollY: 1000, viewport: 800, height: 1800 })).toBe(true)
-    expect(nearBottom({ scrollY: 900, viewport: 800, height: 1800 })).toBe(true) // 100 away
-    expect(nearBottom({ scrollY: 500, viewport: 800, height: 1800 })).toBe(false)
+  it('is true when the end of the conversation is in view or just below it, false when scrolled up', () => {
+    expect(nearBottom({ scrollY: 1000, viewport: 800, endY: 1800 })).toBe(true)
+    expect(nearBottom({ scrollY: 900, viewport: 800, endY: 1800 })).toBe(true) // 100 below the window
+    expect(nearBottom({ scrollY: 500, viewport: 800, endY: 1800 })).toBe(false)
   })
-  it('is true when the page is shorter than the window', () => {
-    expect(nearBottom({ scrollY: 0, viewport: 800, height: 300 })).toBe(true)
+  it('is true when the conversation is shorter than the window', () => {
+    expect(nearBottom({ scrollY: 0, viewport: 800, endY: 300 })).toBe(true)
   })
 })
 

@@ -1,8 +1,8 @@
 // Small, pure helpers for reading a tutor conversation: where the page is scrolled, when a message was sent, and the chat as plain text.
 
-/** True when the window is at the bottom of the page, or within a little of it (so a student who is reading the newest text is followed) */
-export function nearBottom({ scrollY, viewport, height }: { scrollY: number; viewport: number; height: number }, slack = 120): boolean {
-  return scrollY + viewport >= height - slack
+/** True when the end of the conversation (its position down the page) is in view, or just below it: a student reading the newest text is followed */
+export function nearBottom({ scrollY, viewport, endY }: { scrollY: number; viewport: number; endY: number }, slack = 120): boolean {
+  return scrollY + viewport >= endY - slack
 }
 
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
