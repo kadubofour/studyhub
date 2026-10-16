@@ -4,7 +4,7 @@ import { render, cleanup, act } from '@testing-library/react'
 
 // A stand-in for the browser's audio: it records what was made and started, so the sounds can be checked without speakers
 const made = { sources: 0, started: 0, stopped: 0, oscillators: 0, disconnected: 0, loops: [] as { loop: boolean; rate: number; length: number }[], gains: [] as { value: number; setTargetAtTime: ReturnType<typeof vi.fn> }[], filters: [] as { type: string; frequency: number }[] }
-const param = (v = 0) => ({ value: v, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() })
+const param = (v = 0) => ({ value: v, cancelScheduledValues: vi.fn(), setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() })
 function node(extra: Record<string, unknown> = {}) {
   const n: Record<string, unknown> = { context: { currentTime: 0 }, connect: (to: unknown) => to, disconnect: () => { made.disconnected++ }, ...extra }
   return n
@@ -23,10 +23,25 @@ const fakeCtx = () => ({
     made.loops.push({ get loop() { return s.loop as boolean }, get rate() { return (s.playbackRate as { value: number }).value }, get length() { return (s.buffer as { length: number } | null)?.length ?? 0 } })
     return s
   },
+  createMediaElementSource: () => node(),
   createBiquadFilter: () => { const f = node({ type: '', frequency: param(), Q: param() }); made.filters.push({ get type() { return f.type as string }, get frequency() { return (f.frequency as { value: number }).value } }); return f },
   createGain: () => { const g = param(1); made.gains.push(g); return node({ gain: g }) },
   createOscillator: () => { made.oscillators++; return node({ type: '', frequency: param(), detune: param(), start: () => { made.started++ }, stop: () => { made.stopped++ } }) },
 })
+// A stand-in for <audio>: it can be told to fail, as when the file is missing
+let audioBroken = false
+const audios: FakeAudio[] = []
+class FakeAudio {
+  src = ''; currentTime = 0; duration = 120; paused = true; preload = ''
+  private ls = new Map<string, Set<() => void>>()
+  constructor() { audios.push(this) }
+  play() { this.paused = false; if (audioBroken) queueMicrotask(() => this.ls.get('error')?.forEach(f => f())); return Promise.resolve() }
+  pause() { this.paused = true }
+  load() {}
+  removeAttribute() { this.src = '' }
+  addEventListener(t: string, f: () => void) { (this.ls.get(t) ?? this.ls.set(t, new Set()).get(t)!).add(f) }
+  removeEventListener(t: string, f: () => void) { this.ls.get(t)?.delete(f) }
+}
 let ctx: ReturnType<typeof fakeCtx> | null = null
 const primeAudio = vi.fn()
 vi.mock('@/lib/focus/alert', () => ({ audioContext: () => ctx, primeAudio: () => primeAudio() }))
@@ -45,13 +60,14 @@ const flush = async () => { await act(async () => { await vi.advanceTimersByTime
 beforeEach(() => {
   Object.assign(made, { sources: 0, started: 0, stopped: 0, oscillators: 0, disconnected: 0, loops: [], filters: [], gains: [] })
   ctx = fakeCtx(); primeAudio.mockClear(); window.localStorage.clear(); ambientPrefs.set(DEFAULT_AMBIENT)
-  files = {}; fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock); resetAmbientCache()
+  files = {}; audioBroken = false; audios.length = 0; fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock); vi.stubGlobal('Audio', FakeAudio); resetAmbientCache()
   vi.useFakeTimers()
 })
 afterEach(() => { cleanup(); stopAmbient(); vi.runOnlyPendingTimers(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('the sounds, made in the browser when there is no recording', () => {
   it.each(['rain', 'sea', 'lofi'] as const)('%s makes sound and says it is playing', async kind => {
+    audioBroken = true // no recordings at all
     expect(startAmbient(kind, 0.6)).toBe(true)
     expect(ambientPlaying()).toBe(kind)
     await flush()
@@ -83,6 +99,7 @@ describe('the sounds, made in the browser when there is no recording', () => {
   })
 
   it('lo-fi keeps playing chords, one after another, and stops when stopped', async () => {
+    audioBroken = true // its tracks are missing, so the chords play
     startAmbient('lofi', 0.6)
     await flush()
     const first = made.oscillators
@@ -103,11 +120,23 @@ describe('the sounds, made in the browser when there is no recording', () => {
 })
 
 describe('the recordings', () => {
-  it('plays a recording as a seamless loop, in place of the made sound', async () => {
-    files['/sounds/lofi.ogg'] = true
+  it('plays Lo-fi as a playlist of tracks, streamed, not as a loop of one', async () => {
     startAmbient('lofi', 0.6)
     await flush()
-    expect(fetchMock).toHaveBeenCalledWith('/sounds/lofi.ogg')
+    const playing = audios.filter(a => !a.paused)
+    expect(playing).toHaveLength(1)
+    expect(['/sounds/lofi-1.ogg', '/sounds/lofi-2.ogg', '/sounds/lofi-3.ogg']).toContain(playing[0].src)
+    expect(fetchMock).not.toHaveBeenCalled() // streamed by the audio element, not fetched and decoded whole
+    expect(made.oscillators).toBe(0)
+    stopAmbient(); vi.advanceTimersByTime(600)
+    expect(audios.every(a => a.paused)).toBe(true)
+  })
+
+  it('plays a recording as a seamless loop, in place of the made sound', async () => {
+    files['/sounds/rain.ogg'] = true
+    startAmbient('rain', 0.6)
+    await flush()
+    expect(fetchMock).toHaveBeenCalledWith('/sounds/rain.ogg')
     expect(made.oscillators).toBe(0) // no chords made: the recording plays
     expect(made.loops.some(l => l.loop && l.length > RECORDING)).toBe(true)
     // a little shorter than the recording, because its end is blended into its start so the join cannot be heard
@@ -201,6 +230,7 @@ describe('makeSeamless', () => {
 describe('while the browser has not yet allowed sound', () => {
   it('does not pile up chords to blast out together at the first tap', async () => {
     ctx = fakeCtx(); ctx.state = 'suspended'
+    audioBroken = true
     startAmbient('lofi', 0.6)
     await flush()
     const base = made.oscillators

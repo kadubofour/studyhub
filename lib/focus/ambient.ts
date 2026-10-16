@@ -1,10 +1,12 @@
 import { audioContext } from './alert'
 import type { AmbientId } from './ambientPrefs'
+import { startPlaylist } from './playlist'
 
-// Background sounds. Each plays a recording from public/sounds when there is one (a seamless loop), and otherwise makes a soft stand-in in the browser
-// (Web Audio), so the buttons always do something. See public/sounds/README.md for where the recordings come from.
+// Background sounds. Rain and Ocean play a recording from public/sounds as a seamless loop; Lo-fi plays a shuffled playlist of tracks, each fading into
+// the next. When a recording is not there, a soft stand-in is made in the browser (Web Audio), so the buttons always do something. See public/sounds/README.md for where the recordings come from.
 
 type Kind = Exclude<AmbientId, 'off'>
+type LoopKind = Exclude<Kind, 'lofi'>
 type Stops = (() => void)[]
 interface Playing { kind: Kind; master: GainNode; stop: () => void }
 // What is playing is kept on the page itself, not in this module: if the module is loaded again (when it is edited in development), the new copy
@@ -15,10 +17,14 @@ const shared = ((globalThis as unknown as { __studyhubAmbient?: Shared }).__stud
 const STAND_IN = 0.5 // the made sounds are noise and tones at full scale, so they sit lower than a recording
 
 /** How each recording is played: slower is lower in pitch, a low-pass takes the brightness off, and the blend hides the loop point */
-const FILES: Record<Kind, { src: string; rate: number; lowpass: number | null; gain: number; blend: number }> = {
+const FILES: Record<LoopKind, { src: string; rate: number; lowpass: number | null; gain: number; blend: number }> = {
   rain: { src: '/sounds/rain.ogg', rate: 1, lowpass: null, gain: 0.8, blend: 3 }, // steady hiss sounds louder than waves at the same level
   sea: { src: '/sounds/sea.ogg', rate: 1, lowpass: null, gain: 1, blend: 3 },
-  lofi: { src: '/sounds/lofi.ogg', rate: 1, lowpass: null, gain: 0.5, blend: 2 }, // music is heard louder than waves at the same level, so it sits lower
+}
+
+/** Lo-fi is several tracks, set to the same loudness; music is heard louder than waves at the same level, so it sits lower */
+const PLAYLISTS: Partial<Record<Kind, { tracks: string[]; gain: number }>> = {
+  lofi: { tracks: ['/sounds/lofi-1.ogg', '/sounds/lofi-2.ogg', '/sounds/lofi-3.ogg'], gain: 0.5 },
 }
 
 /**
@@ -40,10 +46,10 @@ export function makeSeamless(ctx: AudioContext, buf: AudioBuffer, seconds: numbe
   return out
 }
 
-const recordings = new Map<Kind, Promise<AudioBuffer | null>>()
+const recordings = new Map<LoopKind, Promise<AudioBuffer | null>>()
 export const resetAmbientCache = () => recordings.clear()
 
-function recording(ctx: AudioContext, kind: Kind): Promise<AudioBuffer | null> {
+function recording(ctx: AudioContext, kind: LoopKind): Promise<AudioBuffer | null> {
   let p = recordings.get(kind)
   if (!p) {
     const f = FILES[kind]
@@ -144,7 +150,7 @@ function standIn(ctx: AudioContext, out: AudioNode): GainNode {
   return g
 }
 
-function playRecording(ctx: AudioContext, kind: Kind, buf: AudioBuffer, out: AudioNode, stops: Stops) {
+function playRecording(ctx: AudioContext, kind: LoopKind, buf: AudioBuffer, out: AudioNode, stops: Stops) {
   const f = FILES[kind]
   const src = ctx.createBufferSource()
   src.buffer = buf; src.loop = true; src.playbackRate.value = f.rate
@@ -172,10 +178,18 @@ export function startAmbient(kind: Kind, volume: number): boolean {
         setTimeout(() => { stops.forEach(s => { try { s() } catch { /* already stopped */ } }); master.disconnect() }, 500)
       },
     }
-    void recording(ctx, kind).then(buf => {
-      if (mine !== shared.token) return // stopped, or another sound picked, while it loaded
-      try { if (buf) playRecording(ctx, kind, buf, master, stops); else MAKERS[kind](ctx, standIn(ctx, master), stops) } catch { /* no sound this time */ }
-    })
+    const standInSound = () => { try { MAKERS[kind](ctx, standIn(ctx, master), stops) } catch { /* no sound this time */ } }
+    const list = PLAYLISTS[kind]
+    if (list) {
+      const level = gainOf(ctx, list.gain)
+      level.connect(master)
+      stops.push(startPlaylist(ctx, level, list.tracks, { onFail: () => { if (mine === shared.token) standInSound() } }))
+    } else {
+      void recording(ctx, kind as LoopKind).then(buf => {
+        if (mine !== shared.token) return // stopped, or another sound picked, while it loaded
+        try { if (buf) playRecording(ctx, kind as LoopKind, buf, master, stops); else standInSound() } catch { /* no sound this time */ }
+      })
+    }
     return true
   } catch { return false }
 }
