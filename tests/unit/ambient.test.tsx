@@ -10,7 +10,7 @@ function node(extra: Record<string, unknown> = {}) {
   return n
 }
 const fakeCtx = () => ({
-  currentTime: 0, sampleRate: 8000, destination: node(), state: 'running',
+  currentTime: 0, sampleRate: 8000, destination: node(), state: 'running' as string,
   createBuffer: (_c: number, len: number) => ({ getChannelData: () => new Float32Array(len) }),
   createBufferSource: () => { made.sources++; return node({ loop: false, buffer: null, start: () => { made.started++ }, stop: () => { made.stopped++ } }) },
   createBiquadFilter: () => node({ type: '', frequency: param(), Q: param() }),
@@ -75,6 +75,22 @@ describe('the sounds', () => {
   })
 })
 
+describe('while the browser has not yet allowed sound', () => {
+  it('does not pile up chords or clinks to blast out together at the first tap', () => {
+    for (const kind of ['lofi', 'cafe'] as const) {
+      ctx = fakeCtx(); ctx.state = 'suspended'
+      startAmbient(kind, 0.6)
+      const base = made.oscillators
+      vi.advanceTimersByTime(5 * 60_000) // five minutes with nothing tapped
+      expect(made.oscillators).toBe(base)
+      ctx.state = 'running'
+      vi.advanceTimersByTime(12_000)
+      expect(made.oscillators).toBeGreaterThan(base) // and it plays once it is allowed
+      stopAmbient(); vi.advanceTimersByTime(600)
+    }
+  })
+})
+
 describe('the kept choice', () => {
   it('starts off, and cleans what it finds in storage', () => {
     expect(ambientPrefs.get()).toEqual({ sound: 'off', volume: 0.6 })
@@ -102,6 +118,13 @@ describe('the player in the app layout', () => {
     render(<AmbientPlayer />)
     expect(ambientPlaying()).toBe('lofi')
     act(() => { document.dispatchEvent(new Event('pointerdown')) })
+    expect(primeAudio).toHaveBeenCalledTimes(1)
+  })
+
+  it('also wakes at the first key press', () => {
+    setAmbientPrefs({ sound: 'rain' })
+    render(<AmbientPlayer />)
+    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' })) })
     expect(primeAudio).toHaveBeenCalledTimes(1)
   })
 

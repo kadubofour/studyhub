@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Minimize2, Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
@@ -15,6 +15,23 @@ export function FocusFullscreen({ onClose }: { onClose: () => void }) {
   const running = timer.startedAt !== null
   const every = profile.long_break_every
   const inSet = completedFocus % every
+
+  const view = useRef<HTMLDivElement>(null)
+  const [opener] = useState(() => document.activeElement as HTMLElement | null) // what to give focus back to: read before this view's own button takes it
+  // Tab stays inside the view (the page behind is not reachable), and focus goes back to what opened it
+  useEffect(() => {
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !view.current) return
+      const all = Array.from(view.current.querySelectorAll<HTMLElement>('button:not(:disabled)'))
+      if (all.length === 0) return
+      const first = all[0], last = all[all.length - 1]
+      const outside = !view.current.contains(document.activeElement)
+      if (e.shiftKey && (document.activeElement === first || outside)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && (document.activeElement === last || outside)) { e.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', trap)
+    return () => { document.removeEventListener('keydown', trap); if (opener?.isConnected) opener.focus() }
+  }, [opener])
 
   useEffect(() => {
     const root = document.documentElement
@@ -34,7 +51,7 @@ export function FocusFullscreen({ onClose }: { onClose: () => void }) {
 
   const btn = 'inline-flex items-center gap-2 rounded-full border border-line bg-raised px-5 py-3 text-base transition hover:bg-surface disabled:opacity-40'
   return (
-    <div role="dialog" aria-modal="true" aria-label="Full screen timer" className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-bg px-6 text-center">
+    <div ref={view} role="dialog" aria-modal="true" aria-label="Full screen timer" className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-bg px-6 text-center">
       <button type="button" onClick={onClose} aria-label="Exit full screen" title="Exit full screen" className="absolute right-4 top-4 inline-flex size-11 items-center justify-center rounded-full border border-line bg-raised text-muted hover:text-fg">
         <Minimize2 size={18} aria-hidden />
       </button>

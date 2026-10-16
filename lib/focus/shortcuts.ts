@@ -11,6 +11,10 @@ export function focusShortcut(e: KeyboardEvent): FocusShortcut | null {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return null
   const t = e.target as HTMLElement | null
   const role = t?.getAttribute?.('role') ?? ''
+  // A dialog or an open list on top of the page owns the keys (the timer's own full screen view is the exception)
+  const layer = t?.closest?.('dialog, [role="dialog"], [role="listbox"]')
+  if (layer && layer.getAttribute('aria-label') !== 'Full screen timer') return null
+  if (typeof document !== 'undefined' && document.querySelector('dialog[open]')) return null
   if (t && (TYPING.has(t.tagName) || t.isContentEditable || TYPING_ROLES.has(role))) return null
   if (e.key === ' ' && t && (PRESSABLE.has(t.tagName) || PRESSABLE_ROLES.has(role))) return null
   switch (e.key.toLowerCase()) {

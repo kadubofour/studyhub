@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { focusShortcut } from '@/lib/focus/shortcuts'
 
@@ -27,6 +28,18 @@ describe('focusShortcut', () => {
   })
   it('works from a drum, which uses neither Space nor the letters', () => {
     expect(focusShortcut(key(' ', { target: on('DIV', 'spinbutton') }))).toBe('toggle')
+  })
+  it('leaves the keys to a dialog or an open list on top of the page, but not to the full screen timer', () => {
+    document.body.innerHTML = '<dialog open><button id="d">x</button></dialog><div role="listbox"><div role="option" id="o"></div></div><div role="dialog" aria-label="Full screen timer"><button id="f">p</button></div><button id="plain">y</button>'
+    const at = (id: string) => ({ ...key('r'), target: document.getElementById(id) }) as unknown as KeyboardEvent
+    expect(focusShortcut(at('d'))).toBeNull()
+    expect(focusShortcut(at('o'))).toBeNull()
+    document.body.innerHTML = '<div role="dialog" aria-label="Full screen timer"><button id="f">p</button></div>'
+    expect(focusShortcut(at('f'))).toBe('restart') // the timer's own full screen view
+    document.body.innerHTML = '<dialog open></dialog><button id="plain">y</button>'
+    expect(focusShortcut(at('plain'))).toBeNull() // a dialog is open somewhere
+    document.body.innerHTML = '<button id="plain">y</button>'
+    expect(focusShortcut(at('plain'))).toBe('restart')
   })
   it('leaves browser shortcuts alone, and held keys', () => {
     expect(focusShortcut(key('r', { ctrl: true }))).toBeNull() // reload

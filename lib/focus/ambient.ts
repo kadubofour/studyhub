@@ -61,11 +61,12 @@ function cafe(ctx: AudioContext, out: AudioNode, stops: Stops) {
   // now and then a cup against a saucer
   let timer: ReturnType<typeof setTimeout>
   const clink = () => {
+    timer = setTimeout(clink, 3000 + Math.random() * 7000)
+    if (ctx.state !== 'running') return // not allowed to make sound yet: nothing is saved up to burst out together
     const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain()
     o.type = 'sine'; o.frequency.value = 2200 + Math.random() * 1400
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
     o.connect(g).connect(out); o.start(t); o.stop(t + 0.4)
-    timer = setTimeout(clink, 3000 + Math.random() * 7000)
   }
   timer = setTimeout(clink, 2500)
   stops.push(() => clearTimeout(timer))
@@ -81,6 +82,8 @@ function lofi(ctx: AudioContext, out: AudioNode, stops: Stops) {
   pad.connect(warm)
   let n = 0, timer: ReturnType<typeof setTimeout>
   const play = () => {
+    timer = setTimeout(play, CHORD_SECONDS * 1000)
+    if (ctx.state !== 'running') return // the clock stands still until sound is allowed, so notes scheduled now would all land on the same moment
     const t = ctx.currentTime
     for (const f of CHORDS[n++ % CHORDS.length]) {
       const o = ctx.createOscillator(), g = ctx.createGain()
@@ -88,7 +91,6 @@ function lofi(ctx: AudioContext, out: AudioNode, stops: Stops) {
       g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t + 0.8); g.gain.linearRampToValueAtTime(0.0001, t + CHORD_SECONDS + 0.6)
       o.connect(g).connect(pad); o.start(t); o.stop(t + CHORD_SECONDS + 0.7)
     }
-    timer = setTimeout(play, CHORD_SECONDS * 1000)
   }
   play()
   stops.push(() => clearTimeout(timer))

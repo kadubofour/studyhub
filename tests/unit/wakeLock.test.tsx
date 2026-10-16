@@ -41,6 +41,26 @@ describe('useWakeLock', () => {
     render(<Probe on />)
     await act(async () => {})
   })
+  it('does not ask twice while the first answer is on its way', async () => {
+    let grant: (s: { release: typeof release }) => void = () => {}
+    request.mockImplementationOnce(() => new Promise(r => { grant = r }))
+    render(<Probe on />)
+    hidden('hidden'); await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+    hidden('visible'); await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+    expect(request).toHaveBeenCalledTimes(1)
+    await act(async () => { grant({ release }) })
+    expect(release).not.toHaveBeenCalled()
+    cleanup()
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+  it('asks again after the system took the lock away', async () => {
+    const listeners: Record<string, () => void> = {}
+    request.mockImplementationOnce(async () => ({ release, addEventListener: (t: string, f: () => void) => { listeners[t] = f } }) as never)
+    render(<Probe on />)
+    await act(async () => {})
+    await act(async () => { listeners.release?.(); document.dispatchEvent(new Event('visibilitychange')) })
+    expect(request).toHaveBeenCalledTimes(2)
+  })
   it('releases a lock that arrives after it was no longer wanted', async () => {
     let grant: (s: { release: typeof release }) => void = () => {}
     request.mockImplementationOnce(() => new Promise(r => { grant = r }))

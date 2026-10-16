@@ -23,8 +23,9 @@ const profile: Profile = {
 const page = () => render(<ProfileProvider initial={profile}><ToastProvider><FocusProvider><FocusPage /></FocusProvider></ToastProvider></ProfileProvider>)
 const press = (key: string, target: Element = document.body) => act(async () => { fireEvent.keyDown(target, { key }) })
 
+const realFullscreen = { request: document.documentElement.requestFullscreen, exit: document.exitFullscreen }
 beforeEach(() => { window.localStorage.clear(); ambientPrefs.set(DEFAULT_AMBIENT); focusPrefs.set(DEFAULT_PREFS); logFocusSession.mockClear() })
-afterEach(cleanup)
+afterEach(() => { cleanup(); document.documentElement.requestFullscreen = realFullscreen.request; document.exitFullscreen = realFullscreen.exit; Reflect.deleteProperty(document, 'fullscreenElement') })
 
 describe('Focus page sounds', () => {
   it('choosing a sound and a volume is kept, for the app layout to play', async () => {
@@ -91,6 +92,26 @@ describe('Focus page keyboard shortcuts', () => {
 })
 
 describe('Focus page full screen', () => {
+  it('keeps Tab inside the view, and gives focus back to the button that opened it', async () => {
+    await act(async () => { page() })
+    const opener = screen.getByRole('button', { name: 'Full screen' })
+    opener.focus()
+    await act(async () => { fireEvent.click(opener) })
+    const view = screen.getByRole('dialog', { name: 'Full screen timer' })
+    const inside = within(view).getAllByRole('button')
+    expect(document.activeElement).toBe(within(view).getByRole('button', { name: 'Start' })) // starts on the main control
+    inside[inside.length - 1].focus()
+    await act(async () => { fireEvent.keyDown(inside[inside.length - 1], { key: 'Tab' }) })
+    expect(view.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement).toBe(inside[0])
+    inside[0].focus()
+    await act(async () => { fireEvent.keyDown(inside[0], { key: 'Tab', shiftKey: true }) })
+    expect(document.activeElement).toBe(inside[inside.length - 1])
+    document.querySelector<HTMLElement>('main, body')!.focus()
+    await act(async () => { fireEvent.click(within(view).getByRole('button', { name: 'Exit full screen' })) })
+    expect(document.activeElement).toBe(opener)
+  })
+
   it('opens from the button, shows the timer large with its controls, and closes with Exit', async () => {
     await act(async () => { page() })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Full screen' })) })

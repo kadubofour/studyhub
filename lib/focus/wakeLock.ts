@@ -1,7 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 
-interface Sentinel { release: () => Promise<void> }
+interface Sentinel { release: () => Promise<void>; addEventListener?: (type: 'release', fn: () => void) => void }
 type WakeNav = Navigator & { wakeLock?: { request: (type: 'screen') => Promise<Sentinel> } }
 
 /**
@@ -13,10 +13,17 @@ export function useWakeLock(active: boolean) {
     const wake = (navigator as WakeNav).wakeLock
     if (!active || !wake) return
     let held: Sentinel | null = null
+    let asking = false // an answer is on its way: asking again would leave two locks, one of them never let go
     let live = true
     const take = () => {
-      if (document.visibilityState !== 'visible' || held) return
-      wake.request('screen').then(s => { if (live) held = s; else void s.release().catch(() => {}) }, () => { /* refused: low battery, or not allowed here */ })
+      if (document.visibilityState !== 'visible' || held || asking) return
+      asking = true
+      wake.request('screen').then(s => {
+        asking = false
+        if (!live) { void s.release().catch(() => {}); return }
+        held = s
+        s.addEventListener?.('release', () => { if (held === s) held = null }) // the system took it back
+      }, () => { asking = false /* refused: low battery, or not allowed here */ })
     }
     const again = () => { held = null; take() } // the lock is gone once the page was hidden
     take()
