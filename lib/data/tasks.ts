@@ -1,10 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Priority, Task, TaskType } from '../types'
+import type { ExamKind, Priority, Task, TaskType } from '../types'
 import { check, must } from './util'
 import { announceProgressChanged } from '@/lib/xp/events'
 
-export type NewTask = { title: string; course_id?: string | null; type?: TaskType; due_at?: string | null; priority?: Priority }
-const COLS = 'id,course_id,title,type,due_at,priority,done_at,created_at'
+export type NewTask = {
+  title: string; course_id?: string | null; type?: TaskType; due_at?: string | null; priority?: Priority
+  // What an exam needs (see lib/exams.ts)
+  exam_kind?: ExamKind | null; duration_min?: number | null; location?: string | null; covers?: string | null; weight_pct?: number | null
+}
+const COLS = 'id,course_id,title,type,due_at,priority,done_at,created_at,exam_kind,duration_min,location,covers,weight_pct'
 
 export async function listOpenTasks(sb: SupabaseClient): Promise<Task[]> {
   return must(await sb.from('tasks').select(COLS).is('done_at', null).order('due_at', { ascending: true, nullsFirst: false }))

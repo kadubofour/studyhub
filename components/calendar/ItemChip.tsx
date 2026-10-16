@@ -14,6 +14,7 @@ export function ItemChip({ item, course, onClick, compact = false }: { item: Day
   const inner = (
     <>
       <Icon size={11} className="shrink-0" aria-hidden />
+      {item.time && <span className="shrink-0 opacity-80">{item.time}</span>}
       <span className="truncate">{item.title}</span>
       {item.kind === 'task' && item.priority === 'high' && <span className="shrink-0 text-danger"><Flag size={11} className="fill-current" aria-hidden /><span className="sr-only">High priority</span></span>}
     </>

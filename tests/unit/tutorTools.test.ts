@@ -56,10 +56,13 @@ describe('create_quiz', () => {
 })
 
 describe('create_task', () => {
-  it('defaults the type and priority, and turns a plain date into a time', () => {
+  it('defaults the type and priority, and keeps a plain date as a day (no time is made up: the time zone of the student is applied when it is added)', () => {
     expect(parse('create_task', { title: 'Read ch 4', due_date: '2030-05-17' })?.args).toEqual({
-      title: 'Read ch 4', type: 'other', due_at: '2030-05-17T09:00:00.000Z', priority: 'normal', course_id: null,
+      title: 'Read ch 4', type: 'other', due_at: '2030-05-17', priority: 'normal', course_id: null,
     })
+  })
+  it('keeps a full date and time as it is', () => {
+    expect(parse('create_task', { title: 'Midterm', type: 'exam', due_date: '2030-05-17T14:00:00Z' })?.args).toMatchObject({ due_at: '2030-05-17T14:00:00Z' })
   })
   it('is dropped for an empty title, an unknown type or an unreadable date', () => {
     expect(parse('create_task', { title: '' })).toBeNull()

@@ -30,8 +30,9 @@ const RawQuestion = z.object({
   answer: z.string(), explanation: z.string(),
 })
 const QuizArgs = z.object({ title: text(200), questions: z.array(RawQuestion).min(1).max(30) })
-// A plain date ("2030-05-17") means 09:00 that day (UTC); a full date-time is kept
-const dueAt = z.preprocess(v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T09:00:00.000Z` : v), z.string().datetime({ offset: true }).nullish())
+// A plain date ("2030-05-17") is kept as a day: it becomes the end of that day in the student's own time zone when it is added (a made-up time would
+// show as the start time of an exam); a full date-time is kept
+const dueAt = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.string().datetime({ offset: true })]).nullish()
 const TaskArgs = z.object({
   title: text(300), type: z.enum(['assignment', 'exam', 'reading', 'other']).nullish(), priority: z.enum(['low', 'normal', 'high']).nullish(),
   due_date: dueAt, course_id: id.nullish(),

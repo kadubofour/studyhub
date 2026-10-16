@@ -15,6 +15,7 @@ import { listCourses } from '@/lib/data/courses'
 import { createTask, deleteTask, listOpenTasks, listRecentlyDone, setTaskDone, updateTask, type NewTask } from '@/lib/data/tasks'
 import { createClass, deleteClass, listClasses, updateClass } from '@/lib/data/classes'
 import { boardColumns, boardSummary, rescheduleTo, type MoveChoice } from '@/lib/tasks/board'
+import { keepTimeOfDay } from '@/lib/exams'
 import { LISTS, listCounts, taskGroups, tasksForList, type ListId } from '@/lib/tasks/lists'
 import { TaskRail, type TypeFilter } from '@/components/planner/TaskRail'
 import type { ClassSlot, Course, Task } from '@/lib/types'
@@ -101,11 +102,17 @@ export default function PlannerPage() {
     const temp: Task = {
       id: `temp-${crypto.randomUUID()}`, course_id: input.course_id ?? null, title: input.title, type: input.type ?? 'other',
       due_at: input.due_at ?? null, priority: input.priority ?? 'normal', done_at: null, created_at: new Date().toISOString(),
+      exam_kind: input.exam_kind ?? null, duration_min: input.duration_min ?? null, location: input.location ?? null, covers: input.covers ?? null, weight_pct: input.weight_pct ?? null,
     }
     save(
       () => setTasks(ts => [...ts, temp]),
       () => setTasks(ts => ts.filter(t => t.id !== temp.id)),
-      async () => { const real = await createTask(supabase(), input); setTasks(ts => ts.map(t => (t.id === temp.id ? real : t))) },
+      async () => {
+        const real = await createTask(supabase(), input)
+        setTasks(ts => ts.map(t => (t.id === temp.id ? real : t)))
+        // An exam is for studying towards: offer to plan the revision, which is on the Tasks tab
+        if (real.type === 'exam') toast('Exam added.', { label: 'Plan revision', onClick: () => setTab('tasks') })
+      },
     )
   }
 
@@ -113,6 +120,8 @@ export default function PlannerPage() {
     const before = tasks.find(t => t.id === id)
     if (!before || id.startsWith('temp-')) return
     const change = { title: patch.title, type: patch.type ?? before.type, course_id: patch.course_id ?? null, due_at: patch.due_at ?? null, priority: patch.priority ?? before.priority }
+    // the exam details change when the patch carries them (an exam's patch always does, with nulls for what was cleared)
+    for (const k of ['exam_kind', 'duration_min', 'location', 'covers', 'weight_pct'] as const) if (k in patch) (change as Record<string, unknown>)[k] = patch[k] ?? null
     save(
       () => setTasks(ts => ts.map(t => (t.id === id ? { ...t, ...change } : t))),
       () => setTasks(ts => ts.map(t => (t.id === id ? before : t))),
@@ -151,7 +160,8 @@ export default function PlannerPage() {
   }
 
   function move(t: Task, to: MoveChoice) {
-    edit(t.id, { title: t.title, type: t.type, course_id: t.course_id, priority: t.priority, due_at: rescheduleTo(to, tz, now) })
+    // an exam keeps the time it starts at; other tasks go to the end of the day
+    edit(t.id, { title: t.title, type: t.type, course_id: t.course_id, priority: t.priority, due_at: keepTimeOfDay(t, rescheduleTo(to, tz, now), tz) })
   }
   const counts = listCounts(visible, visibleDone.length, tz, now)
   const shown = tasksForList(list, visible, tz, now)

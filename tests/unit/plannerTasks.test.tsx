@@ -57,6 +57,7 @@ describe('Planner tabs', () => {
     await load()
     await click(screen.getByRole('tab', { name: 'Week' }))
     await click(screen.getByRole('button', { name: 'Add exam' }))
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Course' })).getAllByRole('radio')[0])
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Finals' } })
     await click(screen.getByRole('button', { name: 'Save' }))
     expect(createTask).toHaveBeenCalledWith({}, expect.objectContaining({ title: 'Finals', type: 'exam' }))

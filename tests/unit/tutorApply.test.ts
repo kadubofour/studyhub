@@ -10,7 +10,11 @@ vi.mock('@/lib/data/decks', () => ({ createDeck: (...a: unknown[]) => createDeck
 vi.mock('@/lib/data/cards', () => ({ createCards: (...a: unknown[]) => createCards(...a) }))
 vi.mock('@/lib/data/tasks', () => ({ createTask: (...a: unknown[]) => createTask(...a) }))
 const quizInsert = vi.fn()
-const sb = { from: (t: string) => ({ insert: (row: unknown) => { quizInsert(t, row); return { select: () => ({ single: async () => ({ data: { id: 'q9' }, error: null }) }) } } }) } as never
+let timezone = 'Africa/Lagos' // UTC+1
+const sb = { from: (t: string) => ({
+  insert: (row: unknown) => { quizInsert(t, row); return { select: () => ({ single: async () => ({ data: { id: 'q9' }, error: null }) }) } },
+  select: () => ({ single: async () => ({ data: t === 'profiles' ? { timezone } : null, error: null }) }),
+}) } as never
 import { applyProposal } from '@/lib/tutor/apply'
 import type { Proposal } from '@/lib/ai/tutorTools'
 
@@ -42,6 +46,20 @@ describe('applyProposal', () => {
     const args = { title: 'Read', type: 'reading' as const, due_at: null, priority: 'normal' as const, course_id: null }
     expect(await applyProposal(sb, p({ id: 'p', tool: 'create_task', state: 'pending', args }), chat)).toEqual({ itemId: 't9', itemKind: 'task' })
     expect(createTask).toHaveBeenCalledWith(sb, { ...args, course_id: 'c1' })
+  })
+  it('saves a task with only a day as the end of that day in the time zone of the student, so an exam shows no made-up start time', async () => {
+    const args = { title: 'Bio final', type: 'exam' as const, due_at: '2030-05-17', priority: 'normal' as const, course_id: null }
+    await applyProposal(sb, p({ id: 'p', tool: 'create_task', state: 'pending', args }), chat)
+    expect(createTask).toHaveBeenLastCalledWith(sb, { ...args, course_id: 'c1', due_at: '2030-05-17T22:59:59.000Z' }) // 23:59:59 in Lagos
+    timezone = 'America/New_York'
+    await applyProposal(sb, p({ id: 'p', tool: 'create_task', state: 'pending', args }), chat)
+    expect(createTask).toHaveBeenLastCalledWith(sb, { ...args, course_id: 'c1', due_at: '2030-05-18T03:59:59.000Z' }) // 23:59:59 in New York (UTC-4)
+    timezone = 'Africa/Lagos'
+  })
+  it('keeps a task with a time as it is', async () => {
+    const args = { title: 'Midterm', type: 'exam' as const, due_at: '2030-05-17T14:00:00Z', priority: 'normal' as const, course_id: null }
+    await applyProposal(sb, p({ id: 'p', tool: 'create_task', state: 'pending', args }), chat)
+    expect(createTask).toHaveBeenLastCalledWith(sb, { ...args, course_id: 'c1' })
   })
   it('a failure part-way doesn\'t report success', async () => {
     createCards.mockRejectedValueOnce(new Error('rls'))

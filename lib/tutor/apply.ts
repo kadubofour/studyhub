@@ -5,6 +5,7 @@ import { createDeck, deleteDeck } from '@/lib/data/decks'
 import { createCards } from '@/lib/data/cards'
 import { createTask } from '@/lib/data/tasks'
 import { must } from '@/lib/data/util'
+import { endOfLocalDay } from '@/lib/dates'
 
 // "Add": saves what the tutor proposed, as the student, through the same functions they use by hand
 // (so row-level security applies). Throws if any step fails; the proposal then stays pending.
@@ -32,7 +33,13 @@ export async function applyProposal(
       return { itemId: q.id, itemKind: 'quiz' }
     }
     case 'create_task': {
-      const t = await createTask(sb, { ...p.args, course_id: p.args.course_id ?? chat.course_id })
+      // A date with no time is the end of that day in the student's own time zone, which is how a day with no time is kept
+      let due = p.args.due_at
+      if (due && /^\d{4}-\d{2}-\d{2}$/.test(due)) {
+        const tz = (must(await sb.from('profiles').select('timezone').single()) as { timezone: string }).timezone
+        due = endOfLocalDay(due, tz).toISOString()
+      }
+      const t = await createTask(sb, { ...p.args, due_at: due, course_id: p.args.course_id ?? chat.course_id })
       return { itemId: t.id, itemKind: 'task' }
     }
   }
