@@ -183,6 +183,15 @@ describe('the length of the session', () => {
     await act(async () => { api!.setDuration(45) })
     expect(api!.timer.durationMs).toBe(45 * 60_000); expect(api!.timer.mode).toBe('focus')
   })
+  it('can be any length, kept between one minute and three hours', async () => {
+    mount()
+    await act(async () => { api!.setDuration(37) })
+    expect(api!.timer.durationMs).toBe(37 * 60_000)
+    await act(async () => { api!.setDuration(999) })
+    expect(api!.timer.durationMs).toBe(180 * 60_000)
+    await act(async () => { api!.setDuration(0) })
+    expect(api!.timer.durationMs).toBe(60_000)
+  })
   it('cannot be changed once it is running, or once part of it has gone', async () => {
     mount()
     await act(async () => { api!.toggle() })

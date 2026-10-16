@@ -5,11 +5,9 @@ import { Pause, Play, RotateCcw, SkipForward, Headphones } from 'lucide-react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { canRestart, durationFor, elapsedMs, remainingMs, type Mode } from '@/lib/timer'
-import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { LengthStepper } from '@/components/focus/LengthStepper'
 import { FocusTaskPicker } from '@/components/focus/FocusTaskPicker'
 
-// Quick lengths for the session about to start (Settings still decides the default)
-const PRESETS: Record<Mode, number[]> = { focus: [15, 25, 45, 50], short: [5, 10], long: [15, 20, 30] }
 const SOUNDS = [{ id: 'off', label: 'Off' }, { id: 'rain', label: 'Rain' }, { id: 'cafe', label: 'Café' }, { id: 'lofi', label: 'Lo-fi' }]
 
 export default function FocusPage() {
@@ -39,7 +37,7 @@ export default function FocusPage() {
   const running = timer.startedAt !== null
   const goal = profile.daily_goal_minutes
   const minutes = Math.round(timer.durationMs / 60_000)
-  const lengths = [...new Set([...PRESETS[timer.mode], Math.round(durationFor(timer.mode, profile) / 60_000), minutes])].sort((a, b) => a - b) // the length now in use is always one of the choices
+  const usual = Math.round(durationFor(timer.mode, profile) / 60_000) // what the student set in Settings: where every session starts
   const begun = running || elapsedMs(timer, now) > 0
   const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
 
@@ -52,8 +50,7 @@ export default function FocusPage() {
         ))}
       </div>
       <div className="mt-4 flex justify-center">
-        <ChoiceChips label="Session length" size="sm" value={String(minutes)} disabled={begun} onChange={v => setDuration(Number(v))}
-          options={lengths.map(m => ({ value: String(m), label: `${m} min` }))} />
+        <LengthStepper minutes={minutes} usual={usual} disabled={begun} onChange={setDuration} />
       </div>
       <div className="relative mx-auto my-8 size-64">
         <svg viewBox="0 0 200 200" className="size-full -rotate-90" aria-hidden>

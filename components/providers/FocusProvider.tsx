@@ -11,7 +11,7 @@ import { chime, notify, primeAudio, vibrate } from '@/lib/focus/alert'
 import { dailyMinutes } from '@/lib/streak'
 import { localDayKey, startOfLocalDay } from '@/lib/dates'
 import {
-  createTimer, durationFor, elapsedMs, isFinished, markLogged, nextMode, pauseTimer, remainingMs, restartTimer,
+  createTimer, durationFor, MAX_MINUTES, MIN_MINUTES, elapsedMs, isFinished, markLogged, nextMode, pauseTimer, remainingMs, restartTimer,
   shouldLogSession, startTimer, type Mode, type TimerState,
 } from '@/lib/timer'
 import { usePersistedTimer } from '@/lib/ui/usePersistedTimer'
@@ -148,7 +148,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
 
   const setDuration = useCallback((minutes: number) => {
     if (timer.startedAt !== null || elapsedMs(timer, Date.now()) > 0) return // not once it has begun
-    setTimer(createTimer(timer.mode, Math.round(minutes) * 60_000))
+    setTimer(createTimer(timer.mode, Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(minutes))) * 60_000))
   }, [timer, setTimer])
 
   const pickMode = useCallback((mode: Mode) => {

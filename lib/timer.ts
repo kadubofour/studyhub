@@ -19,6 +19,10 @@ export function startTimer(s: TimerState, now: number): TimerState {
   return { ...s, startedAt: now, firstStartedAt: s.firstStartedAt ?? now }
 }
 
+/** The shortest and longest session a student can set */
+export const MIN_MINUTES = 1
+export const MAX_MINUTES = 180
+
 export function pauseTimer(s: TimerState, now: number): TimerState {
   if (s.startedAt === null) return s
   return { ...s, startedAt: null, accumulatedMs: s.accumulatedMs + (now - s.startedAt) }

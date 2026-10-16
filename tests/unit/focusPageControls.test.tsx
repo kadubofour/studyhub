@@ -142,27 +142,34 @@ describe('the "When time is up" card', () => {
 })
 
 describe('the Focus page', () => {
-  it('offers lengths for the session, marks the one in use, and changes it before the session begins', async () => {
+  it('starts at the length from Settings, and changes it to any length before the session begins', async () => {
     await act(async () => { page() })
-    const group = screen.getByRole('radiogroup', { name: 'Session length' })
-    expect(within(group).getAllByRole('radio').map(r => r.textContent)).toEqual(['15 min', '25 min', '45 min', '50 min'])
-    expect(within(group).getByRole('radio', { name: '25 min' }).getAttribute('aria-checked')).toBe('true')
-    await act(async () => { fireEvent.click(within(group).getByRole('radio', { name: '45 min' })) })
-    expect(screen.getByText('45:00')).toBeTruthy()
+    const box = () => screen.getByRole('spinbutton', { name: 'Session length in minutes' }) as HTMLInputElement
+    expect(box().value).toBe('25')
+    expect(screen.queryByRole('button', { name: /Back to/ })).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Five minutes longer' })) })
+    expect(screen.getByText('30:00')).toBeTruthy()
+    await act(async () => { fireEvent.change(box(), { target: { value: '37' } }); fireEvent.blur(box()) })
+    expect(screen.getByText('37:00')).toBeTruthy()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Back to 25 min' })) })
+    expect(screen.getByText('25:00')).toBeTruthy()
   })
 
-  it('shows a length from Settings that is not one of the presets, as a choice too', async () => {
-    render(<ProfileProvider initial={{ ...profile, focus_minutes: 30 }}><ToastProvider><FocusProvider><FocusPage /></FocusProvider></ToastProvider></ProfileProvider>)
+  it('goes back to a Settings length that is not a multiple of five', async () => {
+    render(<ProfileProvider initial={{ ...profile, focus_minutes: 33 }}><ToastProvider><FocusProvider><FocusPage /></FocusProvider></ToastProvider></ProfileProvider>)
     await act(async () => {})
-    expect(screen.getAllByRole('radio').map(r => r.textContent)).toEqual(['15 min', '25 min', '30 min', '45 min', '50 min'])
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Five minutes shorter' })) })
+    expect(screen.getByText('30:00')).toBeTruthy()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Back to 33 min' })) })
+    expect(screen.getByText('33:00')).toBeTruthy()
   })
 
-  it('locks the lengths once the session is running, and shows the break lengths in a break', async () => {
+  it('locks the length once the session is running, and starts a break at the break length', async () => {
     await act(async () => { page() })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
-    expect((screen.getByRole('radio', { name: '45 min' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).disabled).toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Short break' })) })
-    expect(screen.getAllByRole('radio').map(r => r.textContent)).toEqual(['5 min', '10 min'])
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('5')
   })
 
   it('lets the student choose a task, shows it under the clock, and clears it', async () => {
