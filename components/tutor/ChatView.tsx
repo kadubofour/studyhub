@@ -1,22 +1,32 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ClipboardCopy, Copy, Mic, Pencil, RefreshCw, Square, Trash2 } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
+import { useProfile } from '@/components/providers/ProfileProvider'
+import { useDictation } from '@/components/tutor/useDictation'
+import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickDialog'
+import { usePlan } from '@/components/billing/usePlan'
+import { AI_USED } from '@/components/ai/aiFetch'
 import { Switch } from '@/components/ui/Switch'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
-import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatCourse, setChatGuided, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
+import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatContext, setChatCourse, setChatGuided, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
+import { FREE_DAILY_TUTOR_MESSAGES } from '@/lib/billing/plans'
+import { FOLLOW_UPS, STARTERS, starterMessage } from '@/lib/tutor/starters'
+import { dayHeading, nearBottom, timeOf, transcript } from '@/lib/tutor/conversation'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Course } from '@/lib/types'
 
+const nowMs = () => Date.now() // a plain function, so reading the clock in a click handler is not mistaken for reading it while drawing
+const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for good: a new one each render would make the picker load everything again
 const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string) => `/lectures/${id}`, card: () => '/flashcards' }
 
 export function ChatView({ chatId }: { chatId: string }) {
@@ -31,7 +41,35 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [live, setLive] = useState<string | null>(null) // the reply being written; null when none
   const [problem, setProblem] = useState<{ code: string; message: string } | null>(null)
   const [attachedTitle, setAttachedTitle] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<string | null>(null) // the new name being typed; null when not renaming
+  const [picking, setPicking] = useState(false)
+  const plan = usePlan()
+  const abort = useRef<AbortController | null>(null)
+  const stopped = useRef(false) // the student pressed Stop: an ended reply is not an error
+  const liveText = useRef('') // what has been written of the reply so far
+  const startedAt = useRef(0)
+  const [lastSent, setLastSent] = useState('') // the question just sent, which Try again asks again (it may never have been saved)
+  const renameSettled = useRef(false) // Enter or Escape has decided the rename: the box losing focus afterwards must not decide it again
+  const [partial, setPartial] = useState<string | null>(null) // what was written when the student stopped, until the saved reply is there to show
   const end = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLTextAreaElement>(null)
+  const dictBase = useRef('') // what was in the box when dictation began; what is said goes after it
+  const dictOn = useRef(false) // false once the message is sent, so words that arrive late do not fill the empty box again
+  const dictation = useDictation(spoken => {
+    if (!dictOn.current) return
+    const said = spoken.trim()
+    setText((said ? `${dictBase.current}${dictBase.current ? ' ' : ''}${said}` : dictBase.current).slice(0, 4000))
+  })
+  const toastLatest = useRef(toast)
+  useEffect(() => { toastLatest.current = toast })
+  useEffect(() => {
+    if (dictation.error) toastLatest.current(dictation.error === 'not-allowed' || dictation.error === 'service-not-allowed' ? 'The microphone is blocked. Allow it in your browser settings.' : "Couldn't use the microphone.")
+  }, [dictation.error])
+  const lastY = useRef(0)
+  const pinned = useRef(true) // the student is reading the newest text, so a reply is followed; scrolled up, the page stays where they put it
+  const [away, setAway] = useState(false) // scrolled up from the newest text: offer a way back
+  const [today] = useState(() => new Date(nowMs())) // for the day headings and the welcome
+  const { profile } = useProfile()
   // The newest messages, read by proposal writes (a click's own render can be stale), and a queue so saves run one at a time
   const latest = useRef<TutorMessage[]>([])
   const writes = useRef<Promise<void>>(Promise.resolve())
@@ -53,7 +91,25 @@ export function ChatView({ chatId }: { chatId: string }) {
     }).catch(() => { if (current) router.push('/tutor') })
     return () => { current = false }
   }, [chatId, router])
-  useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
+  useEffect(() => { if (pinned.current) end.current?.scrollIntoView?.({ block: 'end' }) }, [messages, live])
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY
+      const up = y < lastY.current - 2 // any scroll upward is the student leaving, however near the bottom they still are
+      lastY.current = y
+      const near = !up && nearBottom({ scrollY: y, viewport: window.innerHeight, endY: (end.current?.getBoundingClientRect().top ?? 0) + y })
+      pinned.current = near; setAway(!near)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  // The message box grows with what is typed, up to about eight lines
+  useEffect(() => {
+    const el = box.current
+    if (!el || !el.scrollHeight) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 192)}px`
+  }, [text, chat])
   // The message from a Revise button is taken once: drop it from the address so a reload or Back does not fill the box again
   useEffect(() => { if (ask) router.replace(`/tutor/${chatId}`) }, [ask, chatId, router])
 
@@ -62,26 +118,35 @@ export function ChatView({ chatId }: { chatId: string }) {
   async function send(override?: string) {
     const message = (override ?? text).trim()
     if (!message || live !== null) return
-    setProblem(null); if (override === undefined) setText(''); setLive('')
+    dictOn.current = false; dictation.stop()
+    pinned.current = true; setAway(false) // sending a message goes to the newest text
+    setProblem(null); setPartial(null); if (override === undefined) setText(''); setLive('')
+    const control = new AbortController()
+    abort.current = control; stopped.current = false; liveText.current = ''; startedAt.current = nowMs(); setLastSent(message)
     const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '' }]
     latest.current = shown; setMessages(shown)
-    const r = await sendTutorMessage(chatId, message)
+    let r: Awaited<ReturnType<typeof sendTutorMessage>>
+    try { r = await sendTutorMessage(chatId, message, control.signal) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
     if (!r.ok) {
       // Refused (limit, speed, offline): keep what was typed so it isn't lost
-      setProblem({ code: r.error, message: r.message }); if (override === undefined) setText(message); setLive(null); await reload(); return
+      setProblem({ code: r.error, message: r.message }); if (override === undefined) setText(message); setLive(null); await reload().catch(() => {}); return
     }
     const cutOff = { code: 'cut_off', message: 'The reply was cut off. Try again.' }
     let ended = false
     try {
       for await (const l of r.lines) {
-        if (l.t === 'delta') setLive(s => (s ?? '') + l.text)
+        if (l.t === 'delta') { liveText.current += l.text; setLive(s => (s ?? '') + l.text) }
         else if (l.t === 'done') ended = true
         else if (l.t === 'error') { ended = true; setProblem(l.messageId ? cutOff : { code: l.error, message: 'Couldn\'t reach the AI. Try again.' }) }
       }
-      if (!ended) setProblem(cutOff) // the connection closed without finishing
-    } catch { setProblem(cutOff) } finally {
+      if (!ended && !stopped.current) setProblem(cutOff) // the connection closed without finishing
+    } catch { if (!stopped.current) setProblem(cutOff) } finally {
+      // Stopped: keep what was written on the page, because the server saves the partial reply a moment after it hears the stop
+      if (stopped.current) { setPartial(liveText.current.trim() ? liveText.current : null); window.dispatchEvent(new Event(AI_USED)) } // that message was used
+      // The saved reply replaces the streamed one in a single update: the page must not shrink in between, or a reader scrolled up is carried to the bottom
+      try { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) } catch { /* the next load shows it */ }
       setLive(null)
-      try { await reload(); const fresh = await getChat(supabase(), chatId); setChat(c => (c ? { ...fresh, guided: c.guided } : fresh)) } catch { /* the next load shows it */ }
+      try { const fresh = await getChat(supabase(), chatId); setChat(c => (c ? { ...fresh, guided: c.guided } : fresh)) } catch { /* the next load shows it */ }
     }
   }
 
@@ -112,10 +177,31 @@ export function ChatView({ chatId }: { chatId: string }) {
     catch { setChat(c => c && { ...c, guided: !on }); toast('Couldn\'t change guided mode.') }
   }
 
-  async function rename() {
-    const title = window.prompt('Chat name', chat!.title)?.trim()
-    if (!title) return
-    try { await renameChat(supabase(), chatId, title.slice(0, 200)); setChat(c => c && { ...c, title: title.slice(0, 200) }) } catch { toast('Couldn\'t rename.') }
+  async function finishRename() {
+    if (renameSettled.current) return
+    renameSettled.current = true
+    const title = renaming?.trim().slice(0, 200)
+    setRenaming(null)
+    if (!title || title === chat!.title) return
+    try { await renameChat(supabase(), chatId, title); setChat(c => c && { ...c, title }) } catch { toast("Couldn't rename.") }
+  }
+  async function copy(text: string) {
+    try { await navigator.clipboard.writeText(text); toast('Copied.') } catch { toast("Couldn't copy. Select the text instead.") }
+  }
+  // What the chat is about: a note or a lecture, or neither. The tutor reads it from the next message on.
+  function jumpToLatest() { pinned.current = true; setAway(false); end.current?.scrollIntoView?.({ block: 'end' }) }
+  // A touch screen has no Shift key to start a new line with, so there Enter does that and the Send button sends
+  function enterSends(e: React.KeyboardEvent) {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return false // Enter that picks a word while typing Chinese, Japanese or Korean is not Send
+    return e.ctrlKey || e.metaKey || (!e.shiftKey && !window.matchMedia?.('(pointer: coarse)').matches)
+  }
+  async function aboutPicked(t: TutorTarget | null) {
+    setPicking(false)
+    try {
+      await setChatContext(supabase(), chatId, t === null ? null : t.kind === 'lecture' ? { lecture_id: t.id } : { note_id: t.id })
+      setChat(c => c && { ...c, note_id: t?.kind === 'note' ? t.id : null, lecture_id: t?.kind === 'lecture' ? t.id : null })
+      setAttachedTitle(t?.title ?? null)
+    } catch { toast("Couldn't change what this chat is about.") }
   }
   async function remove() {
     if (!await confirm({ title: 'Delete this chat?', body: 'Its messages are deleted for good. Anything you added from it stays.', confirmLabel: 'Delete', danger: true })) return
@@ -124,58 +210,149 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   if (!chat) return <p className="text-sm text-muted">Loading…</p>
   const where = chat.note_id ? `/notes/${chat.note_id}` : chat.lecture_id ? `/lectures/${chat.lecture_id}` : null
+  const last = messages[messages.length - 1]
+  const lastAsked = [...messages].reverse().find(m => m.role === 'user')?.content
+  const idle = live === null
+  // A question with no answer, a reply that was cut off, or a connection that failed: ask it again
+  const retryText = problem ? lastSent || lastAsked : lastAsked // after a failure: the question that failed, which may not have been saved
+  const canRetry = idle && !!retryText && (problem?.code === 'cut_off' || problem?.code === 'ai_failed' || last?.status === 'cut_off' || last?.role === 'user')
+  const canFollowUp = idle && !chat.guided && !problem && last?.role === 'assistant' && last.status === 'ok'
+  const left = plan.billing && !plan.isPremium && !plan.loading ? Math.max(0, FREE_DAILY_TUTOR_MESSAGES - plan.tutorToday) : null
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-lg font-medium">{chat.title}</h1>
-        <select className="input max-w-40" aria-label="Course" value={chat.course_id ?? ''} onChange={e => { const v = e.target.value || null; setChat({ ...chat, course_id: v }); void setChatCourse(supabase(), chatId, v) }}>
+    <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-3xl flex-col gap-3 max-md:min-h-[calc(100dvh-13rem)]">
+      <div className="flex items-center gap-1">
+        {renaming === null
+          ? <h1 className="mr-auto min-w-0 truncate text-lg font-medium">{chat.title}</h1>
+          : <input aria-label="Chat name" className="input mr-auto min-w-0 flex-1 text-lg font-medium" value={renaming} maxLength={200} autoFocus
+              onChange={e => setRenaming(e.target.value)} onBlur={() => { void finishRename() }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void finishRename() } else if (e.key === 'Escape') { renameSettled.current = true; setRenaming(null) } }} />}
+        {renaming === null && <button type="button" className="btn-ghost" aria-label="Rename" title="Rename" onClick={() => { renameSettled.current = false; setRenaming(chat.title) }}><Pencil size={15} aria-hidden /></button>}
+        {messages.length > 0 && <button type="button" className="btn-ghost" aria-label="Copy chat" title="Copy the whole chat" onClick={() => { void copy(transcript(chat.title, messages)) }}><ClipboardCopy size={15} aria-hidden /></button>}
+        <button type="button" className="btn-ghost text-danger" aria-label="Delete chat" title="Delete chat" onClick={remove}><Trash2 size={15} aria-hidden /></button>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {where && attachedTitle ? <>About <Link className="text-accent" href={where}>{attachedTitle}</Link></> : <>Not about a note or lecture</>}
+          <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => setPicking(true)}>{where ? 'Change' : 'Choose one'}</button>
+          {where && <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => { void aboutPicked(null) }}>Remove</button>}
+        </p>
+        <select className="input !w-auto max-w-40 !py-1 text-xs" aria-label="Course" value={chat.course_id ?? ''} onChange={e => { const v = e.target.value || null; setChat({ ...chat, course_id: v }); void setChatCourse(supabase(), chatId, v) }}>
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <span className="flex items-center gap-2 text-sm">
-          <span id="guided-label">Guided</span>
-          <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
-          <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
-        </span>
-        <button type="button" className="btn" onClick={rename}>Rename</button>
-        <button type="button" className="btn-ghost text-danger" aria-label="Delete chat" onClick={remove}><Trash2 size={15} aria-hidden /></button>
       </div>
-      {where && attachedTitle && <p className="text-xs text-muted">About <Link className="text-accent" href={where}>{attachedTitle}</Link></p>}
 
-      <div className="space-y-3" aria-live="polite" aria-label="Conversation">
-        {messages.length === 0 && live === null && <p className="card py-8 text-center text-sm text-muted">Ask anything. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>}
-        {messages.map(m => m.role === 'user'
-          ? <p key={m.id} className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-2xl bg-accent-soft px-3 py-2 text-sm">{m.content}</p>
+      <div className="flex-1 space-y-3" aria-live="polite" aria-label="Conversation">
+        {messages.length === 0 && live === null && (
+          <div className="space-y-4 py-10 text-center">
+            <h2 className="text-2xl font-medium">{today.getHours() < 12 ? 'Good morning' : today.getHours() < 18 ? 'Good afternoon' : 'Good evening'}{profile.display_name ? `, ${profile.display_name}` : ''}</h2>
+            <p className="mx-auto max-w-md text-sm text-muted">Ask anything about your courses. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
+            {/* ideas put a message in the box to finish and send; nothing is sent from here */}
+            <div role="group" aria-label="Ideas to start with" className="flex flex-wrap justify-center gap-2">
+              {STARTERS.map(s => (
+                <button key={s.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5"
+                  onClick={() => { setText(starterMessage(s, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }}>{s.title}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => {
+          const heading = dayHeading(m.created_at, today)
+          const newDay = !!heading && heading !== dayHeading(messages[i - 1]?.created_at ?? '', today)
+          const time = timeOf(m.created_at)
+          return (
+          <Fragment key={m.id}>
+          {newDay && <h2 className="pt-1 text-center text-xs text-muted">{heading}</h2>}
+          {m.role === 'user'
+          ? (
+            <div className="ml-auto flex max-w-[85%] flex-col items-end gap-0.5">
+              <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm">{m.content}</p>
+              {m.id !== 'pending' && (
+                <div className="flex items-center gap-1 text-xs text-muted">
+                  {time && <span>{time}</span>}
+                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy question" title="Copy" onClick={() => { void copy(m.content) }}><Copy size={13} aria-hidden /></button>
+                </div>
+              )}
+            </div>
+          )
           : (
-            <div key={m.id} className="max-w-[95%] space-y-2">
+            <div className="space-y-2">
               <MarkdownView source={m.content} />
-              {m.status === 'cut_off' && <p className="text-xs text-muted">Reply was cut off. Try again.</p>}
+              {m.status === 'cut_off' && <p className="text-xs text-muted">Reply was cut off.</p>}
               {m.sources.length > 0 && (
                 <p className="text-xs text-muted">From: {m.sources.map((s, i) => (
                   <span key={s.id}>{i > 0 && ', '}<Link className="text-accent" href={SOURCE_LINK[s.kind](s.id)}>{s.title}</Link></span>
                 ))}</p>
               )}
+              <div className="flex gap-1 text-muted">
+                <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy reply" title="Copy" onClick={() => { void copy(m.content) }}><Copy size={14} aria-hidden /></button>
+                {m === last && idle && !!lastAsked && m.status === 'ok' && (
+                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Regenerate reply" title="Regenerate" onClick={() => { void send(lastAsked) }}><RefreshCw size={14} aria-hidden /></button>
+                )}
+                {time && <span className="ml-auto self-center text-xs">{time}</span>}
+              </div>
               {m.proposals.map(p => (
                 <ProposalCard key={p.id} proposal={p} onAdd={e => add(m.id, e)} onDiscard={() => { change(m.id, p.id, { state: 'discarded' }).catch(() => toast('Couldn\'t save that.')) }} />
               ))}
             </div>
-          ))}
-        {live !== null && (live ? <MarkdownView source={live} /> : <p role="status" className="text-sm text-muted">Thinking…</p>)}
+          )}
+          </Fragment>
+          )
+        })}
+        {partial && last?.role === 'user' && idle && (
+          <div className="space-y-1"><MarkdownView source={partial} /><p className="text-xs text-muted">Stopped.</p></div>
+        )}
+        {live !== null && (live ? <MarkdownView source={live} /> : <p role="status" className="text-sm text-muted motion-safe:animate-pulse">Thinking…</p>)}
         <div ref={end} />
       </div>
 
       {problem && <AiError code={problem.code} message={problem.message} />}
+      {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
+      {canFollowUp && (
+        <div role="group" aria-label="Follow-up questions" className="flex flex-wrap gap-2">
+          {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5" onClick={() => { void send(f.message) }}>{f.label}</button>)}
+        </div>
+      )}
       {chat.guided && messages.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn" disabled={live !== null} onClick={() => { void send('Give me a hint.') }}>Give me a hint</button>
           <button type="button" className="btn" disabled={live !== null} onClick={() => { void send('Show me the answer.') }}>Show the answer</button>
         </div>
       )}
-      <form className="sticky bottom-0 flex gap-2 bg-bg pb-3 pt-1" onSubmit={e => { e.preventDefault(); void send() }}>
-        <textarea className="input min-h-11 flex-1" rows={2} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
-          onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }} />
-        <button className="btn-primary self-end" disabled={!text.trim() || live !== null}>Send</button>
+      <form className="sticky bottom-0 bg-bg pb-3 pt-1 max-md:bottom-[calc(4.5rem+env(safe-area-inset-bottom))]" onSubmit={e => { e.preventDefault(); void send() }}>
+        {away && messages.length > 0 && (
+          <button type="button" aria-label="Jump to latest" title="Latest" className="btn absolute -top-11 left-1/2 grid size-9 -translate-x-1/2 place-items-center !rounded-full !p-0 shadow-md" onClick={jumpToLatest}><ArrowDown size={16} aria-hidden /></button>
+        )}
+        {/* one rounded box, the way a chat is written: the text and its Send button together */}
+        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent">
+          <textarea ref={box} className="block max-h-48 min-h-11 w-full resize-none border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
+            onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }} />
+          <div className="flex items-center gap-2 pt-1">
+            <span className="flex items-center gap-2 text-xs text-muted">
+              <span id="guided-label">Guided</span>
+              <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
+              <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
+            </span>
+            <span className="ml-auto flex items-center gap-1">
+              {dictation.supported && (
+                <button type="button" aria-label={dictation.listening ? 'Stop dictating' : 'Dictate'} aria-pressed={dictation.listening} title={dictation.listening ? 'Stop dictating' : 'Dictate'}
+                  className={`btn-ghost grid size-10 place-items-center !rounded-full !p-0 ${dictation.listening ? '!bg-accent-soft text-accent motion-safe:animate-pulse' : 'text-muted'}`}
+                  onClick={() => { if (dictation.listening) dictation.stop(); else { dictBase.current = text.trimEnd(); dictOn.current = true; dictation.start() } }}><Mic size={18} aria-hidden /></button>
+              )}
+              {live !== null
+                ? <button key="stop" type="button" aria-label="Stop" title="Stop" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" onClick={() => {
+                  if (nowMs() - startedAt.current < 600) return // the second tap of a double tap on Send
+                  stopped.current = true
+                  abort.current?.abort()
+                }}><Square size={14} className="fill-current" aria-hidden /></button>
+                : <button key="send" aria-label="Send" title="Send" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" disabled={!text.trim()}><ArrowUp size={18} aria-hidden /></button>}
+            </span>
+          </div>
+        </div>
       </form>
+      {text.length >= 3500 && <p className="-mt-1 pb-1 text-right text-xs text-muted">{text.length} / {4000}</p>}
+      {left !== null && <p className="-mt-1 pb-2 text-center text-xs text-muted" aria-live="polite">{left} of {FREE_DAILY_TUTOR_MESSAGES} tutor messages left today</p>}
+      <TutorPickDialog open={picking} onClose={() => setPicking(false)} onPick={t => { void aboutPicked(t) }} kinds={CHAT_KINDS} title="What is this chat about?" />
     </div>
   )
 }

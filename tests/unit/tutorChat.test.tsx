@@ -23,6 +23,8 @@ vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string) 
 const router = { push: vi.fn(), replace: vi.fn() } // stable, like Next's own router: a new object each render would reload forever
 let search = ''
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams(search) }))
+const profileName: string | null = 'Kwadwo'
+vi.mock('@/components/providers/ProfileProvider', () => ({ useProfile: () => ({ profile: { display_name: profileName } }) }))
 import { ChatView } from '@/components/tutor/ChatView'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
