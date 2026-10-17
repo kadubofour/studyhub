@@ -82,6 +82,7 @@ export default function DeckPage() {
     <div>
       <PageHeader title={deck?.name ?? 'Deck'} actions={<>
         {due > 0 && <Link href={`/review?deck=${deckId}`} className="btn-primary">Review {due}</Link>}
+        {cards.length > 0 && <Link href={`/review?practice=1&deck=${deckId}`} className="btn" title="Go over every card, due or not. Your schedule won't change.">Practise</Link>}
         {cards.length >= 4
           ? <><Link href={`/flashcards/${deckId}/play?game=match`} className="btn">Match</Link><Link href={`/flashcards/${deckId}/play?game=speed`} className="btn">Speed round</Link></>
           : <span className="self-center text-xs text-muted">Add 4 cards to play games</span>}

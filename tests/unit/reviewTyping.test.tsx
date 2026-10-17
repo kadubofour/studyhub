@@ -22,9 +22,9 @@ describe('answering by typing', () => {
   it('defaults to flip, and the choice is remembered', async () => {
     await open()
     expect(screen.getByRole('radio', { name: 'Flip' }).getAttribute('aria-checked')).toBe('true')
-    expect(screen.getByRole('button', { name: /Show answer/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Show answer.*space/ })).toBeTruthy()
     typeMode()
-    expect(screen.queryByRole('button', { name: /Show answer/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Show answer.*space/ })).toBeNull()
     cleanup()
     await open()
     expect(screen.getByRole('radio', { name: 'Type answer' }).getAttribute('aria-checked')).toBe('true')
@@ -38,7 +38,7 @@ describe('answering by typing', () => {
     expect(screen.getByText('Close')).toBeTruthy()
     expect(screen.getByText('mitochondrion')).toBeTruthy() // what was written
     expect(screen.getByText('Mitochondria')).toBeTruthy() // the card's answer
-    expect(screen.getByRole('button', { name: /Hard.*suggested/ })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain('Suggested: Hard')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Good/ })) }) // the student overrules it
     expect(rateCard).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'a' }), 3)
   })
@@ -49,12 +49,12 @@ describe('answering by typing', () => {
     fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'MITOCHONDRIA!' } })
     fireEvent.click(screen.getByRole('button', { name: 'Check' }))
     expect(screen.getByText('Correct')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Good.*suggested/ })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain('Suggested: Good')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Good/ })) })
     fireEvent.change(await screen.findByLabelText('Your answer'), { target: { value: 'nothing' } })
     fireEvent.click(screen.getByRole('button', { name: 'Check' }))
     expect(screen.getByText('Not quite')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Again.*suggested/ })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain('Suggested: Again')
   })
 
   it('typing numbers or a space in the box never rates or reveals', async () => {
@@ -69,25 +69,33 @@ describe('answering by typing', () => {
     expect(screen.queryByText('Not quite')).toBeNull()
   })
 
-  it('Enter checks, Shift+Enter does not, and an empty answer cannot be checked', async () => {
+  it('is one line and one button: the rating buttons are the plain ones, with nothing marked on them', async () => {
+    await open()
+    typeMode()
+    expect(screen.getByLabelText('Your answer').tagName).toBe('INPUT')
+    fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'mitochondrion' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check' }))
+    for (const name of ['Again', 'Hard', 'Good', 'Easy']) expect(screen.getByRole('button', { name: new RegExp('^' + name) }).className).not.toMatch(/ring/)
+    expect(screen.queryByText('suggested')).toBeNull()
+  })
+
+  it('Enter checks, and an empty answer cannot be checked', async () => {
     await open()
     typeMode()
     const box = screen.getByLabelText('Your answer')
     expect((screen.getByRole('button', { name: 'Check' }) as HTMLButtonElement).disabled).toBe(true)
     fireEvent.change(box, { target: { value: 'Mitochondria' } })
-    fireEvent.keyDown(box, { key: 'Enter', shiftKey: true })
-    expect(screen.queryByText('Correct')).toBeNull()
-    fireEvent.keyDown(box, { key: 'Enter' })
+    fireEvent.submit(box.closest('form')!) // what Enter does in a one line box
     expect(screen.getByText('Correct')).toBeTruthy()
   })
 
-  it('"I don\'t know" shows the answer without marking it, and the keys 1 to 4 then rate', async () => {
+  it('"Show answer" shows the answer without marking it, and the keys 1 to 4 then rate', async () => {
     await open()
     typeMode()
-    fireEvent.click(screen.getByRole('button', { name: "I don't know" }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show answer' }))
     expect(screen.getByText('Mitochondria')).toBeTruthy()
     expect(screen.queryByText('Not quite')).toBeNull()
-    expect(screen.queryByText(/suggested/)).toBeNull()
+    expect(screen.queryByText(/Suggested/)).toBeNull()
     await act(async () => { key('1') })
     expect(rateCard).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'a' }), 1)
   })
@@ -99,7 +107,6 @@ describe('answering by typing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check' }))
     expect(screen.getByRole('status').textContent).toContain('Correct')
     expect(document.activeElement).toBe(screen.getByRole('group', { name: 'How well did you know it?' }))
-    expect(screen.getByText('suggested')).toBeTruthy() // seen as well as heard
   })
 
   it('in flip mode nothing changes: Space shows the answer and no box appears', async () => {
