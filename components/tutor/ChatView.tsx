@@ -2,10 +2,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowDown, ArrowUp, ClipboardCopy, Copy, Pencil, RefreshCw, Square, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ClipboardCopy, Copy, Mic, Pencil, RefreshCw, Square, Trash2 } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
+import { useDictation } from '@/components/tutor/useDictation'
 import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickDialog'
 import { usePlan } from '@/components/billing/usePlan'
 import { AI_USED } from '@/components/ai/aiFetch'
@@ -51,6 +52,18 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [partial, setPartial] = useState<string | null>(null) // what was written when the student stopped, until the saved reply is there to show
   const end = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
+  const dictBase = useRef('') // what was in the box when dictation began; what is said goes after it
+  const dictOn = useRef(false) // false once the message is sent, so words that arrive late do not fill the empty box again
+  const dictation = useDictation(spoken => {
+    if (!dictOn.current) return
+    const said = spoken.trim()
+    setText((said ? `${dictBase.current}${dictBase.current ? ' ' : ''}${said}` : dictBase.current).slice(0, 4000))
+  })
+  const toastLatest = useRef(toast)
+  useEffect(() => { toastLatest.current = toast })
+  useEffect(() => {
+    if (dictation.error) toastLatest.current(dictation.error === 'not-allowed' || dictation.error === 'service-not-allowed' ? 'The microphone is blocked. Allow it in your browser settings.' : "Couldn't use the microphone.")
+  }, [dictation.error])
   const lastY = useRef(0)
   const pinned = useRef(true) // the student is reading the newest text, so a reply is followed; scrolled up, the page stays where they put it
   const [away, setAway] = useState(false) // scrolled up from the newest text: offer a way back
@@ -103,6 +116,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   async function send(override?: string) {
     const message = (override ?? text).trim()
     if (!message || live !== null) return
+    dictOn.current = false; dictation.stop()
     pinned.current = true; setAway(false) // sending a message goes to the newest text
     setProblem(null); setPartial(null); if (override === undefined) setText(''); setLive('')
     const control = new AbortController()
@@ -203,7 +217,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const canFollowUp = idle && !chat.guided && !problem && last?.role === 'assistant' && last.status === 'ok'
   const left = plan.billing && !plan.isPremium && !plan.loading ? Math.max(0, FREE_DAILY_TUTOR_MESSAGES - plan.tutorToday) : null
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-3">
+    <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-3xl flex-col gap-3 max-md:min-h-[calc(100dvh-13rem)]">
       <div className="flex items-center gap-1">
         {renaming === null
           ? <h1 className="mr-auto min-w-0 truncate text-lg font-medium">{chat.title}</h1>
@@ -224,14 +238,9 @@ export function ChatView({ chatId }: { chatId: string }) {
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <span className="flex items-center gap-2">
-          <span id="guided-label">Guided</span>
-          <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
-          <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
-        </span>
       </div>
 
-      <div className="space-y-3" aria-live="polite" aria-label="Conversation">
+      <div className="flex-1 space-y-3" aria-live="polite" aria-label="Conversation">
         {messages.length === 0 && live === null && (
           <div className="space-y-4 py-10 text-center">
             <p className="text-base text-muted">Ask anything. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
@@ -312,16 +321,30 @@ export function ChatView({ chatId }: { chatId: string }) {
           <button type="button" aria-label="Jump to latest" title="Latest" className="btn absolute -top-11 left-1/2 grid size-9 -translate-x-1/2 place-items-center !rounded-full !p-0 shadow-md" onClick={jumpToLatest}><ArrowDown size={16} aria-hidden /></button>
         )}
         {/* one rounded box, the way a chat is written: the text and its Send button together */}
-        <div className="flex items-end gap-2 rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent">
-          <textarea ref={box} className="max-h-48 min-h-11 flex-1 resize-none self-center border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
+        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent">
+          <textarea ref={box} className="block max-h-48 min-h-11 w-full resize-none border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
             onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }} />
-          {live !== null
-            ? <button key="stop" type="button" aria-label="Stop" title="Stop" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" onClick={() => {
-              if (nowMs() - startedAt.current < 600) return // the second tap of a double tap on Send
-              stopped.current = true
-              abort.current?.abort()
-            }}><Square size={14} className="fill-current" aria-hidden /></button>
-            : <button key="send" aria-label="Send" title="Send" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" disabled={!text.trim()}><ArrowUp size={18} aria-hidden /></button>}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="flex items-center gap-2 text-xs text-muted">
+              <span id="guided-label">Guided</span>
+              <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
+              <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
+            </span>
+            <span className="ml-auto flex items-center gap-1">
+              {dictation.supported && (
+                <button type="button" aria-label={dictation.listening ? 'Stop dictating' : 'Dictate'} aria-pressed={dictation.listening} title={dictation.listening ? 'Stop dictating' : 'Dictate'}
+                  className={`btn-ghost grid size-10 place-items-center !rounded-full !p-0 ${dictation.listening ? '!bg-accent-soft text-accent motion-safe:animate-pulse' : 'text-muted'}`}
+                  onClick={() => { if (dictation.listening) dictation.stop(); else { dictBase.current = text.trimEnd(); dictOn.current = true; dictation.start() } }}><Mic size={18} aria-hidden /></button>
+              )}
+              {live !== null
+                ? <button key="stop" type="button" aria-label="Stop" title="Stop" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" onClick={() => {
+                  if (nowMs() - startedAt.current < 600) return // the second tap of a double tap on Send
+                  stopped.current = true
+                  abort.current?.abort()
+                }}><Square size={14} className="fill-current" aria-hidden /></button>
+                : <button key="send" aria-label="Send" title="Send" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" disabled={!text.trim()}><ArrowUp size={18} aria-hidden /></button>}
+            </span>
+          </div>
         </div>
       </form>
       {text.length >= 3500 && <p className="-mt-1 pb-1 text-right text-xs text-muted">{text.length} / {4000}</p>}
