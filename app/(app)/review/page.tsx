@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CardFace } from '@/components/flashcards/CardFace'
@@ -26,6 +26,7 @@ function Review() {
   const [initialCount, setInitialCount] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const mode = useReviewMode()
+  const ratings = useRef<HTMLDivElement>(null)
   const [typed, setTyped] = useState<{ text: string; check: AnswerCheck } | null>(null) // what was written for this card, and how it was marked
   const [stats, setStats] = useState({ reviewed: 0, again: 0 })
   // Synchronous guard (not state) so a second key press in the same tick sees it immediately
@@ -35,6 +36,9 @@ function Review() {
   useEffect(() => {
     listDueCards(supabase(), new Date(), deckId).then(cs => { setQueue(cs); setInitialCount(cs.length) })
   }, [deckId])
+
+  // After Check (or "I don't know") the box is gone: land on the ratings, so Tab and a screen reader start there
+  useEffect(() => { if (revealed && mode === 'type') ratings.current?.focus() }, [revealed, mode])
 
   const card = queue?.[0]
   // Taken when the card is shown (not when a key is pressed): a press that lands after this
@@ -69,9 +73,9 @@ function Review() {
       if (e.target instanceof Element && e.target.closest('input, textarea')) return
       const action = reviewKeyAction(e, revealed, busy.current)
       if (!action) return
-      if (action.type === 'reveal' && mode === 'type') return
+      if (action.type === 'reveal' && mode === 'type') return // typing mode reveals through Check
       e.preventDefault()
-      if (action.type === 'reveal') { if (mode === 'type') return; setRevealed(true) } // typing mode reveals through Check
+      if (action.type === 'reveal') setRevealed(true)
       else void rate(action.rating)
     }
     window.addEventListener('keydown', onKey)
@@ -105,7 +109,7 @@ function Review() {
           <TypedAnswer key={card.id} onCheck={t => { setTyped({ text: t, check: checkAnswer(t, card.back) }); setRevealed(true) }} onSkip={() => { setTyped(null); setRevealed(true) }} />
         )}
         {revealed && typed && (
-          <div className="w-full space-y-1 border-t border-line pt-4 text-left">
+          <div role="status" className="w-full space-y-1 border-t border-line pt-4 text-left">
             <p className={`text-sm font-medium ${VERDICT[typed.check.verdict].color}`}>{VERDICT[typed.check.verdict].text}</p>
             <p className="text-xs text-muted">You wrote</p>
             <p className="whitespace-pre-wrap text-sm">{typed.text}</p>
@@ -113,12 +117,13 @@ function Review() {
         )}
         {revealed && <div className="w-full border-t border-line pt-4 text-accent"><CardFace text={card.back} /></div>}
       </div>
-      <div className="mt-5 flex justify-center gap-2">
+      <div ref={ratings} tabIndex={revealed ? -1 : undefined} role={revealed ? 'group' : undefined} aria-label={revealed ? 'How well did you know it?' : undefined} className="mt-5 flex justify-center gap-2 outline-none">
         {!revealed ? (
           mode === 'type' ? null : <button className="btn min-w-48" onClick={() => setRevealed(true)}>Show answer <span className="text-muted">· space</span></button>
         ) : ([1, 2, 3, 4] as Rating[]).map(r => (
           <button key={r} className={`btn min-w-20 flex-col gap-0 ${typed?.check.suggested === r ? 'ring-2 ring-accent' : ''}`} onClick={() => void rate(r)}>
-            <span className={COLORS[r]}>{LABELS[r]}{typed?.check.suggested === r && <span className="sr-only"> suggested</span>}</span>
+            <span className={COLORS[r]}>{LABELS[r]}</span>
+            {typed?.check.suggested === r && <span className="text-[10px] font-medium text-accent">suggested</span>}
             <span className="text-[11px] text-muted">{preview[r]} · {r}</span>
           </button>
         ))}

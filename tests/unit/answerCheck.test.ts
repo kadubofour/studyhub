@@ -36,6 +36,39 @@ describe('checkAnswer', () => {
   })
 })
 
+describe('after the review', () => {
+  const v = (a: string, b: string) => checkAnswer(a, b).verdict
+  it('keeps signs, exponents, sub and superscripts, and Greek letters', () => {
+    expect(v('-3', '3')).toBe('different')
+    expect(v('10^-3', '10^3')).toBe('different')
+    expect(v('H₂O₂', 'H₂O')).toBe('different')
+    expect(v('x³', 'x²')).toBe('different')
+    expect(v('β-helix', 'α-helix')).toBe('different')
+    expect(v('H₂O', 'H2O')).toBe('correct')
+    expect(v('3.5', '3.5')).toBe('correct')
+    expect(v('3.5', '35')).toBe('different')
+  })
+  it('works for cards that are not in Latin letters', () => {
+    expect(v('猫', '猫')).toBe('correct')
+    expect(v('狗', '猫')).toBe('different')
+    expect(v('Ω', 'Ω')).toBe('correct')
+    expect(v('ø', 'o')).toBe('different')
+    expect(v('привет', 'Привет!')).toBe('correct')
+  })
+  it('does not call opposites or confusable terms close', () => {
+    expect(v('decreases', 'increases')).toBe('different')
+    expect(v('meiosis', 'mitosis')).toBe('different')
+    expect(v('50 km', '50 cm')).toBe('different')
+    expect(v('the enzyme does denature', 'the enzyme does not denature')).toBe('different')
+    expect(v('B causes A in the cell', 'A causes B in the cell')).toBe('different')
+  })
+  it('is still forgiving of a slip, and of a missing word in a long answer', () => {
+    expect(v('ribosme', 'ribosome')).toBe('close')
+    expect(v('mitochondrion', 'mitochondria')).toBe('close')
+    expect(v("it doesn't change", 'it does not change')).toBe('correct')
+  })
+})
+
 describe('parseReviewMode', () => {
   it('is flip unless typing was chosen', () => {
     expect(parseReviewMode('type')).toBe('type')

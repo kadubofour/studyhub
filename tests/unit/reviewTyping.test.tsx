@@ -92,6 +92,16 @@ describe('answering by typing', () => {
     expect(rateCard).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'a' }), 1)
   })
 
+  it('announces the verdict and moves focus to the ratings, so a keyboard or screen reader user lands there', async () => {
+    await open()
+    typeMode()
+    fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'Mitochondria' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check' }))
+    expect(screen.getByRole('status').textContent).toContain('Correct')
+    expect(document.activeElement).toBe(screen.getByRole('group', { name: 'How well did you know it?' }))
+    expect(screen.getByText('suggested')).toBeTruthy() // seen as well as heard
+  })
+
   it('in flip mode nothing changes: Space shows the answer and no box appears', async () => {
     await open()
     expect(screen.queryByLabelText('Your answer')).toBeNull()
