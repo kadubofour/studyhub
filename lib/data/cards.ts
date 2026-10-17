@@ -33,6 +33,15 @@ export async function listDueCards(sb: SupabaseClient, now: Date, deckId?: strin
   return must(await q)
 }
 
+/** Cards to practise whatever their due dates (a deck's, or every deck's), in a shuffled order. Practising does not change the schedule. */
+export async function listPracticeCards(sb: SupabaseClient, deckId?: string, limit = 200): Promise<Card[]> {
+  let q = sb.from('cards').select(COLS).order('created_at').limit(limit)
+  if (deckId) q = q.eq('deck_id', deckId)
+  const cards = must(await q) as Card[]
+  for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]] }
+  return cards
+}
+
 export async function countDueCards(sb: SupabaseClient, now: Date): Promise<number> {
   const { count, error } = await sb.from('cards').select('id', { count: 'exact', head: true }).lte('due_at', now.toISOString())
   if (error) throw error
