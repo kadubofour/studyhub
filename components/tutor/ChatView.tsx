@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, ClipboardCopy, Copy, Mic, Pencil, RefreshCw, Square
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
+import { useProfile } from '@/components/providers/ProfileProvider'
 import { useDictation } from '@/components/tutor/useDictation'
 import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickDialog'
 import { usePlan } from '@/components/billing/usePlan'
@@ -67,7 +68,8 @@ export function ChatView({ chatId }: { chatId: string }) {
   const lastY = useRef(0)
   const pinned = useRef(true) // the student is reading the newest text, so a reply is followed; scrolled up, the page stays where they put it
   const [away, setAway] = useState(false) // scrolled up from the newest text: offer a way back
-  const [today] = useState(() => new Date(nowMs())) // for the day headings
+  const [today] = useState(() => new Date(nowMs())) // for the day headings and the welcome
+  const { profile } = useProfile()
   // The newest messages, read by proposal writes (a click's own render can be stale), and a queue so saves run one at a time
   const latest = useRef<TutorMessage[]>([])
   const writes = useRef<Promise<void>>(Promise.resolve())
@@ -243,7 +245,8 @@ export function ChatView({ chatId }: { chatId: string }) {
       <div className="flex-1 space-y-3" aria-live="polite" aria-label="Conversation">
         {messages.length === 0 && live === null && (
           <div className="space-y-4 py-10 text-center">
-            <p className="text-base text-muted">Ask anything. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
+            <h2 className="text-2xl font-medium">{today.getHours() < 12 ? 'Good morning' : today.getHours() < 18 ? 'Good afternoon' : 'Good evening'}{profile.display_name ? `, ${profile.display_name}` : ''}</h2>
+            <p className="mx-auto max-w-md text-sm text-muted">Ask anything about your courses. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
             {/* ideas put a message in the box to finish and send; nothing is sent from here */}
             <div role="group" aria-label="Ideas to start with" className="flex flex-wrap justify-center gap-2">
               {STARTERS.map(s => (

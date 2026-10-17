@@ -18,6 +18,8 @@ let send: (chatId: string, message: string, signal?: AbortSignal) => Promise<unk
 vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string, s?: AbortSignal) => send(c, m, s) }))
 const router = { push: vi.fn(), replace: vi.fn() }
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams('') }))
+let profileName: string | null = 'Kwadwo'
+vi.mock('@/components/providers/ProfileProvider', () => ({ useProfile: () => ({ profile: { display_name: profileName } }) }))
 import { ChatView } from '@/components/tutor/ChatView'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -98,5 +100,23 @@ describe('dictation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Dictate' }))
     act(() => FakeRecognition.last!.onerror?.({ error: 'no-speech' }))
     expect(screen.queryByText(/microphone/i)).toBeNull()
+  })
+})
+
+describe('the welcome in an empty chat', () => {
+  it('greets the student by name, and says what the tutor does', async () => {
+    await open()
+    expect(screen.getByRole('heading', { level: 2, name: /^Good (morning|afternoon|evening), Kwadwo$/ })).toBeTruthy()
+    expect(screen.getByText(/Ask anything about your courses/)).toBeTruthy()
+  })
+  it('greets without a name when there is none, and not at all once the chat has begun', async () => {
+    profileName = null
+    await open()
+    expect(screen.getByRole('heading', { level: 2, name: /^Good (morning|afternoon|evening)$/ })).toBeTruthy()
+    cleanup()
+    profileName = 'Kwadwo'
+    messages = [{ id: '1', role: 'user', content: 'Hi', sources: [], proposals: [], status: 'ok', created_at: '' }]
+    await open()
+    expect(screen.queryByRole('heading', { name: /Good (morning|afternoon|evening)/ })).toBeNull()
   })
 })
