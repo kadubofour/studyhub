@@ -20,8 +20,9 @@ const MAX_MESSAGE = 4000
 const bad = (status: number, error: string) => NextResponse.json({ error }, { status })
 
 // The photos and PDFs among the attachments, fetched with the student's own session (so storage policies apply), base64 by path.
-// A missing file is simply not in the map; a PDF's real page count replaces what the browser said.
-async function fetchFiles(sb: Awaited<ReturnType<typeof createServerSupabase>>, list: Attachment[]) {
+// A missing file is simply not in the map; a PDF's real page count replaces what the browser said. Fetching stops (over) as soon as
+// the files would pass the byte budget, before reading or parsing the one that would.
+async function fetchFiles(sb: Awaited<ReturnType<typeof createServerSupabase>>, list: Attachment[], budget: number) {
   const files = new Map<string, string>()
   const pages = new Map<string, number>()
   let bytes = 0
@@ -29,13 +30,16 @@ async function fetchFiles(sb: Awaited<ReturnType<typeof createServerSupabase>>, 
     if (a.kind === 'document' || files.has(a.path)) continue
     const { data } = await sb.storage.from('tutor-files').download(a.path)
     if (!data) continue
+    if (bytes + data.size > budget) return { files, pages, bytes, over: true }
     const buf = Buffer.from(await data.arrayBuffer())
     bytes += buf.length
     if (a.kind === 'pdf') pages.set(a.path, await countPdfPages(buf))
     files.set(a.path, buf.toString('base64'))
   }
-  return { files, pages, bytes }
+  return { files, pages, bytes, over: false }
 }
+const withPages = (list: Attachment[], pages: Map<string, number>): Attachment[] => list.map(a => (a.kind === 'pdf' ? { ...a, pages: pages.get(a.path) ?? a.pages } : a))
+const named = (content: string, list: Attachment[]) => (list.length ? `${content}${content ? '\n' : ''}(Attached: ${list.map(a => a.name).join(', ')})` : content)
 
 // POST { chatId, message, attachments? } → NDJSON: sources, then the reply as it is written, then done (with any
 // proposals) or an error. Nothing the tutor proposes is saved here: the student approves in the browser.
@@ -80,19 +84,36 @@ export async function POST(request: Request) {
     } catch { /* the tutor works without it */ }
   }
   const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak })
-  const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: Attachment[] }[]).reverse()
-  // This message's files must all be there and within the page limit; an earlier question's files are read again if they still are
-  const fresh = await fetchFiles(sb, attachments)
-  if (attachments.some(a => a.kind !== 'document' && !fresh.files.has(a.path))) return bad(400, 'attachment_missing')
-  const counted = attachments.map(a => (a.kind === 'pdf' ? { ...a, pages: fresh.pages.get(a.path) ?? a.pages } : a))
-  if (pagesOf(counted) > ATTACH_LIMITS.pages || fresh.bytes > ATTACH_LIMITS.pdfBytes) return bad(413, 'too_many_pages')
-  const again = new Set(resendable(past12, pagesOf(counted)))
-  const earlier = await fetchFiles(sb, past12.flatMap((h, i) => (again.has(i) ? h.attachments ?? [] : [])))
-  const history = past12.map((h, i) => ({ role: h.role, content: h.content, parts: again.has(i) ? attachmentParts(h.attachments ?? [], earlier.files) : undefined }))
+  // A question's stored attachments are checked again like a new message's: the student can write that column directly
+  const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: unknown }[]).reverse()
+    .map(h => ({ role: h.role, content: h.content, attachments: h.role === 'user' ? checkAttachments(h.attachments, user.id, chat.id) ?? [] : [] }))
   const toolCtx = { noteId: (chat.note_id as string | null) ?? null, courseIds: (courses ?? []).map(c => c.id as string), deckIds: (decks ?? []).map(d => d.id as string) }
 
+  // The message is counted before any file is read, so a stream of requests naming big files uses the student's allowance; refused, it is given back
   const reserved = await reserveTutorMessage(user.id)
   if (reserved !== 'ok') return aiErrorResponse(reserved)
+  const refuse = async (status: number, error: string) => { await releaseTutorMessage(user.id); return bad(status, error) }
+  // This message's files must all be there, within the page limit and the size budget
+  const fresh = await fetchFiles(sb, attachments, ATTACH_LIMITS.pdfBytes)
+  if (fresh.over) return refuse(413, 'too_large')
+  if (attachments.some(a => a.kind !== 'document' && !fresh.files.has(a.path))) return refuse(400, 'attachment_missing')
+  const counted = withPages(attachments, fresh.pages)
+  if (pagesOf(counted) > ATTACH_LIMITS.pages) return refuse(413, 'too_many_pages')
+  // Earlier questions' files are read again, newest first, while they fit in what is left; a file sent again with this message is not read twice
+  let pagesLeft = ATTACH_LIMITS.pages - pagesOf(counted)
+  let bytesLeft = ATTACH_LIMITS.pdfBytes - fresh.bytes
+  const resent = new Map<number, ReturnType<typeof attachmentParts>>()
+  for (const i of resendable(past12, pagesOf(counted))) {
+    const atts = past12[i].attachments.filter(a => a.kind === 'document' || !fresh.files.has(a.path))
+    if (!atts.length) continue
+    const got = await fetchFiles(sb, atts, bytesLeft)
+    if (got.over) continue
+    const recounted = withPages(atts, got.pages)
+    if (pagesOf(recounted) > pagesLeft) continue
+    pagesLeft -= pagesOf(recounted); bytesLeft -= got.bytes
+    resent.set(i, attachmentParts(recounted, got.files))
+  }
+  const history = past12.map((h, i) => ({ role: h.role, content: named(h.content, h.attachments), parts: resent.get(i) }))
   const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 

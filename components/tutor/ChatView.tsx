@@ -19,7 +19,7 @@ import { listCourses } from '@/lib/data/courses'
 import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatContext, setChatCourse, setChatGuided, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
 import { FREE_DAILY_TUTOR_MESSAGES } from '@/lib/billing/plans'
 import { FOLLOW_UPS, STARTERS, starterMessage } from '@/lib/tutor/starters'
-import { dayHeading, nearBottom, timeOf, transcript } from '@/lib/tutor/conversation'
+import { dayHeading, nearBottom, questionText, timeOf, transcript } from '@/lib/tutor/conversation'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
 import { addPending, readFile, uploadAttachments, type Pending } from '@/lib/tutor/attachClient'
@@ -141,6 +141,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
 
   async function addFiles(files: File[]) {
+    if (uploading) return // what is in the bar is being sent: nothing joins it now
     setAttachError(null)
     for (const f of files) {
       setReading(n => n + 1)
@@ -153,6 +154,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     }
   }
   function removePending(id: string) {
+    if (uploading) return
     const gone = pendingRef.current.find(p => p.id === id)
     if (gone) forget(gone)
     setPending(pendingRef.current.filter(p => p.id !== id))
@@ -343,7 +345,7 @@ export function ChatView({ chatId }: { chatId: string }) {
               {m.id !== 'pending' && (
                 <div className="flex items-center gap-1 text-xs text-muted">
                   {time && <span>{time}</span>}
-                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy question" title="Copy" onClick={() => { void copy(m.content) }}><Copy size={13} aria-hidden /></button>
+                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy question" title="Copy" onClick={() => { void copy(questionText(m)) }}><Copy size={13} aria-hidden /></button>
                 </div>
               )}
             </div>
@@ -410,7 +412,7 @@ export function ChatView({ chatId }: { chatId: string }) {
                     {p.kind === 'pdf' && <span className="block text-muted">{p.pages} {p.pages === 1 ? 'page' : 'pages'}</span>}
                     {p.kind === 'document' && p.shortened && <span className="block text-muted">Only the start is read</span>}
                   </span>
-                  <button type="button" aria-label={`Remove ${p.name}`} className="grid size-6 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg pointer-coarse:size-9" onClick={() => removePending(p.id)}><X size={13} aria-hidden /></button>
+                  <button type="button" aria-label={`Remove ${p.name}`} disabled={uploading} className="grid size-6 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg pointer-coarse:size-9" onClick={() => removePending(p.id)}><X size={13} aria-hidden /></button>
                 </li>
               ))}
               {reading > 0 && <li role="status" className="flex items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5 text-xs text-muted"><Loader2 size={13} className="animate-spin" aria-hidden />Reading…</li>}
@@ -418,9 +420,13 @@ export function ChatView({ chatId }: { chatId: string }) {
           )}
           <textarea ref={box} className="block max-h-48 min-h-11 w-full resize-none border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
             onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }}
-            onPaste={e => { const f = Array.from(e.clipboardData?.files ?? []); if (f.length) { e.preventDefault(); void addFiles(f) } }} />
+            onPaste={e => {
+              // Text wins: copying from Word or a web page often brings a picture of it too
+              const f = Array.from(e.clipboardData?.files ?? [])
+              if (f.length && !e.clipboardData.getData?.('text/plain')) { e.preventDefault(); void addFiles(f) }
+            }} />
           <div className="flex items-center gap-2 pt-1">
-            <button type="button" aria-label="Add files or photos" title="Add files or photos" className="btn-ghost -ml-2 grid size-10 shrink-0 place-items-center !rounded-full !p-0 text-muted" onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden /></button>
+            <button type="button" aria-label="Add files or photos" title="Add files or photos" disabled={uploading} className="btn-ghost -ml-2 grid size-10 shrink-0 place-items-center !rounded-full !p-0 text-muted" onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden /></button>
             <input ref={fileInput} type="file" multiple aria-label="Files to add" className="sr-only" tabIndex={-1}
               accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,application/pdf,.docx,.pptx,.txt,.md,.markdown"
               onChange={e => { const f = Array.from(e.target.files ?? []); e.target.value = ''; if (f.length) void addFiles(f) }} />

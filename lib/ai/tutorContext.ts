@@ -59,7 +59,7 @@ export type TutorInputItem = { role: 'user' | 'assistant'; content: string | Par
 const NO_TEXT = 'The student sent the attached files without a message. Look at them and help with what they most likely need (a question to answer, a problem to work through, or notes to explain); if that is unclear, ask.'
 
 // A question's text with its attachments after it; the files and photos are material, like everything inside <material>
-const withParts = (text: string, parts?: Part[]): string | Part[] => (parts?.length ? [{ type: 'input_text', text }, ...parts] : text)
+const withParts = (text: string, parts?: Part[]): string | Part[] => (parts?.length ? [{ type: 'input_text', text: text || '(Files sent without a message.)' }, ...parts] : text)
 
 export function buildInput(o: {
   history: { role: 'user' | 'assistant'; content: string; parts?: Part[] }[]; context: string; message: string; parts?: Part[]

@@ -146,3 +146,30 @@ describe('attachments in the conversation', () => {
     expect(uploaded).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('after the review', () => {
+  it('a paste with text pastes the text, and does not add the picture that came with it', async () => {
+    await open()
+    const photo = new File(['x'], 'from-word.png', { type: 'image/png' })
+    await act(async () => { fireEvent.paste(screen.getByLabelText('Message'), { clipboardData: { files: [photo], items: [], getData: (t: string) => (t === 'text/plain' ? 'Some words' : '') } }) })
+    expect(bar().queryByText('from-word.png')).toBeNull()
+  })
+  it('cannot add or remove files while they upload', async () => {
+    let finish!: () => void
+    uploaded.mockImplementationOnce(() => new Promise<void>(r => { finish = r }))
+    await open()
+    await pick('q1.jpg')
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
+    expect((bar().getByRole('button', { name: 'Add files or photos' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((bar().getByRole('button', { name: 'Remove q1.jpg' }) as HTMLButtonElement).disabled).toBe(true)
+    await act(async () => { finish() })
+  })
+  it('a question that was only files copies their names', async () => {
+    const writeText = vi.fn(async () => {})
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    messages = [{ id: 'm1', role: 'user', content: '', sources: [], proposals: [], status: 'ok', created_at: '', attachments: [{ kind: 'photo', name: 'q1.jpg', path: 'u/c1/a.jpg', pages: 1 }] }]
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy question' })) })
+    expect(writeText).toHaveBeenCalledWith('(Attached: q1.jpg)')
+  })
+})

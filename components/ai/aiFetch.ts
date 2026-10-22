@@ -20,6 +20,7 @@ export const AI_MESSAGES: Record<string, string> = {
   cut_off: 'The reply was cut off. Try again.',
   attachment_missing: 'One of your files didn\'t upload. Add it again.',
   too_many_pages: 'That is too many pages for one message. Use fewer photos or a shorter PDF.',
+  too_large: 'These files are too large together. Send fewer or smaller files.',
   too_little: 'Add a few more notes or record a lecture in this course first.',
   nothing_new: 'Everything in this course is already linked to a topic.',
   bad_request: 'That message couldn\'t be sent.',

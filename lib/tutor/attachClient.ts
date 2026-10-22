@@ -45,6 +45,9 @@ export function addPending(list: Pending[], next: Pending): { list: Pending[]; e
   if (list.length >= ATTACH_LIMITS.count) return { list, error: `Up to ${ATTACH_LIMITS.count} files a message.` }
   const pages = pagesOf([...list, next] as Attachment[])
   if (pages > ATTACH_LIMITS.pages) return { list, error: `Up to ${ATTACH_LIMITS.pages} photos and PDF pages a message. This one would make ${pages}.` }
+  // PDFs go as they are: together they must stay within what one message can carry (photos are shrunk, so they are small)
+  const pdfBytes = [...list, next].reduce((n, p) => n + (p.kind === 'pdf' ? p.file?.size ?? 0 : 0), 0)
+  if (pdfBytes > ATTACH_LIMITS.pdfBytes) return { list, error: 'These files are larger than 24 MB together.' }
   return { list: [...list, next] }
 }
 

@@ -15,6 +15,7 @@ let pdfPages = 2
 vi.mock('@/lib/import/pdfPages', () => ({ countPdfPages: async () => pdfPages }))
 // Files in the tutor-files bucket, by path
 let stored: Record<string, string> = {}
+let big: Record<string, number> = {} // paths whose file is this many bytes
 const downloaded: string[] = []
 vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/ai/openai')>()), openai: () => ({}) }))
 
@@ -42,7 +43,7 @@ const sb = {
   storage: { from: (bucket: string) => ({
     download: async (path: string) => {
       downloaded.push(`${bucket}:${path}`)
-      return bucket === 'tutor-files' && path in stored ? { data: new Blob([stored[path]]), error: null } : { data: null, error: { message: 'not found' } }
+      return bucket === 'tutor-files' && path in stored ? { data: path in big ? new Blob([new Uint8Array(big[path])]) : new Blob([stored[path]]), error: null } : { data: null, error: { message: 'not found' } }
     },
   }) },
   rpc: (fn: string, args?: unknown) => {
@@ -79,7 +80,7 @@ beforeEach(() => {
   lecture = null
   matches = []; history = []; script = [{ type: 'delta', text: 'NADH carries ' }, { type: 'delta', text: 'electrons.' }]
   process.env.OPENAI_API_KEY = 'k'
-  stored = {}; downloaded.length = 0; pdfPages = 2
+  stored = {}; big = {}; downloaded.length = 0; pdfPages = 2
 })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
@@ -264,7 +265,6 @@ describe('POST /api/ai/tutor with files and photos', () => {
     pdfPages = 11 // the PDF has more pages than the browser said
     expect((await call({ attachments: [pdf] })).status).toBe(413)
     expect(inserted.length).toBe(before)
-    expect(release).not.toHaveBeenCalled()
   })
 
   it('reads the files of the last questions again for a follow-up, and not older ones', async () => {
@@ -281,7 +281,7 @@ describe('POST /api/ai/tutor with files and photos', () => {
     await (await call({ message: 'And part b?' })).text()
     expect(downloaded.sort()).toEqual([`tutor-files:${dir}/p2.jpg`, `tutor-files:${dir}/p3.jpg`])
     const input = (modelInput.mock.calls[0][0] as { input: { role: string; content: unknown }[] }).input
-    expect(input[0].content).toBe('First?') // older: its photo is not read again
+    expect(input[0].content).toBe('First?\n(Attached: q1.jpg)') // older: named, but its photo is not read again
     expect(Array.isArray(input[2].content)).toBe(true)
   })
 
@@ -296,5 +296,74 @@ describe('POST /api/ai/tutor with files and photos', () => {
   it('refuses an empty message with nothing attached', async () => {
     expect((await call({ message: '' })).status).toBe(400)
     expect((await call({ message: '   ', attachments: [] })).status).toBe(400)
+  })
+})
+
+describe('POST /api/ai/tutor with files: after the review', () => {
+  const dir = `u1/${CHAT}`
+  const photo = (n: number) => ({ kind: 'photo', name: `q${n}.jpg`, path: `${dir}/p${n}.jpg`, pages: 1 })
+  const input = () => (modelInput.mock.calls[0][0] as { input: { role: string; content: unknown }[] }).input
+  const parts = (i: number) => input()[i].content as { type: string; text?: string }[]
+
+  it('counts the message before reading any file, and gives it back when the files are refused', async () => {
+    stored = { [`${dir}/w.pdf`]: 'PDF' }
+    pdfPages = 11
+    expect((await call({ attachments: [{ kind: 'pdf', name: 'w.pdf', path: `${dir}/w.pdf`, pages: 2 }] })).status).toBe(413)
+    expect(release).toHaveBeenCalledTimes(1)
+    release.mockClear()
+    expect((await call({ attachments: [photo(4)] })).status).toBe(400) // never uploaded
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses files too large together, saying so', async () => {
+    stored = { [`${dir}/a.pdf`]: 'A', [`${dir}/b.pdf`]: 'B' }
+    big = { [`${dir}/a.pdf`]: 13 * 1024 * 1024, [`${dir}/b.pdf`]: 13 * 1024 * 1024 }
+    const res = await call({ attachments: [{ kind: 'pdf', name: 'a.pdf', path: `${dir}/a.pdf`, pages: 1 }, { kind: 'pdf', name: 'b.pdf', path: `${dir}/b.pdf`, pages: 1 }] })
+    expect(res.status).toBe(413)
+    expect(await res.json()).toEqual({ error: 'too_large' })
+  })
+
+  it('checks an earlier question\'s files again before reading them: a changed list is not trusted', async () => {
+    stored = { [`${dir}/w.pdf`]: 'PDF', [`${dir}/p1.jpg`]: 'IMG' }
+    pdfPages = 11 // the stored list says 1 page; the file has 11
+    history = [
+      { role: 'user', content: 'Long one', attachments: [{ kind: 'pdf', name: 'w.pdf', path: `${dir}/w.pdf`, pages: 1 }] },
+      { role: 'user', content: 'Someone else\'s', attachments: [{ kind: 'photo', name: 'x.jpg', path: `u2/${CHAT}/x.jpg`, pages: 1 }] },
+      { role: 'user', content: 'Huge text', attachments: [{ kind: 'document', name: 'd.txt', text: 'x'.repeat(40_000) }] },
+    ]
+    await (await call({ message: 'And?' })).text()
+    expect(downloaded.some(d => d.includes('u2/'))).toBe(false)
+    const all = JSON.stringify(input())
+    expect(all).not.toContain('input_file')
+    expect(all).not.toContain('x'.repeat(40_000))
+  })
+
+  it('reads the files of a question sent again (Regenerate) once, not twice', async () => {
+    stored = { [`${dir}/p1.jpg`]: 'IMG' }
+    history = [{ role: 'assistant', content: 'A cell.', attachments: [] }, { role: 'user', content: 'What is this?', attachments: [photo(1)] }]
+    await (await call({ message: 'What is this?', attachments: [photo(1)] })).text()
+    expect(JSON.stringify(input()).split('input_image').length - 1).toBe(1)
+  })
+
+  it('leaves out earlier files that would make the message too large', async () => {
+    stored = { [`${dir}/a.pdf`]: 'A', [`${dir}/b.pdf`]: 'B' }
+    big = { [`${dir}/a.pdf`]: 13 * 1024 * 1024, [`${dir}/b.pdf`]: 13 * 1024 * 1024 }
+    history = [
+      { role: 'assistant', content: 'Two.', attachments: [] },
+      { role: 'user', content: 'Second', attachments: [{ kind: 'pdf', name: 'b.pdf', path: `${dir}/b.pdf`, pages: 1 }] },
+      { role: 'assistant', content: 'One.', attachments: [] },
+      { role: 'user', content: 'First', attachments: [{ kind: 'pdf', name: 'a.pdf', path: `${dir}/a.pdf`, pages: 1 }] },
+    ]
+    const res = await call({ message: 'And?' })
+    expect(res.status).toBe(200)
+    await res.text()
+    expect(JSON.stringify(input()).split('input_file').length - 1).toBe(1) // only the newest fits
+  })
+
+  it('a question that was only files still reads as one in the history', async () => {
+    stored = { [`${dir}/p1.jpg`]: 'IMG' }
+    history = [{ role: 'assistant', content: 'A cell.', attachments: [] }, { role: 'user', content: '', attachments: [photo(1)] }]
+    await (await call({ message: 'And part b?' })).text()
+    expect(parts(0)[0].text).toMatch(/q1\.jpg/)
   })
 })

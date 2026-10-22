@@ -78,3 +78,10 @@ describe('uploadAttachments', () => {
     await expect(uploadAttachments(list, 'u1', 'c1')).rejects.toThrow("Couldn't upload your files. Check your connection and try again.")
   })
 })
+
+describe('after the review', () => {
+  it('keeps PDFs to 24 MB together, not only each', () => {
+    const pdf = (n: number, mb: number): Pending => ({ id: `d${n}`, kind: 'pdf', name: `w${n}.pdf`, pages: 1, file: file(`w${n}.pdf`, 'application/pdf', mb * 1024 * 1024) })
+    expect(addPending([pdf(1, 15)], pdf(2, 15)).error).toBe('These files are larger than 24 MB together.')
+  })
+})

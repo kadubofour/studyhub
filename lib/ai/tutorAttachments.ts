@@ -9,7 +9,8 @@ export function attachmentParts(list: Attachment[], files: Map<string, string>):
   return list.flatMap((a): ResponseInputContent[] => {
     if (a.kind === 'document') {
       const note = a.shortened ? ' (shortened: only the start of the file)' : ''
-      return [{ type: 'input_text', text: `<attachment name="${safe(a.name)}">${note}\n${a.text}\n</attachment>` }]
+      // the text cannot close its own tag early
+      return [{ type: 'input_text', text: `<attachment name="${safe(a.name)}">${note}\n${a.text.replace(/<\/attachment/gi, '<\\/attachment')}\n</attachment>` }]
     }
     const data = files.get(a.path)
     if (!data) return []

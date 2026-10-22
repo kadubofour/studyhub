@@ -24,8 +24,14 @@ export function timeOf(iso: string): string {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
 
+/** A question as text, with the names of the files that came with it */
+export function questionText(m: { content: string; attachments?: { name: string }[] }): string {
+  const names = (m.attachments ?? []).map(a => a.name)
+  return names.length ? `${m.content}${m.content ? '\n' : ''}(Attached: ${names.join(', ')})` : m.content
+}
+
 /** The whole conversation as plain text, to copy: the title, then each turn as "You:" or "Tutor:" */
-export function transcript(title: string, messages: { id: string; role: 'user' | 'assistant'; content: string; status: string }[]): string {
-  const turns = messages.filter(m => m.id !== 'pending').map(m => `${m.role === 'user' ? 'You' : 'Tutor'}: ${m.content}${m.status === 'cut_off' ? ' (cut off)' : ''}`)
+export function transcript(title: string, messages: { id: string; role: 'user' | 'assistant'; content: string; status: string; attachments?: { name: string }[] }[]): string {
+  const turns = messages.filter(m => m.id !== 'pending').map(m => `${m.role === 'user' ? 'You' : 'Tutor'}: ${questionText(m)}${m.status === 'cut_off' ? ' (cut off)' : ''}`)
   return [title, ...turns].join('\n\n')
 }
