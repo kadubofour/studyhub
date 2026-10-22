@@ -48,3 +48,13 @@ describe('decks as icons', () => {
     expect(atoms.textContent).toContain('9 due')
   })
 })
+
+describe('decks in the grid', () => {
+  it('keep their own tile: the number due, large, and how many cards', async () => {
+    await open()
+    const atoms = screen.getByRole('link', { name: /atoms/ })
+    expect(atoms.textContent).toContain('due now')
+    expect(atoms.textContent).toContain('12 cards')
+    expect(screen.getByRole('link', { name: /Bonds/ }).textContent).toContain('all caught up')
+  })
+})
