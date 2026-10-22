@@ -44,9 +44,8 @@ describe('surfaces', () => {
   it('the page is lit by the accent from the top (the aurora)', () => {
     expect(block('.app-root')).toMatch(/radial-gradient\([^)]*var\(--accent-solid\)/)
   })
-  it('there are no looks left in the stylesheet, except in the print reset', () => {
-    const outsidePrint = css.slice(0, css.indexOf('@media print {')) + css.slice(css.indexOf('\n}\n', css.indexOf('@media print {')))
-    expect(outsidePrint).not.toContain('data-look')
+  it('Studio is the base: no rule sets its colours apart from :root and .dark', () => {
+    expect(css).not.toMatch(/data-look="studio"\] \{/)
   })
 })
 

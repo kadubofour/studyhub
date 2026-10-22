@@ -87,6 +87,14 @@ describe('the sidebar', () => {
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=0')
     expect(rail().getByRole('group', { name: 'Courses' })).toBeTruthy()
   })
+  it('wears the chosen look: Studio by default, or the one in Settings, and the sidebar can be coloured by it', async () => {
+    const { container } = await (async () => { let r!: ReturnType<typeof render>; await act(async () => { r = render(<ProfileProvider initial={{ ...profile, look: undefined } as unknown as Profile}><ToastProvider><ConfirmProvider><AppShell><p>page</p></AppShell></ConfirmProvider></ToastProvider></ProfileProvider>) }); return r })()
+    expect(container.querySelector('.app-root')!.getAttribute('data-look')).toBe('studio')
+    cleanup()
+    await shell({ look: 'vivid' } as Partial<Profile>)
+    expect(document.querySelector('.app-root')!.getAttribute('data-look')).toBe('vivid')
+    expect(screen.getByRole('navigation', { name: 'Studyhub' }).classList.contains('app-sidebar')).toBe(true)
+  })
   it('starts shrunk when the cookie said so', async () => {
     await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><AppShell initialCollapsed><p>page</p></AppShell></ConfirmProvider></ToastProvider></ProfileProvider>) })
     expect(rail().getByRole('button', { name: 'Expand sidebar' })).toBeTruthy()

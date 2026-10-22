@@ -30,6 +30,11 @@ export const isFont = (v: unknown): v is FontName => typeof v === 'string' && v 
 export type ModeColors = { bg: string; raised: string; surface: string; line: string; fg: string; muted: string; tiles: [string, string, string] }
 
 export const LOOKS = {
+  studio: {
+    label: 'Studio', blurb: 'Midnight glass, lit by your colour',
+    light: { bg: '#F5F6FB', raised: '#FFFFFF', surface: '#ECEEF6', line: '#DFE2EE', fg: '#151628', muted: '#5A5E80', tiles: ['#FFFFFF', '#FFFFFF', '#FFFFFF'] },
+    dark: { bg: '#0E0F1A', raised: '#171927', surface: '#1D2032', line: '#282B42', fg: '#ECEDF7', muted: '#9196B3', tiles: ['#171927', '#171927', '#171927'] },
+  },
   classic: {
     label: 'Classic', blurb: 'Calm and minimal, dark sidebar',
     light: { bg: '#fbfbfa', raised: '#ffffff', surface: '#f3f3f0', line: '#e6e5e0', fg: '#1f1f1d', muted: '#6b6a65', tiles: ['#ffffff', '#ffffff', '#ffffff'] },
@@ -55,8 +60,8 @@ export const LOOKS = {
 
 export type LookName = keyof typeof LOOKS
 export const isLook = (v: unknown): v is LookName => typeof v === 'string' && v in LOOKS
-// An old cached profile, or a look this version doesn't know, shows Classic
-export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'classic')
+// An old cached profile, or a look this version doesn't know, shows Studio
+export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'studio')
 
 // Paper only looks right on light: in dark mode it shows as Classic (the student's choice is kept for when they go back to light)
 export const effectiveLook = (look: unknown, resolvedTheme: string | undefined): LookName => {

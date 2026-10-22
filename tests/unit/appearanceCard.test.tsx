@@ -41,10 +41,44 @@ describe('Content width', () => {
 })
 
 
-describe('one design', () => {
-  it('has no Look picker: accent, font and width are the choices', () => {
+describe('Look picker', () => {
+  it('offers Studio first, then the older looks, and marks the current one', () => {
     open()
-    expect(screen.queryByRole('radiogroup', { name: 'Look' })).toBeNull()
-    for (const name of ['Content width', 'Accent colour']) expect(screen.getByRole('radiogroup', { name })).toBeTruthy()
+    const names = screen.getAllByRole('radio').filter(r => r.getAttribute('aria-label')?.endsWith(' look')).map(r => r.getAttribute('aria-label'))
+    expect(names).toEqual(['Studio look', 'Classic look', 'Paper look', 'Vivid look', 'Playful look'])
+    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText('Warm cream, softer edges')).toBeTruthy()
+  })
+  it('applies the new look at once and saves it', async () => {
+    open()
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Studio look' })) })
+    expect(screen.getByTestId('look').textContent).toBe('studio')
+    expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u', { look: 'studio' })
+  })
+  it('goes back to the previous look when saving fails', async () => {
+    failing = true
+    open()
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Paper look' })) })
+    expect(screen.getByTestId('look').textContent).toBe('classic')
+  })
+  it('works from the keyboard like Accent and Font', async () => {
+    open()
+    await act(async () => { fireEvent.keyDown(screen.getByRole('radio', { name: 'Classic look' }), { key: 'ArrowRight' }) })
+    expect(screen.getByTestId('look').textContent).toBe('paper')
+  })
+  it('an old profile without a look shows Studio selected', () => {
+    const old = { ...base } as Record<string, unknown>
+    delete old.look
+    open(old as unknown as Profile)
+    expect(screen.getByRole('radio', { name: 'Studio look' }).getAttribute('aria-checked')).toBe('true')
+  })
+  it('Paper is for light mode: in dark mode it is not offered and a saved Paper shows as Classic, kept', async () => {
+    resolved = 'dark'
+    open({ ...base, look: 'paper' })
+    expect(screen.queryByRole('radio', { name: 'Paper look' })).toBeNull()
+    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Classic look' })) })
+    expect(updateProfile).not.toHaveBeenCalled()
+    expect(screen.getByTestId('look').textContent).toBe('paper')
   })
 })

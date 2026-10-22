@@ -32,6 +32,7 @@ import { DOCK, MORE_PLACES, PLACES, isActive } from '@/lib/shell/nav'
 import type { PaletteItem } from '@/lib/shell/palette'
 import type { Course } from '@/lib/types'
 import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
+import { useLook } from '@/components/providers/useLook'
 
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
@@ -85,6 +86,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   // The sidebar: wide with names and courses, or shrunk to a rail of icons; remembered on this device
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
   const wide = !collapsed
+  const look = useLook()
   const [palette, setPalette] = useState(false)
   const [material, setMaterial] = useState<PaletteItem[]>([])
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
@@ -179,9 +181,9 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }
 
   return (
-    <div className={`app-root min-h-dvh ${immersive ? '' : wide ? 'md:grid md:grid-cols-[260px_1fr]' : 'md:grid md:grid-cols-[72px_1fr]'}`} style={appearance}>
+    <div className={`app-root min-h-dvh ${immersive ? '' : wide ? 'md:grid md:grid-cols-[260px_1fr]' : 'md:grid md:grid-cols-[72px_1fr]'}`} style={appearance} data-look={look}>
       {!immersive && (
-        <nav aria-label="Studyhub" className={`no-print sticky top-0 hidden h-dvh flex-col gap-1.5 border-r border-line py-4 md:flex ${wide ? 'px-3' : 'items-center'}`} style={{ background: 'var(--glass)', backdropFilter: 'blur(18px)' }}>
+        <nav aria-label="Studyhub" className={`app-sidebar no-print sticky top-0 hidden h-dvh flex-col gap-1.5 border-r border-line py-4 md:flex ${wide ? 'px-3' : 'items-center'}`}>
           <div className={`mb-3 flex items-center ${wide ? 'justify-between px-1' : 'flex-col gap-2'}`}>
             {/* the mark; Home is the first item below it */}
             <span className="flex items-center gap-2.5">
