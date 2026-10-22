@@ -5,7 +5,7 @@ export type TutorEvent = { type: 'delta'; text: string } | { type: 'tool'; name:
 
 // One tutor turn, as the model writes it: words as they come, then each tool call the model finished.
 export async function* streamTutor(client: AiClient, o: {
-  instructions: string; input: { role: 'user' | 'assistant'; content: string }[]; tools: OpenAI.Responses.Tool[]; signal?: AbortSignal
+  instructions: string; input: import('./tutorContext').TutorInputItem[]; tools: OpenAI.Responses.Tool[]; signal?: AbortSignal
 }): AsyncGenerator<TutorEvent> {
   const stream = await client.responses.create({
     model: MODELS.strong, instructions: o.instructions, input: o.input, tools: o.tools, stream: true, max_output_tokens: 6000,
