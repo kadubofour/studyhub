@@ -87,7 +87,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [quizzing, setQuizzing] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
-  useOpenUpload(() => setUploading(true))
+  const [uploadNext, setUploadNext] = useState<'tutor' | undefined>(undefined)
+  useOpenUpload(opts => { setUploadNext(opts?.next); setUploading(true) })
   useOpenQuiz(() => setQuizzing(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
@@ -213,7 +214,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         </nav>
       )}
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
-      <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
+      <UploadMaterial open={uploading} defaultNext={uploadNext} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
       {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>
   )

@@ -21,12 +21,17 @@ export function useOpenScan(open: (files?: File[]) => void) {
 
 // Same for Upload: any page can ask the app to open the upload dialog
 export const OPEN_UPLOAD = 'studyhub:open-upload'
-export const requestUpload = () => { window.dispatchEvent(new Event(OPEN_UPLOAD)) }
-export function useOpenUpload(open: () => void) {
+// It can say where the upload should lead ('tutor': a chat about the new note). Used straight as a click handler it just opens the dialog.
+export interface UploadRequest { next?: 'tutor' }
+export const requestUpload = (opts?: unknown) => {
+  const next = (opts as UploadRequest | undefined)?.next === 'tutor' ? 'tutor' : undefined
+  window.dispatchEvent(new CustomEvent(OPEN_UPLOAD, { detail: next ? { next } : undefined }))
+}
+export function useOpenUpload(open: (opts?: UploadRequest) => void) {
   const latest = useRef(open)
   useEffect(() => { latest.current = open })
   useEffect(() => {
-    const heard = () => latest.current()
+    const heard = (e: Event) => latest.current((e as CustomEvent<UploadRequest | null>).detail ?? undefined)
     window.addEventListener(OPEN_UPLOAD, heard)
     return () => window.removeEventListener(OPEN_UPLOAD, heard)
   }, [])

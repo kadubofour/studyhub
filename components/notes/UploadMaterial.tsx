@@ -8,7 +8,7 @@ import type { Course } from '@/lib/types'
 // The upload dialog for any page: it fetches the student's courses when it is opened
 // The notes list is told when a note was made
 const NOTES_CHANGED = 'studyhub:notes-changed'
-export function UploadMaterial({ open, onClose, onScan }: { open: boolean; onClose: () => void; onScan: (files: File[]) => void }) {
+export function UploadMaterial({ open, onClose, onScan, defaultNext }: { open: boolean; onClose: () => void; onScan: (files: File[]) => void; defaultNext?: 'tutor' }) {
   const [courses, setCourses] = useState<Course[]>([])
   useEffect(() => {
     if (!open) return
@@ -16,5 +16,5 @@ export function UploadMaterial({ open, onClose, onScan }: { open: boolean; onClo
     listCourses(supabase()).then(c => { if (live) setCourses(c) }).catch(() => {})
     return () => { live = false }
   }, [open])
-  return <UploadDialog open={open} onClose={onClose} courses={courses} onScan={onScan} onImported={() => { window.dispatchEvent(new Event(NOTES_CHANGED)) }} />
+  return <UploadDialog open={open} onClose={onClose} courses={courses} onScan={onScan} defaultNext={defaultNext} onImported={() => { window.dispatchEvent(new Event(NOTES_CHANGED)) }} />
 }

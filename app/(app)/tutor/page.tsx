@@ -2,12 +2,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BookOpenCheck, ClipboardList, FileText, HelpCircle, MessageSquarePlus, MessagesSquare, Search } from 'lucide-react'
+import { BookOpenCheck, ClipboardList, FileText, HelpCircle, MessageSquarePlus, MessagesSquare, Search, Upload } from 'lucide-react'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickDialog'
+import { requestUpload } from '@/lib/scan/events'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { createChat, listChatContexts, listChats, type TutorChat } from '@/lib/data/tutor'
@@ -74,13 +75,19 @@ export default function TutorPage() {
       </section>
       <p className="-mt-3 mb-5 text-xs text-muted">Pick one, then what it is about. The message is ready for you to change and send.</p>
 
-      {chats !== null && chats.length > 0 && (
+      {chats !== null && (
         <div className="mb-3 space-y-2">
-          <label className="relative block">
-            <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
-            <input type="search" aria-label="Search chats" placeholder="Search your chats" value={query} onChange={e => setQuery(e.target.value)} className="!pl-8" />
-          </label>
-          {withChats.length > 1 && (
+          <div data-testid="chat-search-row" className="flex gap-2">
+            {chats.length > 0 && (
+              <label className="relative block min-w-0 flex-1">
+                <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+                <input type="search" aria-label="Search chats" placeholder="Search your chats" value={query} onChange={e => setQuery(e.target.value)} className="!pl-8" />
+              </label>
+            )}
+            {/* bring material in: it becomes a note, and a chat about it opens */}
+            <button type="button" className="btn ml-auto shrink-0" onClick={() => requestUpload({ next: 'tutor' })}><Upload size={14} aria-hidden />Upload</button>
+          </div>
+          {chats.length > 0 && withChats.length > 1 && (
             <ChoiceChips label="Course" size="sm" value={courseId} options={[{ value: '', label: 'All courses' }, ...withChats.map(c => ({ value: c.id, label: c.name, color: c.color }))]} onChange={setCourseId} />
           )}
         </div>
@@ -110,6 +117,7 @@ export default function TutorPage() {
 
       <TutorPickDialog open={picking !== null} onClose={() => setPicking(null)} onPick={t => { void picked(t, picking?.starter ?? null) }}
         title={picking?.starter ? STARTERS.find(s => s.id === picking.starter)!.title : 'Chat about…'}
+        onUpload={() => { setPicking(null); requestUpload({ next: 'tutor' }) }}
         // a starter can go on without anything chosen: its message is ready, to finish in the chat
         onSkip={picking?.starter ? () => { const s = STARTERS.find(x => x.id === picking.starter)!; setPicking(null); void open({}, starterMessage(s, null)) } : undefined} />
     </div>
