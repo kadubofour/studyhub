@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, School, ArrowRight } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -10,6 +10,8 @@ import { useSaver } from '@/components/providers/ToastProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { greetingFont } from '@/lib/appearance'
+import { useLook } from '@/components/providers/useLook'
 import { HeroFocus } from '@/components/home/HeroFocus'
 import { CourseAccess } from '@/components/home/CourseAccess'
 import { HomeActions } from '@/components/home/HomeActions'
@@ -51,7 +53,7 @@ export default function HomePage() {
   const [due, setDue] = useState(0)
   const [week, setWeek] = useState<Map<string, number>>(new Map())
   const [material, setMaterial] = useState<{ counts: CourseCounts; recent: Recent[] }>({ counts: {}, recent: [] })
-  const { reload: reloadXp } = useXp(focus.todayMinutes)
+  const { xp, reload: reloadXp } = useXp(focus.todayMinutes)
   const plans = usePlans(reloadXp)
   const warmup = useWarmup()
 
@@ -85,6 +87,9 @@ export default function HomePage() {
   const goal = profile.daily_goal_minutes
   const focusPct = Math.min(100, Math.round((focus.todayMinutes / goal) * 100))
   const running = focus.timer.startedAt !== null
+  // Every look but Paper shows the goal as a ring beside the timer; Paper has a bar, and the timer in its own card
+  const look = useLook()
+  const bold = look !== 'paper'
   const weekKeys = weekKeysFor(todayKey)
   const maxWeek = Math.max(goal, ...weekKeys.map(k => week.get(k) ?? 0), 1)
 
@@ -114,14 +119,47 @@ export default function HomePage() {
   )
 
   return (
-    <div className="space-y-7">
-      <header className="pt-1">
-        <p className="text-[15px] text-muted">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
-        <h1 className="font-display mt-1 text-[2.25rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.875rem]">{greeting(hour)}{name}</h1>
-      </header>
+    <div className="space-y-6">
+      <section aria-label="Welcome" className="hero">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-[15px] text-muted">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
+            <h1 className="font-display mt-1 text-[2.25rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+          </div>
+          {/* phones have no sidebar: the places it holds are a tap away here */}
+          <div className="-ml-2 flex gap-0.5 md:hidden">
+            <Link href="/courses" aria-label="Courses" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><BookOpen size={18} aria-hidden /></Link>
+            <Link href="/library" aria-label="Library" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><FolderOpen size={18} aria-hidden /></Link>
+            <Link href="/profile" aria-label="Profile" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><User size={18} aria-hidden /></Link>
+            <Link href="/progress" aria-label="Progress" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><BarChart3 size={18} aria-hidden /></Link>
+            <Link href="/settings" aria-label="Settings" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><Settings size={18} aria-hidden /></Link>
+          </div>
+        </div>
+        {bold ? (
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-6">
+            <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
+            <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
+            {xp && look === 'playful' && (
+              <div className="flex flex-wrap gap-2 text-sm font-medium">
+                <span className="rounded-full bg-surface px-3 py-1">Level {xp.level.level}</span>
+                <span className="rounded-full bg-surface px-3 py-1">{xp.total} XP</span>
+                {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-surface px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}
+              </div>
+            )}
+          </div>
+        ) : (<>
+          <div className="mt-5 flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuenow={focusPct} aria-valuemin={0} aria-valuemax={100} aria-label="Focus goal progress">
+              <div className="h-2 rounded-full bg-accent-solid transition-all" style={{ width: `${focusPct}%` }} />
+            </div>
+            <span className="text-sm text-muted">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
+          </div>
+          {xp && <p className="mt-2 text-sm text-muted">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
+        </>)}
+      </section>
 
-      <div className="grid items-start gap-5 lg:grid-cols-3">
-        <section aria-label="Today" className="card lg:col-span-2">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <section aria-label="Today" className="card">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="section-label !mb-0">Today</h2>
             <span className="text-sm text-muted">{doneToday} of {doneToday + list.length - doneIds.size} done</span>
@@ -144,32 +182,39 @@ export default function HomePage() {
           <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact implicitDue="Today" />
         </section>
 
-        <div className="space-y-5">
-        <section aria-label="Focus" className="hero flex flex-col gap-6">
-          <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
-          <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus today`} />
-        </section>
-
-        <section aria-label="This week" className="card">
-          <h2 className="section-label">This week</h2>
-          <div className="flex h-28 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
-            {weekKeys.map(k => {
-              const m = week.get(k) ?? 0
-              const isToday = k === todayKey
-              return (
-                <div key={k} className="flex flex-1 flex-col items-center gap-1.5" title={`${k}: ${fmtMin(m)}`}>
-                  <div className="w-full rounded-md transition-all"
-                    style={{ height: `${Math.max(6, (m / maxWeek) * 84)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 26%, transparent)', boxShadow: isToday ? '0 0 16px -2px var(--accent-solid)' : undefined }} />
-                  <span className={`text-xs ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
-                </div>
-              )
-            })}
-          </div>
-        </section>
+        <div className="space-y-6">
+          {!bold && (
+            <section aria-label="Focus" className="card text-center">
+              <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
+              <div className="font-display text-5xl font-semibold tabular-nums tracking-tight">{fmtClock(remainingMs(focus.timer, focus.now))}</div>
+              <div className="mt-4 flex justify-center gap-2">
+                <button type="button" className="btn-primary" onClick={focus.toggle}>
+                  {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{focus.timer.accumulatedMs ? 'Resume' : 'Start focus'}</>}
+                </button>
+                <Link href="/focus" className="btn">Open</Link>
+              </div>
+            </section>
+          )}
+          <section aria-label="This week" className="card">
+            <h2 className="section-label">This week</h2>
+            <div className="flex h-32 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
+              {weekKeys.map(k => {
+                const m = week.get(k) ?? 0
+                const isToday = k === todayKey
+                return (
+                  <div key={k} className="flex flex-1 flex-col items-center gap-1.5" title={`${k}: ${fmtMin(m)}`}>
+                    <div className="w-full rounded-md transition-all"
+                      style={{ height: `${Math.max(6, (m / maxWeek) * 100)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 26%, transparent)' }} />
+                    <span className={`text-xs ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         </div>
       </div>
 
-      {/* phones have no rail: there, Home is where these are reached */}
+      {/* phones have no sidebar: there, Home is where these are reached */}
       <div className="md:hidden"><HomeActions /></div>
 
       <CourseAccess courses={courses} counts={material.counts} recent={material.recent} coursesClassName="md:hidden" />
