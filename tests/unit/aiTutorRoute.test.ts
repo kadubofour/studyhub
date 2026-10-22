@@ -11,6 +11,11 @@ const modelInput = vi.fn()
 vi.mock('@/lib/ai/tutor', () => ({
   streamTutor: async function* (_c: unknown, o: unknown) { modelInput(o); for (const e of script) { if (e instanceof Error) throw e; yield e } },
 }))
+let pdfPages = 2
+vi.mock('@/lib/import/pdfPages', () => ({ countPdfPages: async () => pdfPages }))
+// Files in the tutor-files bucket, by path
+let stored: Record<string, string> = {}
+const downloaded: string[] = []
 vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/ai/openai')>()), openai: () => ({}) }))
 
 let user: { id: string } | null
@@ -34,6 +39,12 @@ const result = (data: unknown) => {
 }
 const sb = {
   auth: { getUser: async () => ({ data: { user } }) },
+  storage: { from: (bucket: string) => ({
+    download: async (path: string) => {
+      downloaded.push(`${bucket}:${path}`)
+      return bucket === 'tutor-files' && path in stored ? { data: new Blob([stored[path]]), error: null } : { data: null, error: { message: 'not found' } }
+    },
+  }) },
   rpc: (fn: string, args?: unknown) => {
     rpcCalls.push([fn, args])
     if (fn === 'topic_stats') return statsFail ? { then: (res: (v: unknown) => unknown) => res({ data: null, error: { message: 'boom' } }) } : result(stats)
@@ -68,6 +79,7 @@ beforeEach(() => {
   lecture = null
   matches = []; history = []; script = [{ type: 'delta', text: 'NADH carries ' }, { type: 'delta', text: 'electrons.' }]
   process.env.OPENAI_API_KEY = 'k'
+  stored = {}; downloaded.length = 0; pdfPages = 2
 })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
@@ -211,5 +223,78 @@ describe('POST /api/ai/tutor', () => {
     chat = { ...chat, guided: false }
     await (await call()).text()
     expect(instructions()).not.toMatch(/one hint at a time/i)
+  })
+})
+
+describe('POST /api/ai/tutor with files and photos', () => {
+  const dir = `u1/${CHAT}`
+  const photo = (n: number) => ({ kind: 'photo', name: `q${n}.jpg`, path: `${dir}/p${n}.jpg`, pages: 1 })
+  const pdf = { kind: 'pdf', name: 'week3.pdf', path: `${dir}/w.pdf`, pages: 2 }
+  const doc = { kind: 'document', name: 'notes.docx', text: 'Mitosis has four phases.' }
+  const userParts = () => {
+    const input = (modelInput.mock.calls[0][0] as { input: { role: string; content: unknown }[] }).input
+    return input[input.length - 1].content as { type: string; text?: string; image_url?: string; filename?: string }[]
+  }
+
+  it('gives the model the photos, the PDF and the document with the question, and saves them with it', async () => {
+    stored = { [`${dir}/p1.jpg`]: 'IMG', [`${dir}/w.pdf`]: 'PDF' }
+    await (await call({ message: 'Solve question 2', attachments: [photo(1), pdf, doc] })).text()
+    const parts = userParts()
+    expect(parts[0].type).toBe('input_text')
+    expect(parts[0].text).toContain('Solve question 2')
+    expect(parts[1]).toEqual({ type: 'input_image', image_url: `data:image/jpeg;base64,${Buffer.from('IMG').toString('base64')}`, detail: 'high' })
+    expect(parts[2]).toMatchObject({ type: 'input_file', filename: 'week3.pdf' })
+    expect(parts[3].text).toContain('Mitosis has four phases.')
+    expect(inserted[0][1]).toMatchObject({ role: 'user', content: 'Solve question 2', attachments: [photo(1), pdf, doc] })
+  })
+
+  it('takes files without a message, and names the chat after the first file', async () => {
+    stored = { [`${dir}/p1.jpg`]: 'IMG' }
+    await (await call({ message: '', attachments: [photo(1)] })).text()
+    expect(userParts()[0].text).toMatch(/without a message/)
+    expect(inserted[0][1]).toMatchObject({ content: '', attachments: [photo(1)] })
+    expect(updated.find(([t]) => t === 'tutor_chats')![1]).toEqual({ title: 'q1.jpg' })
+  })
+
+  it('refuses a file in another folder, a missing file, or too many pages, before anything is saved or counted', async () => {
+    const before = inserted.length
+    expect((await call({ attachments: [{ ...photo(1), path: `someone/${CHAT}/p.jpg` }] })).status).toBe(400)
+    expect((await call({ attachments: [photo(1)] })).status).toBe(400) // not uploaded
+    stored = { [`${dir}/w.pdf`]: 'PDF' }
+    pdfPages = 11 // the PDF has more pages than the browser said
+    expect((await call({ attachments: [pdf] })).status).toBe(413)
+    expect(inserted.length).toBe(before)
+    expect(release).not.toHaveBeenCalled()
+  })
+
+  it('reads the files of the last questions again for a follow-up, and not older ones', async () => {
+    stored = { [`${dir}/p1.jpg`]: 'ONE', [`${dir}/p2.jpg`]: 'TWO', [`${dir}/p3.jpg`]: 'THREE' }
+    // newest first, as the route reads them
+    history = [
+      { role: 'assistant', content: 'Three.', attachments: [] },
+      { role: 'user', content: 'And this?', attachments: [photo(3)] },
+      { role: 'assistant', content: 'Two.', attachments: [] },
+      { role: 'user', content: 'This?', attachments: [photo(2)] },
+      { role: 'assistant', content: 'One.', attachments: [] },
+      { role: 'user', content: 'First?', attachments: [photo(1)] },
+    ]
+    await (await call({ message: 'And part b?' })).text()
+    expect(downloaded.sort()).toEqual([`tutor-files:${dir}/p2.jpg`, `tutor-files:${dir}/p3.jpg`])
+    const input = (modelInput.mock.calls[0][0] as { input: { role: string; content: unknown }[] }).input
+    expect(input[0].content).toBe('First?') // older: its photo is not read again
+    expect(Array.isArray(input[2].content)).toBe(true)
+  })
+
+  it('goes on without an earlier file that has gone', async () => {
+    history = [{ role: 'user', content: 'This?', attachments: [photo(7)] }]
+    const res = await call({ message: 'Again?' })
+    expect(res.status).toBe(200)
+    await res.text()
+    expect(modelInput).toHaveBeenCalled()
+  })
+
+  it('refuses an empty message with nothing attached', async () => {
+    expect((await call({ message: '' })).status).toBe(400)
+    expect((await call({ message: '   ', attachments: [] })).status).toBe(400)
   })
 })

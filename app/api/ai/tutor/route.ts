@@ -10,21 +10,44 @@ import { transcriptText } from '@/lib/ai/lectureNote'
 import { evidence, weakSpots } from '@/lib/topics/status'
 import type { TopicStat } from '@/lib/topics/types'
 import type { TranscriptLine } from '@/lib/lectures/time'
+import { ATTACH_LIMITS, checkAttachments, pagesOf, resendable, type Attachment } from '@/lib/tutor/attachments'
+import { attachmentParts } from '@/lib/ai/tutorAttachments'
+import { countPdfPages } from '@/lib/import/pdfPages'
 
 export const maxDuration = 120
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_MESSAGE = 4000
 const bad = (status: number, error: string) => NextResponse.json({ error }, { status })
 
-// POST { chatId, message } → NDJSON: sources, then the reply as it is written, then done (with any
+// The photos and PDFs among the attachments, fetched with the student's own session (so storage policies apply), base64 by path.
+// A missing file is simply not in the map; a PDF's real page count replaces what the browser said.
+async function fetchFiles(sb: Awaited<ReturnType<typeof createServerSupabase>>, list: Attachment[]) {
+  const files = new Map<string, string>()
+  const pages = new Map<string, number>()
+  let bytes = 0
+  for (const a of list) {
+    if (a.kind === 'document' || files.has(a.path)) continue
+    const { data } = await sb.storage.from('tutor-files').download(a.path)
+    if (!data) continue
+    const buf = Buffer.from(await data.arrayBuffer())
+    bytes += buf.length
+    if (a.kind === 'pdf') pages.set(a.path, await countPdfPages(buf))
+    files.set(a.path, buf.toString('base64'))
+  }
+  return { files, pages, bytes }
+}
+
+// POST { chatId, message, attachments? } → NDJSON: sources, then the reply as it is written, then done (with any
 // proposals) or an error. Nothing the tutor proposes is saved here: the student approves in the browser.
 export async function POST(request: Request) {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return bad(401, 'unauthorized')
-  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown } | null
+  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown } | null
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
-  if (typeof body?.chatId !== 'string' || !UUID.test(body.chatId) || !message || message.length > MAX_MESSAGE) return bad(400, 'bad_request')
+  if (typeof body?.chatId !== 'string' || !UUID.test(body.chatId) || message.length > MAX_MESSAGE) return bad(400, 'bad_request')
+  const attachments = checkAttachments(body.attachments, user.id, body.chatId)
+  if (!attachments || (!message && !attachments.length)) return bad(400, 'bad_request')
   if (!isAiConfigured()) return aiErrorResponse('ai_unavailable')
   // Everything below is read with the student's own session: row-level security means only their data
   const { data: chat } = await sb.from('tutor_chats').select('id,title,course_id,note_id,lecture_id,guided').eq('id', body.chatId).maybeSingle()
@@ -41,10 +64,10 @@ export async function POST(request: Request) {
     if (l) { attached = { kind: 'lecture', id: l.id, title: l.title, text: transcriptText(l.transcript as TranscriptLine[]) }; courseId ??= (l.course_id as string | null) ?? null }
   }
   const [{ data: found }, { data: courses }, { data: decks }, { data: past }] = await Promise.all([
-    sb.rpc('tutor_find_material', { p_query: message, p_limit: 5 }),
+    sb.rpc('tutor_find_material', { p_query: message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' '), p_limit: 5 }),
     sb.from('courses').select('id,name'),
     sb.from('decks').select('id,name'),
-    sb.from('tutor_messages').select('role,content').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
+    sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
   ])
   const matches = ((found ?? []) as { kind: Material['kind']; id: string; title: string; snippet: string }[])
     .map(m => ({ kind: m.kind, id: m.id, title: m.title, text: m.snippet }))
@@ -57,17 +80,25 @@ export async function POST(request: Request) {
     } catch { /* the tutor works without it */ }
   }
   const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak })
-  const history = ((past ?? []) as { role: 'user' | 'assistant'; content: string }[]).reverse()
+  const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: Attachment[] }[]).reverse()
+  // This message's files must all be there and within the page limit; an earlier question's files are read again if they still are
+  const fresh = await fetchFiles(sb, attachments)
+  if (attachments.some(a => a.kind !== 'document' && !fresh.files.has(a.path))) return bad(400, 'attachment_missing')
+  const counted = attachments.map(a => (a.kind === 'pdf' ? { ...a, pages: fresh.pages.get(a.path) ?? a.pages } : a))
+  if (pagesOf(counted) > ATTACH_LIMITS.pages || fresh.bytes > ATTACH_LIMITS.pdfBytes) return bad(413, 'too_many_pages')
+  const again = new Set(resendable(past12, pagesOf(counted)))
+  const earlier = await fetchFiles(sb, past12.flatMap((h, i) => (again.has(i) ? h.attachments ?? [] : [])))
+  const history = past12.map((h, i) => ({ role: h.role, content: h.content, parts: again.has(i) ? attachmentParts(h.attachments ?? [], earlier.files) : undefined }))
   const toolCtx = { noteId: (chat.note_id as string | null) ?? null, courseIds: (courses ?? []).map(c => c.id as string), deckIds: (decks ?? []).map(d => d.id as string) }
 
   const reserved = await reserveTutorMessage(user.id)
   if (reserved !== 'ok') return aiErrorResponse(reserved)
-  const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message }).select('id').single()
+  const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 
   const gen = streamTutor(openai(), {
     instructions: tutorInstructions(!!chat.note_id, !!chat.guided), tools: toolDefinitions(!!chat.note_id), signal: request.signal,
-    input: buildInput({ history, context: context.text, message }),
+    input: buildInput({ history, context: context.text, message, parts: attachmentParts(counted, fresh.files) }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status
   let first: IteratorResult<{ type: 'delta'; text: string } | { type: 'tool'; name: string; args: string }>
@@ -96,7 +127,7 @@ export async function POST(request: Request) {
         }
         const messageId = await saveReply(reply, proposals, 'ok')
         // Name the chat only if it still has its default name (a rename made while the reply was written wins); always touch it so it moves to the top
-        if (chat.title === 'New chat') await sb.from('tutor_chats').update({ title: message.slice(0, 60) }).eq('id', chat.id).eq('title', 'New chat')
+        if (chat.title === 'New chat') await sb.from('tutor_chats').update({ title: (message || counted[0]?.name || 'New chat').slice(0, 60) }).eq('id', chat.id).eq('title', 'New chat')
         else await sb.from('tutor_chats').update({ updated_at: new Date().toISOString() }).eq('id', chat.id)
         send({ t: 'done', messageId, proposals })
       } catch (e) {

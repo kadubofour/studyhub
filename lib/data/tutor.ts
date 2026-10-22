@@ -2,14 +2,17 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Source } from '@/lib/ai/tutorContext'
 import type { ChatContext } from '@/lib/tutor/chatList'
+import type { Attachment } from '@/lib/tutor/attachments'
 import { check, fetchAll, must } from './util'
 
 export type TutorChat = { id: string; title: string; course_id: string | null; note_id: string | null; lecture_id: string | null; guided: boolean; created_at: string; updated_at: string }
 export type TutorMessage = {
   id: string; chat_id: string; role: 'user' | 'assistant'; content: string; sources: Source[]; proposals: Proposal[]; status: 'ok' | 'cut_off'; created_at: string
+  /** What the student added to a question (always empty on a reply) */
+  attachments: Attachment[]
 }
 const CHAT = 'id,title,course_id,note_id,lecture_id,guided,created_at,updated_at'
-const MESSAGE = 'id,chat_id,role,content,sources,proposals,status,created_at'
+const MESSAGE = 'id,chat_id,role,content,sources,proposals,status,created_at,attachments'
 
 export async function listChats(sb: SupabaseClient): Promise<TutorChat[]> {
   return fetchAll<TutorChat>((from, to) => sb.from('tutor_chats').select(CHAT).order('updated_at', { ascending: false }).order('id').range(from, to))
@@ -58,7 +61,18 @@ export async function listChatContexts(sb: SupabaseClient, chats: Pick<TutorChat
   }
   return out
 }
+/** The chat, its messages, and the photos and PDFs added to it. The files go first, but a failure there does not keep the chat. */
 export async function deleteChat(sb: SupabaseClient, id: string): Promise<void> {
+  const { data: { user } } = await sb.auth.getUser()
+  if (user) {
+    const folder = `${user.id}/${id}`
+    const bucket = sb.storage.from('tutor-files')
+    try {
+      const { data } = await bucket.list(folder, { limit: 1000 })
+      const paths = (data ?? []).filter(f => f.id !== null).map(f => `${folder}/${f.name}`)
+      if (paths.length) await bucket.remove(paths)
+    } catch { /* the files are removed with the account at the latest */ }
+  }
   check(await sb.from('tutor_chats').delete().eq('id', id))
 }
 export async function listMessages(sb: SupabaseClient, chatId: string): Promise<TutorMessage[]> {
