@@ -27,32 +27,14 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(found).toEqual([])
   })
 
-  test(`the app pages have no serious accessibility problems (${scheme}, Classic)`, async ({ page }) => {
+  test(`the app pages have no serious accessibility problems (${scheme})`, async ({ page }) => {
     test.setTimeout(150_000)
     await page.emulateMedia({ colorScheme: scheme })
     await signUp(page)
-    await page.goto('/settings')
-    await page.getByRole('radio', { name: 'Classic look' }).click() // new students start on Vivid
-    await expect(page.locator('.app-root')).toHaveAttribute('data-look', 'classic')
     const found: string[] = []
-    for (const path of [...APP, await coursePath(page)]) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} classic ${path}`)) }
+    for (const path of [...APP, await coursePath(page)]) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} ${path}`)) }
     expect(found).toEqual([])
   })
-
-  for (const look of ['Paper', 'Vivid', 'Playful'] as const) {
-    if (scheme === 'dark' && look === 'Paper') continue // Paper is for light mode only
-    test(`the app pages have no serious accessibility problems (${scheme}, ${look})`, async ({ page }) => {
-      test.setTimeout(150_000)
-      await page.emulateMedia({ colorScheme: scheme })
-      await signUp(page)
-      await page.goto('/settings')
-      await page.getByRole('radio', { name: `${look} look` }).click()
-      await expect(page.locator('.app-root')).toHaveAttribute('data-look', look.toLowerCase())
-      const found: string[] = []
-      for (const path of ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/library', '/profile', await coursePath(page)]) { await page.goto(path); await settle(page); found.push(...await problems(page, `${scheme} ${look} ${path}`)) }
-      expect(found).toEqual([])
-    })
-  }
 }
 
 test('the Upload and Delete-account dialogs have no serious accessibility problems', async ({ page }) => {

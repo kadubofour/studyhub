@@ -97,15 +97,6 @@ test('Tasks: the type chips filter the list', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Edit Call mum' })).toHaveCount(0)
 })
 
-test('Sidebar Upload and Scan look like the other items, not like heavy buttons', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'the sidebar is for computers')
-  await signUp(page)
-  const side = page.locator('.app-sidebar')
-  const look = (el: Element) => { const s = getComputedStyle(el); return { bg: s.backgroundColor, size: s.fontSize, pad: s.paddingTop } }
-  const item = await side.getByRole('link', { name: 'Notes' }).evaluate(look)
-  for (const name of ['Upload', 'Scan']) expect(await side.getByRole('button', { name }).evaluate(look), name).toEqual(item)
-})
-
 for (const scheme of ['light', 'dark'] as const) {
   test(`the planner tabs have no serious accessibility problems (${scheme})`, async ({ page }) => {
     test.setTimeout(90_000)

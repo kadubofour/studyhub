@@ -50,14 +50,14 @@ test('Course page: asking the tutor opens a chat in the course', async ({ page }
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
 })
 
-test('Course page: one tap from the sidebar on a computer, and from Courses on a phone', async ({ page, isMobile }) => {
+test('Course page: from Search or jump anywhere, and from Home on a phone', async ({ page, isMobile }) => {
   await signUp(page)
   if (isMobile) {
-    await page.getByRole('link', { name: 'Courses' }).first().click() // the Home banner icon
-    await expect(page).toHaveURL(/\/courses$/)
-    await page.getByRole('list', { name: 'Your courses' }).getByRole('link', { name: /Biology/ }).click()
+    await page.getByRole('list', { name: 'Your courses' }).getByRole('link', { name: /Biology/ }).click() // Home lists them on a phone
   } else {
-    await page.getByRole('group', { name: 'Courses' }).getByRole('link', { name: 'Biology' }).click()
+    await page.getByRole('button', { name: 'Search or jump' }).click()
+    await page.getByRole('combobox', { name: 'Search or jump' }).fill('biology')
+    await page.keyboard.press('Enter')
   }
   await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 })
   await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()

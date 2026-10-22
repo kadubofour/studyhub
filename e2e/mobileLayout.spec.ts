@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
-import { signUp } from './helpers'
+import { create, signUp } from './helpers'
 
 // A small phone: nothing may run off the side, and what is tapped must be big enough to tap
 test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
@@ -51,8 +51,8 @@ test('the top bar, the note toolbar and the drawing tools can be tapped', async 
 
 test('Upload and Scan open as a sheet from the bottom that fits the screen', async ({ page }) => {
   await signUp(page)
-  for (const name of ['Upload', 'Scan']) {
-    await page.getByRole('button', { name }).first().click()
+  for (const name of ['Upload', 'Scan'] as const) {
+    await create(page, name)
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     const box = (await dialog.boundingBox())!
@@ -96,25 +96,28 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the page names itself (the top bar does not repeat it), and the bottom bar has five places with room around them', async ({ page }) => {
+test('the page names itself, and the floating dock has four places and Create, with room around them', async ({ page }) => {
   await signUp(page)
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await expect(page.getByRole('banner')).not.toContainText('Home')
   const bar = page.getByRole('navigation', { name: 'Main' })
-  await expect(bar.locator('a, button')).toHaveText(['Home', 'Planner', 'Scan', 'Notes', 'Flashcards'])
+  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Create new', 'Notes', 'Flashcards'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
-  expect(box.width).toBeGreaterThanOrEqual(373)
-  // Each place has at least 70 px across and its name fits
+  expect(box.width).toBeGreaterThanOrEqual(340) // it floats, a little in from the edges
+  // Each place is at least 44 px across (a comfortable tap) and its name fits
   const items = await bar.locator('a, button').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, w: r.width, scroll: (e as HTMLElement).scrollWidth, label: e.textContent } }))
-  for (const i of items) { expect(i.w, i.label ?? '').toBeGreaterThanOrEqual(70); expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label ?? '').toBeLessThanOrEqual(Math.ceil(i.w)) }
+  for (const i of items) { expect(i.w, i.label ?? '').toBeGreaterThanOrEqual(44); expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label ?? '').toBeLessThanOrEqual(Math.ceil(i.w)) }
   await bar.getByRole('link', { name: 'Flashcards' }).dispatchEvent('click')
   await expect(page).toHaveURL(/\/flashcards/)
   await expect(page.getByRole('heading', { name: 'Flashcards', level: 1 })).toBeVisible()
   await expect(bar.getByRole('link', { name: 'Flashcards' })).toHaveAttribute('aria-current', 'page')
   expect(await sideways(page)).toBeLessThanOrEqual(0)
-  // What the bar leaves out is one tap from Home
+  // What the dock leaves out is in Search or jump
   await page.goto('/home')
-  for (const n of ['Courses', 'Library', 'Profile', 'Progress', 'Settings', 'Record lecture', 'Ask the tutor']) await expect(page.getByRole('link', { name: n, exact: true }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Search or jump' }).click()
+  const results = page.getByRole('listbox', { name: 'Results' })
+  for (const n of ['Courses', 'Library', 'Profile', 'Progress', 'Settings', 'Lectures', 'Tutor']) await expect(results.getByRole('option', { name: n, exact: true })).toBeAttached()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('link', { name: 'Open' })).toBeVisible() // the focus timer's way in
 })

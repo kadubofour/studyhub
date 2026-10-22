@@ -178,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span title="Studyhub" className="mb-3 grid size-10 place-items-center rounded-xl bg-accent-solid text-white shadow-[0_6px_20px_-6px_var(--accent-solid)]">
             <GraduationCap size={19} aria-hidden />
           </span>
-          <button type="button" aria-label="Create" aria-haspopup="menu" aria-expanded={creating === 'rail'} onClick={() => setCreating(c => (c ? null : 'rail'))}
+          <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'rail'} onClick={() => setCreating(c => (c ? null : 'rail'))}
             className="group relative mb-3 grid size-11 place-items-center rounded-xl border border-dashed border-line text-muted transition hover:border-accent hover:text-accent">
             <Plus size={19} aria-hidden />{tip('Create')}
           </button>
@@ -212,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {!immersive && (
         <nav aria-label="Main" className="no-print glass fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 mx-auto grid max-w-md grid-cols-5 items-center rounded-[22px] px-2 py-1.5 md:hidden" style={{ background: 'var(--glass-strong)' }}>
           {DOCK.slice(0, 2).map(dockLink)}
-          <button type="button" aria-label="Create" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => setCreating(c => (c ? null : 'dock'))}
+          <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => setCreating(c => (c ? null : 'dock'))}
             className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-solid text-white shadow-[0_8px_22px_-6px_var(--accent-solid)]">
             <Plus size={22} aria-hidden />
           </button>

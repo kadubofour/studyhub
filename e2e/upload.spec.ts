@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import JSZip from 'jszip'
-import { signUp } from './helpers'
+import { create, signUp } from './helpers'
 
 const A = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
 const P = 'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
@@ -60,11 +60,10 @@ test('a photo is handed to Scan and a recording to Lectures', async ({ page, isM
   await expect(page).toHaveURL(/\/lectures$/)
 })
 
-test('Upload in the sidebar opens the dialog from any page, and a photo goes to Scan', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'the sidebar is for wider screens')
+test('Upload in the Create menu opens the dialog from any page, and a photo goes to Scan', async ({ page }) => {
   await signUp(page)
   await page.goto('/flashcards')
-  await page.getByRole('navigation').first().getByRole('button', { name: 'Upload' }).click()
+  await create(page, 'Upload')
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   await page.getByLabel('File to upload').setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer: Buffer.from('not really a png') })
   await expect(page.getByRole('heading', { name: 'Scan pages' })).toBeVisible()

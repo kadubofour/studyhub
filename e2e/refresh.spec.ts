@@ -18,17 +18,6 @@ test('accent colour and font apply instantly and survive a reload', async ({ pag
   await expect(page.getByRole('radio', { name: 'Teal accent' })).toHaveAttribute('aria-checked', 'true')
 })
 
-test('the sidebar can be hidden and stays hidden after a reload', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'phones use the bottom tab bar')
-  await signUp(page)
-  await page.getByRole('button', { name: 'Hide sidebar' }).click()
-  await expect(page.getByRole('link', { name: 'Planner' })).toHaveCount(0)
-  await page.reload()
-  await expect(page.getByRole('button', { name: 'Show sidebar' })).toBeVisible()
-  await page.getByRole('button', { name: 'Show sidebar' }).click()
-  await expect(page.getByRole('link', { name: 'Planner' })).toBeVisible()
-})
-
 test('writing a note is full screen, and Esc goes back to the list', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')

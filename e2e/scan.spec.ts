@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { signUp } from './helpers'
+import { create, signUp } from './helpers'
 
 // A tiny PNG standing in for a phone photo of a page
 const photo = (name: string) => ({
@@ -10,7 +10,7 @@ const photo = (name: string) => ({
 test('scan photos into a note: reorder, read, scan again, save', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Scan' }).first().click()
+  await create(page, 'Scan')
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('radio', { name: /A note/ })).toHaveAttribute('aria-checked', 'true')
   await dialog.getByLabel('Images or a PDF to scan').setInputFiles([photo('p1.png'), photo('p2.png')])
@@ -27,7 +27,7 @@ test('scan photos into a note: reorder, read, scan again, save', async ({ page }
 test('scan pages into flashcards and save them to a new deck', async ({ page }) => {
   await signUp(page)
   await page.goto('/flashcards')
-  await page.getByRole('button', { name: 'Scan' }).click()
+  await create(page, 'Scan')
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('radio', { name: /Flashcards/ })).toHaveAttribute('aria-checked', 'true')
   await dialog.getByLabel('Images or a PDF to scan').setInputFiles([photo('cards.png')])
@@ -42,7 +42,7 @@ test('scan pages into flashcards and save them to a new deck', async ({ page }) 
 test('scan a timetable into tasks and classes, matching and creating courses', async ({ page }) => {
   await signUp(page) // onboarding made the course "Biology"
   await page.goto('/planner')
-  await page.getByRole('button', { name: 'Scan' }).click()
+  await create(page, 'Scan')
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Images or a PDF to scan').setInputFiles([photo('timetable.png')])
   await dialog.getByRole('button', { name: '✦ Scan 1 page' }).click()
