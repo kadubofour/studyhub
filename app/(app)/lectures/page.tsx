@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, FileText, FolderInput, Mic, MoreHorizontal, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ViewOptions } from '@/components/ui/ViewOptions'
+import { sortLectures, useView } from '@/lib/ui/listView'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { Dialog } from '@/components/ui/Dialog'
@@ -46,6 +48,8 @@ export default function LecturesPage() {
   const [menu, setMenu] = useState<{ x: number; y: number; lecture: LectureSummary } | null>(null)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [busy, setBusy] = useState(false)
+  const view = useView('lectures')
+  const grid = view.layout === 'grid'
 
   useEffect(() => {
     const sb = supabase()
@@ -148,16 +152,19 @@ export default function LecturesPage() {
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         </div>
       )}
-      <div className="mb-3 space-y-1">
-        <p className="text-xs text-muted">{formatMb(used)} of {formatMb(AUDIO_QUOTA_BYTES)} audio</p>
-        <StorageMessage used={used} />
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div className="space-y-1">
+          <p className="text-xs text-muted">{formatMb(used)} of {formatMb(AUDIO_QUOTA_BYTES)} audio</p>
+          <StorageMessage used={used} />
+        </div>
+        {!!lectures?.length && <ViewOptions page="lectures" />}
       </div>
       {lectures?.length === 0 && <EmptyState icon={Mic} tone="c" title="Capture your next lecture" body="No lectures yet. Press Record at the start of your next lecture." />}
-      <ul className="space-y-2">
-        {lectures?.map(l => (
+      <ul aria-label="Lectures" data-layout={view.layout} className={grid ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-2'}>
+        {sortLectures(lectures ?? [], view.sort).map(l => (
           <li key={l.id} className="group relative">
             <Link href={`/lectures/${l.id}`} onContextMenu={e => openMenu(e, l)}
-              className="card flex flex-wrap items-center justify-between gap-2 pr-12 hover:border-accent">
+              className={`card flex gap-2 pr-12 hover:border-accent ${grid ? 'h-full flex-col items-start' : 'flex-wrap items-center justify-between'}`}>
               <span className="font-medium">{l.title}</span>
               <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
                 <CourseTag course={courseOf(l.course_id)} />

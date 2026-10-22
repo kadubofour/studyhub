@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Upload, CheckSquare, X, NotebookPen, Search, MoreHorizontal, FolderClosed, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { ViewOptions } from '@/components/ui/ViewOptions'
+import { sortNotes, useView } from '@/lib/ui/listView'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { countByNotebook, filterNotes } from '@/lib/notes/notebooks'
 import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
@@ -147,7 +149,9 @@ export function NotesSidebar() {
     { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { void remove(n) } },
   ]
 
-  const shown = filterNotes(notes ?? [], { notebook, course })
+  const view = useView('notes')
+  const list = view.layout === 'list'
+  const shown = sortNotes(filterNotes(notes ?? [], { notebook, course }), view.sort, Object.fromEntries(courses.map(c => [c.id, c.name])))
   const counts = countByNotebook(notes ?? [])
   const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
@@ -194,8 +198,8 @@ export function NotesSidebar() {
         )}
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <div className="relative min-w-48 flex-1">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
           <input className="input w-full pl-9" placeholder="Search notes" value={q} onChange={e => setQ(e.target.value)} aria-label="Search notes" />
         </div>
@@ -203,6 +207,7 @@ export function NotesSidebar() {
           <option value="">All courses</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <ViewOptions page="notes" />
       </div>
 
       {empty && (
@@ -215,35 +220,51 @@ export function NotesSidebar() {
         <p className="py-2 text-sm text-muted">{!q.trim() && !course && notebook && notebook !== 'none' ? 'This notebook is empty. Move notes into it from their menu.' : 'No notes match.'}</p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div role="list" aria-label="Notes" data-layout={view.layout} className={list ? 'flex flex-col gap-2' : 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'}>
         {shown.map(n => {
           const c = courseOf(n.course_id)
           const on = selected.includes(n.id)
-          const body = (
+          const age = formatDistanceToNow(new Date(n.updated_at), { addSuffix: true })
+          const tags = (
+            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <CourseTag course={c} />
+              {!notebook && bookOf(n.notebook_id) && <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted"><FolderClosed size={12} aria-hidden /><span className="truncate">{bookOf(n.notebook_id)!.name}</span></span>}
+            </span>
+          )
+          // A list row: everything on one line, wrapping on a narrow screen
+          const body = list ? (
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {selecting && <input type="checkbox" checked={on} readOnly tabIndex={-1} aria-hidden className="size-4 accent-[var(--accent-solid)]" />}
+              <span className="min-w-0 flex-1 truncate font-medium">{n.title || 'Untitled'}</span>
+              {tags}
+              <span className="text-xs text-muted">{age}</span>
+            </span>
+          ) : (
             <>
               <div className="flex items-start gap-2">
                 {selecting && <input type="checkbox" checked={on} readOnly tabIndex={-1} aria-hidden className="mt-1 size-4 accent-[var(--accent-solid)]" />}
                 <span className="line-clamp-2 flex-1 font-medium">{n.title || 'Untitled'}</span>
               </div>
               <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <CourseTag course={c} />
-                  {!notebook && bookOf(n.notebook_id) && <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted"><FolderClosed size={12} aria-hidden /><span className="truncate">{bookOf(n.notebook_id)!.name}</span></span>}
-                </span>
-                <span className="ml-auto text-xs text-muted">{formatDistanceToNow(new Date(n.updated_at), { addSuffix: true })}</span>
+                {tags}
+                <span className="ml-auto text-xs text-muted">{age}</span>
               </div>
             </>
           )
-          const cls = `tile block border-t-4 text-left transition hover:-translate-y-0.5 ${on ? 'ring-2 ring-accent' : ''}`
-          const style = { borderTopColor: c?.color ?? 'var(--line)' }
+          const cls = list
+            ? `tile block w-full border-l-4 !py-2.5 text-left transition hover:border-accent ${on ? 'ring-2 ring-accent' : ''}`
+            : `tile block w-full border-t-4 text-left transition hover:-translate-y-0.5 ${on ? 'ring-2 ring-accent' : ''}`
+          const style = list ? { borderLeftColor: c?.color ?? 'var(--line)' } : { borderTopColor: c?.color ?? 'var(--line)' }
           return selecting ? (
-            <button key={n.id} type="button" role="checkbox" aria-checked={on} aria-label={`Select ${n.title || 'Untitled'}`}
-              className={cls} style={style} onClick={() => toggle(n.id)}>{body}</button>
+            <div key={n.id} role="listitem">
+              <button type="button" role="checkbox" aria-checked={on} aria-label={`Select ${n.title || 'Untitled'}`}
+                className={cls} style={style} onClick={() => toggle(n.id)}>{body}</button>
+            </div>
           ) : (
-            <div key={n.id} className="group relative">
+            <div key={n.id} role="listitem" className="group relative">
               <Link href={`/notes/${n.id}`} className={`${cls} h-full pr-10`} style={style} onContextMenu={e => openMenu(e, n)}>{body}</Link>
               <button type="button" aria-label={`More actions for ${n.title || 'Untitled'}`} aria-haspopup="menu"
-                className="absolute right-2 top-3 rounded-lg p-1 pointer-coarse:p-2.5 pointer-coarse:top-1.5 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                className={`absolute right-2 ${list ? 'top-1/2 -translate-y-1/2' : 'top-3 pointer-coarse:top-1.5'}` + " rounded-lg p-1 pointer-coarse:p-2.5 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"}
                 onClick={e => openMenu(e, n)}><MoreHorizontal size={16} aria-hidden /></button>
             </div>
           )

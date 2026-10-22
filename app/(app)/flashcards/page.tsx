@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { ListChecks, Plus, Layers } from 'lucide-react'
 import { requestQuiz } from '@/lib/quiz/events'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ViewOptions } from '@/components/ui/ViewOptions'
+import { sortDecks, useView } from '@/lib/ui/listView'
 import { useScanSaved } from '@/lib/scan/events'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Dialog } from '@/components/ui/Dialog'
@@ -43,6 +45,9 @@ export default function FlashcardsPage() {
   }
 
   const totalDue = decks?.reduce((n, d) => n + d.due, 0) ?? 0
+  const view = useView('decks')
+  const list = view.layout === 'list'
+  const shown = sortDecks(decks ?? [], view.sort)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
 
   return (
@@ -57,12 +62,24 @@ export default function FlashcardsPage() {
           <button className="btn-primary" onClick={() => setOpen(true)}>Create a deck</button>
         </EmptyState>
       )}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {decks?.map(d => {
+      {decks && decks.length > 0 && <ViewOptions page="decks" className="mb-3 justify-end" />}
+      <div role="list" aria-label="Decks" data-layout={view.layout} className={list ? 'flex flex-col gap-2' : 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3'}>
+        {shown.map(d => {
           const c = courseOf(d.course_id)
           const color = c?.color ?? 'var(--accent-solid)'
+          if (list) return (
+            <div key={d.id} role="listitem">
+              <Link href={`/flashcards/${d.id}`} className="tile flex flex-wrap items-center gap-x-3 gap-y-1 border-l-4 !py-2.5 transition hover:border-accent" style={{ borderLeftColor: color }}>
+                <span className="min-w-0 flex-1 truncate font-semibold">{d.name}</span>
+                <CourseTag course={c} />
+                <span className="text-xs" style={{ color: d.due > 0 ? color : undefined }}>{d.due > 0 ? `${d.due} due` : 'all caught up'}</span>
+                <span className="text-xs text-muted">{d.total} cards</span>
+              </Link>
+            </div>
+          )
           return (
-            <Link key={d.id} href={`/flashcards/${d.id}`} className="tile group relative overflow-hidden transition hover:-translate-y-0.5">
+            <div key={d.id} role="listitem">
+            <Link href={`/flashcards/${d.id}`} className="tile group relative block h-full overflow-hidden transition hover:-translate-y-0.5">
               {/* stacked-cards motif in the course colour */}
               <span aria-hidden className="absolute -right-3 -top-3 size-16 rotate-12 rounded-xl opacity-15" style={{ background: color }} />
               <span aria-hidden className="absolute -right-1 top-1 size-12 rotate-6 rounded-xl opacity-25" style={{ background: color }} />
@@ -78,6 +95,7 @@ export default function FlashcardsPage() {
                 </div>
               </div>
             </Link>
+            </div>
           )
         })}
       </div>

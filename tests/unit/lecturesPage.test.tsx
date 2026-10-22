@@ -146,3 +146,25 @@ describe('StorageCard', () => {
     expect(screen.getByText(/Delete old lectures to record more/)).toBeTruthy()
   })
 })
+
+describe('how the lectures are shown', () => {
+  it('newest first as a list, and can be oldest first, by title, or a grid', async () => {
+    localStorage.clear()
+    lectures = [
+      { id: 'L1', course_id: 'c1', title: 'Week 2', recorded_at: '2026-10-02T09:00:00Z', duration_seconds: 60, transcript_status: 'done', audio_bytes: 1 },
+      { id: 'L2', course_id: 'c1', title: 'week 10', recorded_at: '2026-10-09T09:00:00Z', duration_seconds: 60, transcript_status: 'done', audio_bytes: 1 },
+      { id: 'L3', course_id: 'c1', title: 'Intro', recorded_at: '2026-09-01T09:00:00Z', duration_seconds: 60, transcript_status: 'done', audio_bytes: 1 },
+    ]
+    await open()
+    const order = () => screen.getAllByRole('link').filter(l => /^\/lectures\/L/.test(l.getAttribute('href') ?? '')).map(l => l.getAttribute('href'))
+    const list = () => screen.getByRole('list', { name: 'Lectures' })
+    expect(order()).toEqual(['/lectures/L2', '/lectures/L1', '/lectures/L3'])
+    expect(list().getAttribute('data-layout')).toBe('list')
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'oldest' } })
+    expect(order()).toEqual(['/lectures/L3', '/lectures/L1', '/lectures/L2'])
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'title' } })
+    expect(order()).toEqual(['/lectures/L3', '/lectures/L1', '/lectures/L2'])
+    fireEvent.click(screen.getByRole('radio', { name: 'Grid' }))
+    expect(list().getAttribute('data-layout')).toBe('grid')
+  })
+})
