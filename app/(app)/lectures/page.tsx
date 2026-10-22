@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ExternalLink, FileText, FolderInput, Mic, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
+import { StackTile } from '@/components/ui/StackTile'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { sortLectures, useView } from '@/lib/ui/listView'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -163,6 +164,11 @@ export default function LecturesPage() {
       <ItemList label="Lectures" layout={view.layout}>
         {sortLectures(lectures ?? [], view.sort).map(l => {
           const c = courseOf(l.course_id)
+          if (view.layout === 'grid') return (
+            <StackTile key={l.id} motif="strip" color={c?.color} title={l.title} href={`/lectures/${l.id}`} tag={c && <CourseTag course={c} />}
+              big={formatClock(l.duration_seconds)} bigLabel={`recorded ${day(l.recorded_at)}`} side={statusOf(l)}
+              onMenu={e => openMenu(e, l)} onContextMenu={e => openMenu(e, l)} />
+          )
           return (
             <ItemTile key={l.id} layout={view.layout} icon={Mic} color={c?.color} title={l.title} href={`/lectures/${l.id}`}
               subtitle={<><span>{day(l.recorded_at)}</span> · <span>{formatClock(l.duration_seconds)}</span></>} meta={c && <CourseTag course={c} />} aside={statusOf(l)}

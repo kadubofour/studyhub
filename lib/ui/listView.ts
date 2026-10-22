@@ -8,7 +8,7 @@ export interface View { layout: Layout; sort: string }
 export const VIEW_CHOICES: Record<ViewPage, { layout: Layout; sorts: { value: string; label: string }[] }> = {
   notes: { layout: 'grid', sorts: [{ value: 'edited', label: 'Recently edited' }, { value: 'title', label: 'Title (A to Z)' }, { value: 'course', label: 'Course' }] },
   decks: { layout: 'grid', sorts: [{ value: 'due', label: 'Most due' }, { value: 'name', label: 'Name (A to Z)' }, { value: 'newest', label: 'Newest' }] },
-  lectures: { layout: 'list', sorts: [{ value: 'newest', label: 'Newest' }, { value: 'oldest', label: 'Oldest' }, { value: 'title', label: 'Title (A to Z)' }] },
+  lectures: { layout: 'grid', sorts: [{ value: 'newest', label: 'Newest' }, { value: 'oldest', label: 'Oldest' }, { value: 'title', label: 'Title (A to Z)' }] },
 }
 
 /** A stored value made safe: a known layout and one of the page's sorts, else the page's defaults */

@@ -116,6 +116,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const appearance = {
     '--a-solid': a.solid, '--a-text': a.text, '--a-text-dark': a.textDark, '--a-soft': a.soft,
     '--a-soft-dark': a.softDark, '--a-glow': a.glow, '--app-font': `var(${(FONTS[profile.font] ?? FONTS.sans).cssVar})`,
+    // headings: the display face with the default Sans; the student's own font when they picked another
+    '--display-font': profile.font && profile.font !== 'sans' && FONTS[profile.font] ? `var(${FONTS[profile.font].cssVar})` : 'var(--font-bricolage)',
   } as React.CSSProperties
 
   return (
@@ -189,7 +191,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <PanelLeftOpen size={18} aria-hidden />
           </button>
         )}
-        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-3 md:px-6 md:py-4' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
+        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-5 md:px-8 md:py-7' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
         <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-raised/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">

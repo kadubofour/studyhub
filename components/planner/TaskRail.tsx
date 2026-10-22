@@ -22,20 +22,20 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
           const on = list === l.id
           return (
             <button key={l.id} type="button" aria-current={on ? 'true' : undefined} onClick={() => onList(l.id)}
-              className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition ${on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+              className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition ${on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
               <Icon size={16} aria-hidden /><span className="flex-1 text-left">{l.label}</span>{' '}<span className={`text-xs ${on ? 'text-accent' : 'text-muted'}`}>{counts[l.id]}</span>
             </button>
           )
         })}
       </nav>
       <div>
-        <p className="mb-1.5 hidden px-3 text-xs font-medium text-muted lg:block">Type</p>
+        <p className="section-label !mb-1.5 hidden px-3 !text-sm lg:block">Type</p>
         <div role="group" aria-label="Task type" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0">
           {TYPES.map(t => {
             const on = type === t.id
             return (
               <button key={t.id} type="button" aria-pressed={on} onClick={() => onType(t.id)}
-                className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm pointer-coarse:py-2 transition ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm pointer-coarse:py-2.5 transition ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
                 <span>{t.label}</span>{' '}<span className="text-xs">{typeCounts[t.id]}</span>
               </button>
             )

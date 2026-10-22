@@ -108,10 +108,18 @@ describe('Classic is the calm version of Vivid', () => {
   it('top bar chips stand out from the bar in Classic', () => {
     expect(css).toMatch(/data-look="classic"\][^{]*Today at a glance[^{]*\{[^}]*background: var\(--surface\)/)
   })
-  it('stays calm: plain tiles, no glow under the main button, quieter section labels', () => {
+  it('stays calm: plain tiles, no glow under the main button', () => {
     const layer = css.slice(css.indexOf('/* Classic shapes'), css.indexOf('/* Playful shapes'))
     expect(layer).not.toContain('color-mix')
-    expect(layer).toMatch(/\.section-label \{ color: var\(--muted\)/)
+  })
+})
+
+describe('section titles', () => {
+  it('are short headings in the display face, never all-caps eyebrows, in every look', () => {
+    const rule = css.match(/\s\.section-label \{[^}]*\}/)![0]
+    expect(rule).toContain('var(--display-font)')
+    expect(rule).not.toContain('uppercase')
+    expect(css).not.toMatch(/section-label[^{]*\{[^}]*(uppercase|letter-spacing: \.0[68]em)/)
   })
 })
 

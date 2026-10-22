@@ -144,7 +144,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
           <p className="flex items-start gap-2 text-xs text-muted"><Sparkles size={13} className="mt-0.5 shrink-0 text-accent" aria-hidden />
             <span>PDFs are structured by AI (OpenAI), which uses AI actions: headings, lists, tables and equations, up to 24 MB and 100 pages. Word, PowerPoint and text files are read here for free.</span></p>
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Something else?</p>
+            <p className="section-label !mb-2">Something else?</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <button type="button" onClick={() => { close(); (onScan ?? requestScan)([]) }}
                 className="flex items-center gap-3 rounded-xl border border-line bg-raised p-3 text-left transition hover:bg-surface">
@@ -196,7 +196,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
             <ChoiceChips label="After saving" size="sm" value={next} onChange={v => setNext(v as Next)} options={NEXT.map(([value, label]) => ({ value, label }))} />
           </div>
           <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Preview</p>
+            <p className="section-label !mb-1.5">Preview</p>
             <div className="max-h-64 overflow-y-auto rounded-xl border border-line bg-raised px-3 py-2" aria-label="Preview" tabIndex={0} role="region">
               <MarkdownView source={draft.content_md || '*This file had no text.*'} />
             </div>

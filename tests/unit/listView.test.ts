@@ -8,7 +8,7 @@ describe('parseView', () => {
   it('keeps a known layout and sort, and falls back to the page\'s defaults otherwise', () => {
     expect(parseView('notes', { layout: 'list', sort: 'title' })).toEqual({ layout: 'list', sort: 'title' })
     expect(parseView('notes', { layout: 'tiles', sort: 'nonsense' })).toEqual({ layout: 'grid', sort: 'edited' })
-    expect(parseView('lectures', null)).toEqual({ layout: 'list', sort: 'newest' })
+    expect(parseView('lectures', null)).toEqual({ layout: 'grid', sort: 'newest' })
     expect(parseView('decks', { sort: 'due' })).toEqual({ layout: 'grid', sort: 'due' })
   })
   it('each page offers its own sorts', () => {

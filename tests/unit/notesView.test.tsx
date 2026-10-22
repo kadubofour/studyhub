@@ -79,3 +79,14 @@ describe('notes as icons', () => {
     expect(screen.getAllByRole('listitem').length).toBe(screen.getAllByRole('link').length)
   })
 })
+
+describe('notes in the grid', () => {
+  it('use the deck tile: ruled sheets in the corner, the day it was last edited, and the notebook', async () => {
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: 'Grid' }))
+    const link = screen.getByRole('link', { name: /Krebs cycle/ })
+    expect(link.querySelector('[data-motif="sheets"]')).toBeTruthy()
+    expect(link.textContent).toContain('last edited')
+    expect(link.textContent).toContain('Biology') // its notebook
+  })
+})

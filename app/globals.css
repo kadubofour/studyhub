@@ -8,6 +8,7 @@
   /* Accent defaults (blue preset) for pages outside the signed-in app */
   --accent: #3B5BDB; --accent-soft: #EEF1FD; --accent-solid: #3B5BDB; --accent-glow: #7C5CFF;
   --app-font: var(--font-inter);
+  --display-font: var(--font-bricolage);
   --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
 }
 .dark {
@@ -105,7 +106,9 @@ body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
   --color-success: var(--success); --color-warn: var(--warn);
 }
 
-body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
+body { background: var(--bg); color: var(--fg); font-size: 15px; line-height: 1.55; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
+/* The display face: page titles, section titles, tile titles and big numbers */
+.font-display { font-family: var(--display-font), var(--app-font), ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.012em; }
 .app-root { font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
 
 @layer components {
@@ -144,22 +147,32 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
   .menu-item.danger .menu-icon, .menu-item.danger:hover .menu-icon { @apply text-danger; }
   .menu-kbd { @apply ml-auto rounded-md border border-line px-1.5 py-px font-mono text-[10.5px] text-muted; }
   .menu-sep { @apply mx-2 my-1 h-px bg-line; }
-  .card { @apply rounded-2xl border border-line bg-raised p-4; box-shadow: var(--shadow); }
-  .tile { @apply rounded-2xl border border-line bg-raised px-4 py-3; box-shadow: var(--shadow); }
+  .card { @apply rounded-2xl border border-line bg-raised p-5; box-shadow: var(--shadow); }
+  .tile { @apply rounded-2xl border border-line bg-raised px-5 py-4; box-shadow: var(--shadow); }
   .tile-a { background: var(--tile-a); }
   .tile-b { background: var(--tile-b); }
   .tile-c { background: var(--tile-c); }
-  .hero { @apply rounded-2xl px-5 py-4 text-white; background: linear-gradient(135deg, var(--accent-solid), var(--accent-glow)); box-shadow: var(--shadow); }
-  .section-label { @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-muted; }
+  /* The hero is the top of a notebook page in the accent colour: faint ruled lines and a margin line */
+  .hero {
+    @apply rounded-2xl py-5 pr-5 text-white; --hero-margin: 1.25rem; padding-left: calc(var(--hero-margin) + 1.1rem); box-shadow: var(--shadow);
+    background-color: var(--accent-solid);
+    background-image:
+      linear-gradient(90deg, transparent var(--hero-margin), rgb(255 255 255 / .32) var(--hero-margin), rgb(255 255 255 / .32) calc(var(--hero-margin) + 1.5px), transparent calc(var(--hero-margin) + 1.5px)),
+      repeating-linear-gradient(to bottom, transparent 0 1.9rem, rgb(255 255 255 / .11) 1.9rem calc(1.9rem + 1px));
+  }
+  .hero h1 { font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.02em; }
+  /* A section's title: a short heading in the display face, sentence case, in the text colour */
+  .section-label { @apply mb-3 text-[15px] font-semibold text-fg; font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.005em; }
+  /* In the sidebar the group names stay small and quiet */
+  .app-sidebar .section-label { @apply text-xs font-semibold text-muted; letter-spacing: 0; }
 }
 
 @layer components {
 /* Vivid shapes: larger corners and type, a livelier hero, pill buttons. Same classes, so every page changes at once. */
 .app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; }
-.app-root[data-look="vivid"] .card { padding: 1.25rem; }
-.app-root[data-look="vivid"] .tile { padding: 1rem 1.25rem; border-color: transparent; }
-.app-root[data-look="vivid"] .section-label { color: var(--accent); font-weight: 600; letter-spacing: .06em; }
-.app-root[data-look="vivid"] .hero { border-radius: 1.75rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
+.app-root[data-look="vivid"] .card { padding: 1.5rem; }
+.app-root[data-look="vivid"] .tile { padding: 1.125rem 1.375rem; border-color: transparent; }
+.app-root[data-look="vivid"] .hero { border-radius: 1.75rem; padding-block: 1.75rem; --hero-margin: 1.5rem; font-size: 1rem; }
 .app-root[data-look="vivid"] .hero h1 { font-size: 2rem; line-height: 1.15; }
 .app-root[data-look="vivid"] .btn, .app-root[data-look="vivid"] .btn-primary, .app-root[data-look="vivid"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
 .app-root[data-look="vivid"] .btn-primary { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent); }
@@ -170,10 +183,9 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 
 /* Classic shapes: Vivid's rounded cards, pill buttons and bigger hero, kept calm: plain tiles, quiet labels, no glow under buttons. */
 .app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card, .app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { border-radius: 1.25rem; }
-.app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card { padding: 1.25rem; }
-.app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { padding: 1rem 1.25rem; }
-.app-root[data-look="classic"] .section-label, .dark .app-root[data-look="paper"] .section-label { color: var(--muted); font-weight: 600; letter-spacing: .06em; }
-.app-root[data-look="classic"] .hero, .dark .app-root[data-look="paper"] .hero { border-radius: 1.5rem; padding: 1.5rem 1.75rem; font-size: 1rem; }
+.app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card { padding: 1.5rem; }
+.app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { padding: 1.125rem 1.375rem; }
+.app-root[data-look="classic"] .hero, .dark .app-root[data-look="paper"] .hero { border-radius: 1.5rem; padding-block: 1.75rem; --hero-margin: 1.5rem; font-size: 1rem; }
 .app-root[data-look="classic"] .btn, .dark .app-root[data-look="paper"] .btn, .app-root[data-look="classic"] .btn-primary, .dark .app-root[data-look="paper"] .btn-primary, .app-root[data-look="classic"] .btn-danger, .dark .app-root[data-look="paper"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
 .app-root[data-look="classic"] .field input, .dark .app-root[data-look="paper"] .field input, .app-root[data-look="classic"] .field select, .dark .app-root[data-look="paper"] .field select, .app-root[data-look="classic"] input.input, .dark .app-root[data-look="paper"] input.input, .app-root[data-look="classic"] select.input, .dark .app-root[data-look="paper"] select.input { border-radius: 9999px; }
 .app-root[data-look="classic"] .field input, .dark .app-root[data-look="paper"] .field input, .app-root[data-look="classic"] input.input, .dark .app-root[data-look="paper"] input.input { padding-inline: 1rem; }
@@ -184,9 +196,9 @@ body { background: var(--bg); color: var(--fg); font-size: 14px; font-family: va
 
 /* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
 .app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }
-.app-root[data-look="playful"] .card { padding: 1.125rem; }
-.app-root[data-look="playful"] .section-label { color: var(--fg); font-weight: 700; letter-spacing: .08em; }
-.app-root[data-look="playful"] .hero { background: var(--accent-solid); border-radius: 1.5rem; padding: 1.25rem 1.5rem; box-shadow: none; border-bottom: 5px solid color-mix(in srgb, #000 22%, var(--accent-solid)); }
+.app-root[data-look="playful"] .card { padding: 1.375rem; }
+.app-root[data-look="playful"] .section-label { font-weight: 700; }
+.app-root[data-look="playful"] .hero { background: var(--accent-solid); border-radius: 1.5rem; padding: 1.5rem 1.75rem; box-shadow: none; border-bottom: 5px solid color-mix(in srgb, #000 22%, var(--accent-solid)); }
 .app-root[data-look="playful"] .hero h1 { font-size: 1.75rem; font-weight: 700; }
 .app-root[data-look="playful"] .btn, .app-root[data-look="playful"] .btn-primary, .app-root[data-look="playful"] .btn-danger {
   border-radius: 1rem; font-weight: 700; border-width: 2px; border-bottom-width: 4px; padding-block: .5rem; box-shadow: none;

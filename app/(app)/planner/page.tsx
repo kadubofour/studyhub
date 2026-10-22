@@ -178,12 +178,12 @@ export default function PlannerPage() {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h1 className="page-title text-lg font-medium">Planner</h1>
+      <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <h1 className="page-title font-display text-[1.75rem] font-semibold leading-tight tracking-tight sm:text-[2rem]">Planner</h1>
         <div role="tablist" className="flex gap-1">
           {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${tab === t ? 'bg-surface font-medium' : 'text-muted'}`}>
+              className={`rounded-xl px-3.5 py-1.5 text-sm pointer-coarse:py-2.5 ${tab === t ? 'bg-surface font-medium' : 'text-muted hover:text-fg'}`}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
           ))}
@@ -199,12 +199,12 @@ export default function PlannerPage() {
       </div>
 
       {tab === 'tasks' && (
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[15rem_minmax(0,1fr)]">
           <TaskRail list={list} onList={setList} counts={counts} type={typeFilter} onType={setTypeFilter} typeCounts={typeCounts} />
           <div className="min-w-0">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold">{title}</h2>
-              <p className="text-sm text-muted" aria-live="polite">{subtitle}</p>
+            <div className="mb-5">
+              <h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight">{title}</h2>
+              <p className="mt-0.5 text-sm text-muted" aria-live="polite">{subtitle}</p>
             </div>
             {list !== 'done' && <QuickAdd variant="card" courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />}
             {loaded && courses.length === 0 && tasks.length === 0 && (
@@ -219,16 +219,16 @@ export default function PlannerPage() {
             ) : groups.length === 0 ? (
               <p className="rounded-2xl bg-surface px-4 py-8 text-center text-sm text-muted">{EMPTY[list]}</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {groups.map(g => (
                   <section key={g.key} aria-label={g.label} className="overflow-hidden rounded-2xl border border-line bg-raised">
-                    <h3 className={`flex items-center justify-between px-4 pb-1 pt-3 text-xs font-semibold ${g.tone === 'danger' ? 'text-danger' : g.tone === 'today' ? 'text-accent' : 'text-muted'}`}>{g.label}<span className="font-normal text-muted">{g.tasks.length}</span></h3>
+                    <h3 className={`font-display flex items-center justify-between px-5 pb-1.5 pt-4 text-sm font-semibold ${g.tone === 'danger' ? 'text-danger' : g.tone === 'today' ? 'text-accent' : 'text-muted'}`}>{g.label}<span className="font-normal text-muted">{g.tasks.length}</span></h3>
                     <div className="divide-y divide-line">{g.tasks.map(row)}</div>
                   </section>
                 ))}
               </div>
             )}
-            {list !== 'done' && <div className="mt-5 [&>section]:!mt-0"><StudyPlanPanel courses={courses} tasks={tasks} /></div>}
+            {list !== 'done' && <div className="mt-6 [&>section]:!mt-0"><StudyPlanPanel courses={courses} tasks={tasks} /></div>}
           </div>
         </div>
       )}

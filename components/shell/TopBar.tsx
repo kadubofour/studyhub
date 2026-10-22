@@ -78,7 +78,7 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
 
   return (
     <header aria-label="Today at a glance" className={`no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-raised/95 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] backdrop-blur md:px-8 ${sidebarHidden ? 'md:pl-16' : ''}`}>
-      {name && <span data-page className="shrink-0 text-lg font-semibold sm:text-base">{name}</span>}
+      {name && <span data-page className="font-display shrink-0 text-xl font-semibold tracking-tight">{name}</span>}
       <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto">
         {burst && (
           <span className={`${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>

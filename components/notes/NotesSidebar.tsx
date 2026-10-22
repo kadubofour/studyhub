@@ -5,6 +5,7 @@ import { Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderClosed, Folder
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
+import { StackTile } from '@/components/ui/StackTile'
 import { sortNotes, useView } from '@/lib/ui/listView'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { countByNotebook, filterNotes } from '@/lib/notes/notebooks'
@@ -223,11 +224,18 @@ export function NotesSidebar() {
         {shown.map(n => {
           const c = courseOf(n.course_id)
           const book = !notebook ? bookOf(n.notebook_id) : undefined
+          const select = selecting ? { on: selected.includes(n.id), onToggle: () => toggle(n.id) } : undefined
+          if (view.layout === 'grid') return (
+            <StackTile key={n.id} motif="sheets" color={c?.color} title={n.title} href={`/notes/${n.id}`} tag={c && <CourseTag course={c} />}
+              big={new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} bigLabel="last edited"
+              side={book && <span className="inline-flex max-w-full items-center gap-1"><FolderClosed size={12} aria-hidden /><span className="truncate">{book.name}</span></span>}
+              select={select} onMenu={e => openMenu(e, n)} onContextMenu={e => openMenu(e, n)} />
+          )
           return (
             <ItemTile key={n.id} layout={view.layout} icon={FileText} color={c?.color} title={n.title} href={`/notes/${n.id}`}
               subtitle={book && <span className="inline-flex min-w-0 items-center gap-1"><FolderClosed size={12} aria-hidden /><span className="truncate">{book.name}</span></span>}
               meta={c && <CourseTag course={c} />} aside={formatDistanceToNow(new Date(n.updated_at), { addSuffix: true })}
-              select={selecting ? { on: selected.includes(n.id), onToggle: () => toggle(n.id) } : undefined}
+              select={select}
               onMenu={e => openMenu(e, n)} onContextMenu={e => openMenu(e, n)} />
           )
         })}

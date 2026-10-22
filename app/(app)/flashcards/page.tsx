@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ListChecks, Plus, Layers } from 'lucide-react'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
+import { StackTile } from '@/components/ui/StackTile'
 import { requestQuiz } from '@/lib/quiz/events'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ViewOptions } from '@/components/ui/ViewOptions'
@@ -67,26 +68,10 @@ export default function FlashcardsPage() {
         {shown.map(d => {
           const c = courseOf(d.course_id)
           const color = c?.color ?? 'var(--accent-solid)'
-          // In the grid a deck keeps its own tile: the stacked cards and the big number due
+          // In the grid a deck keeps its tile: the stacked cards and the big number due
           if (view.layout === 'grid') return (
-            <div key={d.id} role="listitem">
-              <Link href={`/flashcards/${d.id}`} className="tile group relative block h-full overflow-hidden transition hover:-translate-y-0.5">
-                {/* stacked-cards motif in the course colour */}
-                <span aria-hidden className="absolute -right-3 -top-3 size-16 rotate-12 rounded-xl opacity-15" style={{ background: color }} />
-                <span aria-hidden className="absolute -right-1 top-1 size-12 rotate-6 rounded-xl opacity-25" style={{ background: color }} />
-                <div className="relative">
-                  <div data-title className="font-semibold">{d.name}</div>
-                  <CourseTag course={c} className="mt-0.5" />
-                  <div className="mt-4 flex items-end justify-between">
-                    <div>
-                      <div className="text-2xl font-semibold" style={{ color: d.due > 0 ? color : undefined }}>{d.due}</div>
-                      <div className="text-xs text-muted">{d.due > 0 ? 'due now' : 'all caught up'}</div>
-                    </div>
-                    <div className="text-xs text-muted">{d.total} cards</div>
-                  </div>
-                </div>
-              </Link>
-            </div>
+            <StackTile key={d.id} motif="cards" color={color} title={d.name} href={`/flashcards/${d.id}`} tag={<CourseTag course={c} />}
+              big={d.due} bigColor={d.due > 0 ? color : undefined} bigLabel={d.due > 0 ? 'due now' : 'all caught up'} side={`${d.total} cards`} />
           )
           return (
             <ItemTile key={d.id} layout={view.layout} icon={Layers} color={c?.color} title={d.name} href={`/flashcards/${d.id}`} badge={d.due || undefined}

@@ -148,7 +148,7 @@ describe('StorageCard', () => {
 })
 
 describe('how the lectures are shown', () => {
-  it('newest first as a list, and can be oldest first, by title, or a grid', async () => {
+  it('newest first in the grid, like decks, and can be oldest first, by title, or a list', async () => {
     localStorage.clear()
     lectures = [
       { id: 'L1', course_id: 'c1', title: 'Week 2', recorded_at: '2026-10-02T09:00:00Z', duration_seconds: 60, transcript_status: 'done', audio_bytes: 1 },
@@ -159,13 +159,13 @@ describe('how the lectures are shown', () => {
     const order = () => screen.getAllByRole('link').filter(l => /^\/lectures\/L/.test(l.getAttribute('href') ?? '')).map(l => l.getAttribute('href'))
     const list = () => screen.getByRole('list', { name: 'Lectures' })
     expect(order()).toEqual(['/lectures/L2', '/lectures/L1', '/lectures/L3'])
-    expect(list().getAttribute('data-layout')).toBe('list')
+    expect(list().getAttribute('data-layout')).toBe('grid')
     fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'oldest' } })
     expect(order()).toEqual(['/lectures/L3', '/lectures/L1', '/lectures/L2'])
     fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'title' } })
     expect(order()).toEqual(['/lectures/L3', '/lectures/L1', '/lectures/L2'])
-    fireEvent.click(screen.getByRole('radio', { name: 'Grid' }))
-    expect(list().getAttribute('data-layout')).toBe('grid')
+    fireEvent.click(screen.getByRole('radio', { name: 'List' }))
+    expect(list().getAttribute('data-layout')).toBe('list')
   })
 })
 
@@ -176,5 +176,16 @@ describe('lectures as icons', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Icons' }))
     expect(screen.getByRole('list', { name: 'Lectures' }).getAttribute('data-layout')).toBe('icons')
     expect(screen.getByRole('link', { name: /Krebs cycle/ }).querySelector('[data-icon]')).toBeTruthy()
+  })
+})
+
+describe('lectures in the grid', () => {
+  it('use the deck tile: a recording strip, the length large, the day it was recorded, and the transcript status', async () => {
+    localStorage.clear()
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: 'Grid' }))
+    const link = screen.getByRole('link', { name: /Krebs cycle/ })
+    expect(link.querySelector('[data-motif="strip"]')).toBeTruthy()
+    expect(link.textContent).toContain('1:02:03')
   })
 })

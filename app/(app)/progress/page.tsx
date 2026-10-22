@@ -58,7 +58,7 @@ export default function ProgressPage() {
   const reviewTotal = last14.reduce((n, k) => n + (reviewsByDay.get(k) ?? 0), 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader title="Progress" />
       <ProgressSummary xp={xp} stats={[
         { label: 'Current streak', value: `${streak.current} ${streak.current === 1 ? 'day' : 'days'}` },
@@ -72,7 +72,7 @@ export default function ProgressPage() {
         { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
         { node: <NewNoteButton /> },
       ]} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <section className="card">
           <div className="mb-3 flex items-baseline justify-between gap-2">
             <h2 className="text-sm font-medium">Focus, last 12 weeks</h2>

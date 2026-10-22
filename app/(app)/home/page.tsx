@@ -120,7 +120,7 @@ export default function HomePage() {
   )
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <section className="hero">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
@@ -178,7 +178,7 @@ export default function HomePage() {
 
       <WeakSpotsCard courses={courses} />
 
-      <section className="grid gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <section className="grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="card">
           <h2 className="section-label">Today</h2>
           {sessions.map(({ v, s }) => (
@@ -193,7 +193,7 @@ export default function HomePage() {
           <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact implicitDue="Today" />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {!bold && <div className="card text-center">
             <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
             <div className="font-mono text-4xl font-semibold tracking-tight">{fmtClock(remainingMs(focus.timer, focus.now))}</div>

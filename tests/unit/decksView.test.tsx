@@ -58,3 +58,10 @@ describe('decks in the grid', () => {
     expect(screen.getByRole('link', { name: /Bonds/ }).textContent).toContain('all caught up')
   })
 })
+
+describe('the deck tile is the model for the others', () => {
+  it('draws index cards in the corner', async () => {
+    await open()
+    expect(screen.getByRole('link', { name: /atoms/ }).querySelector('[data-motif="cards"]')).toBeTruthy()
+  })
+})

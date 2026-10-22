@@ -6,7 +6,7 @@ import { Pause, Play, RotateCcw } from 'lucide-react'
 export function HeroFocus({ mode, clock, running, resumable, onToggle, onRestart }: { mode: string; clock: string; running: boolean; resumable: boolean; onToggle: () => void; onRestart?: () => void }) {
   return (
     <div className="w-full rounded-2xl bg-black/20 px-5 py-3.5 text-center sm:w-auto">
-      <div className="text-xs font-medium uppercase tracking-wide opacity-85">{mode}</div>
+      <div className="font-display text-sm font-semibold opacity-90">{mode}</div>
       <div className="font-mono text-4xl font-semibold tracking-tight">{clock}</div>
       <div className="mt-2.5 flex justify-center gap-2">
         <button type="button" onClick={onToggle} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white px-4 text-sm font-medium text-[var(--accent-solid)] transition hover:brightness-95">
