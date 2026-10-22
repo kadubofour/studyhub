@@ -53,10 +53,12 @@
 .app-root[data-look="classic"] {
   --bg: #fbfbfa; --raised: #ffffff; --surface: #f3f3f0; --line: #e6e5e0; --fg: #1f1f1d; --muted: #6b6a65;
   --shadow: 0 1px 2px rgb(20 20 19 / 0.05), 0 4px 14px rgb(20 20 19 / 0.05);
+  --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
 }
 .dark .app-root[data-look="classic"] {
   --bg: #121211; --raised: #1a1a19; --surface: #222220; --line: #30302d; --fg: #ededea; --muted: #9a9993;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
+  --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
 }
 /* Paper: warm cream. It is for light mode only: in dark mode the app shows Classic (components/providers/useLook.ts), and these are
    Classic's dark values, so nothing cream shows in the moment before the page knows the theme. */
@@ -94,12 +96,14 @@
 }
 /* The sidebar (only that: the Study panel in a note is an aside too) is the darker shade in Classic and Vivid. Its own tokens re-colour everything inside it. */
 .app-root[data-look="classic"] .app-sidebar {
+  --glass: var(--raised); --glass-strong: var(--raised);
   background: #1F1F1D; --fg: #ECEBE8; --muted: #A8A7A1; --line: #3A3A37; --surface: #2A2A28; --raised: #353533;
   --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
 }
 .dark .app-root[data-look="paper"] .app-sidebar,
 .dark .app-root[data-look="classic"] .app-sidebar { background: #0D0D0C; --line: #262624; --surface: #1A1A19; --raised: #242422; }
 .app-root[data-look="vivid"] .app-sidebar {
+  --glass: var(--raised); --glass-strong: var(--raised);
   background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
   --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
 }

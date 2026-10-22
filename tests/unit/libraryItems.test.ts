@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { countsByCourse, countsByKind, folders, isMovable, visible, type LibraryItem, type View } from '@/lib/library/items'
+import { countsByCourse, countsByKind, folders, isMovable, visible, withKnownNotebooks, type LibraryItem, type View } from '@/lib/library/items'
 
 const item = (kind: LibraryItem['kind'], id: string, title: string, course: string | null, at: string): LibraryItem =>
   ({ kind, id, title, course_id: course, at, meta: '', href: `/${kind}/${id}` })
@@ -97,5 +97,13 @@ describe('notebooks are folders', () => {
     expect(folders(FILED, BOOKS, view({ q: 'krebs' }))).toEqual([])
     expect(folders(FILED, BOOKS, view({ kind: 'deck' }))).toEqual([])
     expect(folders(FILED, BOOKS, view({ folder: 'cell' }))).toEqual([])
+  })
+})
+
+describe('withKnownNotebooks', () => {
+  it('treats a note whose notebook is not in the list as loose, so it never disappears', () => {
+    const notes = [{ ...item('note', 'a', 'A', null, ''), notebook_id: 'gone' }, { ...item('note', 'b', 'B', null, ''), notebook_id: 'kept' }, item('deck', 'd', 'D', null, '')]
+    const out = withKnownNotebooks(notes, [{ id: 'kept', name: 'Kept', created_at: '' }])
+    expect(out.map(i => i.notebook_id ?? null)).toEqual([null, 'kept', null])
   })
 })

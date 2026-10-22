@@ -21,7 +21,7 @@ import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNoteboo
 import { requestUpload } from '@/lib/scan/events'
 import { requestQuiz } from '@/lib/quiz/events'
 import { useView } from '@/lib/ui/listView'
-import { countsByKind, folders, isMovable, visible, type Kind, type LibraryItem, type View } from '@/lib/library/items'
+import { countsByKind, folders, isMovable, visible, withKnownNotebooks, type Kind, type LibraryItem, type View } from '@/lib/library/items'
 import type { Course, Notebook } from '@/lib/types'
 
 const KIND: Record<Kind, { label: string; plural: string; icon: LucideIcon }> = {
@@ -55,14 +55,15 @@ export default function LibraryPage() {
   const [moving, setMoving] = useState(false)
   const [dialog, setDialog] = useState<null | 'new' | 'rename' | 'file'>(null)
 
+  // The items and the notebooks are read together, so a note never shows (or hides) against an out-of-date list of folders
+  const read = () => Promise.all([loadLibrary(supabase(), new Date()), listNotebooks(supabase())])
   const load = useCallback(async () => {
-    try { setItems(await loadLibrary(supabase(), new Date())); setFailed(false) } catch { setFailed(true); setItems(null) }
+    try { const [l, b] = await read(); setItems(l); setNotebooks(b); setFailed(false) } catch { setFailed(true); setItems(null) }
   }, [])
   useEffect(() => {
     let live = true
     listCourses(supabase()).then(c => { if (live) { setCourses(c); setCoursesLoaded(true) } }).catch(() => {})
-    listNotebooks(supabase()).then(b => { if (live) setNotebooks(b) }).catch(() => {})
-    loadLibrary(supabase(), new Date()).then(l => { if (live) { setItems(l); setFailed(false) } }).catch(() => { if (live) setFailed(true) })
+    read().then(([l, b]) => { if (live) { setItems(l); setNotebooks(b); setFailed(false) } }).catch(() => { if (live) setFailed(true) })
     return () => { live = false }
   }, [])
 
@@ -73,9 +74,10 @@ export default function LibraryPage() {
   // A folder whose notebook is gone is closed
   const open = bookOf(view.folder)
   const current: View = { ...view, course, folder: open?.id ?? null }
-  const shown = items ? visible(items, current) : []
-  const shelf = items ? folders(items, notebooks, current) : []
-  const counts = items ? countsByKind(items, current) : null
+  const known = items ? withKnownNotebooks(items, notebooks) : null
+  const shown = known ? visible(known, current) : []
+  const shelf = known ? folders(known, notebooks, current) : []
+  const counts = known ? countsByKind(known, current) : null
   // Only what is shown can be moved, so a tick hidden by a filter never goes along unseen
   const movableShown = shown.filter(isMovable)
   const picked = movableShown.filter(i => selected.has(key(i)))
@@ -90,14 +92,21 @@ export default function LibraryPage() {
   function toggleAll() {
     setSelected(s => { const n = new Set(s); for (const i of movableShown) { if (allShownPicked) n.delete(key(i)); else n.add(key(i)) } return n })
   }
+  // The open folder and the course are kept in the address (without new history entries), so coming back from a note finds them again
+  function remember(name: 'notebook' | 'course', value: string | null) {
+    const params = new URLSearchParams(window.location.search)
+    if (value) params.set(name, value); else params.delete(name)
+    const qs = params.toString()
+    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
+  }
   function openFolder(id: string | null) {
     setView(v => ({ ...v, folder: id, kind: null, q: '' }))
     setSelected(new Set())
-    // the open folder is in the address (without a new history entry), so coming back from a note opens it again
-    const params = new URLSearchParams(window.location.search)
-    if (id) params.set('notebook', id); else params.delete('notebook')
-    const qs = params.toString()
-    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
+    remember('notebook', id)
+  }
+  function chooseCourse(id: string) {
+    setView(v => ({ ...v, course: id }))
+    remember('course', id === 'all' ? null : id)
   }
 
   async function move() {
@@ -183,8 +192,8 @@ export default function LibraryPage() {
         <>
           <div role="group" aria-label="Courses">
             <CourseBar courses={courses} selected={courses.some(c => c.id === course) ? course : null}
-              onSelect={id => setView(v => ({ ...v, course: id ?? 'all' }))} onChange={c => { setCourses(c); void load() }} // a deleted course frees its items, so read them again
-              unsorted={{ active: course === 'none', onClick: () => setView(v => ({ ...v, course: 'none' })) }} />
+              onSelect={id => chooseCourse(id ?? 'all')} onChange={c => { setCourses(c); void load() }} // a deleted course frees its items, so read them again
+              unsorted={{ active: course === 'none', onClick: () => chooseCourse('none') }} />
           </div>
 
           {open && (
@@ -259,13 +268,15 @@ export default function LibraryPage() {
             open ? (
               view.q.trim()
                 ? <div className="card space-y-2 py-8 text-center"><p className="text-sm">Nothing matches.</p><button type="button" className="btn" onClick={() => setView(v => ({ ...v, q: '' }))}>Clear search</button></div>
-                : <div className="card py-8 text-center text-sm text-muted">No notes in this notebook yet.</div>
-            ) : filtered && items.some(i => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)) ? (
+                : course !== 'all'
+                  ? <div className="card space-y-2 py-8 text-center"><p className="text-sm">{course === 'none' ? `No unsorted notes in ${open.name}.` : `No notes from ${courseName ?? 'this course'} in ${open.name}.`}</p><button type="button" className="btn" onClick={() => chooseCourse('all')}>Show all courses</button></div>
+                  : <div className="card py-8 text-center text-sm text-muted">No notes in this notebook yet.</div>
+            ) : shelf.length > 0 ? null : filtered && items.some(i => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)) ? (
               <div className="card space-y-2 py-8 text-center">
                 <p className="text-sm">Nothing matches.</p>
-                <button type="button" className="btn" onClick={() => setView({ course: 'all', kind: null, q: '', sort: view.sort, folder: null })}>Clear filters</button>
+                <button type="button" className="btn" onClick={() => { setView({ course: 'all', kind: null, q: '', sort: view.sort, folder: null }); remember('course', null) }}>Clear filters</button>
               </div>
-            ) : shelf.length === 0 && (
+            ) : (
               <div className="card py-8 text-center text-sm text-muted">{course === 'none' ? 'Everything is in a course.' : courseName ? 'Nothing in this course yet.' : 'Nothing here yet.'}</div>
             )
           ) : (

@@ -29,12 +29,13 @@ vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses, createC
 vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (sb: unknown, p: unknown[], c: unknown) => moveItems(sb, p, c) }))
 vi.mock('@/lib/scan/events', () => ({ requestUpload: () => requestUpload() }))
 let notebooks: { id: string; name: string; created_at: string }[] = []
+let notebooksFail = false
 const createNotebook = vi.fn(async (_sb: unknown, name: string) => { const b = { id: 'new', name, created_at: '' }; notebooks = [...notebooks, b]; return b })
 const renameNotebook = vi.fn(async (_sb: unknown, id: string, name: string) => { notebooks = notebooks.map(b => (b.id === id ? { ...b, name } : b)) })
 const deleteNotebook = vi.fn(async (_sb: unknown, id: string) => { notebooks = notebooks.filter(b => b.id !== id) })
 const moveNotes = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('@/lib/data/notebooks', () => ({
-  listNotebooks: async () => notebooks,
+  listNotebooks: async () => { if (notebooksFail) throw new Error('offline'); return notebooks },
   createNotebook: (sb: unknown, n: string) => createNotebook(sb, n), renameNotebook: (sb: unknown, id: string, n: string) => renameNotebook(sb, id, n),
   deleteNotebook: (sb: unknown, id: string) => deleteNotebook(sb, id), moveNotes: (...a: unknown[]) => moveNotes(...a),
 }))
@@ -45,7 +46,7 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 const open = async () => { await act(async () => { render(<ToastProvider><ConfirmProvider><LibraryPage /></ConfirmProvider></ToastProvider>) }) }
 const rows = () => screen.getAllByRole('listitem').map(li => li.textContent ?? '')
 const click = async (el: HTMLElement) => { await act(async () => { fireEvent.click(el) }) }
-beforeEach(() => { notebooks = []; createNotebook.mockClear(); renameNotebook.mockClear(); deleteNotebook.mockClear(); moveNotes.mockClear(); movedCount = null; items = STUFF; loadFails = false; search = ''; requestUpload.mockClear(); moveItems.mockClear(); loadLibrary.mockClear() })
+beforeEach(() => { notebooks = []; notebooksFail = false; createNotebook.mockClear(); renameNotebook.mockClear(); deleteNotebook.mockClear(); moveNotes.mockClear(); movedCount = null; items = STUFF; loadFails = false; search = ''; requestUpload.mockClear(); moveItems.mockClear(); loadLibrary.mockClear() })
 afterEach(cleanup)
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -330,7 +331,8 @@ describe('Library', () => {
       await click(screen.getByRole('button', { name: 'Delete' }))
       expect(deleteNotebook).toHaveBeenCalledWith({}, 'cell')
       expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull()
-      expect(loadLibrary).toHaveBeenCalledTimes(2) // its notes come back as loose notes
+      expect(loadLibrary).toHaveBeenCalledTimes(2)
+      expect(listed().some(t => t.includes('Glycolysis'))).toBe(true) // its notes are loose again
     })
     it('moves ticked notes into a notebook', async () => {
       await open()
@@ -348,6 +350,51 @@ describe('Library', () => {
       expect(screen.getByRole('button', { name: 'Move to notebook' })).toBeTruthy()
       await click(screen.getByRole('checkbox', { name: /Cells/ }))
       expect(screen.queryByRole('button', { name: 'Move to notebook' })).toBeNull()
+    })
+    it('reads the notebooks again with the items, so a notebook made elsewhere shows its notes', async () => {
+      await open()
+      notebooks = [...notebooks, { id: 'gen', name: 'Genetics', created_at: '' }]
+      items = [...FILED, { ...item('note', 'n5', 'Mendel', 'bio', '2026-10-02T10:00:00Z'), notebook_id: 'gen' }]
+      await click(screen.getByRole('checkbox', { name: /Loose thoughts/ }))
+      await click(within(screen.getByRole('radiogroup', { name: 'Move to' })).getByRole('radio', { name: 'Biology' }))
+      await click(screen.getByRole('button', { name: 'Move' }))
+      expect(shelf().getByRole('button', { name: 'Open Genetics, 1 note' })).toBeTruthy()
+    })
+    it('a note in a notebook it cannot find stays in view, loose', async () => {
+      notebooks = []
+      await open()
+      expect(screen.queryByRole('list', { name: 'Notebooks' })).toBeNull()
+      expect(listed().some(t => t.includes('Glycolysis'))).toBe(true)
+    })
+    it('says it could not load when the notebooks cannot be read, rather than hiding notes', async () => {
+      notebooksFail = true
+      await open()
+      expect(screen.getByRole('alert').textContent).toContain('Could not load your library')
+    })
+    it('keeps the chosen course in the address, so coming back keeps it', async () => {
+      const replace = vi.spyOn(window.history, 'replaceState')
+      search = 'course=bio'
+      await open()
+      await click(screen.getByRole('button', { name: 'All' }))
+      expect(String(replace.mock.calls.at(-1)![2])).not.toContain('course=')
+      await click(screen.getByRole('button', { name: 'Spanish' }))
+      expect(String(replace.mock.calls.at(-1)![2])).toContain('course=lang')
+      replace.mockRestore()
+    })
+    it('inside a folder with a course chosen, says the folder has nothing from that course, and offers all courses', async () => {
+      await open()
+      await click(shelf().getByRole('button', { name: /Cell biology/ }))
+      await click(screen.getByRole('button', { name: 'Spanish' }))
+      expect(screen.getByText('No notes from Spanish in Cell biology.')).toBeTruthy()
+      await click(screen.getByRole('button', { name: 'Show all courses' }))
+      expect(listed()).toHaveLength(2)
+    })
+    it('does not say nothing matches when the course\'s notes are all in folders', async () => {
+      items = FILED.filter(i => i.course_id === 'bio' && i.kind === 'note' && i.notebook_id)
+      search = 'course=bio'
+      await open()
+      expect(shelf().getByRole('button', { name: /Cell biology/ })).toBeTruthy()
+      expect(screen.queryByText('Nothing matches.')).toBeNull()
     })
     it('shows only the folders with notes in the chosen course', async () => {
       search = 'course=lang'

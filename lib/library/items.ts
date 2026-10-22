@@ -53,3 +53,9 @@ export function folders(items: LibraryItem[], notebooks: Notebook[], v: View): {
     .filter(f => v.course === 'all' || f.count > 0)
     .sort((a, b) => a.notebook.name.localeCompare(b.notebook.name, undefined, { sensitivity: 'base', numeric: true }))
 }
+
+// A note is only inside a folder the Library knows: one whose notebook is gone (or not read yet) is loose, so it never disappears
+export function withKnownNotebooks(items: LibraryItem[], notebooks: Notebook[]): LibraryItem[] {
+  const known = new Set(notebooks.map(b => b.id))
+  return items.map(i => (i.notebook_id && !known.has(i.notebook_id) ? { ...i, notebook_id: null } : i))
+}

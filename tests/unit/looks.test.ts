@@ -81,3 +81,14 @@ describe('the dark sidebars of Classic and Vivid', () => {
     expect(block('.app-sidebar')).toContain('background: var(--glass)')
   })
 })
+
+describe('review fixes', () => {
+  it.each(['.app-root[data-look="classic"] .app-sidebar', '.app-root[data-look="vivid"] .app-sidebar'])('%s re-declares the glass, so the rail tooltips are dark like the sidebar, not white', sel => {
+    const b = block(sel)
+    expect(value(b, '--glass')).toBe('var(--raised)')
+    expect(value(b, '--glass-strong')).toBe('var(--raised)')
+  })
+  it.each(['.app-root[data-look="classic"]', '.dark .app-root[data-look="classic"]'])('%s sets its own tile colours, so no Studio glass tint shows on its chips', sel => {
+    for (const t of ['a', 'b', 'c']) expect(value(block(sel), `--tile-${t}`)).toBe('var(--raised)')
+  })
+})
