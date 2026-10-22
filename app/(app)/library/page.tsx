@@ -9,7 +9,6 @@ import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { ViewOptions } from '@/components/ui/ViewOptions'
-import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -175,12 +174,9 @@ export default function LibraryPage() {
       <PageHeader title="Library" actions={!empty && (
         <>
           {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
-          <NewNoteButton className="btn" />
           <button type="button" className="btn" onClick={() => setDialog('new')}><FolderPlus size={14} aria-hidden />New notebook</button>
-          {/* the Create menu has Quiz and Upload: here they are for phones */}
+          {/* notes, decks and uploads are made from the Create button; a quiz is started here on a phone */}
           <button type="button" className="btn md:hidden" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
-          <Link href="/flashcards?new=1" className="btn"><Layers size={14} aria-hidden />New deck</Link>
-          <button type="button" className="btn md:hidden" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
         </>
       )} />
       {empty ? (

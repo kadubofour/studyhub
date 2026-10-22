@@ -33,7 +33,7 @@ const summary = (over: Partial<XpSummary> = {}): XpSummary => ({
   total: 120, today: 10, level: { level: 2, into: 70, span: 150, toNext: 80 }, streak: 0, best: 0, goals: [], allDone: false, bonus: 20, last14: [], ...over,
 })
 const open = async () => { await act(async () => { render(<TopBar onSearch={() => {}} />) }) }
-beforeEach(() => { forgetXp(); countCalls = 0; path = '/home'; timer = createTimer('focus', 25 * MIN); now = 0; xp = null; due = 0; dueFails = false; toggle.mockClear() })
+beforeEach(() => { forgetXp(); countCalls = 0; path = '/planner'; timer = createTimer('focus', 25 * MIN); now = 0; xp = null; due = 0; dueFails = false; toggle.mockClear() })
 afterEach(cleanup)
 
 describe('TopBar keeping up', () => {
@@ -143,6 +143,13 @@ describe('TopBar celebrations', () => {
 })
 
 describe('TopBar', () => {
+  it('on Home leaves out the timer, next class and cards due: Home shows them itself', async () => {
+    path = '/home'; due = 3
+    await open()
+    expect(screen.queryByRole('link', { name: /timer/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Search or jump' })).toBeTruthy()
+  })
   it('is a labelled region that does not repeat the page name (the page shows its own title)', async () => {
     path = '/planner'
     await open()

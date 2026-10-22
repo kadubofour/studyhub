@@ -91,10 +91,11 @@ describe('Library', () => {
       await click(screen.getByRole('button', { name: 'All' }))
       expect(rows()).toHaveLength(7)
     })
-    it('has quick ways to start a note or a deck', async () => {
+    it('leaves making notes, decks and uploads to the Create button, and keeps New notebook, which only the Library makes', async () => {
       await open()
-      expect(screen.getByRole('button', { name: 'New note' })).toBeTruthy()
-      expect(screen.getByRole('link', { name: 'New deck' }).getAttribute('href')).toBe('/flashcards?new=1')
+      for (const name of ['New note', 'New deck', 'Upload']) expect(screen.queryByRole('button', { name })).toBeNull()
+      expect(screen.queryByRole('link', { name: 'New deck' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'New notebook' })).toBeTruthy()
     })
     it('opens on a course named in the address', async () => {
       search = 'course=bio'

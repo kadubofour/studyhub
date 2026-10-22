@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { noteWithText, signUp } from './helpers'
+import { create, noteWithText, signUp } from './helpers'
 
 test('the Tutor page: ways to start, a starter that asks what it is about, and a chat that opens with its message ready', async ({ page }) => {
   test.setTimeout(120_000)
@@ -26,9 +26,8 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   test.setTimeout(150_000)
   await signUp(page)
   await noteWithText(page, 'Glycolysis')
-  // a second note, from the New note button (the first-note helper only works with none)
-  await page.goto('/library')
-  await page.getByRole('button', { name: 'New note' }).first().click()
+  // a second note, from the Create menu (the first-note helper only works with none)
+  await create(page, 'New note')
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill('Krebs cycle')

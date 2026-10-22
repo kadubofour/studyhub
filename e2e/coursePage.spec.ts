@@ -57,6 +57,7 @@ test('Course page: from Search or jump anywhere, and from Home on a phone', asyn
   } else {
     await page.getByRole('button', { name: 'Search or jump' }).click()
     await page.getByRole('combobox', { name: 'Search or jump' }).fill('biology')
+    await expect(page.getByRole('option', { name: /Biology/ })).toHaveAttribute('aria-selected', 'true') // courses are read when the palette opens
     await page.keyboard.press('Enter')
   }
   await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 })

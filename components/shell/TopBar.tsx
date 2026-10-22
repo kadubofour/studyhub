@@ -21,6 +21,8 @@ const chip = 'glass inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 
 // The strip above every page: the way into the command palette, and on the right the focus timer, the next class, cards due, the streak and the level, so they are one glance away
 export function TopBar({ onSearch }: { onSearch: () => void }) {
   const path = usePathname()
+  // Home shows the timer, the next class and the cards due itself, so the strip does not repeat them there
+  const home = path === '/home'
   const { timer, now, toggle } = useFocus()
   const { xp } = useXp(path) // read again on each page: a session finished on another page shows up here
   const [due, setDue] = useState<number | null>(null)
@@ -83,18 +85,18 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
             {burst.levelUp ? `Level up! Level ${burst.levelUp}` : `+${burst.gained} XP`}
           </span>
         )}
-        <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
+        {!home && <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
           <Link href="/focus" aria-label={`${MODE_LABEL[timer.mode]} timer, ${clock} left`} className="inline-flex min-h-9 items-center font-mono tabular-nums">{clock}</Link>
           <button type="button" onClick={toggle} aria-label={`${verb} ${label} timer`} className="flex size-7 items-center justify-center rounded-full bg-accent-solid text-white pointer-coarse:size-9">
             {running ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
           </button>
-        </div>
-        {period && (
+        </div>}
+        {!home && period && (
           <Link href="/planner" aria-label={period.label} className={`${chip} bg-surface text-fg`}>
             <School size={15} aria-hidden /><span aria-hidden className="sm:hidden">{period.short}</span><span aria-hidden className="hidden sm:inline">{period.label}</span>
           </Link>
         )}
-        {due !== null && (
+        {!home && due !== null && (
           <Link href={due > 0 ? '/review' : '/flashcards'} aria-label={due === 0 ? 'No cards due' : `${due} card${due === 1 ? '' : 's'} due`}
             className={`${chip} ${due > 0 ? 'tile-a text-fg' : 'text-muted'}`}>
             <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? <><span className="sm:hidden">0</span><span className="hidden sm:inline">No cards due</span></> : <><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></>}</span>
