@@ -26,7 +26,8 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   test.setTimeout(150_000)
   await signUp(page)
   await noteWithText(page, 'Glycolysis')
-  // a second note, from the Create menu (the first-note helper only works with none)
+  // a second note, from the Create menu (the first-note helper only works with none); a note is full screen, so from Home
+  await page.goto('/home')
   await create(page, 'New note')
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
