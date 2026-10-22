@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { GraduationCap, Moon, Plus, Settings, Sun } from 'lucide-react'
+import { GraduationCap, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Sun } from 'lucide-react'
 import { QuizStartDialog } from '@/components/quiz/QuizStartDialog'
 import { useOpenQuiz } from '@/lib/quiz/events'
 import { ScanDialog } from '@/components/scan/ScanDialog'
@@ -31,6 +31,7 @@ import { listCourses } from '@/lib/data/courses'
 import { DOCK, MORE_PLACES, PLACES, isActive } from '@/lib/shell/nav'
 import type { PaletteItem } from '@/lib/shell/palette'
 import type { Course } from '@/lib/types'
+import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 
 const noopSubscribe = () => () => {}
 // Scan starts on what the current page holds; the student can change it in the dialog
@@ -50,7 +51,7 @@ const DO: PaletteItem[] = [
   { id: 'do:task', group: 'Do', label: 'New task', keywords: 'todo assignment exam planner', run: { action: 'new-task' } },
 ]
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, initialCollapsed = false }: { children: React.ReactNode; initialCollapsed?: boolean }) {
   const path = usePathname()
   const router = useRouter()
   const confirm = useConfirm()
@@ -80,7 +81,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [uploading, setUploading] = useState(false)
   const [quizzing, setQuizzing] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
-  const [creating, setCreating] = useState<null | 'rail' | 'dock'>(null)
+  const [creating, setCreating] = useState<null | 'rail' | 'wide' | 'dock'>(null)
+  // The sidebar: wide with names and courses, or shrunk to a rail of icons; remembered on this device
+  const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
+  const wide = !collapsed
   const [palette, setPalette] = useState(false)
   const [material, setMaterial] = useState<PaletteItem[]>([])
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
@@ -155,8 +159,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // titles: the display face with the default Sans; the student's own font when they picked another
     '--display-font': profile.font && profile.font !== 'sans' && FONTS[profile.font] ? `var(${FONTS[profile.font].cssVar})` : 'var(--font-instrument)',
   } as React.CSSProperties
-  const railItem = (on: boolean) => `group relative grid size-11 place-items-center rounded-xl transition ${on ? 'bg-accent-soft text-accent shadow-[0_0_24px_-6px_var(--accent-solid)]' : 'text-muted hover:bg-surface hover:text-fg'}`
-  const tip = (label: string) => (
+  const lit = 'bg-accent-soft text-accent shadow-[0_0_24px_-8px_var(--accent-solid)]'
+  const railItem = (on: boolean) => wide
+    ? `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
+    : `group relative grid size-11 place-items-center rounded-xl transition ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
+  // the name beside the icon when wide; a tooltip on the rail
+  const tip = (label: string) => wide ? <span aria-hidden className="truncate">{label}</span> : (
     <span aria-hidden className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line px-2.5 py-1 text-[13px] font-medium text-fg opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100" style={{ background: 'var(--glass-strong)' }}>{label}</span>
   )
   const dockLink = (href: string) => {
@@ -171,26 +179,49 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={`app-root min-h-dvh ${immersive ? '' : 'md:grid md:grid-cols-[72px_1fr]'}`} style={appearance}>
+    <div className={`app-root min-h-dvh ${immersive ? '' : wide ? 'md:grid md:grid-cols-[260px_1fr]' : 'md:grid md:grid-cols-[72px_1fr]'}`} style={appearance}>
       {!immersive && (
-        <nav aria-label="Studyhub" className="no-print sticky top-0 hidden h-dvh flex-col items-center gap-1.5 border-r border-line py-4 md:flex" style={{ background: 'var(--glass)', backdropFilter: 'blur(18px)' }}>
-          {/* the mark; Home is the first item below it */}
-          <span title="Studyhub" className="mb-3 grid size-10 place-items-center rounded-xl bg-accent-solid text-white shadow-[0_6px_20px_-6px_var(--accent-solid)]">
-            <GraduationCap size={19} aria-hidden />
-          </span>
-          <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'rail'} onClick={() => setCreating(c => (c ? null : 'rail'))}
-            className="group relative mb-3 grid size-11 place-items-center rounded-xl border border-dashed border-line text-muted transition hover:border-accent hover:text-accent">
+        <nav aria-label="Studyhub" className={`no-print sticky top-0 hidden h-dvh flex-col gap-1.5 border-r border-line py-4 md:flex ${wide ? 'px-3' : 'items-center'}`} style={{ background: 'var(--glass)', backdropFilter: 'blur(18px)' }}>
+          <div className={`mb-3 flex items-center ${wide ? 'justify-between px-1' : 'flex-col gap-2'}`}>
+            {/* the mark; Home is the first item below it */}
+            <span className="flex items-center gap-2.5">
+              <span title="Studyhub" className="grid size-10 place-items-center rounded-xl bg-accent-solid text-white shadow-[0_6px_20px_-6px_var(--accent-solid)]"><GraduationCap size={19} aria-hidden /></span>
+              {wide && <span className="font-display text-lg font-semibold tracking-tight">Studyhub</span>}
+            </span>
+            <button type="button" onClick={() => setCollapsed(wide)} aria-label={wide ? 'Shrink sidebar' : 'Expand sidebar'} title={wide ? 'Shrink sidebar' : 'Expand sidebar'}
+              className="grid size-9 place-items-center rounded-lg text-muted transition hover:bg-surface hover:text-fg">
+              {wide ? <PanelLeftClose size={17} aria-hidden /> : <PanelLeftOpen size={17} aria-hidden />}
+            </button>
+          </div>
+          <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating !== null && creating !== 'dock'} onClick={() => setCreating(c => (c ? null : wide ? 'wide' : 'rail'))}
+            className={`group relative mb-3 border border-dashed border-line text-muted transition hover:border-accent hover:text-accent ${wide ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium' : 'grid size-11 place-items-center rounded-xl'}`}>
             <Plus size={19} aria-hidden />{tip('Create')}
           </button>
-          {PLACES.map(({ href, label, icon: Icon }) => {
-            const on = isActive(path, href)
-            return (
-              <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined} className={railItem(on)}>
-                <Icon size={19} aria-hidden />{tip(label)}
-              </Link>
-            )
-          })}
-          <div className="mt-auto flex flex-col items-center gap-1.5">
+          <div className={`flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto ${wide ? '' : 'items-center'}`}>
+            {PLACES.map(({ href, label, icon: Icon }) => {
+              const on = isActive(path, href)
+              return (
+                <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined} className={railItem(on)}>
+                  <Icon size={19} aria-hidden />{tip(label)}
+                </Link>
+              )
+            })}
+            {wide && courses.length > 0 && (
+              <div role="group" aria-labelledby="nav-courses" className="mt-4 flex flex-col gap-0.5">
+                <Link id="nav-courses" href="/courses" onClick={e => guard(e, '/courses')} className="px-3 pb-1 text-[13px] font-semibold text-muted hover:text-fg">Courses</Link>
+                {courses.map(c => {
+                  const on = isActive(path, `/courses/${c.id}`)
+                  return (
+                    <Link key={c.id} href={`/courses/${c.id}`} onClick={e => guard(e, `/courses/${c.id}`)} aria-current={on ? 'page' : undefined}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                      <span aria-hidden className="size-2.5 shrink-0 rounded-[3px]" style={{ background: c.color }} /><span className="truncate">{c.name}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          <div className={`mt-2 flex flex-col gap-1 ${wide ? '' : 'items-center'}`}>
             <button type="button" onClick={toggleTheme} aria-label={dark ? 'Light mode' : 'Dark mode'} className={railItem(false)}>
               {dark ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}{tip(dark ? 'Light mode' : 'Dark mode')}
             </button>
@@ -198,8 +229,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Settings size={18} aria-hidden />{tip('Settings')}
             </Link>
             <Link href="/profile" onClick={e => guard(e, '/profile')} aria-label={profile.display_name || 'Your profile'} aria-current={isActive(path, '/profile') ? 'page' : undefined}
-              className={`group relative mt-1 rounded-full ring-2 transition ${isActive(path, '/profile') ? 'ring-accent' : 'ring-transparent hover:ring-line'}`}>
-              <Avatar name={profile.display_name} color={profile.avatar_color} size={34} />{tip(profile.display_name || 'Your profile')}
+              className={wide ? `mt-1 flex items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] transition ${isActive(path, '/profile') ? lit : 'hover:bg-surface'}` : `group relative mt-1 rounded-full ring-2 transition ${isActive(path, '/profile') ? 'ring-accent' : 'ring-transparent hover:ring-line'}`}>
+              <Avatar name={profile.display_name} color={profile.avatar_color} size={wide ? 30 : 34} />{tip(profile.display_name || 'Your profile')}
             </Link>
           </div>
         </nav>

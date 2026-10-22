@@ -67,6 +67,33 @@ describe('the rail', () => {
   })
 })
 
+describe('the sidebar', () => {
+  it('is wide by default, with names beside the icons and your courses', async () => {
+    courseList = [{ id: 'k1', name: 'Biology', color: '#1D9E75' }]
+    await shell()
+    expect(rail().getByText('Studyhub')).toBeTruthy()
+    expect(rail().getByRole('link', { name: 'Notes' }).textContent).toContain('Notes')
+    const courses = within(rail().getByRole('group', { name: 'Courses' }))
+    expect(courses.getByRole('link', { name: /Biology/ }).getAttribute('href')).toBe('/courses/k1')
+  })
+  it('shrinks to a rail of icons, remembers it in a cookie, and expands again', async () => {
+    courseList = [{ id: 'k1', name: 'Biology', color: '#1D9E75' }]
+    await shell()
+    fireEvent.click(rail().getByRole('button', { name: 'Shrink sidebar' }))
+    expect(document.cookie).toContain('studyhub_sidebar_collapsed=1')
+    expect(rail().queryByRole('group', { name: 'Courses' })).toBeNull()
+    expect(rail().getByRole('link', { name: 'Notes' }).textContent).toBe('Notes') // the tooltip only
+    fireEvent.click(rail().getByRole('button', { name: 'Expand sidebar' }))
+    expect(document.cookie).toContain('studyhub_sidebar_collapsed=0')
+    expect(rail().getByRole('group', { name: 'Courses' })).toBeTruthy()
+  })
+  it('starts shrunk when the cookie said so', async () => {
+    await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><AppShell initialCollapsed><p>page</p></AppShell></ConfirmProvider></ToastProvider></ProfileProvider>) })
+    expect(rail().getByRole('button', { name: 'Expand sidebar' })).toBeTruthy()
+    expect(rail().queryByText('Studyhub')).toBeNull()
+  })
+})
+
 describe('Create', () => {
   it('opens a menu of everything that makes something', async () => {
     await shell()

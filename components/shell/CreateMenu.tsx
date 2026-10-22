@@ -13,7 +13,7 @@ const ITEMS: { id: CreateAction; label: string; hint: string; icon: LucideIcon }
 ]
 
 // Everything that makes something, from the + in the rail (opens beside it) or in the phone dock (opens above it).
-export function CreateMenu({ from, onPick, onClose }: { from: 'rail' | 'dock'; onPick: (a: CreateAction) => void; onClose: () => void }) {
+export function CreateMenu({ from, onPick, onClose }: { from: 'rail' | 'wide' | 'dock'; onPick: (a: CreateAction) => void; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
@@ -30,7 +30,7 @@ export function CreateMenu({ from, onPick, onClose }: { from: 'rail' | 'dock'; o
   }
   return (
     <div ref={ref} role="menu" aria-label="Create" onKeyDown={move}
-      className={`glass create-in fixed z-50 w-72 rounded-2xl p-1.5 ${from === 'rail' ? 'left-[84px] top-16' : 'inset-x-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] mx-auto max-w-sm'}`}
+      className={`glass create-in fixed z-50 w-72 rounded-2xl p-1.5 ${from === 'rail' ? 'left-[84px] top-16' : from === 'wide' ? 'left-[272px] top-16' : 'inset-x-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] mx-auto max-w-sm'}`}
       style={{ background: 'var(--glass-strong)' }}>
       {ITEMS.map(({ id, label, hint, icon: Icon }) => (
         <button key={id} type="button" role="menuitem" aria-label={label} onClick={() => { onClose(); onPick(id) }}
