@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowDown, ArrowUp, ClipboardCopy, Copy, Mic, Pencil, RefreshCw, Square, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ClipboardCopy, Copy, FileText, Loader2, Mic, Paperclip, Pencil, RefreshCw, Square, Trash2, X } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
@@ -22,11 +22,16 @@ import { FOLLOW_UPS, STARTERS, starterMessage } from '@/lib/tutor/starters'
 import { dayHeading, nearBottom, timeOf, transcript } from '@/lib/tutor/conversation'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
+import { addPending, readFile, uploadAttachments, type Pending } from '@/lib/tutor/attachClient'
+import type { Attachment } from '@/lib/tutor/attachments'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Course } from '@/lib/types'
 
 const nowMs = () => Date.now() // a plain function, so reading the clock in a click handler is not mistaken for reading it while drawing
 const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for good: a new one each render would make the picker load everything again
+// An attachment that was sent, back in the bar: it is not uploaded again
+const asPending = (a: Attachment): Pending => (a.kind === 'document' ? { id: crypto.randomUUID(), ...a } : a.kind === 'photo' ? { id: crypto.randomUUID(), kind: 'photo', name: a.name, pages: 1, sent: a } : { id: crypto.randomUUID(), kind: 'pdf', name: a.name, pages: a.pages, sent: a })
+const forget = (p: Pending) => { if (p.kind === 'photo' && p.preview && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(p.preview) }
 const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string) => `/lectures/${id}`, card: () => '/flashcards' }
 
 export function ChatView({ chatId }: { chatId: string }) {
@@ -49,6 +54,17 @@ export function ChatView({ chatId }: { chatId: string }) {
   const liveText = useRef('') // what has been written of the reply so far
   const startedAt = useRef(0)
   const [lastSent, setLastSent] = useState('') // the question just sent, which Try again asks again (it may never have been saved)
+  const [lastAtts, setLastAtts] = useState<Attachment[]>([]) // and its files, already uploaded
+  // Files and photos waiting in the bar. The ref is the same list, read at once by handlers that add several in a row
+  const [pending, setPendingState] = useState<Pending[]>([])
+  const pendingRef = useRef<Pending[]>([])
+  const setPending = (list: Pending[]) => { pendingRef.current = list; setPendingState(list) }
+  const [reading, setReading] = useState(0) // files being read
+  const [uploading, setUploading] = useState(false)
+  const [attachError, setAttachError] = useState<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [fileUrls, setFileUrls] = useState<Record<string, string>>({}) // links to the photos and PDFs in the conversation
+  const askedUrls = useRef(new Set<string>())
   const renameSettled = useRef(false) // Enter or Escape has decided the rename: the box losing focus afterwards must not decide it again
   const [partial, setPartial] = useState<string | null>(null) // what was written when the student stopped, until the saved reply is there to show
   const end = useRef<HTMLDivElement>(null)
@@ -110,26 +126,66 @@ export function ChatView({ chatId }: { chatId: string }) {
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 192)}px`
   }, [text, chat])
+  // Links for the photos and PDFs in the conversation, fetched once each (they last an hour)
+  useEffect(() => {
+    const paths = messages.flatMap(m => (m.attachments ?? []).flatMap(a => (a.kind === 'document' || askedUrls.current.has(a.path) ? [] : [a.path])))
+    if (!paths.length) return
+    paths.forEach(p => askedUrls.current.add(p))
+    supabase().storage.from('tutor-files').createSignedUrls(paths, 3600)
+      .then(({ data }) => { if (data) setFileUrls(u => ({ ...u, ...Object.fromEntries(data.flatMap(d => (d.signedUrl && d.path ? [[d.path, d.signedUrl]] : []))) })) })
+      .catch(() => {})
+  }, [messages])
   // The message from a Revise button is taken once: drop it from the address so a reload or Back does not fill the box again
   useEffect(() => { if (ask) router.replace(`/tutor/${chatId}`) }, [ask, chatId, router])
 
   async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
 
-  async function send(override?: string) {
+  async function addFiles(files: File[]) {
+    setAttachError(null)
+    for (const f of files) {
+      setReading(n => n + 1)
+      const r = await readFile(f)
+      setReading(n => n - 1)
+      if ('error' in r) { setAttachError(r.error); continue }
+      const res = addPending(pendingRef.current, r)
+      setPending(res.list)
+      if (res.error) { forget(r); setAttachError(res.error) }
+    }
+  }
+  function removePending(id: string) {
+    const gone = pendingRef.current.find(p => p.id === id)
+    if (gone) forget(gone)
+    setPending(pendingRef.current.filter(p => p.id !== id))
+  }
+
+  // From the bar (no override): its text and files. Try again, Regenerate, follow-ups and hints pass their own text, and files already uploaded.
+  async function send(override?: string, again?: Attachment[]) {
+    const fromBar = override === undefined
     const message = (override ?? text).trim()
-    if (!message || live !== null) return
+    const files = fromBar ? pendingRef.current : again ?? []
+    if ((!message && !files.length) || live !== null || uploading || reading) return
+    let atts: Attachment[] = again ?? []
+    if (fromBar && files.length) {
+      setUploading(true); setAttachError(null)
+      try { atts = await uploadAttachments(pendingRef.current, profile.id, chatId) } catch (e) { setAttachError((e as Error).message); return } finally { setUploading(false) }
+      pendingRef.current.forEach(forget)
+      setPending([])
+    }
+    setLastAtts(atts)
     dictOn.current = false; dictation.stop()
     pinned.current = true; setAway(false) // sending a message goes to the newest text
     setProblem(null); setPartial(null); if (override === undefined) setText(''); setLive('')
     const control = new AbortController()
     abort.current = control; stopped.current = false; liveText.current = ''; startedAt.current = nowMs(); setLastSent(message)
-    const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '' }]
+    const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '', attachments: atts }]
     latest.current = shown; setMessages(shown)
     let r: Awaited<ReturnType<typeof sendTutorMessage>>
-    try { r = await sendTutorMessage(chatId, message, control.signal) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
+    try { r = await sendTutorMessage(chatId, message, control.signal, atts.length ? atts : undefined) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
     if (!r.ok) {
       // Refused (limit, speed, offline): keep what was typed so it isn't lost
-      setProblem({ code: r.error, message: r.message }); if (override === undefined) setText(message); setLive(null); await reload().catch(() => {}); return
+      setProblem({ code: r.error, message: r.message })
+      if (fromBar) { setText(message); if (atts.length && r.error !== 'attachment_missing') setPending(atts.map(asPending)) }
+      setLive(null); await reload().catch(() => {}); return
     }
     const cutOff = { code: 'cut_off', message: 'The reply was cut off. Try again.' }
     let ended = false
@@ -211,11 +267,14 @@ export function ChatView({ chatId }: { chatId: string }) {
   if (!chat) return <p className="text-sm text-muted">Loading…</p>
   const where = chat.note_id ? `/notes/${chat.note_id}` : chat.lecture_id ? `/lectures/${chat.lecture_id}` : null
   const last = messages[messages.length - 1]
-  const lastAsked = [...messages].reverse().find(m => m.role === 'user')?.content
+  const lastQuestion = [...messages].reverse().find(m => m.role === 'user')
+  const lastAsked = lastQuestion?.content
+  const lastAskedAtts = lastQuestion?.attachments ?? []
   const idle = live === null
   // A question with no answer, a reply that was cut off, or a connection that failed: ask it again
   const retryText = problem ? lastSent || lastAsked : lastAsked // after a failure: the question that failed, which may not have been saved
-  const canRetry = idle && !!retryText && (problem?.code === 'cut_off' || problem?.code === 'ai_failed' || last?.status === 'cut_off' || last?.role === 'user')
+  const retryAtts = problem ? lastAtts : lastAskedAtts
+  const canRetry = idle && (!!retryText || retryAtts.length > 0) && (problem?.code === 'cut_off' || problem?.code === 'ai_failed' || last?.status === 'cut_off' || last?.role === 'user')
   const canFollowUp = idle && !chat.guided && !problem && last?.role === 'assistant' && last.status === 'ok'
   const left = plan.billing && !plan.isPremium && !plan.loading ? Math.max(0, FREE_DAILY_TUTOR_MESSAGES - plan.tutorToday) : null
   return (
@@ -266,7 +325,21 @@ export function ChatView({ chatId }: { chatId: string }) {
           {m.role === 'user'
           ? (
             <div className="ml-auto flex max-w-[85%] flex-col items-end gap-0.5">
-              <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm">{m.content}</p>
+              {(m.attachments ?? []).length > 0 && (
+                <ul aria-label="Attached" className="flex flex-wrap justify-end gap-1.5">
+                  {m.attachments.map((a, j) => (
+                    <li key={j} className="max-w-56">
+                      {a.kind !== 'document' && fileUrls[a.path]
+                        ? <a href={fileUrls[a.path]} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-xl border border-line bg-raised px-2.5 py-1.5 text-xs hover:border-accent">
+                            {a.kind === 'photo' ? <img src={fileUrls[a.path]} alt="" className="size-8 rounded object-cover" /> : <FileText size={14} aria-hidden className="text-muted" />}
+                            <span className="truncate">{a.name}</span>
+                          </a>
+                        : <span className="flex items-center gap-1.5 rounded-xl border border-line bg-raised px-2.5 py-1.5 text-xs"><FileText size={14} aria-hidden className="text-muted" /><span className="truncate">{a.name}</span></span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {m.content && <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm">{m.content}</p>}
               {m.id !== 'pending' && (
                 <div className="flex items-center gap-1 text-xs text-muted">
                   {time && <span>{time}</span>}
@@ -286,8 +359,8 @@ export function ChatView({ chatId }: { chatId: string }) {
               )}
               <div className="flex gap-1 text-muted">
                 <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy reply" title="Copy" onClick={() => { void copy(m.content) }}><Copy size={14} aria-hidden /></button>
-                {m === last && idle && !!lastAsked && m.status === 'ok' && (
-                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Regenerate reply" title="Regenerate" onClick={() => { void send(lastAsked) }}><RefreshCw size={14} aria-hidden /></button>
+                {m === last && idle && (!!lastAsked || lastAskedAtts.length > 0) && m.status === 'ok' && (
+                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Regenerate reply" title="Regenerate" onClick={() => { void send(lastAsked ?? '', lastAskedAtts) }}><RefreshCw size={14} aria-hidden /></button>
                 )}
                 {time && <span className="ml-auto self-center text-xs">{time}</span>}
               </div>
@@ -307,7 +380,7 @@ export function ChatView({ chatId }: { chatId: string }) {
       </div>
 
       {problem && <AiError code={problem.code} message={problem.message} />}
-      {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
+      {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
       {canFollowUp && (
         <div role="group" aria-label="Follow-up questions" className="flex flex-wrap gap-2">
           {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5" onClick={() => { void send(f.message) }}>{f.label}</button>)}
@@ -324,10 +397,33 @@ export function ChatView({ chatId }: { chatId: string }) {
           <button type="button" aria-label="Jump to latest" title="Latest" className="btn absolute -top-11 left-1/2 grid size-9 -translate-x-1/2 place-items-center !rounded-full !p-0 shadow-md" onClick={jumpToLatest}><ArrowDown size={16} aria-hidden /></button>
         )}
         {/* one rounded box, the way a chat is written: the text and its Send button together */}
-        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent">
+        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent"
+          onDragOver={e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault() }}
+          onDrop={e => { const f = Array.from(e.dataTransfer?.files ?? []); if (f.length) { e.preventDefault(); void addFiles(f) } }}>
+          {(pending.length > 0 || reading > 0) && (
+            <ul aria-label="Files to send" className="flex flex-wrap gap-2 pb-1 pt-1">
+              {pending.map(p => (
+                <li key={p.id} className="flex max-w-60 items-center gap-1.5 rounded-xl border border-line bg-bg py-1 pl-1.5 pr-1 text-xs">
+                  {p.kind === 'photo' && p.preview ? <img src={p.preview} alt="" className="size-8 rounded object-cover" /> : <FileText size={15} aria-hidden className="ml-1 text-muted" />}
+                  <span className="min-w-0">
+                    <span className="block truncate">{p.name}</span>
+                    {p.kind === 'pdf' && <span className="block text-muted">{p.pages} {p.pages === 1 ? 'page' : 'pages'}</span>}
+                    {p.kind === 'document' && p.shortened && <span className="block text-muted">Only the start is read</span>}
+                  </span>
+                  <button type="button" aria-label={`Remove ${p.name}`} className="grid size-6 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg pointer-coarse:size-9" onClick={() => removePending(p.id)}><X size={13} aria-hidden /></button>
+                </li>
+              ))}
+              {reading > 0 && <li role="status" className="flex items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5 text-xs text-muted"><Loader2 size={13} className="animate-spin" aria-hidden />Reading…</li>}
+            </ul>
+          )}
           <textarea ref={box} className="block max-h-48 min-h-11 w-full resize-none border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
-            onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }} />
+            onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }}
+            onPaste={e => { const f = Array.from(e.clipboardData?.files ?? []); if (f.length) { e.preventDefault(); void addFiles(f) } }} />
           <div className="flex items-center gap-2 pt-1">
+            <button type="button" aria-label="Add files or photos" title="Add files or photos" className="btn-ghost -ml-2 grid size-10 shrink-0 place-items-center !rounded-full !p-0 text-muted" onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden /></button>
+            <input ref={fileInput} type="file" multiple aria-label="Files to add" className="sr-only" tabIndex={-1}
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,application/pdf,.docx,.pptx,.txt,.md,.markdown"
+              onChange={e => { const f = Array.from(e.target.files ?? []); e.target.value = ''; if (f.length) void addFiles(f) }} />
             <span className="flex items-center gap-2 text-xs text-muted">
               <span id="guided-label">Guided</span>
               <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
@@ -345,11 +441,12 @@ export function ChatView({ chatId }: { chatId: string }) {
                   stopped.current = true
                   abort.current?.abort()
                 }}><Square size={14} className="fill-current" aria-hidden /></button>
-                : <button key="send" aria-label="Send" title="Send" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" disabled={!text.trim()}><ArrowUp size={18} aria-hidden /></button>}
+                : <button key="send" aria-label="Send" title="Send" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" disabled={(!text.trim() && !pending.length) || reading > 0 || uploading}>{uploading ? <Loader2 size={18} className="animate-spin" aria-hidden /> : <ArrowUp size={18} aria-hidden />}</button>}
             </span>
           </div>
         </div>
       </form>
+      {attachError && <p role="alert" className="-mt-1 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{attachError}</p>}
       {text.length >= 3500 && <p className="-mt-1 pb-1 text-right text-xs text-muted">{text.length} / {4000}</p>}
       {left !== null && <p className="-mt-1 pb-2 text-center text-xs text-muted" aria-live="polite">{left} of {FREE_DAILY_TUTOR_MESSAGES} tutor messages left today</p>}
       <TutorPickDialog open={picking} onClose={() => setPicking(false)} onPick={t => { void aboutPicked(t) }} kinds={CHAT_KINDS} title="What is this chat about?" />

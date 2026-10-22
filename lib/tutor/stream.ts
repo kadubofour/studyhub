@@ -1,6 +1,7 @@
 import { AI_MESSAGES, AI_USED } from '@/components/ai/aiFetch'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Source } from '@/lib/ai/tutorContext'
+import type { Attachment } from './attachments'
 
 export type TutorLine =
   | { t: 'sources'; sources: Source[] }
@@ -26,11 +27,11 @@ export async function* readTutorStream(res: Response): AsyncGenerator<TutorLine>
   if (last) yield last
 }
 
-export async function sendTutorMessage(chatId: string, message: string, signal?: AbortSignal): Promise<
+export async function sendTutorMessage(chatId: string, message: string, signal?: AbortSignal, attachments?: Attachment[]): Promise<
   { ok: true; lines: AsyncGenerator<TutorLine> } | { ok: false; error: string; message: string }
 > {
   try {
-    const res = await fetch('/api/ai/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId, message }), signal })
+    const res = await fetch('/api/ai/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(attachments?.length ? { chatId, message, attachments } : { chatId, message }), signal })
     if (!res.ok || !res.body) {
       const error = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'ai_failed'
       return { ok: false, error, message: AI_MESSAGES[error] ?? AI_MESSAGES.ai_failed }

@@ -29,7 +29,7 @@ test('the tutor proposes flashcards, the student edits one and adds them', async
   await say(page, 'Make flashcards on this')
   await expect(page.getByText('2 flashcards for “Krebs tutor deck”')).toBeVisible()
   await page.getByLabel('Card 1 front').fill('Where does the Krebs cycle run?')
-  await page.getByRole('button', { name: 'Add' }).click()
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Open' })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('link', { name: 'Open' })).toBeVisible() // still added after a reload
