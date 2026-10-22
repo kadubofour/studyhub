@@ -44,7 +44,7 @@ describe('notes list quick actions', () => {
     await act(async () => { fireEvent.contextMenu(screen.getByRole('link', { name: /Krebs cycle/ }), { clientX: 30, clientY: 40 }) })
     const menu = screen.getByRole('menu', { name: 'Krebs cycle' })
     expect(Array.from(menu.querySelectorAll('[role="menuitem"]')).map(e => e.textContent)).toEqual(
-      ['Open', 'Open in new tab', 'Export as Word', 'Export as PDF', 'Select', 'Delete'])
+      ['Open', 'Open in new tab', 'Export as Word', 'Export as PDF', 'Move to notebook…', 'Select', 'Delete'])
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Export as PDF' })) })
     expect(openPdfExport).toHaveBeenCalledWith(['a'])
   })

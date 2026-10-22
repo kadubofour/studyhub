@@ -3,7 +3,7 @@ import { fetchAll } from '@/lib/data/util'
 
 // Everything a student owns, in the order it reads best. Not here: billing tokens, usage counters, and lecture audio (files, not rows).
 export const EXPORT_TABLES = [
-  'profiles', 'courses', 'classes', 'tasks', 'notes', 'decks', 'cards', 'reviews', 'focus_sessions',
+  'profiles', 'courses', 'classes', 'tasks', 'notebooks', 'notes', 'decks', 'cards', 'reviews', 'focus_sessions',
   'quizzes', 'quiz_attempts', 'lectures', 'topics', 'topic_links', 'topic_resources', 'study_plans', 'study_plan_days',
   'tutor_chats', 'tutor_messages', 'game_plays', 'payments', 'entitlements',
 ] as const

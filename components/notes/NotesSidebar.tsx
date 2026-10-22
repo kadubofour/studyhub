@@ -2,7 +2,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Upload, CheckSquare, X, NotebookPen, Search, MoreHorizontal, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { Plus, Upload, CheckSquare, X, NotebookPen, Search, MoreHorizontal, FolderClosed, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
+import { countByNotebook, filterNotes } from '@/lib/notes/notebooks'
+import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
 import { formatDistanceToNow } from 'date-fns'
@@ -16,7 +20,7 @@ import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 import { supabase } from '@/lib/supabase/client'
 import { createNote, deleteNote, listNotes, searchNotes } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
-import type { Course, NoteSummary } from '@/lib/types'
+import type { Course, NoteSummary, Notebook } from '@/lib/types'
 
 // Fired by the editor after a save, so titles and order in the list stay current
 export const NOTES_CHANGED = 'studyhub:notes-changed'
@@ -29,6 +33,10 @@ export function NotesSidebar() {
   const [courses, setCourses] = useState<Course[]>([])
   const [q, setQ] = useState('')
   const [course, setCourse] = useState('')
+  const [notebooks, setNotebooks] = useState<Notebook[]>([])
+  const [notebook, setNotebook] = useState('') // '' is all notes, 'none' the unfiled ones, otherwise a notebook's id
+  const [naming, setNaming] = useState<null | 'new' | 'rename'>(null)
+  const [moving, setMoving] = useState<string[] | null>(null) // the notes being moved to a notebook
   const [version, setVersion] = useState(0)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
@@ -39,6 +47,7 @@ export function NotesSidebar() {
   const closeMenu = useCallback(() => setMenu(null), [])
 
   useEffect(() => { listCourses(supabase()).then(setCourses).catch(() => {}) }, [])
+  useEffect(() => { listNotebooks(supabase()).then(setNotebooks).catch(() => {}) }, [])
 
   useEffect(() => {
     const bump = () => setVersion(v => v + 1)
@@ -59,7 +68,7 @@ export function NotesSidebar() {
 
   async function create() {
     try {
-      const n = await createNote(supabase(), { course_id: course || null })
+      const n = await createNote(supabase(), { course_id: course || null, notebook_id: notebook && notebook !== 'none' ? notebook : null })
       router.push(`/notes/${n.id}`)
     } catch { toast('Couldn\'t create a note.') }
   }
@@ -87,18 +96,55 @@ export function NotesSidebar() {
     } catch { toast('Couldn\'t delete the note.') }
   }
 
+  async function addNotebook(name: string) {
+    setNaming(null)
+    try { const b = await createNotebook(supabase(), name); setNotebooks(bs => [...bs, b]); setNotebook(b.id) } catch { toast("Couldn't make the notebook.") }
+  }
+  async function renameChosen(name: string) {
+    setNaming(null)
+    try { await renameNotebook(supabase(), notebook, name); setNotebooks(bs => bs.map(b => (b.id === notebook ? { ...b, name } : b))) } catch { toast("Couldn't rename the notebook.") }
+  }
+  async function removeChosen() {
+    const b = notebooks.find(x => x.id === notebook)
+    if (!b) return
+    const ok = await confirm({ title: 'Delete this notebook?', body: `“${b.name}” will be deleted. Its notes are kept; they move to Unfiled.`, confirmLabel: 'Delete', danger: true })
+    if (!ok) return
+    try {
+      await deleteNotebook(supabase(), b.id)
+      setNotebooks(bs => bs.filter(x => x.id !== b.id)); setNotes(ns => ns?.map(n => (n.notebook_id === b.id ? { ...n, notebook_id: null } : n)) ?? ns); setNotebook('')
+    } catch { toast("Couldn't delete the notebook.") }
+  }
+  async function moveTo(ids: string[], target: string | null, made?: Notebook) {
+    setMoving(null)
+    try {
+      await moveNotes(supabase(), ids, target)
+      if (made) setNotebooks(bs => [...bs, made])
+      setNotes(ns => ns?.map(n => (ids.includes(n.id) ? { ...n, notebook_id: target } : n)) ?? ns)
+      setSelecting(false); setSelected([])
+    } catch { toast("Couldn't move the notes.") }
+  }
+  async function createAndMove(name: string) {
+    const ids = moving ?? []
+    let made: Notebook
+    try { made = await createNotebook(supabase(), name) } catch { setMoving(null); toast("Couldn't make the notebook."); return }
+    await moveTo(ids, made.id, made)
+  }
+
   const menuItems = (n: NoteSummary): MenuEntry[] => [
     { label: 'Open', icon: ExternalLink, onSelect: () => router.push(`/notes/${n.id}`) },
     { label: 'Open in new tab', icon: SquareArrowOutUpRight, onSelect: () => window.open(`/notes/${n.id}`, '_blank', 'noopener') },
     'sep',
     { label: 'Export as Word', icon: FileText, onSelect: () => { exportNotesToWord([n.id]).catch(() => toast('Couldn\'t create the Word document.')) } },
     { label: 'Export as PDF', icon: FileType2, onSelect: () => openPdfExport([n.id]) },
+    { label: 'Move to notebook…', icon: FolderInput, onSelect: () => setMoving([n.id]) },
     'sep',
     { label: 'Select', icon: CheckSquare, onSelect: () => { setSelecting(true); setSelected(s => (s.includes(n.id) ? s : [...s, n.id])) } },
     { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { void remove(n) } },
   ]
 
-  const shown = (notes ?? []).filter(n => !course || n.course_id === course)
+  const shown = filterNotes(notes ?? [], { notebook, course })
+  const counts = countByNotebook(notes ?? [])
+  const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
   const empty = notes?.length === 0 && !q.trim()
   const toggle = (id: string) => setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]))
@@ -111,6 +157,7 @@ export function NotesSidebar() {
           {selecting ? (
             <>
               <span className="text-sm text-muted">{selected.length} selected</span>
+              <button className="btn" disabled={!selected.length} aria-label="Move to notebook" onClick={() => setMoving(selected)}><FolderInput size={14} aria-hidden />Move</button>
               <ExportMenu ids={selected} label="Export selected" disabled={!selected.length} />
               <button className="btn-ghost" onClick={() => { setSelecting(false); setSelected([]) }} aria-label="Stop selecting"><X size={15} aria-hidden />Done</button>
             </>
@@ -123,6 +170,23 @@ export function NotesSidebar() {
             </>
           )}
         </div>
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {notebooks.length > 0 && (
+          <ChoiceChips label="Notebook" size="sm" value={notebook} onChange={setNotebook} options={[
+            { value: '', label: `All (${counts.all})` },
+            ...notebooks.map(b => ({ value: b.id, label: `${b.name} (${counts.byId[b.id] ?? 0})` })),
+            ...(counts.unfiled > 0 ? [{ value: 'none', label: `Unfiled (${counts.unfiled})` }] : []),
+          ]} />
+        )}
+        <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs" aria-label="New notebook" onClick={() => setNaming('new')}><FolderPlus size={14} aria-hidden />Notebook</button>
+        {notebook && notebook !== 'none' && (
+          <span className="ml-auto flex gap-1">
+            <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setNaming('rename')}><Pencil size={13} aria-hidden />Rename notebook</button>
+            <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs text-danger" onClick={() => { void removeChosen() }}><Trash2 size={13} aria-hidden />Delete notebook</button>
+          </span>
+        )}
       </div>
 
       <div className="mb-4 flex gap-2">
@@ -155,7 +219,10 @@ export function NotesSidebar() {
                 <span className="line-clamp-2 flex-1 font-medium">{n.title || 'Untitled'}</span>
               </div>
               <div className="mt-3 flex items-center justify-between gap-2">
-                <CourseTag course={c} />
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <CourseTag course={c} />
+                  {!notebook && bookOf(n.notebook_id) && <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted"><FolderClosed size={12} aria-hidden /><span className="truncate">{bookOf(n.notebook_id)!.name}</span></span>}
+                </span>
                 <span className="ml-auto text-xs text-muted">{formatDistanceToNow(new Date(n.updated_at), { addSuffix: true })}</span>
               </div>
             </>
@@ -176,6 +243,9 @@ export function NotesSidebar() {
         })}
       </div>
 
+      <NotebookNameDialog open={naming !== null} onClose={() => setNaming(null)} title={naming === 'rename' ? 'Rename notebook' : 'New notebook'} submitLabel={naming === 'rename' ? 'Save' : 'Create'}
+        initial={naming === 'rename' ? bookOf(notebook)?.name ?? '' : ''} onSubmit={name => { void (naming === 'rename' ? renameChosen(name) : addNotebook(name)) }} />
+      <MoveToNotebookDialog open={moving !== null} onClose={() => setMoving(null)} notebooks={notebooks} onMove={id => { void moveTo(moving ?? [], id) }} onCreateAndMove={name => { void createAndMove(name) }} />
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
     </div>
   )

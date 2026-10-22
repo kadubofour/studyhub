@@ -3,7 +3,7 @@ import type { Note, NoteSummary } from '../types'
 import { check, fetchAll, must } from './util'
 
 export async function listNotes(sb: SupabaseClient): Promise<NoteSummary[]> {
-  return fetchAll<NoteSummary>((from, to) => sb.from('notes').select('id,course_id,title,updated_at').order('updated_at', { ascending: false }).order('id').range(from, to))
+  return fetchAll<NoteSummary>((from, to) => sb.from('notes').select('id,course_id,title,updated_at,notebook_id').order('updated_at', { ascending: false }).order('id').range(from, to))
 }
 
 export async function getNote(sb: SupabaseClient, id: string): Promise<Note> {
@@ -11,7 +11,7 @@ export async function getNote(sb: SupabaseClient, id: string): Promise<Note> {
 }
 
 export async function createNote(
-  sb: SupabaseClient, input: { title?: string; content_md?: string; course_id?: string | null },
+  sb: SupabaseClient, input: { title?: string; content_md?: string; course_id?: string | null; notebook_id?: string | null },
 ): Promise<Note> {
   return must(await sb.from('notes').insert(input).select('id,course_id,title,content_md,ink,updated_at').single())
 }
