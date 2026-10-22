@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, ListChecks, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -11,7 +11,6 @@ import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProv
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { greetingFont } from '@/lib/appearance'
-import { TintTile } from '@/components/ui/cards'
 import { HeroFocus } from '@/components/home/HeroFocus'
 import { CourseAccess } from '@/components/home/CourseAccess'
 import { HomeActions } from '@/components/home/HomeActions'
@@ -124,8 +123,8 @@ export default function HomePage() {
       <section className="hero">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-sm opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMM d')}</p>
-            <h1 className="mt-0.5 text-2xl font-semibold" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+            <p className="text-[15px] opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
+            <h1 className="mt-1 text-[2rem] font-semibold leading-[1.1] sm:text-[2.5rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
           <div className="-ml-2 flex gap-0.5 md:hidden">
             <Link href="/courses" aria-label="Courses" className="rounded-lg p-2.5 hover:bg-white/15"><BookOpen size={17} aria-hidden /></Link>
@@ -136,7 +135,7 @@ export default function HomePage() {
           </div>
         </div>
         {bold ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-5">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
             {xp && look === 'playful' && ( // the top bar (Classic, Vivid) shows these
@@ -158,29 +157,18 @@ export default function HomePage() {
         </>)}
       </section>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <TintTile color="#1D9E75" icon={ListChecks} label="Tasks today">
-          {doneToday} <span className="text-sm font-normal text-muted">/ {doneToday + list.length - doneIds.size}</span>
-        </TintTile>
-        <TintTile color="#D4537E" icon={Layers} label="Cards due" href={due > 0 ? '/review' : '/flashcards'}>
-          <span className="flex items-center gap-1">{due}{due > 0 && <ArrowRight size={15} className="text-muted" aria-hidden />}</span>
-        </TintTile>
-        <TintTile color="#BA7517" icon={School} label="Next class" href="/planner" className="col-span-2 md:col-span-1">
-          <span className="block truncate text-lg">
-            {nextCourse ? <>{nextCourse.name} · {nextLabel}</> : <span className="text-muted">No classes yet</span>}
-          </span>
-        </TintTile>
-      </section>
-
-      <HomeActions />
-
-      <CourseAccess courses={courses} counts={material.counts} recent={material.recent} />
-
-      <WeakSpotsCard courses={courses} />
-
-      <section className="grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="card">
-          <h2 className="section-label">Today</h2>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 className="section-label !mb-0">Today</h2>
+            <span className="text-sm text-muted">{doneToday} of {doneToday + list.length - doneIds.size} done</span>
+          </div>
+          {(nextCourse || due > 0) && (
+            <ul className="mb-4 space-y-2 text-[15px]">
+              {nextCourse && <li><Link href="/planner" className="inline-flex items-center gap-2.5 hover:text-accent"><School size={17} className="text-muted" aria-hidden />Next class: {nextCourse.name}, {nextLabel}</Link></li>}
+              {due > 0 && <li><Link href="/review" className="inline-flex items-center gap-2.5 font-medium text-accent hover:underline"><Layers size={17} aria-hidden />{due} {due === 1 ? 'card' : 'cards'} to review<ArrowRight size={15} aria-hidden /></Link></li>}
+            </ul>
+          )}
           {sessions.map(({ v, s }) => (
             <SessionRow key={s.id} s={s} course={courseOf(v.courseId)} done={!!s.done_at}
               onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
@@ -193,7 +181,7 @@ export default function HomePage() {
           <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact implicitDue="Today" />
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
           {!bold && <div className="card text-center">
             <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
             <div className="font-mono text-4xl font-semibold tracking-tight">{fmtClock(remainingMs(focus.timer, focus.now))}</div>
@@ -206,15 +194,15 @@ export default function HomePage() {
           </div>}
           <div className="card">
             <h2 className="section-label">This week</h2>
-            <div className="flex h-24 items-end gap-2" role="img" aria-label="Focus minutes per day this week">
+            <div className="flex h-32 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
               {weekKeys.map(k => {
                 const m = week.get(k) ?? 0
                 const isToday = k === todayKey
                 return (
                   <div key={k} className="flex flex-1 flex-col items-center gap-1" title={`${k}: ${fmtMin(m)}`}>
                     <div className="w-full rounded-md transition-all"
-                      style={{ height: `${Math.max(4, (m / maxWeek) * 72)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 28%, transparent)' }} />
-                    <span className={`text-[10px] ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
+                      style={{ height: `${Math.max(6, (m / maxWeek) * 100)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 28%, transparent)' }} />
+                    <span className={`text-xs ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
                   </div>
                 )
               })}
@@ -222,6 +210,13 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* phones have no sidebar: there, Home is where these are reached */}
+      <div className="md:hidden"><HomeActions /></div>
+
+      <CourseAccess courses={courses} counts={material.counts} recent={material.recent} coursesClassName="md:hidden" />
+
+      <WeakSpotsCard courses={courses} />
     </div>
   )
 }

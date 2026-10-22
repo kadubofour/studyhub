@@ -96,14 +96,15 @@ describe('Classic is the calm version of Vivid', () => {
       expect(css).toContain('.dark .app-root[data-look="paper"] .app-sidebar,')
     })
   })
-  it('has the rounded shapes and pill buttons, in the components layer', () => {
-    const layer = css.slice(css.indexOf('/* Vivid shapes'), css.indexOf('.prose-note h1 {'))
-    for (const sel of ['.card', '.tile', '.btn', 'input.input', '.hero']) expect(layer, sel).toContain(`.app-root[data-look="classic"] ${sel}`)
+  it('has its rounded panels and hero, in the components layer, and the shared buttons and fields (no pills)', () => {
+    const layer = css.slice(css.indexOf('/* Classic shapes'), css.indexOf('/* Playful shapes'))
+    for (const sel of ['.card', '.tile', '.hero']) expect(layer, sel).toContain(`.app-root[data-look="classic"] ${sel}`)
+    expect(layer).not.toMatch(/\.btn[^{]*\{[^}]*border-radius: 9999px/)
   })
   it('Paper in dark mode gets all of it too, so there is no jump when the page learns the theme', () => {
     expect(css).toContain('.dark .app-root[data-look="paper"] .app-sidebar')
     const layer = css.slice(css.indexOf('/* Classic shapes'), css.indexOf('/* Playful shapes'))
-    for (const sel of ['.card', '.tile', '.btn', 'input.input']) expect(layer, sel).toContain(`.dark .app-root[data-look="paper"] ${sel}`)
+    for (const sel of ['.card', '.tile', '.hero']) expect(layer, sel).toContain(`.dark .app-root[data-look="paper"] ${sel}`)
   })
   it('top bar chips stand out from the bar in Classic', () => {
     expect(css).toMatch(/data-look="classic"\][^{]*Today at a glance[^{]*\{[^}]*background: var\(--surface\)/)
@@ -160,9 +161,8 @@ describe('Classic has no colourful cards', () => {
 })
 
 describe('page title with the top bar', () => {
-  it('is hidden from sight but kept for screen readers when the top bar shows the page name', () => {
-    expect(css).toMatch(/\.app-root\[data-topbar\] \.page-title \{[^}]*position: absolute/)
-    expect(css).toMatch(/\.app-root\[data-topbar\] \.page-title \{[^}]*clip/)
+  it('is always shown on the page: the top bar no longer names the page', () => {
+    expect(css).not.toMatch(/\.page-title \{[^}]*position: absolute/)
   })
 })
 

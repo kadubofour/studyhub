@@ -8,8 +8,9 @@ test('start a quiz from Home, answer with the keyboard, review the results and r
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/home')
 
-  // The Quiz dialog opens from Home's quick actions
-  await page.getByRole('group', { name: 'Quick actions' }).getByRole('button', { name: 'Take a quiz' }).click()
+  // The Quiz dialog opens from Home's quick actions on a phone, and from Flashcards on a computer (its sidebar has no Home shortcuts)
+  if (isMobile) await page.getByRole('group', { name: 'Quick actions' }).getByRole('button', { name: 'Take a quiz' }).click()
+  else { await page.goto('/flashcards'); await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click() }
   const dialog = page.getByRole('dialog', { name: 'Quiz yourself' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('radio', { name: /Krebs cycle/ }).click()
@@ -73,8 +74,8 @@ test('the Quiz dialog, the player and the results have no serious accessibility 
   }
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.goto('/home')
-  await page.getByRole('group', { name: 'Quick actions' }).getByRole('button', { name: 'Take a quiz' }).click()
+  await page.goto('/flashcards')
+  await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Quiz yourself' })
   await dialog.getByRole('radio', { name: /Krebs cycle/ }).click()
   expect(await problems('dialog')).toEqual([])

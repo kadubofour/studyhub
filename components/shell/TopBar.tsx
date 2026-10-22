@@ -16,11 +16,6 @@ import { celebrate, rememberXp, seenXp, type Burst, type Snapshot } from '@/lib/
 import { useProgressChanged } from '@/lib/xp/events'
 import { useCoursesChanged, useTimetableChanged } from '@/lib/course/events'
 
-const PAGES: [string, string][] = [
-  ['/home', 'Home'], ['/planner', 'Planner'], ['/focus', 'Focus'], ['/progress', 'Progress'], ['/notes', 'Notes'], ['/lectures', 'Lectures'],
-  ['/flashcards', 'Flashcards'], ['/review', 'Review'], ['/tutor', 'Tutor'], ['/quiz', 'Quiz'], ['/settings', 'Settings'], ['/plans', 'Plans'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses', 'Courses'],
-]
-const pageName = (path: string) => PAGES.find(([p]) => path === p || path.startsWith(p + '/'))?.[1]
 const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:py-2.5'
 
 // A strip above every page (Classic and Vivid looks): the focus timer, cards due, the streak and the level, so they are one glance away
@@ -74,32 +69,31 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
   const label = timer.mode === 'focus' ? 'focus' : MODE_LABEL[timer.mode].toLowerCase()
   const clock = fmtClock(remainingMs(timer, now))
   const verb = running ? 'Pause' : timer.accumulatedMs > 0 ? 'Resume' : 'Start'
-  const name = pageName(path)
+  const underway = running || timer.accumulatedMs > 0
 
   return (
-    <header aria-label="Today at a glance" className={`no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-raised/95 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] backdrop-blur md:px-8 ${sidebarHidden ? 'md:pl-16' : ''}`}>
-      {name && <span data-page className="font-display shrink-0 text-xl font-semibold tracking-tight">{name}</span>}
+    <header aria-label="Today at a glance" className={`no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-bg/90 px-5 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] backdrop-blur md:px-10 ${sidebarHidden ? 'md:pl-16' : ''}`}>
       <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto">
         {burst && (
           <span className={`${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>
             {burst.levelUp ? `Level up! Level ${burst.levelUp}` : `+${burst.gained} XP`}
           </span>
         )}
-        <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
+        {underway && <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
           <Link href="/focus" aria-label={`${MODE_LABEL[timer.mode]} timer, ${clock} left`} className="inline-flex min-h-9 items-center font-mono tabular-nums">{clock}</Link>
           <button type="button" onClick={toggle} aria-label={`${verb} ${label} timer`} className="flex size-7 items-center justify-center rounded-full bg-accent-solid text-white pointer-coarse:size-9">
             {running ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
           </button>
-        </div>
+        </div>}
         {period && (
           <Link href="/planner" aria-label={period.label} className={`${chip} bg-surface text-fg`}>
             <School size={15} aria-hidden /><span aria-hidden className="sm:hidden">{period.short}</span><span aria-hidden className="hidden sm:inline">{period.label}</span>
           </Link>
         )}
-        {due !== null && (
-          <Link href={due > 0 ? '/review' : '/flashcards'} aria-label={due === 0 ? 'No cards due' : `${due} card${due === 1 ? '' : 's'} due`}
-            className={`${chip} ${due > 0 ? 'tile-a text-fg' : 'bg-surface text-muted'}`}>
-            <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? <><span className="sm:hidden">0</span><span className="hidden sm:inline">No cards due</span></> : <><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></>}</span>
+        {/* only when there is something to review: "no cards due" says nothing worth the space */}
+        {due !== null && due > 0 && (
+          <Link href="/review" aria-label={`${due} card${due === 1 ? '' : 's'} due`} className={`${chip} tile-a text-fg`}>
+            <Layers size={15} aria-hidden /><span aria-hidden><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></span>
           </Link>
         )}
         <span role="status" aria-live="polite" className="sr-only">

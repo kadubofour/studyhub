@@ -33,7 +33,7 @@ test('Paper on Home: a serif greeting, until another font is chosen', async ({ p
   await page.getByRole('radio', { name: 'Paper look' }).click()
   await expect(root(page)).toHaveAttribute('data-look', 'paper')
   await page.goto('/home')
-  await expect(page.getByText('Tasks today')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   const greeting = page.getByRole('heading', { level: 1 })
   expect(await greeting.evaluate(el => getComputedStyle(el).fontFamily)).toContain('Lora')
   await page.goto('/settings')

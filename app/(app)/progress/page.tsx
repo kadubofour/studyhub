@@ -66,12 +66,13 @@ export default function ProgressPage() {
         { label: 'Focus this week', value: fmtMin(thisWeek) },
         { label: 'Retention (30 days)', value: ret === null ? '—' : `${Math.round(ret * 100)}%` },
       ]} />
-      <QuickActions label="Quick actions" actions={[
+      {/* phones have no sidebar, so the shortcuts stay there */}
+      <div className="md:hidden"><QuickActions label="Quick actions" actions={[
         { label: 'Start focus', icon: Timer, href: '/focus' },
         { label: 'Review cards', icon: Layers, href: '/review' },
         { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
         { node: <NewNoteButton /> },
-      ]} />
+      ]} /></div>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <section className="card">
           <div className="mb-3 flex items-baseline justify-between gap-2">

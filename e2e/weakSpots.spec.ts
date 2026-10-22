@@ -64,7 +64,7 @@ test('a weak topic shows on Home, and Revise opens the tutor with the message re
   const card = page.getByRole('region', { name: 'Weak spots' })
   await expect(card.getByRole('listitem', { name: 'Krebs cycle' })).toContainText('8 answers, 50% right in the last 30 days')
   await card.getByRole('button', { name: 'Revise Krebs cycle' }).click()
-  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}\?ask=/)
+  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}/) // the message rides in the address, which the chat then tidies away
   await expect(page.getByLabel('Message')).toHaveValue('Quiz me on Krebs cycle')
   await expect(page.getByText(/Ask anything/)).toBeVisible() // nothing has been sent
   await page.getByRole('button', { name: 'Send' }).click()
@@ -74,6 +74,6 @@ test('a weak topic shows on Home, and Revise opens the tutor with the message re
 test('Home has no Weak spots card when nothing is weak', async ({ page }) => {
   await signUp(page)
   await page.goto('/home')
-  await expect(page.getByText('Tasks today')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Weak spots' })).toHaveCount(0)
 })

@@ -8,9 +8,9 @@ export function ChoiceChips({ label, value, options, onChange, disabled = false,
   label: string; value: string; options: Choice[]; onChange: (v: string) => void; disabled?: boolean; size?: 'sm' | 'md'; className?: string
 }) {
   const current = Math.max(0, options.findIndex(o => o.value === value))
-  const pad = size === 'sm' ? 'px-2.5 py-1 text-xs pointer-coarse:py-2' : 'px-3 py-1.5 text-sm pointer-coarse:py-2.5'
+  const pad = size === 'sm' ? 'px-3 py-1.5 text-[13px] pointer-coarse:py-2' : 'px-3.5 py-2 text-[15px] pointer-coarse:py-2.5'
   return (
-    <div role="radiogroup" aria-label={label} className={`flex flex-wrap gap-1.5 ${className}`}>
+    <div role="radiogroup" aria-label={label} className={`flex flex-wrap gap-2 ${className}`}>
       {options.map((o, i) => {
         const on = i === current && options.some(x => x.value === value)
         return (
@@ -21,7 +21,7 @@ export function ChoiceChips({ label, value, options, onChange, disabled = false,
               if (to === null) return
               e.preventDefault(); onChange(options[to].value); focusRadio(e.currentTarget, to)
             }}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg ${pad} transition disabled:opacity-50 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-fg hover:brightness-95'}`}>
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl ${pad} transition disabled:opacity-50 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-fg hover:brightness-95'}`}>
             {o.color && <span data-dot aria-hidden className="size-2 shrink-0 rounded-[3px]" style={{ background: o.color }} />}{o.label}
           </button>
         )

@@ -34,7 +34,8 @@ test('the focus timer can be started over: from the Focus page and from Home, an
   await expect(page.getByRole('button', { name: 'Pause', exact: true }).first()).toBeVisible()
 })
 
-test('the Home quick actions are in the accent colour', async ({ page }) => {
+test('the Home quick actions are in the accent colour', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'they are on Home on phones; a wider screen has them in the sidebar')
   await signUp(page)
   await page.goto('/home')
   const tile = page.getByRole('group', { name: 'Quick actions' }).getByRole('button', { name: /Take a quiz/ })

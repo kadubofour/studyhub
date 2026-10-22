@@ -97,16 +97,13 @@ test('Tasks: the type chips filter the list', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Edit Call mum' })).toHaveCount(0)
 })
 
-test('Sidebar Upload and Scan are solid and darker, with no dashed outline', async ({ page, isMobile }) => {
+test('Sidebar Upload and Scan look like the other items, not like heavy buttons', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the sidebar is for computers')
   await signUp(page)
   const side = page.locator('.app-sidebar')
-  for (const name of ['Upload', 'Scan']) {
-    const b = side.getByRole('button', { name })
-    const style = await b.evaluate(el => { const s = getComputedStyle(el); return { border: s.borderTopStyle, bg: s.backgroundColor } })
-    expect(style.border).not.toBe('dashed')
-    expect(style.bg).not.toBe('rgba(0, 0, 0, 0)') // filled
-  }
+  const look = (el: Element) => { const s = getComputedStyle(el); return { bg: s.backgroundColor, size: s.fontSize, pad: s.paddingTop } }
+  const item = await side.getByRole('link', { name: 'Notes' }).evaluate(look)
+  for (const name of ['Upload', 'Scan']) expect(await side.getByRole('button', { name }).evaluate(look), name).toEqual(item)
 })
 
 for (const scheme of ['light', 'dark'] as const) {

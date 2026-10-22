@@ -43,7 +43,7 @@ describe('TopBar keeping up', () => {
     expect(screen.getByRole('link', { name: '3 cards due' })).toBeTruthy()
     due = 0
     await act(async () => { announceProgressChanged() })
-    expect(screen.getByRole('link', { name: 'No cards due' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull() // nothing due: nothing to say
     expect(countCalls).toBe(2)
   })
   it('leaves room for the Show sidebar button when the sidebar is hidden', async () => {
@@ -141,29 +141,18 @@ describe('TopBar celebrations', () => {
 })
 
 describe('TopBar', () => {
-  it('is a labelled region with the page name', async () => {
+  it('is a labelled region that does not repeat the page name (the page shows its own title)', async () => {
     path = '/planner'
     await open()
     const bar = screen.getByRole('banner', { name: 'Today at a glance' })
-    expect(within(bar).getByText('Planner')).toBeTruthy()
-  })
-  it('names the page for each section, and nothing for an unknown one', async () => {
-    for (const [p, name] of [['/home', 'Home'], ['/library', 'Library'], ['/profile', 'Profile'], ['/courses/c1', 'Courses'], ['/courses', 'Courses'], ['/flashcards/d1', 'Flashcards'], ['/review', 'Review'], ['/progress', 'Progress'], ['/tutor/c1', 'Tutor']] as const) {
-      path = p
-      await open()
-      expect(within(screen.getByRole('banner')).getByText(name), p).toBeTruthy()
-      cleanup()
-    }
-    path = '/somewhere-else'
-    await open()
-    expect(screen.getByRole('banner').querySelector('[data-page]')).toBeNull()
+    expect(within(bar).queryByText('Planner')).toBeNull()
   })
 
   describe('focus timer', () => {
-    it('shows the time left and offers to start', async () => {
+    it('is not shown before a session starts: Home and Focus have the start button', async () => {
       await open()
-      expect(screen.getByRole('link', { name: /Focus timer, 25:00 left/ }).getAttribute('href')).toBe('/focus')
-      expect(screen.getByRole('button', { name: 'Start focus timer' })).toBeTruthy()
+      expect(screen.queryByRole('link', { name: /timer/ })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Start focus timer' })).toBeNull()
     })
     it('counts down while running and offers to pause', async () => {
       timer = startTimer(timer, 0); now = 5 * MIN
@@ -177,14 +166,15 @@ describe('TopBar', () => {
       expect(screen.getByRole('button', { name: 'Resume focus timer' })).toBeTruthy()
     })
     it('names a break as a break', async () => {
-      timer = createTimer('short', 5 * MIN)
+      timer = startTimer(createTimer('short', 5 * MIN), 0)
       await open()
       expect(screen.getByRole('link', { name: /Short break timer, 05:00 left/ })).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'Start short break timer' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Pause short break timer' })).toBeTruthy()
     })
-    it('starts and pauses with the same button', async () => {
+    it('pauses and resumes with the same button', async () => {
+      timer = startTimer(timer, 0)
       await open()
-      fireEvent.click(screen.getByRole('button', { name: 'Start focus timer' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Pause focus timer' }))
       expect(toggle).toHaveBeenCalledTimes(1)
     })
   })
@@ -201,9 +191,9 @@ describe('TopBar', () => {
       await open()
       expect(screen.getByRole('link', { name: '1 card due' })).toBeTruthy()
     })
-    it('links to the flashcards when none are', async () => {
+    it('says nothing when none are due', async () => {
       await open()
-      expect(screen.getByRole('link', { name: 'No cards due' }).getAttribute('href')).toBe('/flashcards')
+      expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull()
     })
     it('shows nothing about cards when they cannot be counted', async () => {
       dueFails = true

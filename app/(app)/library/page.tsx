@@ -101,9 +101,10 @@ export default function LibraryPage() {
         <>
           {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
           <NewNoteButton className="btn" />
-          <button type="button" className="btn" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
+          {/* the sidebar has Quiz and Upload: here they are for phones */}
+          <button type="button" className="btn md:hidden" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
           <Link href="/flashcards?new=1" className="btn"><Layers size={14} aria-hidden />New deck</Link>
-          <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
+          <button type="button" className="btn md:hidden" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
         </>
       )} />
       {items.length === 0 ? (

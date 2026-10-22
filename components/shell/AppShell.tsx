@@ -107,8 +107,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
 
   const link = ({ href, label, icon: Icon }: { href: string; label: string; icon: typeof Home }) => (
     <Link key={href} href={href} onClick={e => guard(e, href)} aria-current={active(href) ? 'page' : undefined}
-      className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition ${active(href) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
-      <Icon size={17} aria-hidden />{label}
+      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${active(href) ? 'bg-accent-soft font-semibold text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+      <Icon size={18} aria-hidden />{label}
     </Link>
   )
 
@@ -121,13 +121,13 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   } as React.CSSProperties
 
   return (
-    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[208px_1fr]' : ''}`} style={appearance} data-look={look} data-topbar={(look === 'vivid' || look === 'classic') && !immersive ? '' : undefined}>
+    <div className={`app-root min-h-dvh bg-bg ${sidebar ? 'md:grid md:grid-cols-[248px_1fr]' : ''}`} style={appearance} data-look={look} data-topbar={(look === 'vivid' || look === 'classic') && !immersive ? '' : undefined}>
       {sidebar && (
-        <aside className="app-sidebar no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 p-3 md:flex md:flex-col">
-          <div className="mb-6 flex items-center justify-between px-1">
-            <Link href="/home" onClick={e => guard(e, '/home')} className="flex items-center gap-2 text-[15px] font-semibold">
-              <span className="flex size-7 items-center justify-center rounded-lg text-white" style={{ background: 'linear-gradient(135deg, var(--accent-solid), var(--accent-glow))' }}>
-                <GraduationCap size={16} aria-hidden />
+        <aside className="app-sidebar no-print sticky top-0 hidden h-dvh border-r border-line bg-surface/60 px-4 py-5 md:flex md:flex-col">
+          <div className="mb-8 flex items-center justify-between px-1">
+            <Link href="/home" onClick={e => guard(e, '/home')} className="font-display flex items-center gap-2.5 text-lg font-semibold tracking-tight">
+              <span className="flex size-8 items-center justify-center rounded-xl bg-accent-solid text-white">
+                <GraduationCap size={17} aria-hidden />
               </span>
               Studyhub
               <PremiumBadge />
@@ -136,21 +136,21 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
               <PanelLeftClose size={16} aria-hidden />
             </button>
           </div>
-          <nav className="-mx-1 flex min-h-0 flex-col gap-4 overflow-y-auto px-1">
+          <nav className="-mx-1 flex min-h-0 flex-col gap-6 overflow-y-auto px-1">
             {link(HOME)}
             {GROUPS.map(g => (
               <div key={g.label} role="group" aria-labelledby={`nav-${g.label}`} className="flex flex-col gap-0.5">
-                <p id={`nav-${g.label}`} className="section-label !mb-1 px-2.5">{g.label}</p>
+                <p id={`nav-${g.label}`} className="section-label !mb-1 px-3">{g.label}</p>
                 {g.items.map(link)}
                 {g.scan && (
                   <>
                     <button type="button" onClick={() => setUploading(true)}
-                      className="mt-1 flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
-                      <Upload size={17} aria-hidden />Upload
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] text-muted transition hover:bg-surface hover:text-fg">
+                      <Upload size={18} aria-hidden />Upload
                     </button>
                     <button type="button" onClick={() => { setScanFiles(undefined); setScanning(true) }}
-                      className="flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
-                      <ScanLine size={17} aria-hidden />Scan
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] text-muted transition hover:bg-surface hover:text-fg">
+                      <ScanLine size={18} aria-hidden />Scan
                     </button>
                   </>
                 )}
@@ -158,10 +158,10 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             ))}
             {courses.length > 0 && (
               <div role="group" aria-labelledby="nav-Courses" className="flex flex-col gap-0.5">
-                <Link id="nav-Courses" href="/courses" onClick={e => guard(e, '/courses')} aria-current={path === '/courses' ? 'page' : undefined} className="section-label !mb-0 px-2.5 py-1.5 hover:underline">Courses</Link>
+                <Link id="nav-Courses" href="/courses" onClick={e => guard(e, '/courses')} aria-current={path === '/courses' ? 'page' : undefined} className="section-label !mb-1 px-3 hover:text-fg">Courses</Link>
                 {courses.map(c => (
                   <Link key={c.id} href={`/courses/${c.id}`} onClick={e => guard(e, `/courses/${c.id}`)} aria-current={active(`/courses/${c.id}`) ? 'page' : undefined}
-                    className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm transition ${active(`/courses/${c.id}`) ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] transition ${active(`/courses/${c.id}`) ? 'bg-accent-soft font-semibold text-accent' : 'text-muted hover:bg-surface hover:text-fg'}`}>
                     <span aria-hidden className="size-2.5 shrink-0 rounded-[3px]" style={{ background: c.color }} /><span className="truncate">{c.name}</span>
                   </Link>
                 ))}
@@ -170,7 +170,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           </nav>
           <div className="mt-auto flex flex-col gap-0.5">
             <Link href="/profile" onClick={e => guard(e, '/profile')} aria-current={active('/profile') ? 'page' : undefined}
-              className={`mb-1 flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition ${active('/profile') ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+              className={`mb-1 flex items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] transition ${active('/profile') ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
               <Avatar name={profile.display_name} color={profile.avatar_color} size={28} />
               <span className="truncate">{profile.display_name || 'Your profile'}</span>
             </Link>
@@ -191,7 +191,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <PanelLeftOpen size={18} aria-hidden />
           </button>
         )}
-        <main className={immersive ? 'w-full' : `mx-auto w-full px-4 ${path.startsWith('/planner') ? 'max-w-none py-5 md:px-8 md:py-7' : `${{ focused: 'max-w-5xl md:px-10', wide: 'max-w-[1400px] md:px-8', full: 'max-w-none md:px-6' }[contentWidthOf(profile.content_width)]} py-5 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
+        <main className={immersive ? 'w-full' : `mx-auto w-full px-5 ${path.startsWith('/planner') ? 'max-w-none py-7 md:px-10 md:py-10' : `${{ focused: 'max-w-5xl md:px-12', wide: 'max-w-[1320px] md:px-10 xl:px-14', full: 'max-w-none md:px-10' }[contentWidthOf(profile.content_width)]} py-7 md:py-12`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
         <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-raised/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">

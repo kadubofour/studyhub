@@ -96,9 +96,10 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the top bar names the page, and the bottom bar has five places with room around them', async ({ page }) => {
+test('the page names itself (the top bar does not repeat it), and the bottom bar has five places with room around them', async ({ page }) => {
   await signUp(page)
-  await expect(page.getByRole('banner')).toContainText('Home')
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await expect(page.getByRole('banner')).not.toContainText('Home')
   const bar = page.getByRole('navigation', { name: 'Main' })
   await expect(bar.locator('a, button')).toHaveText(['Home', 'Planner', 'Scan', 'Notes', 'Flashcards'])
   const box = (await bar.boundingBox())!
@@ -109,7 +110,7 @@ test('the top bar names the page, and the bottom bar has five places with room a
   for (const i of items) { expect(i.w, i.label ?? '').toBeGreaterThanOrEqual(70); expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label ?? '').toBeLessThanOrEqual(Math.ceil(i.w)) }
   await bar.getByRole('link', { name: 'Flashcards' }).dispatchEvent('click')
   await expect(page).toHaveURL(/\/flashcards/)
-  await expect(page.getByRole('banner')).toContainText('Flashcards')
+  await expect(page.getByRole('heading', { name: 'Flashcards', level: 1 })).toBeVisible()
   await expect(bar.getByRole('link', { name: 'Flashcards' })).toHaveAttribute('aria-current', 'page')
   expect(await sideways(page)).toBeLessThanOrEqual(0)
   // What the bar leaves out is one tap from Home

@@ -21,7 +21,7 @@ test('keyboard shortcuts and full screen on the Focus page', async ({ page, isMo
   await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toHaveAttribute('aria-valuenow', '25') // started over, stopped: the drums are back
 })
 
-test('the background sound is remembered, in the app and after a reload', async ({ page }) => {
+test('the background sound is remembered, in the app and after a reload', async ({ page, isMobile }) => {
   await signUp(page)
   await page.goto('/focus')
   await page.waitForLoadState('networkidle')
@@ -31,7 +31,9 @@ test('the background sound is remembered, in the app and after a reload', async 
   // Moving around the app (no reload) and coming back, then a reload: still Rain, same volume
   await page.getByRole('link', { name: 'Planner' }).first().click()
   await expect(page).toHaveURL(/\/planner/)
-  await page.getByRole('link', { name: 'Focus' }).first().click()
+  // back to Focus without a reload: the sidebar on a computer, Home's Open on a phone (the bottom bar has no Focus)
+  if (isMobile) { await page.getByRole('link', { name: 'Home' }).first().click(); await page.getByRole('main').getByRole('link', { name: 'Open', exact: true }).click() }
+  else await page.getByRole('link', { name: 'Focus' }).first().click()
   await expect(page.getByRole('button', { name: 'Rain', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.reload()
   await expect(page.getByRole('button', { name: 'Rain', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -70,9 +72,14 @@ test('the length can be set to the second, and each kind of session has its own 
   const button = page.getByRole('main').getByRole('button', { name: /Resume|Start/ }).first()
   const colourOf = () => button.evaluate(b => getComputedStyle(b).backgroundColor)
   const focus = await colourOf()
+  // the colour eases from one to the next: wait for it to settle before reading it
   await page.getByRole('tab', { name: 'Short break' }).click()
+  await expect.poll(colourOf).not.toBe(focus)
+  await page.waitForTimeout(400)
   const short = await colourOf()
   await page.getByRole('tab', { name: 'Long break' }).click()
+  await expect.poll(colourOf).not.toBe(short)
+  await page.waitForTimeout(400)
   const long = await colourOf()
   expect(new Set([focus, short, long]).size).toBe(3)
   for (const tab of ['Short break', 'Long break', 'Focus']) {

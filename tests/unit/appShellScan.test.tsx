@@ -227,20 +227,21 @@ describe('Scan in the app shell', () => {
       return cls
     }
     expect(main('/home', 'focused')).toContain('max-w-5xl')
-    expect(main('/home', 'wide')).toContain('max-w-[1400px]')
+    expect(main('/home', 'wide')).toContain('max-w-[1320px]')
     expect(main('/home', 'full')).toContain('max-w-none')
-    expect(main('/home')).toContain('max-w-[1400px]') // an old profile without a choice is wide
+    expect(main('/home')).toContain('max-w-[1320px]') // an old profile without a choice is wide
     expect(main('/planner', 'focused')).toContain('max-w-none')
   })
 
-  it('Upload and Scan are solid and darker than the sidebar, with no dashed outline', () => {
+  it('Upload and Scan look like the other items in the sidebar, not like heavy buttons', () => {
     path = '/home'
     const { container } = render(<ProfileProvider initial={profile}><AppShell><p>page</p></AppShell></ProfileProvider>)
     const side = container.querySelector('.app-sidebar') as HTMLElement
+    const item = within(side).getByRole('link', { name: 'Notes' }).className
     for (const name of ['Upload', 'Scan']) {
       const b = within(side).getByRole('button', { name })
-      expect(b.className, name).not.toContain('dashed')
-      expect(b.className, name).toContain('bg-black/')
+      expect(b.className, name).not.toContain('bg-black/')
+      for (const c of ['rounded-xl', 'px-3', 'py-2.5', 'text-[15px]']) { expect(item).toContain(c); expect(b.className, name).toContain(c) }
     }
   })
 
