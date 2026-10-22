@@ -72,3 +72,12 @@ describe('printing', () => {
     expect(printCss).toMatch(/\.app-root \{ background-image: none; \}/)
   })
 })
+
+describe('the Home hero', () => {
+  it('is the old ruled notebook page in the accent, with white text, in every look', () => {
+    const rule = css.match(/\.hero-page \{[^}]*\}/)![0]
+    expect(rule).toContain('background-color: var(--accent-solid)')
+    expect(rule).toContain('repeating-linear-gradient')
+    expect(rule).toContain('color: #fff')
+  })
+})

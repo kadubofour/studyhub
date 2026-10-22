@@ -42,6 +42,7 @@ describe('Home, as it was, in the new design', () => {
     expect(hero.getByRole('progressbar', { name: 'Focus goal progress' }).getAttribute('aria-valuetext')).toBe('30m of 2h focus')
     expect(hero.getByRole('button', { name: /Start focus/ })).toBeTruthy()
     expect(hero.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/focus')
+    expect(screen.getByRole('region', { name: 'Welcome' }).className).toContain('hero-page')
   })
   it('has the phone shortcuts in the hero: Courses, Library, Profile, Progress and Settings', async () => {
     await home()

@@ -120,19 +120,19 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <section aria-label="Welcome" className="hero">
+      <section aria-label="Welcome" className="hero hero-page">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-[15px] text-muted">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
+            <p className="text-[15px] opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
             <h1 className="font-display mt-1 text-[2.25rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
           {/* phones have no sidebar: the places it holds are a tap away here */}
           <div className="-ml-2 flex gap-0.5 md:hidden">
-            <Link href="/courses" aria-label="Courses" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><BookOpen size={18} aria-hidden /></Link>
-            <Link href="/library" aria-label="Library" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><FolderOpen size={18} aria-hidden /></Link>
-            <Link href="/profile" aria-label="Profile" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><User size={18} aria-hidden /></Link>
-            <Link href="/progress" aria-label="Progress" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><BarChart3 size={18} aria-hidden /></Link>
-            <Link href="/settings" aria-label="Settings" className="rounded-lg p-2.5 text-muted hover:bg-surface hover:text-fg"><Settings size={18} aria-hidden /></Link>
+            <Link href="/courses" aria-label="Courses" className="rounded-lg p-2.5 hover:bg-white/15"><BookOpen size={18} aria-hidden /></Link>
+            <Link href="/library" aria-label="Library" className="rounded-lg p-2.5 hover:bg-white/15"><FolderOpen size={18} aria-hidden /></Link>
+            <Link href="/profile" aria-label="Profile" className="rounded-lg p-2.5 hover:bg-white/15"><User size={18} aria-hidden /></Link>
+            <Link href="/progress" aria-label="Progress" className="rounded-lg p-2.5 hover:bg-white/15"><BarChart3 size={18} aria-hidden /></Link>
+            <Link href="/settings" aria-label="Settings" className="rounded-lg p-2.5 hover:bg-white/15"><Settings size={18} aria-hidden /></Link>
           </div>
         </div>
         {bold ? (
@@ -141,20 +141,20 @@ export default function HomePage() {
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
             {xp && look === 'playful' && (
               <div className="flex flex-wrap gap-2 text-sm font-medium">
-                <span className="rounded-full bg-surface px-3 py-1">Level {xp.level.level}</span>
-                <span className="rounded-full bg-surface px-3 py-1">{xp.total} XP</span>
-                {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-surface px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}
+                <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
+                <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>
+                {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}
               </div>
             )}
           </div>
         ) : (<>
           <div className="mt-5 flex items-center gap-3">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuenow={focusPct} aria-valuemin={0} aria-valuemax={100} aria-label="Focus goal progress">
-              <div className="h-2 rounded-full bg-accent-solid transition-all" style={{ width: `${focusPct}%` }} />
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25" role="progressbar" aria-valuenow={focusPct} aria-valuemin={0} aria-valuemax={100} aria-label="Focus goal progress">
+              <div className="h-2 rounded-full bg-white transition-all" style={{ width: `${focusPct}%` }} />
             </div>
-            <span className="text-sm text-muted">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
+            <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
           </div>
-          {xp && <p className="mt-2 text-sm text-muted">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
+          {xp && <p className="mt-2 text-sm opacity-90">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
         </>)}
       </section>
 
