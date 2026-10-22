@@ -11,7 +11,6 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
-import { createChat } from '@/lib/data/tutor'
 import { fileKind } from '@/lib/import/fileKind'
 import { requestScan } from '@/lib/scan/events'
 import { isRecording } from '@/lib/lectures/recordingGuard'
@@ -21,14 +20,12 @@ import { LimitPrompt } from '@/components/billing/LimitPrompt'
 
 type Draft = { title: string; content_md: string; notice?: string; via?: 'ai' | 'text'; limit?: 'daily_limit' | 'fair_use' }
 
-type Next = '' | 'summary' | 'cards' | 'quiz' | 'tutor'
-const NEXT: [Next, string][] = [['', 'Open the note'], ['summary', 'Open with Summary'], ['cards', 'Open with Flashcards'], ['quiz', 'Open with Quiz'], ['tutor', 'Chat about it with the tutor']]
+type Next = '' | 'summary' | 'cards' | 'quiz'
+const NEXT: [Next, string][] = [['', 'Open the note'], ['summary', 'Open with Summary'], ['cards', 'Open with Flashcards'], ['quiz', 'Open with Quiz']]
 
 // Upload a PDF, Word, PowerPoint or text file and review it before it becomes a note. Photos go to Scan, recordings to Lectures.
-export function UploadDialog({ open, onClose, courses, onImported, onScan, defaultNext }: {
+export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
   open: boolean; onClose: () => void; courses: Course[]; onImported?: () => void; onScan?: (files: File[]) => void
-  /** What "After saving" starts as: 'tutor' when the upload was asked for from the Tutor */
-  defaultNext?: 'tutor'
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -36,8 +33,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, defau
   const { profile } = useProfile()
   const input = useRef<HTMLInputElement>(null)
   const [stage, setStage] = useState<'pick' | 'working' | 'review' | 'recording'>('pick')
-  const [picked, setNext] = useState<Next | null>(null) // null until the student chooses: then it follows where the upload was asked for
-  const next: Next = picked ?? defaultNext ?? ''
+  const [next, setNext] = useState<Next>('')
   const [working, setWorking] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [courseId, setCourseId] = useState('')
@@ -52,7 +48,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, defau
     generation.current++
     abort.current?.abort() // stops an in-flight AI conversion so it isn't paid for
     abort.current = null
-    setStage('pick'); setDraft(null); setError(null); setCourseId(''); setNext(null)
+    setStage('pick'); setDraft(null); setError(null); setCourseId(''); setNext('')
     if (input.current) input.current.value = ''
   }
   function close() { reset(); onClose() }
@@ -117,15 +113,6 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, defau
       const n = await createNote(supabase(), { title: draft.title.trim() || 'Imported note', content_md: draft.content_md, course_id: courseId || null })
       onImported?.()
       close()
-      if (next === 'tutor') {
-        try {
-          const chat = await createChat(supabase(), { title: (n.title || draft.title).slice(0, 200) || 'New chat', course_id: courseId || null, note_id: n.id })
-          router.push(`/tutor/${chat.id}`)
-          return
-        } catch { toast("Couldn't start the chat. The note is saved.") }
-        router.push(`/notes/${n.id}`)
-        return
-      }
       router.push(`/notes/${n.id}${next ? `?study=${next}` : ''}`)
     } catch {
       toast('Couldn\'t save the note.')

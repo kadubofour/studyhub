@@ -47,7 +47,6 @@ describe('Tutor page', () => {
   it('says there are no chats yet', async () => {
     await open()
     expect(screen.getByText(/No chats yet/)).toBeTruthy()
-    expect(screen.queryByLabelText('Search chats')).toBeNull() // nothing to search
   })
 
   it('starts a new chat and opens it', async () => {
@@ -65,19 +64,15 @@ describe('Tutor page', () => {
     expect(screen.getByRole('alert').textContent).toMatch(/Couldn.t start a chat/)
   })
 
-  it('searches chats by title or by what they are about, and filters by course', async () => {
+  it('lists chats newest first, filters by course, and has no search box', async () => {
     chats = [chat('c1', 'Krebs cycle', { course_id: 'k1' }), chat('c2', 'Reactions', { course_id: 'k2', updated_at: '2026-10-04T09:00:00Z' }), chat('c3', 'New chat', { note_id: 'n1', updated_at: '2026-10-02T09:00:00Z' })]
     contexts = { c3: { kind: 'note', title: 'Glycolysis' } }
     await open()
     const names = () => screen.getAllByRole('link').map(l => l.getAttribute('href'))
     expect(names()).toEqual(['/tutor/c2', '/tutor/c1', '/tutor/c3']) // newest first
-    fireEvent.change(screen.getByLabelText('Search chats'), { target: { value: 'glyco' } })
-    expect(names()).toEqual(['/tutor/c3'])
-    fireEvent.change(screen.getByLabelText('Search chats'), { target: { value: '' } })
+    expect(screen.queryByLabelText('Search chats')).toBeNull()
     fireEvent.click(screen.getByRole('radio', { name: 'Chemistry' }))
     expect(names()).toEqual(['/tutor/c2'])
-    fireEvent.change(screen.getByLabelText('Search chats'), { target: { value: 'zzz' } })
-    expect(screen.getByText('No chats match.')).toBeTruthy()
   })
 
   it('shows the four ways to start, and a starter asks what it is about before it opens a chat with its message ready', async () => {

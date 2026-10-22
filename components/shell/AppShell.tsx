@@ -87,8 +87,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [quizzing, setQuizzing] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
   useOpenScan(files => { setScanFiles(files); setScanning(true) })
-  const [uploadNext, setUploadNext] = useState<'tutor' | undefined>(undefined)
-  useOpenUpload(opts => { setUploadNext(opts?.next); setUploading(true) })
+  useOpenUpload(() => setUploading(true))
   useOpenQuiz(() => setQuizzing(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
@@ -143,7 +142,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 {g.items.map(link)}
                 {g.scan && (
                   <>
-                    <button type="button" onClick={() => { setUploadNext(undefined); setUploading(true) }}
+                    <button type="button" onClick={() => setUploading(true)}
                       className="mt-1 flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <Upload size={17} aria-hidden />Upload
                     </button>
@@ -214,7 +213,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         </nav>
       )}
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
-      <UploadMaterial open={uploading} defaultNext={uploadNext} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
+      <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
       {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>
   )

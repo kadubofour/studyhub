@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { MessagesSquare, Search, Upload } from 'lucide-react'
+import { MessagesSquare, Search } from 'lucide-react'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { Dialog } from '@/components/ui/Dialog'
 import { supabase } from '@/lib/supabase/client'
@@ -19,21 +19,19 @@ const LABEL: Record<Kind, string> = { note: 'Notes', lecture: 'Lectures', course
 const ALL_KINDS: Kind[] = ['note', 'lecture', 'course']
 
 // Choose what a chat is about: one of the student's notes, lectures or courses. Used to start a chat with material attached, and to change it later.
-export function TutorPickDialog({ open, onClose, onPick, onSkip, onUpload, skipLabel = 'Without a note or lecture', kinds = ALL_KINDS, title = 'Chat about…' }: {
+export function TutorPickDialog({ open, onClose, onPick, onSkip, skipLabel = 'Without a note or lecture', kinds = ALL_KINDS, title = 'Chat about…' }: {
   open: boolean; onClose: () => void; onPick: (t: TutorTarget) => void; kinds?: Kind[]; title?: string
   /** Offered when it is fine to go on without choosing anything */
   onSkip?: () => void; skipLabel?: string
-  /** Offered beside the search, to bring in material that is not here yet */
-  onUpload?: () => void
 }) {
   return (
     <Dialog open={open} onClose={onClose} title={title} icon={MessagesSquare} size="md" subtitle="The tutor starts from what you pick.">
-      {open && <Picker onPick={onPick} kinds={kinds} onSkip={onSkip} onUpload={onUpload} skipLabel={skipLabel} />}
+      {open && <Picker onPick={onPick} kinds={kinds} onSkip={onSkip} skipLabel={skipLabel} />}
     </Dialog>
   )
 }
 
-function Picker({ onPick, kinds, onSkip, onUpload, skipLabel }: { onPick: (t: TutorTarget) => void; kinds: Kind[]; onSkip?: () => void; onUpload?: () => void; skipLabel: string }) {
+function Picker({ onPick, kinds, onSkip, skipLabel }: { onPick: (t: TutorTarget) => void; kinds: Kind[]; onSkip?: () => void; skipLabel: string }) {
   const [kind, setKind] = useState<Kind>(kinds[0])
   const [query, setQuery] = useState('')
   const [data, setData] = useState<{ notes: { id: string; title: string; course_id: string | null }[]; lectures: { id: string; title: string; course_id: string | null }[]; courses: Course[] } | null>(null)
@@ -62,13 +60,10 @@ function Picker({ onPick, kinds, onSkip, onUpload, skipLabel }: { onPick: (t: Tu
   return (
     <div className="space-y-3">
       {kinds.length > 1 && <ChoiceChips label="What to chat about" value={kind} options={kinds.map(k => ({ value: k, label: LABEL[k] }))} onChange={v => { setKind(v as Kind); setQuery('') }} />}
-      <div className="flex gap-2">
-        <label className="relative block min-w-0 flex-1">
-          <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
-          <input type="search" aria-label={`Search ${LABEL[kind].toLowerCase()}`} placeholder="Search" value={query} onChange={e => setQuery(e.target.value)} className="!pl-8" />
-        </label>
-        {onUpload && <button type="button" className="btn shrink-0" onClick={onUpload}><Upload size={14} aria-hidden />Upload</button>}
-      </div>
+      <label className="relative block">
+        <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+        <input type="search" aria-label={`Search ${LABEL[kind].toLowerCase()}`} placeholder="Search" value={query} onChange={e => setQuery(e.target.value)} className="!pl-8" />
+      </label>
       {failed && <p role="alert" className="text-sm text-danger">Couldn&apos;t load your {LABEL[kind].toLowerCase()}. Check your connection.</p>}
       {!data && !failed && <p role="status" className="text-sm text-muted">Loading…</p>}
       {data && rows.length === 0 && <p className="text-sm text-muted">{query.trim() ? 'Nothing matches.' : kind === 'course' ? 'No courses yet.' : `No ${LABEL[kind].toLowerCase()} yet.`}</p>}

@@ -93,7 +93,7 @@ test('in a chat: ideas to start with, times, copying, and a message box that gro
   }
 })
 
-test('the Tutor page lists chats with what they are about, and searches them', async ({ page }) => {
+test('the Tutor page lists chats with what they are about', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.getByRole('button', { name: 'Ask the tutor' }).click()
@@ -101,10 +101,6 @@ test('the Tutor page lists chats with what they are about, and searches them', a
   await page.goto('/tutor')
   const link = page.getByRole('link', { name: /Krebs cycle/ })
   await expect(link).toContainText('Note: Krebs cycle')
-  await page.getByLabel('Search chats').fill('zzzz')
-  await expect(page.getByText('No chats match.')).toBeVisible()
-  await page.getByLabel('Search chats').fill('krebs')
-  await expect(link).toBeVisible()
 })
 
 test('on a phone the message box is above the bottom bar', async ({ page, isMobile }) => {

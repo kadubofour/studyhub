@@ -40,28 +40,3 @@ test('notebooks: make one, move a note into it, filter, rename, delete (the note
   await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible() // the note is kept
 })
 
-test('Tutor: Upload beside the search turns a file into a note and opens a chat about it', async ({ page }) => {
-  test.setTimeout(120_000)
-  await signUp(page)
-  await page.goto('/tutor')
-  await page.getByRole('main').getByRole('button', { name: 'Upload', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Upload material' })
-  await dialog.getByLabel('File to upload').setInputFiles({ name: 'krebs.txt', mimeType: 'text/plain', buffer: Buffer.from('The Krebs cycle happens in the mitochondrial matrix.') })
-  await expect(dialog.getByRole('radio', { name: 'Chat about it with the tutor' })).toBeChecked()
-  await dialog.getByRole('button', { name: 'Save note' }).click()
-  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
-  await expect(page.getByText('About').first()).toBeVisible()
-  await expect(page.getByRole('link', { name: /krebs/i }).first()).toBeVisible()
-})
-
-test('Upload opened from the sidebar afterwards does not still lead to a chat', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'the sidebar')
-  await signUp(page)
-  await page.goto('/tutor')
-  await page.getByRole('main').getByRole('button', { name: 'Upload', exact: true }).click()
-  await page.getByRole('dialog', { name: 'Upload material' }).getByRole('button', { name: 'Close' }).click()
-  await page.getByRole('complementary').getByRole('button', { name: 'Upload' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Upload material' })
-  await dialog.getByLabel('File to upload').setInputFiles({ name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('Some notes.') })
-  await expect(dialog.getByRole('radio', { name: 'Open the note' })).toBeChecked()
-})
