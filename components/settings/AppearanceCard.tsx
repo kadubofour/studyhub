@@ -1,33 +1,23 @@
 'use client'
-import { useSyncExternalStore } from 'react'
 import { Check } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useSaver } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
-import { ACCENTS, CONTENT_WIDTHS, FONTS, LOOKS, contentWidthOf, effectiveLook, lookChoices, type AccentName, type ContentWidth, type FontName, type LookName } from '@/lib/appearance'
+import { ACCENTS, CONTENT_WIDTHS, FONTS, contentWidthOf, type AccentName, type ContentWidth, type FontName } from '@/lib/appearance'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { SettingRow } from './SettingRow'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
 const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[]
 const FONT_NAMES = Object.keys(FONTS) as FontName[]
-const noopSubscribe = () => () => {}
 
 // Accent and font apply instantly (the whole app re-colours / re-fonts) and save in the background
 export function AppearanceCard() {
   const { profile, setProfile } = useProfile()
   const save = useSaver()
-  const { resolvedTheme } = useTheme()
-  // The server can't know the theme: draw the previews light until the page has hydrated, so both agree
-  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
-  const mode = mounted && resolvedTheme === 'dark' ? 'dark' : 'light'
-  const look = effectiveLook(profile.look, mode) // Paper shows as Classic in dark mode
-  const LOOK_NAMES = lookChoices(mode)
 
-  function choose(patch: { accent?: AccentName; font?: FontName; look?: LookName; content_width?: ContentWidth }) {
-    if (Object.keys(patch).length === 1 && patch.look === look) return // e.g. Classic shown for a saved Paper in dark mode: keep the saved choice
+  function choose(patch: { accent?: AccentName; font?: FontName; content_width?: ContentWidth }) {
     const before = profile
     const keys = Object.keys(patch) as (keyof typeof patch)[]
     save(
@@ -40,34 +30,6 @@ export function AppearanceCard() {
 
   return (
     <div className="card divide-y divide-line p-0">
-      <SettingRow title="Look" hint="The style of the whole app.">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-4" role="radiogroup" aria-label="Look">
-          {LOOK_NAMES.map((name, i) => {
-            const on = look === name
-            const c = LOOKS[name][mode]
-            return (
-              <button key={name} type="button" role="radio" aria-checked={on} aria-label={`${LOOKS[name].label} look`}
-                tabIndex={on ? 0 : -1}
-                onKeyDown={e => {
-                  const to = radioKeyTarget(e.key, i, LOOK_NAMES.length)
-                  if (to === null) return
-                  e.preventDefault(); choose({ look: LOOK_NAMES[to] }); focusRadio(e.currentTarget, to)
-                }}
-                onClick={() => choose({ look: name })}
-                className={`rounded-xl border p-2 text-left transition ${on ? 'border-accent ring-2 ring-accent-soft' : 'border-line hover:bg-surface'}`}>
-                <div className="flex h-14 items-end gap-1.5 rounded-lg p-2" style={{ background: c.bg, border: `1px solid ${c.line}` }} aria-hidden>
-                  <div className="h-8 flex-1 rounded-md" style={{ background: c.tiles[0], border: `1px solid ${c.line}` }} />
-                  <div className="h-8 flex-1 rounded-md" style={{ background: c.tiles[1], border: `1px solid ${c.line}` }} />
-                  <div className="h-5 w-8 rounded-md" style={{ background: ACCENTS[profile.accent]?.solid ?? ACCENTS.blue.solid }} />
-                </div>
-                <div className="mt-1.5 text-sm font-medium">{LOOKS[name].label}</div>
-                <div className="text-xs text-muted">{LOOKS[name].blurb}</div>
-              </button>
-            )
-          })}
-        </div>
-        {mode === 'dark' && <p className="mt-2 text-xs text-muted">Paper is for light mode. Switch to light mode to use it{profile.look === 'paper' ? ' (your choice is kept)' : ''}.</p>}
-      </SettingRow>
       <SettingRow title="Content width" hint="Focused is a centred column, Wide uses more of the screen, Full uses all of it.">
         <ChoiceChips label="Content width" value={contentWidthOf(profile.content_width)} options={CONTENT_WIDTHS.map(w => ({ value: w.id, label: w.label }))} onChange={v => choose({ content_width: v as ContentWidth })} />
       </SettingRow>

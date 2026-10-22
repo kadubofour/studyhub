@@ -86,7 +86,7 @@ describe('Settings page', () => {
     page()
     expect(screen.getByRole('navigation', { name: 'Settings sections' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Appearance' })).toBeTruthy()
-    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
+    expect(screen.getByRole('radiogroup', { name: 'Accent colour' })).toBeTruthy()
     expect(screen.queryByLabelText('Focus length (min)')).toBeNull()
     expect(screen.queryByText('Profile and focus')).toBeNull()
   })
@@ -107,7 +107,7 @@ describe('Settings page', () => {
   })
   it('falls back to Appearance for a section that does not exist', () => {
     page('section=nonsense')
-    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
+    expect(screen.getByRole('radiogroup', { name: 'Accent colour' })).toBeTruthy()
   })
   it('has Your data with the download and delete options', () => {
     page()

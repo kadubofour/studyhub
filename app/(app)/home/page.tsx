@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Layers, School, ArrowRight } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -10,7 +10,6 @@ import { useSaver } from '@/components/providers/ToastProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
-import { greetingFont } from '@/lib/appearance'
 import { HeroFocus } from '@/components/home/HeroFocus'
 import { CourseAccess } from '@/components/home/CourseAccess'
 import { HomeActions } from '@/components/home/HomeActions'
@@ -18,7 +17,6 @@ import { homeMaterial, type Recent, type CourseCounts } from '@/lib/home/materia
 import { listNotes } from '@/lib/data/notes'
 import { listDecks } from '@/lib/data/decks'
 import { listLectures } from '@/lib/data/lectures'
-import { useLook } from '@/components/providers/useLook'
 import { WeakSpotsCard } from '@/components/topics/WeakSpotsCard'
 import { useXp } from '@/components/xp/useXp'
 import { GoalRing } from '@/components/home/GoalRing'
@@ -53,7 +51,7 @@ export default function HomePage() {
   const [due, setDue] = useState(0)
   const [week, setWeek] = useState<Map<string, number>>(new Map())
   const [material, setMaterial] = useState<{ counts: CourseCounts; recent: Recent[] }>({ counts: {}, recent: [] })
-  const { xp, reload: reloadXp } = useXp(focus.todayMinutes)
+  const { reload: reloadXp } = useXp(focus.todayMinutes)
   const plans = usePlans(reloadXp)
   const warmup = useWarmup()
 
@@ -87,9 +85,6 @@ export default function HomePage() {
   const goal = profile.daily_goal_minutes
   const focusPct = Math.min(100, Math.round((focus.todayMinutes / goal) * 100))
   const running = focus.timer.startedAt !== null
-  // Every look but Paper shows the goal as a ring with chips for level, XP and streak
-  const look = useLook()
-  const bold = look !== 'paper'
   const weekKeys = weekKeysFor(todayKey)
   const maxWeek = Math.max(goal, ...weekKeys.map(k => week.get(k) ?? 0), 1)
 
@@ -119,46 +114,14 @@ export default function HomePage() {
   )
 
   return (
-    <div className="space-y-6">
-      <section className="hero">
-        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-[15px] opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
-            <h1 className="mt-1 text-[2rem] font-semibold leading-[1.1] sm:text-[2.5rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
-          </div>
-          <div className="-ml-2 flex gap-0.5 md:hidden">
-            <Link href="/courses" aria-label="Courses" className="rounded-lg p-2.5 hover:bg-white/15"><BookOpen size={17} aria-hidden /></Link>
-            <Link href="/library" aria-label="Library" className="rounded-lg p-2.5 hover:bg-white/15"><FolderOpen size={17} aria-hidden /></Link>
-            <Link href="/profile" aria-label="Profile" className="rounded-lg p-2.5 hover:bg-white/15"><User size={17} aria-hidden /></Link>
-            <Link href="/progress" aria-label="Progress" className="rounded-lg p-2.5 hover:bg-white/15"><BarChart3 size={17} aria-hidden /></Link>
-            <Link href="/settings" aria-label="Settings" className="rounded-lg p-2.5 hover:bg-white/15"><Settings size={17} aria-hidden /></Link>
-          </div>
-        </div>
-        {bold ? (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-5">
-            <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
-            <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
-            {xp && look === 'playful' && ( // the top bar (Classic, Vivid) shows these
-              <div className="flex flex-wrap gap-2 text-sm font-medium">
-                <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
-                <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>
-                {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}
-              </div>
-            )}
-          </div>
-        ) : (<>
-        <div className="mt-4 flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25" role="progressbar" aria-valuenow={focusPct} aria-valuemin={0} aria-valuemax={100} aria-label="Focus goal progress">
-            <div className="h-2 rounded-full bg-white transition-all" style={{ width: `${focusPct}%` }} />
-          </div>
-          <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
-        </div>
-        {xp && <p className="mt-2 text-sm opacity-90">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
-        </>)}
-      </section>
+    <div className="space-y-7">
+      <header className="pt-1">
+        <p className="text-[15px] text-muted">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
+        <h1 className="font-display mt-1 text-[2.25rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.875rem]">{greeting(hour)}{name}</h1>
+      </header>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="card">
+      <div className="grid items-start gap-5 lg:grid-cols-3">
+        <section aria-label="Today" className="card lg:col-span-2">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="section-label !mb-0">Today</h2>
             <span className="text-sm text-muted">{doneToday} of {doneToday + list.length - doneIds.size} done</span>
@@ -174,44 +137,39 @@ export default function HomePage() {
               onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
           ))}
           {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
-          {list.length === 0 && sessions.length === 0 && <p className="py-2 text-sm text-muted">Nothing due today. Add something below.</p>}
+          {list.length === 0 && sessions.length === 0 && <p className="py-2 text-[15px] text-muted">Nothing due today. Add something below.</p>}
           {list.map(t => (
             <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done={doneIds.has(t.id)} onToggle={() => toggle(t)} showType={false} />
           ))}
           <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact implicitDue="Today" />
-        </div>
+        </section>
 
-        <div className="space-y-6">
-          {!bold && <div className="card text-center">
-            <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
-            <div className="font-mono text-4xl font-semibold tracking-tight">{fmtClock(remainingMs(focus.timer, focus.now))}</div>
-            <div className="mt-3 flex justify-center gap-2">
-              <button className="btn-primary" onClick={focus.toggle}>
-                {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{focus.timer.accumulatedMs ? 'Resume' : 'Start focus'}</>}
-              </button>
-              <Link href="/focus" className="btn">Open</Link>
-            </div>
-          </div>}
-          <div className="card">
-            <h2 className="section-label">This week</h2>
-            <div className="flex h-32 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
-              {weekKeys.map(k => {
-                const m = week.get(k) ?? 0
-                const isToday = k === todayKey
-                return (
-                  <div key={k} className="flex flex-1 flex-col items-center gap-1" title={`${k}: ${fmtMin(m)}`}>
-                    <div className="w-full rounded-md transition-all"
-                      style={{ height: `${Math.max(6, (m / maxWeek) * 100)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 28%, transparent)' }} />
-                    <span className={`text-xs ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
-                  </div>
-                )
-              })}
-            </div>
+        <div className="space-y-5">
+        <section aria-label="Focus" className="hero flex flex-col gap-6">
+          <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
+          <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus today`} />
+        </section>
+
+        <section aria-label="This week" className="card">
+          <h2 className="section-label">This week</h2>
+          <div className="flex h-28 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
+            {weekKeys.map(k => {
+              const m = week.get(k) ?? 0
+              const isToday = k === todayKey
+              return (
+                <div key={k} className="flex flex-1 flex-col items-center gap-1.5" title={`${k}: ${fmtMin(m)}`}>
+                  <div className="w-full rounded-md transition-all"
+                    style={{ height: `${Math.max(6, (m / maxWeek) * 84)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 26%, transparent)', boxShadow: isToday ? '0 0 16px -2px var(--accent-solid)' : undefined }} />
+                  <span className={`text-xs ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
+                </div>
+              )
+            })}
           </div>
+        </section>
         </div>
-      </section>
+      </div>
 
-      {/* phones have no sidebar: there, Home is where these are reached */}
+      {/* phones have no rail: there, Home is where these are reached */}
       <div className="md:hidden"><HomeActions /></div>
 
       <CourseAccess courses={courses} counts={material.counts} recent={material.recent} coursesClassName="md:hidden" />

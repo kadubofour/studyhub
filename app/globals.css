@@ -1,22 +1,28 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Studio: one design, dark first. A midnight ink page lit from the top by the student's accent (the aurora), and layered glass panels on it.
+   Light mode keeps the same structure, paler. Contrast of text on every surface is checked by tests/unit/studioTokens.test.ts. */
 :root {
-  --bg: #fbfbfa; --raised: #ffffff; --surface: #f3f3f0; --line: #e6e5e0; --fg: #1f1f1d; --muted: #6b6a65;
-  --danger: #c43c3c; --danger-soft: #fcebeb; --success: #1d7a52; --warn: #9a5200;
-  --shadow: 0 1px 2px rgb(20 20 19 / 0.05), 0 4px 14px rgb(20 20 19 / 0.05);
+  --bg: #F5F6FB; --raised: #FFFFFF; --surface: #ECEEF6; --line: #DFE2EE; --fg: #151628; --muted: #5A5E80;
+  --glass: rgb(255 255 255 / 0.78); --glass-strong: rgb(255 255 255 / 0.92); --edge: rgb(255 255 255 / 0.9);
+  --danger: #C2364A; --danger-soft: #FBE9EC; --success: #12795A; --warn: #8F5200;
+  --shadow: 0 1px 2px rgb(21 22 40 / 0.04), 0 10px 32px -14px rgb(21 22 40 / 0.18);
+  --aurora-strength: 13%;
   /* Accent defaults (blue preset) for pages outside the signed-in app */
   --accent: #3B5BDB; --accent-soft: #EEF1FD; --accent-solid: #3B5BDB; --accent-glow: #7C5CFF;
   --app-font: var(--font-inter);
-  --display-font: var(--font-bricolage);
-  --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
+  --display-font: var(--font-instrument);
+  --tile-a: var(--glass); --tile-b: var(--glass); --tile-c: var(--glass);
 }
 .dark {
-  --bg: #121211; --raised: #1a1a19; --surface: #222220; --line: #30302d; --fg: #ededea; --muted: #9a9993;
-  --danger: #f07b7b; --danger-soft: #3d1b1b; --success: #4fd1a5; --warn: #f0b45a;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
+  --bg: #0E0F1A; --raised: #171927; --surface: #1D2032; --line: #282B42; --fg: #ECEDF7; --muted: #9196B3;
+  --glass: rgb(23 25 39 / 0.72); --glass-strong: rgb(27 29 45 / 0.92); --edge: rgb(255 255 255 / 0.07);
+  --danger: #FF8095; --danger-soft: #3A1621; --success: #4FD1A5; --warn: #F0B45A;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 44px -18px rgb(0 0 0 / 0.75);
+  --aurora-strength: 26%;
   --accent: #8DA2FB; --accent-soft: #1B2550;
-  --tile-a: var(--raised); --tile-b: var(--raised); --tile-c: var(--raised);
+  --tile-a: var(--glass); --tile-b: var(--glass); --tile-c: var(--glass);
 }
 
 /* The signed-in app sets --a-* and --app-font from the student's Settings (see AppShell) */
@@ -24,78 +30,24 @@
   --accent: var(--a-text); --accent-soft: var(--a-soft); --accent-solid: var(--a-solid); --accent-glow: var(--a-glow);
   /* the student's own accent under names a page can keep when it recolours --accent-* (the Focus page's breaks do) */
   --user-solid: var(--a-solid); --user-glow: var(--a-glow);
+  font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif;
+  /* the aurora: the accent glowing from the top of every page, fixed while the page scrolls */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(900px 420px at 18% -160px, color-mix(in srgb, var(--accent-solid) var(--aurora-strength), transparent), transparent 72%),
+    radial-gradient(700px 360px at 92% -120px, color-mix(in srgb, var(--accent-glow) calc(var(--aurora-strength) * 0.7), transparent), transparent 70%);
+  background-attachment: fixed; background-repeat: no-repeat;
 }
 .dark .app-root { --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); }
 
-/* Paper: the same variables, warmer values. Colours here are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
-.app-root[data-look="paper"] {
-  --bg: #F6F0E4; --raised: #FFFBF2; --surface: #EFE7D6; --line: #E2D8C3; --fg: #2A2520; --muted: #6E6455;
-  --shadow: 0 1px 2px rgb(60 45 20 / 0.06), 0 4px 14px rgb(60 45 20 / 0.06);
-  --tile-a: #F8E4D4; --tile-b: #F7EDC4; --tile-c: #DDEEE3;
-}
-/* Paper is for light mode only: in dark mode the app shows Classic (components/providers/useLook.ts). These are Classic's dark values, so
-   nothing cream shows in the moment before the page knows the theme. */
-.dark .app-root[data-look="paper"] {
-  --bg: #121211; --raised: #1a1a19; --surface: #222220; --line: #30302d; --fg: #ededea; --muted: #9a9993;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
-  --tile-a: #1a1a19; --tile-b: #1a1a19; --tile-c: #1a1a19;
-}
-/* Vivid: bold colour on a light neutral page, big type, soft large corners, a darker sidebar and a top bar.
-   Colours are checked against lib/appearance.ts (LOOKS) by tests/unit/lookCss.test.ts */
-.app-root[data-look="vivid"] {
-  --bg: #FAFAF8; --raised: #FFFFFF; --surface: #F1F1EE; --line: #E4E3DE; --fg: #1B1B1F; --muted: #5D5C66;
-  --shadow: 0 2px 4px rgb(20 20 30 / 0.05), 0 8px 24px rgb(20 20 30 / 0.08);
-  --tile-a: #FFDCCB; --tile-b: #CDEFE0; --tile-c: #FFEBB0;
-}
-.dark .app-root[data-look="vivid"] {
-  --bg: #18181C; --raised: #212127; --surface: #2B2B33; --line: #3A3A44; --fg: #F2F2F5; --muted: #A9A9B6;
-  --shadow: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
-  --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
-}
-/* The app sidebar (only that: the Study panel in a note is an aside too) is always the darker shade: charcoal on the light page,
-   near-black on the dark one. Its own tokens re-colour everything inside it. */
-/* Classic's sidebar is Classic's own warm neutral (the same family as its text colour #1F1F1D), so it sits in the theme instead of adding a blue. */
-.app-root[data-look="classic"] .app-sidebar {
-  background: #1F1F1D; --fg: #ECEBE8; --muted: #A8A7A1; --line: #3A3A37; --surface: #2A2A28; --raised: #353533;
-  --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --warn: #F0B45A; --tile-a: #2A2A28; --tile-b: #2A2A28; --tile-c: #2A2A28;
-  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
-}
-.dark .app-root[data-look="paper"] .app-sidebar,
-.dark .app-root[data-look="classic"] .app-sidebar { background: #0D0D0C; --line: #262624; --surface: #1A1A19; --raised: #242422; }
-.app-root[data-look="vivid"] .app-sidebar {
-  background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
-  --danger: #F28B8B; --danger-soft: #3D1B1B; --success: #4FD1A5; --warn: #F0B45A; --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
-  --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); color: var(--fg); color-scheme: dark;
-}
-.dark .app-root[data-look="vivid"] .app-sidebar { background: #0E0E11; --line: #26262E; --surface: #1B1B21; --raised: #25252D; }
-/* Playful: thick outlines, flat colour, buttons that press down */
-.app-root[data-look="playful"] {
-  --bg: #F7FBF4; --raised: #FFFFFF; --surface: #EAF2E5; --line: #CFDACA; --fg: #26301F; --muted: #556350;
-  --shadow: none;
-  --tile-a: #FFEFBF; --tile-b: #D6F1DD; --tile-c: #D5E8FF;
-}
-.dark .app-root[data-look="playful"] {
-  --bg: #131F24; --raised: #1E2D34; --surface: #26373F; --line: #3A4B54; --fg: #F0F6F9; --muted: #A9BBC4;
-  --shadow: none;
-  --tile-a: #3D3515; --tile-b: #1E3B2A; --tile-c: #1C3447;
-}
-/* Behind the app (overscroll on phones) matches the look */
-body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
-.dark body:has(.app-root[data-look="paper"]) { background: #121211; }
-body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
-.dark body:has(.app-root[data-look="vivid"]) { background: #18181C; }
-body:has(.app-root[data-look="playful"]) { background: #F7FBF4; }
-.dark body:has(.app-root[data-look="playful"]) { background: #131F24; }
+/* Tinted tiles from older parts are plain glass in Studio; a course keeps its colour as a bar */
+[data-tint] { background: var(--glass); border: 1px solid var(--line); }
+[data-tint-icon] { background: var(--surface); }
+[data-block] { background: var(--surface); color: var(--fg); box-shadow: inset 4px 0 0 var(--c); }
 
-
-/* Classic is calm: the tinted tiles become plain raised cards with a hairline (unlayered, so they beat the tile's own tint) */
-.app-root[data-look="classic"] [data-tint], .dark .app-root[data-look="paper"] [data-tint] { background: var(--raised); border: 1px solid var(--line); }
-.app-root[data-look="classic"] [data-tint-icon], .dark .app-root[data-look="paper"] [data-tint-icon] { background: var(--surface); }
-.app-root[data-look="classic"] [data-block], .dark .app-root[data-look="paper"] [data-block] { background: var(--surface); color: var(--fg); box-shadow: inset 4px 0 0 var(--c); }
-
-/* Whatever is scrolled into view (by the keyboard, a link, a screen reader) clears the sticky top bar, and on a phone the tab bar at the bottom */
+/* Whatever is scrolled into view (by the keyboard, a link, a screen reader) clears the status strip, and on a phone the dock at the bottom */
 html { scroll-padding-top: 4.5rem; }
-@media (max-width: 767px) { html { scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); } }
+@media (max-width: 767px) { html { scroll-padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); } }
 
 /* A scrollable area without its scrollbar: it still scrolls (wheel, touch, keyboard) */
 .no-scrollbar { scrollbar-width: none; }
@@ -108,37 +60,44 @@ html { scroll-padding-top: 4.5rem; }
   --color-success: var(--success); --color-warn: var(--warn);
 }
 
-body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.6; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
-/* The display face: page titles, section titles, tile titles and big numbers */
-.font-display { font-family: var(--display-font), var(--app-font), ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.012em; }
-.app-root { font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; }
+body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.6; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+/* The display face: page titles, panel titles, tile titles and numbers */
+.font-display { font-family: var(--display-font), var(--app-font), ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.015em; font-feature-settings: "tnum" 1; }
+/* A keycap for a keyboard shortcut */
+.kbd { @apply inline-flex min-w-5 items-center justify-center rounded-md border border-line bg-surface px-1.5 font-mono text-[11px] leading-5 text-muted; }
 
 @layer components {
-  /* Buttons: 40 px (44 on touch). Secondary is a filled soft surface, primary the solid accent, quiet is text that fills on hover. */
-  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-transparent bg-surface px-4 py-2 text-[15px] font-medium whitespace-nowrap text-fg transition hover:border-line disabled:opacity-60 pointer-coarse:min-h-11; }
-  .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--fg) 7%, var(--surface)); }
-  .btn-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent-solid px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition hover:brightness-110 active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; }
-  .btn-danger { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-danger px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition hover:brightness-110 active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; }
+  /* Glass: the surface of every panel. A blurred, slightly see-through layer over the aurora, with a lit top edge. */
+  .glass { background: var(--glass); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); }
+
+  /* Buttons: 40 px (44 on touch), 10 px corners. Primary is the accent lit from within; secondary is glass; quiet is text that fills on hover. */
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-line px-4 py-2 text-[15px] font-medium whitespace-nowrap text-fg transition disabled:opacity-60 pointer-coarse:min-h-11; background: var(--glass); box-shadow: inset 0 1px 0 var(--edge); }
+  .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--fg) 8%, var(--glass-strong)); }
+  .btn-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] bg-accent-solid px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 6px 18px -8px var(--accent-solid); }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 10px 26px -8px var(--accent-solid); }
+  .btn-danger { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] bg-danger px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition hover:brightness-110 active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; }
   .dark .btn-danger { @apply text-black; }
-  .btn-ghost { @apply inline-flex min-h-9 items-center gap-2 rounded-xl px-2.5 py-1.5 text-[15px] whitespace-nowrap text-muted transition hover:bg-surface hover:text-fg pointer-coarse:min-h-11 pointer-coarse:px-3; }
+  .btn-ghost { @apply inline-flex min-h-9 items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-[15px] whitespace-nowrap text-muted transition hover:bg-surface hover:text-fg pointer-coarse:min-h-11 pointer-coarse:px-3; }
   .field { @apply flex flex-col gap-1.5 text-[15px]; }
   .field > span { @apply text-sm font-medium text-muted; }
   .field input, .field select, .field textarea, input.input, select.input, textarea.input {
-    @apply min-h-11 rounded-xl border border-line bg-surface/50 px-3.5 py-2.5 text-[15px] outline-none transition hover:border-[color-mix(in_srgb,var(--fg)_22%,var(--line))] focus:border-accent focus:bg-raised focus:ring-4 focus:ring-accent-soft;
+    @apply min-h-11 rounded-[10px] border border-line px-3.5 py-2.5 text-[15px] outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft;
+    background: var(--glass-strong);
   }
   /* Our own chevron instead of the browser's: same in every browser and theme */
   .field select, select.input {
     @apply cursor-pointer appearance-none bg-no-repeat pr-9;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f8e88' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f93ad' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
     background-position: right .7rem center; background-size: 15px;
   }
   /* Dropdown menus (note File/Edit/View, Export…) */
   .menu-panel {
-    @apply absolute z-50 mt-1.5 min-w-60 rounded-2xl border border-line bg-raised p-1.5;
-    box-shadow: 0 2px 6px rgb(20 20 19 / 0.06), 0 14px 36px rgb(20 20 19 / 0.12);
+    @apply absolute z-50 mt-1.5 min-w-60 rounded-2xl border border-line p-1.5;
+    background: var(--glass-strong); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    box-shadow: inset 0 1px 0 var(--edge), 0 2px 6px rgb(20 20 40 / 0.06), 0 18px 44px rgb(20 20 40 / 0.18);
     animation: menu-in .12s ease-out; transform-origin: top left;
   }
-  .dark .menu-panel { box-shadow: 0 2px 6px rgb(0 0 0 / 0.35), 0 14px 36px rgb(0 0 0 / 0.45); }
+  .dark .menu-panel { box-shadow: inset 0 1px 0 var(--edge), 0 2px 6px rgb(0 0 0 / 0.35), 0 18px 44px rgb(0 0 0 / 0.55); }
   .menu-item {
     @apply flex w-full items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-left text-sm outline-none transition-colors;
   }
@@ -151,68 +110,22 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
   .menu-item.danger .menu-icon, .menu-item.danger:hover .menu-icon { @apply text-danger; }
   .menu-kbd { @apply ml-auto rounded-md border border-line px-1.5 py-px font-mono text-[10.5px] text-muted; }
   .menu-sep { @apply mx-2 my-1 h-px bg-line; }
-  .card { @apply rounded-[1.25rem] border border-line bg-raised p-6; }
-  .tile { @apply rounded-[1.25rem] border border-line bg-raised px-6 py-5; }
-  a.tile:hover, button.tile:hover { box-shadow: var(--shadow); }
-  .tile-a { background: var(--tile-a); }
-  .tile-b { background: var(--tile-b); }
-  .tile-c { background: var(--tile-c); }
-  /* The hero is the top of a notebook page in the accent colour: faint ruled lines and a margin line */
+
+  /* Panels: glass, 16 px corners, 24 px inside. A clickable tile lifts a little and brightens its edge on hover. */
+  .card { @apply rounded-2xl p-6; background: var(--glass); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); }
+  .tile { @apply rounded-2xl px-6 py-5; background: var(--glass); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); }
+  a.tile:hover, button.tile:hover { border-color: color-mix(in srgb, var(--accent-solid) 45%, var(--line)); }
+  .tile-a, .tile-b, .tile-c { background: var(--glass); }
+  /* The hero: a larger glass panel with the accent glowing in from its corner */
   .hero {
-    @apply rounded-[1.75rem] py-8 pr-6 text-white; --hero-margin: 1.5rem; padding-left: calc(var(--hero-margin) + 1.1rem); box-shadow: var(--shadow);
-    background-color: var(--accent-solid);
-    background-image:
-      linear-gradient(90deg, transparent var(--hero-margin), rgb(255 255 255 / .32) var(--hero-margin), rgb(255 255 255 / .32) calc(var(--hero-margin) + 1.5px), transparent calc(var(--hero-margin) + 1.5px)),
-      repeating-linear-gradient(to bottom, transparent 0 1.9rem, rgb(255 255 255 / .11) 1.9rem calc(1.9rem + 1px));
+    @apply rounded-3xl p-8 text-fg;
+    background: radial-gradient(520px 260px at 0% 0%, color-mix(in srgb, var(--accent-solid) 32%, transparent), transparent 70%), var(--glass);
+    border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
   }
-  .hero h1 { font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.02em; }
-  /* A section's title: a short heading in the display face, sentence case, in the text colour */
-  .section-label { @apply mb-4 text-[1.25rem] leading-tight font-semibold text-fg; font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.005em; }
-  /* In the sidebar the group names stay small and quiet */
-  .app-sidebar .section-label { @apply text-[13px] font-semibold text-muted; letter-spacing: 0; font-family: inherit; }
-}
-
-@layer components {
-/* Vivid shapes: larger corners and type, a livelier hero, pill buttons. Same classes, so every page changes at once. */
-.app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; }
-.app-root[data-look="vivid"] .card { box-shadow: var(--shadow); border-color: transparent; }
-.app-root[data-look="vivid"] .card { padding: 1.75rem; }
-.app-root[data-look="vivid"] .tile { padding: 1.25rem 1.5rem; border-color: transparent; box-shadow: var(--shadow); }
-.app-root[data-look="vivid"] .hero { border-radius: 1.75rem; padding-block: 1.75rem; --hero-margin: 1.5rem; font-size: 1rem; }
-.app-root[data-look="vivid"] .hero h1 { font-size: 2rem; line-height: 1.15; }
-.app-root[data-look="vivid"] .btn, .app-root[data-look="vivid"] .btn-primary, .app-root[data-look="vivid"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
-.app-root[data-look="vivid"] .btn-primary { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent); }
-.app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] .field select,
-.app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; }
-.app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] input.input { padding-inline: 1rem; }
-.app-root[data-look="vivid"] .field textarea, .app-root[data-look="vivid"] textarea.input { border-radius: 1.25rem; }
-
-/* Classic shapes: Vivid's rounded cards, pill buttons and bigger hero, kept calm: plain tiles, quiet labels, no glow under buttons. */
-.app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card, .app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { border-radius: 1.25rem; }
-.app-root[data-look="classic"] .card, .dark .app-root[data-look="paper"] .card { padding: 1.75rem; }
-.app-root[data-look="classic"] .tile, .dark .app-root[data-look="paper"] .tile { padding: 1.25rem 1.5rem; }
-.app-root[data-look="classic"] .hero, .dark .app-root[data-look="paper"] .hero { border-radius: 1.75rem; padding-block: 2rem; --hero-margin: 1.75rem; font-size: 1rem; }
-/* Top bar chips are tinted tiles; in Classic that is the bar's own colour, so give them a body */
-.app-root[data-look="classic"] [aria-label="Today at a glance"] .tile-a, .app-root[data-look="classic"] [aria-label="Today at a glance"] .tile-b, .app-root[data-look="classic"] [aria-label="Today at a glance"] .tile-c,
-.dark .app-root[data-look="paper"] [aria-label="Today at a glance"] .tile-a, .dark .app-root[data-look="paper"] [aria-label="Today at a glance"] .tile-b, .dark .app-root[data-look="paper"] [aria-label="Today at a glance"] .tile-c { background: var(--surface); }
-
-/* Playful shapes: 2px outlines, a thick bottom edge on buttons that squashes when pressed, a flat hero. */
-.app-root[data-look="playful"] .card, .app-root[data-look="playful"] .tile { border-width: 2px; box-shadow: none; border-radius: 1.25rem; }
-.app-root[data-look="playful"] .card { padding: 1.5rem; }
-.app-root[data-look="playful"] .section-label { font-weight: 700; }
-.app-root[data-look="playful"] .hero { background: var(--accent-solid); border-radius: 1.5rem; padding: 1.5rem 1.75rem; box-shadow: none; border-bottom: 5px solid color-mix(in srgb, #000 22%, var(--accent-solid)); }
-.app-root[data-look="playful"] .hero h1 { font-size: 1.75rem; font-weight: 700; }
-.app-root[data-look="playful"] .btn, .app-root[data-look="playful"] .btn-primary, .app-root[data-look="playful"] .btn-danger {
-  border-radius: 1rem; font-weight: 700; border-width: 2px; border-bottom-width: 4px; padding-block: .5rem; box-shadow: none;
-}
-.app-root[data-look="playful"] .btn { border-color: var(--line); }
-.app-root[data-look="playful"] .btn-primary { border-color: color-mix(in srgb, #000 22%, var(--accent-solid)); }
-.app-root[data-look="playful"] .btn-danger { border-color: color-mix(in srgb, #000 22%, var(--danger)); }
-.app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: translateY(2px); border-bottom-width: 2px; }
-.app-root[data-look="playful"] .field input, .app-root[data-look="playful"] .field select, .app-root[data-look="playful"] .field textarea,
-.app-root[data-look="playful"] input.input, .app-root[data-look="playful"] select.input, .app-root[data-look="playful"] textarea.input { border-width: 2px; border-radius: 1rem; }
-.app-root[data-look="playful"] .app-sidebar { border-right-width: 2px; }
-@media (prefers-reduced-motion: reduce) { .app-root[data-look="playful"] .btn:active, .app-root[data-look="playful"] .btn-primary:active, .app-root[data-look="playful"] .btn-danger:active { transform: none; } }
+  .hero h1 { font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.025em; }
+  /* A panel's title: the display face, in the text colour */
+  .section-label { @apply mb-4 text-[17px] leading-tight font-semibold text-fg; font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.01em; }
 }
 
 .prose-note h1 { font-size: 1.4rem; font-weight: 600; margin: .7em 0 .3em; }
@@ -243,9 +156,10 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
   :root, .dark, .app-root, .dark .app-root, .app-root[data-look], .dark .app-root[data-look] {
     --bg: #fff; --raised: #fff; --surface: #f3f3f0; --line: #ccc; --fg: #000; --muted: #444;
     --accent: #2b3fa8; --accent-soft: #eef1fd; --danger: #a32d2d;
-    --tile-a: #fff; --tile-b: #fff; --tile-c: #fff;
+    --tile-a: #fff; --tile-b: #fff; --tile-c: #fff; --glass: #fff; --glass-strong: #fff; --edge: transparent; --shadow: none;
     color-scheme: light;
   }
+  .app-root { background-image: none; }
   .no-print { display: none !important; }
   body, body:has(.app-root[data-look]), .dark body:has(.app-root[data-look]) { background: #fff; color: #000; }
   .print-note { break-after: page; }

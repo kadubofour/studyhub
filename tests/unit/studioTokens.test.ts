@@ -1,0 +1,75 @@
+import { describe, it, expect } from 'vitest'
+import fs from 'node:fs'
+import { ACCENTS, contrastRatio } from '@/lib/appearance'
+
+const css = fs.readFileSync('app/globals.css', 'utf8').replace(/\r\n/g, '\n')
+// The declarations inside the first rule whose selector is exactly `selector`
+function block(selector: string): string {
+  const start = css.indexOf(`\n${selector} {`)
+  expect(start, `no rule for ${selector}`).toBeGreaterThanOrEqual(0)
+  return css.slice(start, css.indexOf('}', start))
+}
+const value = (b: string, name: string) => new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, 'i').exec(b)?.[1].toLowerCase()
+
+describe('the Studio colours', () => {
+  for (const [mode, sel] of [['light', ':root'], ['dark', '.dark']] as const) {
+    it(`${mode}: text and quiet text can be read on the page, on raised panels and on the soft surface`, () => {
+      const b = block(sel)
+      const [bg, raised, surface, fg, muted] = ['bg', 'raised', 'surface', 'fg', 'muted'].map(k => value(b, k)!)
+      for (const back of [bg, raised, surface]) {
+        expect(contrastRatio(fg, back), `text on ${back}`).toBeGreaterThanOrEqual(7)
+        expect(contrastRatio(muted, back), `quiet text on ${back}`).toBeGreaterThanOrEqual(4.5)
+      }
+    })
+  }
+  it('dark is a midnight ink, not a grey near-black', () => {
+    const bg = value(block('.dark'), 'bg')!
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(bg.slice(i, i + 2), 16))
+    expect(b).toBeGreaterThan(r) // blue leaning
+    expect(b).toBeGreaterThan(g)
+  })
+  it('every accent\'s button text is readable on its solid colour', () => {
+    for (const [name, a] of Object.entries(ACCENTS)) expect(contrastRatio('#ffffff', a.solid), name).toBeGreaterThanOrEqual(4.5)
+  })
+})
+
+describe('surfaces', () => {
+  it('panels, tiles and the hero are glass with a lit top edge', () => {
+    for (const sel of ['.card', '.tile', '.hero']) {
+      const rule = css.match(new RegExp(`\\s\\${sel} \\{[^}]*\\}`))![0]
+      expect(rule, sel).toContain('var(--glass)')
+      expect(rule, sel).toContain('inset 0 1px 0 var(--edge)')
+    }
+  })
+  it('the page is lit by the accent from the top (the aurora)', () => {
+    expect(block('.app-root')).toMatch(/radial-gradient\([^)]*var\(--accent-solid\)/)
+  })
+  it('there are no looks left in the stylesheet, except in the print reset', () => {
+    const outsidePrint = css.slice(0, css.indexOf('@media print {')) + css.slice(css.indexOf('\n}\n', css.indexOf('@media print {')))
+    expect(outsidePrint).not.toContain('data-look')
+  })
+})
+
+describe('section titles', () => {
+  it('are short headings in the display face, never all-caps eyebrows', () => {
+    const rule = css.match(/\s\.section-label \{[^}]*\}/)![0]
+    expect(rule).toContain('var(--display-font)')
+    expect(rule).not.toContain('uppercase')
+  })
+})
+
+describe('no-scrollbar', () => {
+  it('hides the scrollbar in every browser while leaving the area scrollable', () => {
+    expect(css).toMatch(/\.no-scrollbar \{[^}]*scrollbar-width: none/)
+    expect(css).toMatch(/\.no-scrollbar::-webkit-scrollbar \{[^}]*display: none/)
+  })
+})
+
+describe('printing', () => {
+  it('is black on white whatever the theme: glass, edges and the aurora are reset', () => {
+    const start = css.indexOf('@media print {')
+    const printCss = css.slice(start, css.indexOf('\n}\n', start))
+    for (const t of ['--glass: #fff', '--glass-strong: #fff', '--edge: transparent', '--shadow: none']) expect(printCss).toContain(t)
+    expect(printCss).toMatch(/\.app-root \{ background-image: none; \}/)
+  })
+})

@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderToString } from 'react-dom/server'
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import type { Profile } from '@/lib/types'
 
@@ -20,30 +19,6 @@ function Look() { return <output data-testid="look">{useProfile().profile.look}<
 const open = (p: Profile = base) => render(<ToastProvider><ProfileProvider initial={p}><AppearanceCard /><Look /></ProfileProvider></ToastProvider>)
 beforeEach(() => { impl = null; resolved = 'light'; failing = false; updateProfile.mockReset().mockResolvedValue({}) })
 afterEach(cleanup)
-
-describe('Paper is light mode only', () => {
-  it('is not offered in dark mode, and a student on Paper sees Classic selected without losing Paper', () => {
-    resolved = 'dark'
-    open({ ...base, look: 'paper' })
-    expect(screen.queryByRole('radio', { name: 'Paper look' })).toBeNull()
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-    expect(screen.getByTestId('look').textContent).toBe('paper')
-    expect(screen.getByText(/Paper is for light mode/)).toBeTruthy()
-  })
-  it('choosing the Classic that is already shown does not replace the saved Paper', async () => {
-    resolved = 'dark'
-    open({ ...base, look: 'paper' })
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Classic look' })) })
-    expect(updateProfile).not.toHaveBeenCalled()
-    expect(screen.getByTestId('look').textContent).toBe('paper')
-  })
-  it('keyboard moving skips Paper in dark mode', async () => {
-    resolved = 'dark'
-    open()
-    await act(async () => { fireEvent.keyDown(screen.getByRole('radio', { name: 'Classic look' }), { key: 'ArrowRight' }) })
-    expect(screen.getByTestId('look').textContent).toBe('vivid')
-  })
-})
 
 describe('Content width', () => {
   it('offers Focused, Wide and Full, with the current one chosen', () => {
@@ -65,55 +40,11 @@ describe('Content width', () => {
   })
 })
 
-describe('Look picker', () => {
-  it('shows Classic and Paper and marks the current one', () => {
+
+describe('one design', () => {
+  it('has no Look picker: accent, font and width are the choices', () => {
     open()
-    expect(screen.getByRole('radiogroup', { name: 'Look' })).toBeTruthy()
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-    expect(screen.getByRole('radio', { name: 'Paper look' }).getAttribute('aria-checked')).toBe('false')
-    expect(screen.getByText('Warm cream, softer edges')).toBeTruthy()
-  })
-  it('applies the new look at once and saves it', async () => {
-    open()
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Paper look' })) })
-    expect(screen.getByTestId('look').textContent).toBe('paper')
-    expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u', { look: 'paper' })
-    expect(screen.getByRole('radio', { name: 'Paper look' }).getAttribute('aria-checked')).toBe('true')
-  })
-  it('goes back to the previous look when saving fails', async () => {
-    failing = true
-    open()
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Paper look' })) })
-    expect(screen.getByTestId('look').textContent).toBe('classic')
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-  })
-  it('works from the keyboard like Accent and Font', async () => {
-    open()
-    await act(async () => { fireEvent.keyDown(screen.getByRole('radio', { name: 'Classic look' }), { key: 'ArrowRight' }) })
-    expect(screen.getByTestId('look').textContent).toBe('paper')
-  })
-  it('an old profile without a look shows Classic selected', () => {
-    const old = { ...base } as Record<string, unknown>
-    delete old.look
-    open(old as unknown as Profile)
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-  })
-  it('a failed accent save does not undo a look that was saved meanwhile', async () => {
-    let rejectFirst: (e: Error) => void = () => {}
-    let calls = 0
-    impl = () => (++calls === 1 ? new Promise((_, rej) => { rejectFirst = rej }) : Promise.resolve({}))
-    open()
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Coral accent' })) })
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Paper look' })) })
-    await act(async () => { rejectFirst(new Error('offline')) })
-    expect(screen.getByTestId('look').textContent).toBe('paper')
-    expect(screen.getByRole('radio', { name: 'Blue accent' }).getAttribute('aria-checked')).toBe('true')
-    expect(screen.getByRole('radio', { name: 'Coral accent' }).getAttribute('aria-checked')).toBe('false')
-  })
-  it('the previews are drawn light on the server even when the theme is dark, so hydration matches', () => {
-    resolved = 'dark' // what the browser's first render reads; the server cannot know it
-    const html = renderToString(<ToastProvider><ProfileProvider initial={base}><AppearanceCard /></ProfileProvider></ToastProvider>)
-    expect(html).toContain('#fbfbfa') // Classic light background
-    expect(html).not.toContain('#121211') // Classic dark background
+    expect(screen.queryByRole('radiogroup', { name: 'Look' })).toBeNull()
+    for (const name of ['Content width', 'Accent colour']) expect(screen.getByRole('radiogroup', { name })).toBeTruthy()
   })
 })

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
-import { cookies, headers } from 'next/headers'
-import { SIDEBAR_COOKIE } from '@/lib/ui/sidebarCookie'
+import { headers } from 'next/headers'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -32,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <FocusProvider>
             <ReminderProvider>
               <AmbientPlayer />
-              <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
+              <AppShell>{children}</AppShell>
             </ReminderProvider>
           </FocusProvider>
         </ConfirmProvider>

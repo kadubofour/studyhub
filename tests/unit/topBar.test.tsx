@@ -32,7 +32,7 @@ import { TopBar } from '@/components/shell/TopBar'
 const summary = (over: Partial<XpSummary> = {}): XpSummary => ({
   total: 120, today: 10, level: { level: 2, into: 70, span: 150, toNext: 80 }, streak: 0, best: 0, goals: [], allDone: false, bonus: 20, last14: [], ...over,
 })
-const open = async () => { await act(async () => { render(<TopBar />) }) }
+const open = async () => { await act(async () => { render(<TopBar onSearch={() => {}} />) }) }
 beforeEach(() => { forgetXp(); countCalls = 0; path = '/home'; timer = createTimer('focus', 25 * MIN); now = 0; xp = null; due = 0; dueFails = false; toggle.mockClear() })
 afterEach(cleanup)
 
@@ -46,9 +46,11 @@ describe('TopBar keeping up', () => {
     expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull() // nothing due: nothing to say
     expect(countCalls).toBe(2)
   })
-  it('leaves room for the Show sidebar button when the sidebar is hidden', async () => {
-    await act(async () => { render(<TopBar sidebarHidden />) })
-    expect(screen.getByRole('banner').className).toContain('md:pl-16')
+  it('opens the command palette from its search button', async () => {
+    const onSearch = vi.fn()
+    await act(async () => { render(<TopBar onSearch={onSearch} />) })
+    fireEvent.click(screen.getByRole('button', { name: 'Search or jump' }))
+    expect(onSearch).toHaveBeenCalled()
   })
   it('has short and long wording for narrow and wide screens, so nothing is cut off on a phone', async () => {
     due = 12
@@ -70,9 +72,9 @@ describe('TopBar keeping up', () => {
   })
   it('shows the cheer first in the strip, so it does not push the other chips about', async () => {
     xp = summary({ total: 120 })
-    const { rerender } = render(<TopBar />)
+    const { rerender } = render(<TopBar onSearch={() => {}} />)
     xp = summary({ total: 130 })
-    await act(async () => { rerender(<TopBar />) })
+    await act(async () => { rerender(<TopBar onSearch={() => {}} />) })
     const strip = screen.getByRole('banner').querySelector('.overflow-x-auto')!
     expect(strip.firstElementChild!.textContent).toBe('+10 XP')
   })
@@ -81,11 +83,11 @@ describe('TopBar keeping up', () => {
 describe('TopBar celebrations', () => {
   it('still celebrates after a full-screen page took the bar away and brought it back', async () => {
     xp = summary({ total: 120 })
-    const first = render(<TopBar />)
+    const first = render(<TopBar onSearch={() => {}} />)
     await act(async () => {})
     first.unmount() // a quiz or note editor page: no top bar
     xp = summary({ total: 135 })
-    await act(async () => { render(<TopBar />) })
+    await act(async () => { render(<TopBar onSearch={() => {}} />) })
     expect(screen.getByRole('status').textContent).toBe('+15 XP')
   })
   const level = (n: number, into = 10) => ({ level: n, into, span: 150, toNext: 140 })
@@ -107,32 +109,32 @@ describe('TopBar celebrations', () => {
   })
   it('cheers the points gained when XP goes up', async () => {
     xp = summary({ total: 120 })
-    const { rerender } = render(<TopBar />)
+    const { rerender } = render(<TopBar onSearch={() => {}} />)
     xp = summary({ total: 145 })
-    await act(async () => { rerender(<TopBar />) })
+    await act(async () => { rerender(<TopBar onSearch={() => {}} />) })
     expect(screen.getByRole('status').textContent).toBe('+25 XP')
   })
   it('announces a new level', async () => {
     xp = summary({ total: 190, level: level(2) })
-    const { rerender } = render(<TopBar />)
+    const { rerender } = render(<TopBar onSearch={() => {}} />)
     xp = summary({ total: 210, level: level(3) })
-    await act(async () => { rerender(<TopBar />) })
+    await act(async () => { rerender(<TopBar onSearch={() => {}} />) })
     expect(screen.getByRole('status').textContent).toBe('Level up! You reached level 3 (+20 XP)')
   })
   it('stays quiet when nothing was gained', async () => {
     xp = summary({ total: 120 })
-    const { rerender } = render(<TopBar />)
+    const { rerender } = render(<TopBar onSearch={() => {}} />)
     xp = summary({ total: 120 })
-    await act(async () => { rerender(<TopBar />) })
+    await act(async () => { rerender(<TopBar onSearch={() => {}} />) })
     expect(screen.getByRole('status').textContent).toBe('')
   })
   it('fades away after a few seconds', async () => {
     vi.useFakeTimers()
     try {
       xp = summary({ total: 120 })
-      const { rerender } = render(<TopBar />)
+      const { rerender } = render(<TopBar onSearch={() => {}} />)
       xp = summary({ total: 130 })
-      await act(async () => { rerender(<TopBar />) })
+      await act(async () => { rerender(<TopBar onSearch={() => {}} />) })
       expect(screen.getByRole('status').textContent).toBe('+10 XP')
       await act(async () => { vi.advanceTimersByTime(4500) })
       expect(screen.getByRole('status').textContent).toBe('')

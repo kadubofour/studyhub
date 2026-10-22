@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Flame, Layers, Pause, Play, School, Zap } from 'lucide-react'
+import { Flame, Layers, Pause, Play, School, Search, Zap } from 'lucide-react'
 import { MODE_LABEL, fmtClock, useFocus } from '@/components/providers/FocusProvider'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useXp } from '@/components/xp/useXp'
@@ -16,10 +16,10 @@ import { celebrate, rememberXp, seenXp, type Burst, type Snapshot } from '@/lib/
 import { useProgressChanged } from '@/lib/xp/events'
 import { useCoursesChanged, useTimetableChanged } from '@/lib/course/events'
 
-const chip = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:py-2.5'
+const chip = 'glass inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:py-2.5'
 
-// A strip above every page (Classic and Vivid looks): the focus timer, cards due, the streak and the level, so they are one glance away
-export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
+// The strip above every page: the way into the command palette, and on the right only what there is to say (a running timer, cards due, the streak, the level)
+export function TopBar({ onSearch }: { onSearch: () => void }) {
   const path = usePathname()
   const { timer, now, toggle } = useFocus()
   const { xp } = useXp(path) // read again on each page: a session finished on another page shows up here
@@ -72,7 +72,12 @@ export function TopBar({ sidebarHidden = false }: { sidebarHidden?: boolean }) {
   const underway = running || timer.accumulatedMs > 0
 
   return (
-    <header aria-label="Today at a glance" className={`no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-bg/90 px-5 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] backdrop-blur md:px-10 ${sidebarHidden ? 'md:pl-16' : ''}`}>
+    <header aria-label="Today at a glance" className="no-print sticky top-0 z-30 flex items-center gap-3 px-5 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10">
+      <button type="button" onClick={onSearch} aria-label="Search or jump"
+        className="glass flex min-h-10 min-w-0 items-center gap-2.5 rounded-xl px-3.5 text-[15px] text-muted transition hover:text-fg md:w-80">
+        <Search size={16} aria-hidden /><span aria-hidden className="hidden truncate md:inline">Search or jump…</span>
+        <span aria-hidden className="ml-auto hidden items-center gap-1 md:flex"><span className="kbd">Ctrl</span><span className="kbd">K</span></span>
+      </button>
       <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto">
         {burst && (
           <span className={`${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>
