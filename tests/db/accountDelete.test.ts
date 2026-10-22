@@ -3,7 +3,7 @@ import { adminClient, newUser } from './helpers'
 
 // Every table that holds a student's rows has a user_id; deleting the sign-in must take them all
 const OWNED = [
-  'profiles', 'courses', 'classes', 'tasks', 'notes', 'decks', 'cards', 'reviews', 'focus_sessions', 'quizzes', 'quiz_attempts', 'lectures',
+  'profiles', 'courses', 'classes', 'tasks', 'notebooks', 'notes', 'decks', 'cards', 'reviews', 'focus_sessions', 'quizzes', 'quiz_attempts', 'lectures',
   'topics', 'topic_links', 'topic_resources', 'study_plans', 'study_plan_days', 'tutor_chats', 'tutor_messages', 'game_plays',
   'entitlements', 'payments', 'ai_charges', 'ai_requests', 'transcription_usage',
 ]

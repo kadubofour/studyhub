@@ -143,7 +143,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
                 {g.items.map(link)}
                 {g.scan && (
                   <>
-                    <button type="button" onClick={() => setUploading(true)}
+                    <button type="button" onClick={() => { setUploadNext(undefined); setUploading(true) }}
                       className="mt-1 flex items-center gap-2.5 rounded-xl bg-black/30 px-2.5 py-2 text-sm text-fg transition hover:bg-black/45">
                       <Upload size={17} aria-hidden />Upload
                     </button>

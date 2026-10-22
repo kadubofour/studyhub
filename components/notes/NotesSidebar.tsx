@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Upload, CheckSquare, X, NotebookPen, Search, MoreHorizontal, FolderClosed, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
@@ -114,20 +114,25 @@ export function NotesSidebar() {
       setNotebooks(bs => bs.filter(x => x.id !== b.id)); setNotes(ns => ns?.map(n => (n.notebook_id === b.id ? { ...n, notebook_id: null } : n)) ?? ns); setNotebook('')
     } catch { toast("Couldn't delete the notebook.") }
   }
-  async function moveTo(ids: string[], target: string | null, made?: Notebook) {
+  async function moveTo(ids: string[], target: string | null) {
     setMoving(null)
     try {
       await moveNotes(supabase(), ids, target)
-      if (made) setNotebooks(bs => [...bs, made])
       setNotes(ns => ns?.map(n => (ids.includes(n.id) ? { ...n, notebook_id: target } : n)) ?? ns)
       setSelecting(false); setSelected([])
     } catch { toast("Couldn't move the notes.") }
   }
+  const making = useRef(false) // a second press while the notebook is being made must not make another
   async function createAndMove(name: string) {
+    if (making.current) return
+    making.current = true
     const ids = moving ?? []
-    let made: Notebook
-    try { made = await createNotebook(supabase(), name) } catch { setMoving(null); toast("Couldn't make the notebook."); return }
-    await moveTo(ids, made.id, made)
+    try {
+      let made: Notebook
+      try { made = await createNotebook(supabase(), name) } catch { setMoving(null); toast("Couldn't make the notebook."); return }
+      setNotebooks(bs => [...bs, made]) // it exists now, whether or not the move works
+      await moveTo(ids, made.id)
+    } finally { making.current = false }
   }
 
   const menuItems = (n: NoteSummary): MenuEntry[] => [
@@ -206,7 +211,9 @@ export function NotesSidebar() {
           <button className="btn-primary" onClick={create}>Write your first note</button>
         </EmptyState>
       )}
-      {notes && !empty && shown.length === 0 && <p className="py-2 text-sm text-muted">No notes match.</p>}
+      {notes && !empty && shown.length === 0 && (
+        <p className="py-2 text-sm text-muted">{!q.trim() && !course && notebook && notebook !== 'none' ? 'This notebook is empty. Move notes into it from their menu.' : 'No notes match.'}</p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map(n => {

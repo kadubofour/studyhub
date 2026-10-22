@@ -53,3 +53,15 @@ test('Tutor: Upload beside the search turns a file into a note and opens a chat 
   await expect(page.getByText('About').first()).toBeVisible()
   await expect(page.getByRole('link', { name: /krebs/i }).first()).toBeVisible()
 })
+
+test('Upload opened from the sidebar afterwards does not still lead to a chat', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the sidebar')
+  await signUp(page)
+  await page.goto('/tutor')
+  await page.getByRole('main').getByRole('button', { name: 'Upload', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Upload material' }).getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('complementary').getByRole('button', { name: 'Upload' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Upload material' })
+  await dialog.getByLabel('File to upload').setInputFiles({ name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('Some notes.') })
+  await expect(dialog.getByRole('radio', { name: 'Open the note' })).toBeChecked()
+})

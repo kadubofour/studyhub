@@ -58,6 +58,28 @@ describe('notebooks', () => {
     await expect(moveNotes(B.sb, [theirs.id], mine.id)).rejects.toBeTruthy()
   })
 
+  it('moving a note in or out, or deleting its notebook, is not an edit: the note keeps its edited time', async () => {
+    const book = await createNotebook(A.sb, 'Quiet')
+    const n = await createNote(A.sb, { title: 'Old note', content_md: 'x' })
+    await A.sb.from('notes').update({ updated_at: '2020-01-01T00:00:00Z' }).eq('id', n.id) // an edit would set it to now
+    const before = (await A.sb.from('notes').select('updated_at').eq('id', n.id).single()).data!.updated_at
+    await moveNotes(A.sb, [n.id], book.id)
+    expect((await A.sb.from('notes').select('updated_at').eq('id', n.id).single()).data!.updated_at).toBe(before)
+    await deleteNotebook(A.sb, book.id)
+    expect((await A.sb.from('notes').select('updated_at').eq('id', n.id).single()).data!.updated_at).toBe(before)
+    await A.sb.from('notes').update({ title: 'Edited' }).eq('id', n.id) // a real edit still counts
+    expect((await A.sb.from('notes').select('updated_at').eq('id', n.id).single()).data!.updated_at).not.toBe(before)
+  })
+
+  it('search matches a backslash and a percent sign literally', async () => {
+    await createNote(A.sb, { title: 'Path note', content_md: 'saved in C:\\temp\\files' })
+    await createNote(A.sb, { title: 'Percent note', content_md: 'scored 50% overall' })
+    expect((await searchNotes(A.sb, 'C:\\temp')).map(n => n.title)).toEqual(['Path note'])
+    expect((await searchNotes(A.sb, 'temp\\')).map(n => n.title)).toEqual(['Path note'])
+    expect((await searchNotes(A.sb, '50%')).map(n => n.title)).toEqual(['Percent note'])
+    expect(await searchNotes(A.sb, 'zzz\\')).toEqual([])
+  })
+
   it('go with the account (deleting the user removes them)', async () => {
     const fresh = await newUser()
     await createNotebook(fresh.sb, 'Mine')

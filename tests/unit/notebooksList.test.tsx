@@ -156,6 +156,27 @@ describe('moving notes into a notebook', () => {
     expect(createNotebook).toHaveBeenCalledWith(expect.anything(), 'History')
     expect(moveNotes).toHaveBeenCalledWith(expect.anything(), ['d'], 'b3')
   })
+  it('makes the notebook once even if Create and move is pressed twice, and keeps it in the list if the move fails', async () => {
+    moveNotes.mockRejectedValueOnce(new Error('offline'))
+    await open()
+    await act(async () => { fireEvent.contextMenu(screen.getByRole('link', { name: /Loose note/ }), { clientX: 10, clientY: 10 }) })
+    fireEvent.click(within(screen.getByRole('menu', { name: 'Loose note' })).getByRole('menuitem', { name: /Move to notebook/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Move to notebook' })
+    fireEvent.change(within(dialog).getByLabelText('New notebook'), { target: { value: 'History' } })
+    await act(async () => {
+      fireEvent.submit(within(dialog).getByLabelText('New notebook').closest('form')!)
+      fireEvent.submit(within(dialog).getByLabelText('New notebook').closest('form')!)
+    })
+    expect(createNotebook).toHaveBeenCalledTimes(1)
+    expect(bar().getByRole('radio', { name: /^History/ })).toBeTruthy() // the notebook exists, so it is shown
+  })
+  it('an empty notebook says it is empty, not that nothing matches', async () => {
+    books = [...books, { id: 'b9', name: 'Empty one' }]
+    await open()
+    fireEvent.click(bar().getByRole('radio', { name: /^Empty one/ }))
+    expect(screen.getByText(/This notebook is empty/)).toBeTruthy()
+    expect(screen.queryByText('No notes match.')).toBeNull()
+  })
   it('says so and changes nothing when the move fails', async () => {
     moveNotes.mockRejectedValueOnce(new Error('offline'))
     await open()
