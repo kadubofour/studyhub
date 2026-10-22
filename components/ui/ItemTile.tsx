@@ -29,7 +29,7 @@ function IconBox({ icon: Icon, color, size, badge }: { icon: LucideIcon; color: 
   )
 }
 
-export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, href, subtitle, meta, aside, badge, select, onMenu, onContextMenu }: {
+export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, href, subtitle, meta, aside, badge, select, onMenu, onContextMenu, corner }: {
   layout: Layout; icon: LucideIcon
   /** The course's colour, for the icon */
   color?: string
@@ -44,6 +44,8 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
   select?: { on: boolean; onToggle: () => void }
   onMenu?: (e: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
+  /** A control of its own in the corner, beside the link (the Library's tick box) */
+  corner?: React.ReactNode
 }) {
   const name = title || 'Untitled'
   const on = !!select?.on
@@ -94,14 +96,15 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
   const cls = layout === 'icons'
     ? `relative flex h-full w-full flex-col items-center gap-2 rounded-xl p-2 pt-3 text-center transition hover:bg-surface ${ring}`
     : layout === 'list'
-      ? `tile flex w-full items-center gap-3 !py-2.5 text-left transition hover:border-accent ${onMenu ? 'pr-11' : ''} ${ring}`
-      : `tile flex h-full w-full flex-col gap-3 text-left transition hover:-translate-y-0.5 hover:border-accent ${onMenu ? 'pr-10' : ''} ${ring}`
+      ? `tile flex w-full items-center gap-3 !py-2.5 text-left transition hover:border-accent ${onMenu || corner ? 'pr-11' : ''} ${ring}`
+      : `tile flex h-full w-full flex-col gap-3 text-left transition hover:-translate-y-0.5 hover:border-accent ${onMenu || corner ? 'pr-10' : ''} ${ring}`
 
   return (
     <div role="listitem" className="group relative">
       {select
         ? <button type="button" role="checkbox" aria-checked={on} aria-label={`Select ${name}`} className={cls} onClick={select.onToggle}>{body}</button>
         : <Link href={href} className={cls} title={layout === 'icons' ? name : undefined} onContextMenu={onContextMenu}>{body}</Link>}
+      {corner && <span className={`absolute flex ${layout === 'list' ? 'right-3.5 top-1/2 -translate-y-1/2' : layout === 'icons' ? 'left-1.5 top-1.5' : 'right-3.5 top-4'}`}>{corner}</span>}
       {onMenu && !select && (
         <button type="button" aria-label={`More actions for ${name}`} aria-haspopup="menu" onClick={onMenu}
           className={`absolute rounded-lg p-1 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:p-2.5 [@media(pointer:coarse)]:opacity-100 ${layout === 'list' ? 'right-2 top-1/2 -translate-y-1/2' : layout === 'icons' ? 'right-0.5 top-0.5' : 'right-2 top-3'}`}>

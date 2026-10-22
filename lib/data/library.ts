@@ -18,7 +18,7 @@ export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<Librar
   ])
   const noteCourse = new Map(notes.map(n => [n.id, n.course_id]))
   return [
-    ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, at: n.updated_at, meta: '', href: `/notes/${n.id}` })),
+    ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, notebook_id: n.notebook_id ?? null, at: n.updated_at, meta: '', href: `/notes/${n.id}` })),
     ...decks.map(d => ({
       kind: 'deck' as const, id: d.id, title: d.name, course_id: d.course_id, at: d.created_at ?? '',
       due: d.due, meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,

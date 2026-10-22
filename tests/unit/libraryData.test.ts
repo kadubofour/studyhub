@@ -50,6 +50,12 @@ describe('loadLibrary', () => {
     expect(by['chat:c1']).toMatchObject({ title: 'Matrix?', href: '/tutor/c1', at: '2026-10-06T11:00:00Z' })
     expect(items).toHaveLength(5)
   })
+  it('keeps the notebook a note is in, so the Library can show it inside its folder', async () => {
+    const filed = { ...rows, notes: [{ ...rows.notes[0], notebook_id: 'nb1' }, { id: 'n2', course_id: null, title: 'Loose', updated_at: '2026-10-10T10:00:00Z', notebook_id: null }] }
+    const items = await loadLibrary(client(filed).sb, NOW)
+    expect(items.find(i => i.id === 'n1')!.notebook_id).toBe('nb1')
+    expect(items.find(i => i.id === 'n2')!.notebook_id).toBeNull()
+  })
   it('gives a quiz its note\'s course, and leaves out a quiz whose note is gone', async () => {
     const items = await loadLibrary(client(rows).sb, NOW)
     const quiz = items.find(i => i.kind === 'quiz')!

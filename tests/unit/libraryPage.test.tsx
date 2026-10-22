@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react'
 import type { Course } from '@/lib/types'
 import type { LibraryItem } from '@/lib/library/items'
@@ -28,14 +28,29 @@ vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses, createCourse: vi.fn(), updateCourse: vi.fn(), deleteCourse: vi.fn() }))
 vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (sb: unknown, p: unknown[], c: unknown) => moveItems(sb, p, c) }))
 vi.mock('@/lib/scan/events', () => ({ requestUpload: () => requestUpload() }))
+let notebooks: { id: string; name: string; created_at: string }[] = []
+const createNotebook = vi.fn(async (_sb: unknown, name: string) => { const b = { id: 'new', name, created_at: '' }; notebooks = [...notebooks, b]; return b })
+const renameNotebook = vi.fn(async (_sb: unknown, id: string, name: string) => { notebooks = notebooks.map(b => (b.id === id ? { ...b, name } : b)) })
+const deleteNotebook = vi.fn(async (_sb: unknown, id: string) => { notebooks = notebooks.filter(b => b.id !== id) })
+const moveNotes = vi.fn(async (..._a: unknown[]) => {})
+vi.mock('@/lib/data/notebooks', () => ({
+  listNotebooks: async () => notebooks,
+  createNotebook: (sb: unknown, n: string) => createNotebook(sb, n), renameNotebook: (sb: unknown, id: string, n: string) => renameNotebook(sb, id, n),
+  deleteNotebook: (sb: unknown, id: string) => deleteNotebook(sb, id), moveNotes: (...a: unknown[]) => moveNotes(...a),
+}))
 import LibraryPage from '@/app/(app)/library/page'
 import { ToastProvider } from '@/components/providers/ToastProvider'
+import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 
-const open = async () => { await act(async () => { render(<ToastProvider><LibraryPage /></ToastProvider>) }) }
+const open = async () => { await act(async () => { render(<ToastProvider><ConfirmProvider><LibraryPage /></ConfirmProvider></ToastProvider>) }) }
 const rows = () => screen.getAllByRole('listitem').map(li => li.textContent ?? '')
 const click = async (el: HTMLElement) => { await act(async () => { fireEvent.click(el) }) }
-beforeEach(() => { movedCount = null; items = STUFF; loadFails = false; search = ''; requestUpload.mockClear(); moveItems.mockClear(); loadLibrary.mockClear() })
+beforeEach(() => { notebooks = []; createNotebook.mockClear(); renameNotebook.mockClear(); deleteNotebook.mockClear(); moveNotes.mockClear(); movedCount = null; items = STUFF; loadFails = false; search = ''; requestUpload.mockClear(); moveItems.mockClear(); loadLibrary.mockClear() })
 afterEach(cleanup)
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+})
 
 describe('Library', () => {
   it('lists everything, newest first, with what it is and where it belongs', async () => {
@@ -239,5 +254,106 @@ describe('Library', () => {
     expect(screen.getByRole('button', { name: 'Biology' }).getAttribute('aria-pressed')).toBe('false')
     const chips = screen.getByRole('group', { name: 'Courses' })
     expect(within(chips).getByRole('button', { name: 'Biology' })).toBeTruthy()
+  })
+
+  describe('notebooks are folders', () => {
+    const FILED = [
+      ...STUFF,
+      { ...item('note', 'n3', 'Glycolysis', 'bio', '2026-10-12T10:00:00Z'), notebook_id: 'cell' },
+      { ...item('note', 'n4', 'Mitochondria', 'bio', '2026-10-01T10:00:00Z'), notebook_id: 'cell' },
+    ]
+    const shelf = () => within(screen.getByRole('list', { name: 'Notebooks' }))
+    const listed = () => within(screen.getByRole('list', { name: 'Library items' })).getAllByRole('listitem').map(li => li.textContent ?? '')
+    beforeEach(() => { items = FILED; notebooks = [{ id: 'cell', name: 'Cell biology', created_at: '' }, { id: 'old', name: 'Archive', created_at: '' }] })
+
+    it('shows each notebook as a folder with its note count, and keeps filed notes inside it', async () => {
+      await open()
+      expect(shelf().getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Open Archive, 0 notes', 'Open Cell biology, 2 notes'])
+      expect(listed().some(t => t.includes('Glycolysis'))).toBe(false)
+      expect(listed()).toHaveLength(7)
+    })
+    it('opens a folder: its notes, and a way back to the whole Library', async () => {
+      await open()
+      await click(shelf().getByRole('button', { name: /Cell biology/ }))
+      const trail = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      expect(trail.getByText('Cell biology').getAttribute('aria-current')).toBe('page')
+      expect(listed().map(t => t.includes('Glycolysis') || t.includes('Mitochondria'))).toEqual([true, true])
+      expect(screen.queryByRole('list', { name: 'Notebooks' })).toBeNull()
+      await click(trail.getByRole('button', { name: 'Library' }))
+      expect(screen.getByRole('list', { name: 'Notebooks' })).toBeTruthy()
+      expect(listed()).toHaveLength(7)
+    })
+    it('keeps the open folder in the address, so coming back from a note opens it again', async () => {
+      const replace = vi.spyOn(window.history, 'replaceState')
+      await open()
+      await click(shelf().getByRole('button', { name: /Cell biology/ }))
+      expect(String(replace.mock.calls.at(-1)![2])).toMatch(/[?&]notebook=cell/)
+      await click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: 'Library' }))
+      expect(String(replace.mock.calls.at(-1)![2])).not.toContain('notebook=')
+      cleanup()
+      search = 'notebook=cell'
+      await open()
+      expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Cell biology')).toBeTruthy()
+      replace.mockRestore()
+    })
+    it('says so when a folder is empty', async () => {
+      await open()
+      await click(shelf().getByRole('button', { name: /Archive/ }))
+      expect(screen.getByText('No notes in this notebook yet.')).toBeTruthy()
+    })
+    it('finds notes inside folders when searching, and says which notebook each is in', async () => {
+      await open()
+      fireEvent.change(screen.getByLabelText('Search the library'), { target: { value: 'glyco' } })
+      expect(screen.queryByRole('list', { name: 'Notebooks' })).toBeNull()
+      expect(listed()).toHaveLength(1)
+      expect(listed()[0]).toContain('Cell biology')
+    })
+    it('makes a new notebook from the Library', async () => {
+      await open()
+      await click(screen.getByRole('button', { name: 'New notebook' }))
+      const dialog = within(screen.getByRole('dialog', { name: 'New notebook' }))
+      fireEvent.change(dialog.getByLabelText('Name'), { target: { value: 'Genetics' } })
+      await click(dialog.getByRole('button', { name: 'Create' }))
+      expect(createNotebook).toHaveBeenCalledWith({}, 'Genetics')
+      expect(shelf().getByRole('button', { name: 'Open Genetics, 0 notes' })).toBeTruthy()
+    })
+    it('renames and deletes the open notebook; deleting keeps its notes, loose again', async () => {
+      await open()
+      await click(shelf().getByRole('button', { name: /Cell biology/ }))
+      await click(screen.getByRole('button', { name: 'Rename notebook' }))
+      const dialog = within(screen.getByRole('dialog', { name: 'Rename notebook' }))
+      fireEvent.change(dialog.getByLabelText('Name'), { target: { value: 'Cells' } })
+      await click(dialog.getByRole('button', { name: 'Save' }))
+      expect(renameNotebook).toHaveBeenCalledWith({}, 'cell', 'Cells')
+      expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Cells')).toBeTruthy()
+      await click(screen.getByRole('button', { name: 'Delete notebook' }))
+      await click(screen.getByRole('button', { name: 'Delete' }))
+      expect(deleteNotebook).toHaveBeenCalledWith({}, 'cell')
+      expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull()
+      expect(loadLibrary).toHaveBeenCalledTimes(2) // its notes come back as loose notes
+    })
+    it('moves ticked notes into a notebook', async () => {
+      await open()
+      await click(screen.getByRole('checkbox', { name: /Loose thoughts/ }))
+      await click(screen.getByRole('checkbox', { name: /Krebs cycle/ }))
+      await click(screen.getByRole('button', { name: 'Move to notebook' }))
+      await click(within(screen.getByRole('dialog', { name: 'Move to notebook' })).getByRole('button', { name: 'Cell biology' }))
+      expect(moveNotes).toHaveBeenCalledWith({}, ['n2', 'n1'], 'cell')
+      expect(screen.getByText('Moved 2 notes to Cell biology.')).toBeTruthy()
+      expect(loadLibrary).toHaveBeenCalledTimes(2)
+    })
+    it('offers Move to notebook only when every ticked item is a note', async () => {
+      await open()
+      await click(screen.getByRole('checkbox', { name: /Loose thoughts/ }))
+      expect(screen.getByRole('button', { name: 'Move to notebook' })).toBeTruthy()
+      await click(screen.getByRole('checkbox', { name: /Cells/ }))
+      expect(screen.queryByRole('button', { name: 'Move to notebook' })).toBeNull()
+    })
+    it('shows only the folders with notes in the chosen course', async () => {
+      search = 'course=lang'
+      items = FILED.filter(i => i.course_id === 'lang')
+      await open()
+      expect(screen.queryByRole('list', { name: 'Notebooks' })).toBeNull()
+    })
   })
 })
