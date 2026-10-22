@@ -18,7 +18,7 @@ import { useCoursesChanged, useTimetableChanged } from '@/lib/course/events'
 
 const chip = 'glass inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:py-2.5'
 
-// The strip above every page: the way into the command palette, and on the right only what there is to say (a running timer, cards due, the streak, the level)
+// The strip above every page: the way into the command palette, and on the right the focus timer, the next class, cards due, the streak and the level, so they are one glance away
 export function TopBar({ onSearch }: { onSearch: () => void }) {
   const path = usePathname()
   const { timer, now, toggle } = useFocus()
@@ -69,7 +69,6 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const label = timer.mode === 'focus' ? 'focus' : MODE_LABEL[timer.mode].toLowerCase()
   const clock = fmtClock(remainingMs(timer, now))
   const verb = running ? 'Pause' : timer.accumulatedMs > 0 ? 'Resume' : 'Start'
-  const underway = running || timer.accumulatedMs > 0
 
   return (
     <header aria-label="Today at a glance" className="no-print sticky top-0 z-30 flex items-center gap-3 px-5 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10">
@@ -84,21 +83,21 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
             {burst.levelUp ? `Level up! Level ${burst.levelUp}` : `+${burst.gained} XP`}
           </span>
         )}
-        {underway && <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
+        <div className={`${chip} gap-2 bg-accent-soft !py-1 pr-1 text-accent`}>
           <Link href="/focus" aria-label={`${MODE_LABEL[timer.mode]} timer, ${clock} left`} className="inline-flex min-h-9 items-center font-mono tabular-nums">{clock}</Link>
           <button type="button" onClick={toggle} aria-label={`${verb} ${label} timer`} className="flex size-7 items-center justify-center rounded-full bg-accent-solid text-white pointer-coarse:size-9">
             {running ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
           </button>
-        </div>}
+        </div>
         {period && (
           <Link href="/planner" aria-label={period.label} className={`${chip} bg-surface text-fg`}>
             <School size={15} aria-hidden /><span aria-hidden className="sm:hidden">{period.short}</span><span aria-hidden className="hidden sm:inline">{period.label}</span>
           </Link>
         )}
-        {/* only when there is something to review: "no cards due" says nothing worth the space */}
-        {due !== null && due > 0 && (
-          <Link href="/review" aria-label={`${due} card${due === 1 ? '' : 's'} due`} className={`${chip} tile-a text-fg`}>
-            <Layers size={15} aria-hidden /><span aria-hidden><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></span>
+        {due !== null && (
+          <Link href={due > 0 ? '/review' : '/flashcards'} aria-label={due === 0 ? 'No cards due' : `${due} card${due === 1 ? '' : 's'} due`}
+            className={`${chip} ${due > 0 ? 'tile-a text-fg' : 'text-muted'}`}>
+            <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? <><span className="sm:hidden">0</span><span className="hidden sm:inline">No cards due</span></> : <><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></>}</span>
           </Link>
         )}
         <span role="status" aria-live="polite" className="sr-only">

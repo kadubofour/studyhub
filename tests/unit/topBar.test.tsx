@@ -43,7 +43,7 @@ describe('TopBar keeping up', () => {
     expect(screen.getByRole('link', { name: '3 cards due' })).toBeTruthy()
     due = 0
     await act(async () => { announceProgressChanged() })
-    expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull() // nothing due: nothing to say
+    expect(screen.getByRole('link', { name: 'No cards due' })).toBeTruthy()
     expect(countCalls).toBe(2)
   })
   it('opens the command palette from its search button', async () => {
@@ -151,10 +151,11 @@ describe('TopBar', () => {
   })
 
   describe('focus timer', () => {
-    it('is not shown before a session starts: Home and Focus have the start button', async () => {
+    it('is always there: before a session it shows the full time and starts it', async () => {
       await open()
-      expect(screen.queryByRole('link', { name: /timer/ })).toBeNull()
-      expect(screen.queryByRole('button', { name: 'Start focus timer' })).toBeNull()
+      expect(screen.getByRole('link', { name: /Focus timer, 25:00 left/ }).getAttribute('href')).toBe('/focus')
+      fireEvent.click(screen.getByRole('button', { name: 'Start focus timer' }))
+      expect(toggle).toHaveBeenCalledTimes(1)
     })
     it('counts down while running and offers to pause', async () => {
       timer = startTimer(timer, 0); now = 5 * MIN
@@ -193,9 +194,9 @@ describe('TopBar', () => {
       await open()
       expect(screen.getByRole('link', { name: '1 card due' })).toBeTruthy()
     })
-    it('says nothing when none are due', async () => {
+    it('says so when none are due, and links to the decks', async () => {
       await open()
-      expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull()
+      expect(screen.getByRole('link', { name: 'No cards due' }).getAttribute('href')).toBe('/flashcards')
     })
     it('shows nothing about cards when they cannot be counted', async () => {
       dueFails = true
