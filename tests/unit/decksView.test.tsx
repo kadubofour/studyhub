@@ -15,7 +15,7 @@ import FlashcardsPage from '@/app/(app)/flashcards/page'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 
 const open = async () => { await act(async () => { render(<ToastProvider><FlashcardsPage /></ToastProvider>) }) }
-const names = () => screen.getAllByRole('link').filter(l => l.getAttribute('href')?.startsWith('/flashcards/')).map(l => l.querySelector('.font-semibold')?.textContent)
+const names = () => screen.getAllByRole('link').filter(l => l.getAttribute('href')?.startsWith('/flashcards/')).map(l => l.querySelector('[data-title]')?.textContent)
 beforeEach(() => {
   localStorage.clear()
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -34,5 +34,17 @@ describe('how the decks are shown', () => {
     expect(names()).toEqual(['Bonds', 'Cells', 'atoms'])
     fireEvent.click(screen.getByRole('radio', { name: 'List' }))
     expect(screen.getByRole('list', { name: 'Decks' }).getAttribute('data-layout')).toBe('list')
+  })
+})
+
+describe('decks as icons', () => {
+  it('shows a big icon with the number due on it', async () => {
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: 'Icons' }))
+    expect(screen.getByRole('list', { name: 'Decks' }).getAttribute('data-layout')).toBe('icons')
+    const atoms = screen.getByRole('link', { name: /atoms/ })
+    expect(atoms.querySelector('[data-badge]')!.textContent).toBe('9')
+    expect(screen.getByRole('link', { name: /Bonds/ }).querySelector('[data-badge]')).toBeNull() // nothing due: no badge
+    expect(atoms.textContent).toContain('9 due')
   })
 })

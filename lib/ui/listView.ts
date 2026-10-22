@@ -1,7 +1,7 @@
 import { localStore, useLocalStore, type LocalStore } from '@/lib/ui/localStore'
 
 // How a list page shows its items: as a grid of tiles or as a list of rows, and in what order. Kept on this device, per page.
-export type Layout = 'grid' | 'list'
+export type Layout = 'grid' | 'list' | 'icons'
 export type ViewPage = 'notes' | 'decks' | 'lectures'
 export interface View { layout: Layout; sort: string }
 
@@ -16,7 +16,7 @@ export function parseView(page: ViewPage, v: unknown): View {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
   const c = VIEW_CHOICES[page]
   return {
-    layout: o.layout === 'grid' || o.layout === 'list' ? o.layout : c.layout,
+    layout: o.layout === 'grid' || o.layout === 'list' || o.layout === 'icons' ? o.layout : c.layout,
     sort: c.sorts.some(s => s.value === o.sort) ? (o.sort as string) : c.sorts[0].value,
   }
 }

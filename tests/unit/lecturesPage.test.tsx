@@ -168,3 +168,13 @@ describe('how the lectures are shown', () => {
     expect(list().getAttribute('data-layout')).toBe('grid')
   })
 })
+
+describe('lectures as icons', () => {
+  it('shows each lecture as a big icon with its name', async () => {
+    localStorage.clear()
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: 'Icons' }))
+    expect(screen.getByRole('list', { name: 'Lectures' }).getAttribute('data-layout')).toBe('icons')
+    expect(screen.getByRole('link', { name: /Krebs cycle/ }).querySelector('[data-icon]')).toBeTruthy()
+  })
+})

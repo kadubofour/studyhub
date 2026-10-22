@@ -1,10 +1,12 @@
 'use client'
-import { LayoutGrid, List } from 'lucide-react'
+import { Grid3x3, LayoutGrid, List } from 'lucide-react'
 import { VIEW_CHOICES, useView, viewStore, type Layout, type ViewPage } from '@/lib/ui/listView'
 
-const LAYOUTS: { value: Layout; label: string; Icon: typeof List }[] = [{ value: 'grid', label: 'Grid', Icon: LayoutGrid }, { value: 'list', label: 'List', Icon: List }]
+const LAYOUTS: { value: Layout; label: string; Icon: typeof List }[] = [
+  { value: 'grid', label: 'Grid', Icon: LayoutGrid }, { value: 'list', label: 'List', Icon: List }, { value: 'icons', label: 'Icons', Icon: Grid3x3 },
+]
 
-// How a list page shows its items: grid or list, and in what order. The choice is kept on this device for that page.
+// How a list page shows its items: grid, list or icons, and in what order. The choice is kept on this device for that page.
 export function ViewOptions({ page, className = '' }: { page: ViewPage; className?: string }) {
   const view = useView(page)
   const set = (patch: Partial<typeof view>) => viewStore(page).set({ ...view, ...patch })

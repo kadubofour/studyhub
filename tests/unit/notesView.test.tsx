@@ -47,7 +47,7 @@ const open = async () => {
   await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><NotesSidebar /></ConfirmProvider></ToastProvider></ProfileProvider>) })
   await screen.findByText('Krebs cycle')
 }
-const titles = () => screen.getAllByRole('link').map(l => l.querySelector('span.font-medium, .line-clamp-2')?.textContent)
+const titles = () => screen.getAllByRole('link').map(l => l.querySelector('[data-title]')?.textContent)
 const layoutOf = () => screen.getByRole('list', { name: 'Notes' }).getAttribute('data-layout')
 beforeEach(() => localStorage.clear())
 
@@ -65,5 +65,17 @@ describe('how the notes are shown', () => {
     await open()
     expect(layoutOf()).toBe('list')
     expect((screen.getByLabelText('Sort by') as HTMLSelectElement).value).toBe('title')
+  })
+})
+
+describe('notes as icons', () => {
+  it('shows each note as a big icon with its name, with the same tile as the other pages', async () => {
+    await open()
+    fireEvent.click(screen.getByRole('radio', { name: 'Icons' }))
+    expect(screen.getByRole('list', { name: 'Notes' }).getAttribute('data-layout')).toBe('icons')
+    const link = screen.getByRole('link', { name: /Krebs cycle/ })
+    expect(link.getAttribute('title')).toBe('Krebs cycle')
+    expect(link.querySelector('[data-icon]')).toBeTruthy()
+    expect(screen.getAllByRole('listitem').length).toBe(screen.getAllByRole('link').length)
   })
 })

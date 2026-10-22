@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, FileText, FolderInput, Mic, MoreHorizontal, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { ExternalLink, FileText, FolderInput, Mic, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { sortLectures, useView } from '@/lib/ui/listView'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -49,7 +50,6 @@ export default function LecturesPage() {
   const [editing, setEditing] = useState<Editing | null>(null)
   const [busy, setBusy] = useState(false)
   const view = useView('lectures')
-  const grid = view.layout === 'grid'
 
   useEffect(() => {
     const sb = supabase()
@@ -160,25 +160,16 @@ export default function LecturesPage() {
         {!!lectures?.length && <ViewOptions page="lectures" />}
       </div>
       {lectures?.length === 0 && <EmptyState icon={Mic} tone="c" title="Capture your next lecture" body="No lectures yet. Press Record at the start of your next lecture." />}
-      <ul aria-label="Lectures" data-layout={view.layout} className={grid ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-2'}>
-        {sortLectures(lectures ?? [], view.sort).map(l => (
-          <li key={l.id} className="group relative">
-            <Link href={`/lectures/${l.id}`} onContextMenu={e => openMenu(e, l)}
-              className={`card flex gap-2 pr-12 hover:border-accent ${grid ? 'h-full flex-col items-start' : 'flex-wrap items-center justify-between'}`}>
-              <span className="font-medium">{l.title}</span>
-              <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                <CourseTag course={courseOf(l.course_id)} />
-                <span>{day(l.recorded_at)}</span>
-                <span>{formatClock(l.duration_seconds)}</span>
-                <span>{statusOf(l)}</span>
-              </span>
-            </Link>
-            <button type="button" aria-label={`More actions for ${l.title}`} aria-haspopup="menu"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 pointer-coarse:p-2.5 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
-              onClick={e => openMenu(e, l)}><MoreHorizontal size={16} aria-hidden /></button>
-          </li>
-        ))}
-      </ul>
+      <ItemList label="Lectures" layout={view.layout}>
+        {sortLectures(lectures ?? [], view.sort).map(l => {
+          const c = courseOf(l.course_id)
+          return (
+            <ItemTile key={l.id} layout={view.layout} icon={Mic} color={c?.color} title={l.title} href={`/lectures/${l.id}`}
+              subtitle={<><span>{day(l.recorded_at)}</span> · <span>{formatClock(l.duration_seconds)}</span></>} meta={c && <CourseTag course={c} />} aside={statusOf(l)}
+              onMenu={e => openMenu(e, l)} onContextMenu={e => openMenu(e, l)} />
+          )
+        })}
+      </ItemList>
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.lecture.title} items={menuItems(menu.lecture)} onClose={() => setMenu(null)} />}
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={editing?.kind === 'course' ? 'Change course' : 'Rename lecture'}>
         {editing && (
