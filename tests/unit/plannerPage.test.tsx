@@ -12,7 +12,10 @@ vi.mock('@/lib/data/tasks', () => ({
   createTask: async (...a: unknown[]) => ({ id: 'real-1', course_id: null, type: 'other', priority: 'normal', done_at: null, created_at: '', due_at: null, ...(a[1] as object) }),
   listRecentlyDone: async () => [], updateTask: vi.fn(), setTaskDone: vi.fn(), deleteTask: vi.fn(),
 }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }))
+let search = ''
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams(search) }))
+let mine: unknown[] = []
+vi.mock('@/lib/data/reminders', () => ({ listReminders: async () => mine, deleteReminder: vi.fn(), deleteReminders: vi.fn(), announceRemindersChanged: vi.fn(), REMINDERS_CHANGED: 'studyhub:reminders-changed' }))
 
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -38,5 +41,25 @@ describe('Planner page', () => {
     await act(async () => { window.dispatchEvent(new Event(SCAN_SAVED)) })
     await act(async () => { finishLoad([{ id: 't9', course_id: null, title: 'Cell biology essay', type: 'assignment', due_at: null, priority: 'normal', done_at: null, created_at: '' }]) })
     expect(screen.getByText('Cell biology essay')).toBeTruthy()
+  })
+})
+
+describe('reminders in the Planner', () => {
+  const page = async () => { await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><PlannerPage /></ToastProvider></ProfileProvider>) }) }
+  afterEach(() => { search = ''; mine = [] })
+  it('lists them beside the task lists, with how many are coming, and shows them when chosen', async () => {
+    mine = [{ id: 'a', title: 'Email my tutor', day: '2099-01-01', at: '09:00:00', repeat: 'once' }, { id: 'b', title: 'Gone', day: '2000-01-01', at: '09:00:00', repeat: 'once' }]
+    await page()
+    const entry = screen.getByRole('button', { name: /^Reminders/ })
+    expect(entry.textContent).toContain('1')
+    await act(async () => { fireEvent.click(entry) })
+    expect(screen.getByRole('list', { name: 'Upcoming' }).textContent).toContain('Email my tutor')
+    expect(screen.getByRole('button', { name: 'New reminder' })).toBeTruthy()
+  })
+  it('opens on them from the address, where a reminder about nothing takes the student', async () => {
+    search = 'list=reminders'
+    await page()
+    expect(screen.getByRole('button', { name: /^Reminders/ }).getAttribute('aria-current')).toBe('true')
+    expect(screen.getByRole('button', { name: 'New reminder' })).toBeTruthy()
   })
 })

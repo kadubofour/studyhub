@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { BellPlus, Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
@@ -9,6 +9,7 @@ import { sortNotes, useView } from '@/lib/ui/listView'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { NotebookCover, coverColor } from '@/components/notes/NotebookCover'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
+import { requestReminder } from '@/lib/reminders/events'
 import { countByNotebook, filterNotes } from '@/lib/notes/notebooks'
 import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -146,6 +147,7 @@ export function NotesSidebar() {
     { label: 'Export as Word', icon: FileText, onSelect: () => { exportNotesToWord([n.id]).catch(() => toast('Couldn\'t create the Word document.')) } },
     { label: 'Export as PDF', icon: FileType2, onSelect: () => openPdfExport([n.id]) },
     { label: 'Move to notebook…', icon: FolderInput, onSelect: () => setMoving([n.id]) },
+    { label: 'Remind me to review…', icon: BellPlus, onSelect: () => requestReminder({ title: `Review ${n.title || 'Untitled'}`, href: `/notes/${n.id}`, link_label: n.title || 'Untitled' }) },
     'sep',
     { label: 'Select', icon: CheckSquare, onSelect: () => { setSelecting(true); setSelected(s => (s.includes(n.id) ? s : [...s, n.id])) } },
     { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { void remove(n) } },

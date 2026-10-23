@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Bell } from 'lucide-react'
+import { Bell, X } from 'lucide-react'
 import { fromZonedTime } from 'date-fns-tz'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -51,6 +51,15 @@ function Form({ start, tz, onClose, onSave }: { start: ReminderInput; tz: string
         <span className="text-sm font-medium text-muted">Repeat</span>
         <ChoiceChips label="Repeat" value={r.repeat} options={REPEATS} onChange={v => set({ repeat: v as Repeat })} />
       </div>
+      {r.href && r.link_label && (
+        // what it is about: its Open goes there
+        <p className="flex items-center gap-2 text-sm">
+          <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-accent-soft py-1 pl-3 pr-1 text-accent">
+            <span className="truncate">About {r.link_label}</span>
+            <button type="button" aria-label={`Not about ${r.link_label}`} onClick={() => set({ href: null, link_label: null })} className="grid size-6 place-items-center rounded-full hover:bg-accent/15"><X size={13} aria-hidden /></button>
+          </span>
+        </p>
+      )}
       {passed && <p role="alert" className="text-sm text-danger">That time has passed.</p>}
       <DialogFooter>
         <button type="button" className={BTN_OUTLINE} onClick={onClose}>Cancel</button>

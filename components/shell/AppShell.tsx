@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { GraduationCap, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Sun } from 'lucide-react'
 import { QuizStartDialog } from '@/components/quiz/QuizStartDialog'
+import { ReminderHost } from '@/components/reminders/ReminderHost'
+import { requestReminder } from '@/lib/reminders/events'
 import { useOpenQuiz } from '@/lib/quiz/events'
 import { ScanDialog } from '@/components/scan/ScanDialog'
 import { UploadMaterial } from '@/components/notes/UploadMaterial'
@@ -137,7 +139,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     else if (a === 'new-deck') go('/flashcards?new=1')
     else if (a === 'record') go('/lectures/record')
     else if (a === 'new-task') go('/planner')
-    else if (a === 'new-reminder') go('/reminders?new=1')
+    else if (a === 'new-reminder') requestReminder()
     else if (a === 'upload') setUploading(true)
     else if (a === 'scan') { setScanFiles(undefined); setScanning(true) }
     else if (a === 'quiz') setQuizzing(true)
@@ -257,6 +259,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       {creating && <CreateMenu from={creating} onPick={act} onClose={() => setCreating(null)} />}
       {palette && <CommandPalette items={paletteItems} onRun={run} onClose={() => setPalette(false)} />}
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
+      <ReminderHost />
       <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
       {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>

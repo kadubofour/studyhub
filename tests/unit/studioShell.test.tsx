@@ -48,7 +48,7 @@ describe('the rail', () => {
   it('has every place, in order, each a link with its name, and marks the one you are on', async () => {
     await shell()
     expect(rail().getAllByRole('link').map(l => l.getAttribute('aria-label'))).toEqual(
-      ['Home', 'Planner', 'Reminders', 'Focus', 'Notes', 'Flashcards', 'Lectures', 'Tutor', 'Quiz', 'Library', 'Progress', 'Settings', 'Kwadwo'])
+      ['Home', 'Planner', 'Focus', 'Notes', 'Flashcards', 'Lectures', 'Tutor', 'Quiz', 'Library', 'Progress', 'Settings', 'Kwadwo'])
     expect(rail().getByRole('link', { name: 'Planner' }).getAttribute('aria-current')).toBe('page')
     expect(rail().getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBeNull()
     expect(rail().getByRole('link', { name: 'Kwadwo' }).getAttribute('href')).toBe('/profile')
@@ -221,10 +221,11 @@ describe('the frame', () => {
 })
 
 describe('reminders from anywhere', () => {
-  it('New reminder in the Create menu opens the Reminders page ready to write one', async () => {
+  it('New reminder in the Create menu opens the reminder dialog over the page, without going anywhere', async () => {
     await shell()
     fireEvent.click(rail().getByRole('button', { name: 'Create new' }))
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'New reminder' })) })
-    expect(push).toHaveBeenCalledWith('/reminders?new=1')
+    expect(screen.getByRole('dialog', { name: 'New reminder' })).toBeTruthy()
+    expect(push).not.toHaveBeenCalled()
   })
 })

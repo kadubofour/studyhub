@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -35,6 +35,8 @@ import { dailyMinutes } from '@/lib/streak'
 import { remainingMs } from '@/lib/timer'
 import { nextClass } from '@/lib/timetable'
 import type { ClassSlot, Course, Task } from '@/lib/types'
+import { REMINDERS_CHANGED, listReminders } from '@/lib/data/reminders'
+import { nextOccurrence, type MyReminder } from '@/lib/reminders/mine'
 
 const DAY_LETTER = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const greeting = (hour: number) => (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening')
@@ -53,6 +55,15 @@ export default function HomePage() {
   const [due, setDue] = useState(0)
   const [week, setWeek] = useState<Map<string, number>>(new Map())
   const [material, setMaterial] = useState<{ counts: CourseCounts; recent: Recent[] }>({ counts: {}, recent: [] })
+  // the student's own reminders, for the ones still to come today
+  const [mine, setMine] = useState<MyReminder[]>([])
+  useEffect(() => {
+    let live = true
+    const read = () => { listReminders(supabase()).then(r => { if (live) setMine(r) }).catch(() => {}) }
+    read()
+    window.addEventListener(REMINDERS_CHANGED, read)
+    return () => { live = false; window.removeEventListener(REMINDERS_CHANGED, read) }
+  }, [])
   const { xp, reload: reloadXp } = useXp(focus.todayMinutes)
   const plans = usePlans(reloadXp)
   const warmup = useWarmup()
@@ -112,6 +123,7 @@ export default function HomePage() {
   }
 
   const nextCourse = upcomingClass && courseOf(upcomingClass.cls.course_id)
+  const remindersToday = mine.map(r => ({ r, at: nextOccurrence(r, now, tz) })).filter((x): x is { r: MyReminder; at: Date } => !!x.at && localDayKey(x.at, tz) === todayKey).sort((a, b) => a.at.getTime() - b.at.getTime())
   const nextLabel = upcomingClass && (
     upcomingClass.dayKey === todayKey
       ? upcomingClass.cls.start_time.slice(0, 5)
@@ -164,6 +176,15 @@ export default function HomePage() {
             <h2 className="section-label !mb-0">Today</h2>
             <span className="text-sm text-muted">{doneToday} of {doneToday + list.length - doneIds.size} done</span>
           </div>
+          {remindersToday.length > 0 && (
+            <ul aria-label="Reminders today" className="mb-4 space-y-2 text-[15px]">
+              {remindersToday.map(({ r, at }) => (
+                <li key={r.id}><Link href={r.href || '/planner?list=reminders'} className="inline-flex items-center gap-2.5 hover:text-accent">
+                  <Bell size={17} className="text-accent" aria-hidden /><span className="font-medium tabular-nums">{formatInTimeZone(at, tz, 'HH:mm')}</span><span className="text-muted" aria-hidden>·</span>{r.title}
+                </Link></li>
+              ))}
+            </ul>
+          )}
           {(nextCourse || due > 0) && (
             <ul className="mb-4 space-y-2 text-[15px]">
               {nextCourse && <li><Link href="/planner" className="inline-flex items-center gap-2.5 hover:text-accent"><School size={17} className="text-muted" aria-hidden />Next class: {nextCourse.name}, {nextLabel}</Link></li>}

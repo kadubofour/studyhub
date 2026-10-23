@@ -1,5 +1,9 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { RemindersList } from '@/components/reminders/RemindersList'
+import { REMINDERS_CHANGED, listReminders } from '@/lib/data/reminders'
+import { nextOccurrence, type MyReminder } from '@/lib/reminders/mine'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
@@ -46,6 +50,19 @@ export default function PlannerPage() {
   const [loaded, setLoaded] = useState(false)
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [editing, setEditing] = useState<Task | null>(null)
+  // The student's own reminders are one more list here; ?list=reminders opens on it (a reminder about nothing leads here)
+  const askedList = useSearchParams().get('list')
+  const [reminding, setReminding] = useState(askedList === 'reminders')
+  const [seenList, setSeenList] = useState(askedList)
+  if (askedList !== seenList) { setSeenList(askedList); if (askedList === 'reminders') { setTab('tasks'); setReminding(true) } }
+  const [mine, setMine] = useState<MyReminder[]>([])
+  useEffect(() => {
+    let live = true
+    const read = () => { listReminders(supabase()).then(r => { if (live) setMine(r) }).catch(() => {}) }
+    read()
+    window.addEventListener(REMINDERS_CHANGED, read)
+    return () => { live = false; window.removeEventListener(REMINDERS_CHANGED, read) }
+  }, [])
   // Scan (in the app's sidebar) saved tasks or classes: show them
   useScanSaved(() => { loadPlanner().then(([c, t, cl, d]) => {
     setCourses(c); setClasses(cur => [...cl, ...cur.filter(x => x.id.startsWith('temp-'))]); setDone(d)
@@ -200,7 +217,17 @@ export default function PlannerPage() {
 
       {tab === 'tasks' && (
         <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[15rem_minmax(0,1fr)]">
-          <TaskRail list={list} onList={setList} counts={counts} type={typeFilter} onType={setTypeFilter} typeCounts={typeCounts} />
+          <TaskRail list={reminding ? null : list} onList={l => { setReminding(false); setList(l) }} counts={counts} type={typeFilter} onType={setTypeFilter} typeCounts={typeCounts}
+            reminders={{ count: mine.filter(r => nextOccurrence(r, now, tz)).length, on: reminding, onOpen: () => setReminding(true) }} />
+          {reminding ? (
+            <div className="min-w-0">
+              <div className="mb-5">
+                <h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight">Reminders</h2>
+                <p className="mt-0.5 text-sm text-muted">Yours, once or repeating. Also made with “Remind me” on a task, a note or a deck.</p>
+              </div>
+              <RemindersList tz={tz} />
+            </div>
+          ) : (
           <div className="min-w-0">
             <div className="mb-5">
               <h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight">{title}</h2>
@@ -230,6 +257,7 @@ export default function PlannerPage() {
             )}
             {list !== 'done' && <div className="mt-6 [&>section]:!mt-0"><StudyPlanPanel courses={courses} tasks={tasks} /></div>}
           </div>
+          )}
         </div>
       )}
       {tab === 'week' && (

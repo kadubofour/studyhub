@@ -5,7 +5,7 @@ import { WINDOW_MIN, type Reminder } from './engine'
 // A reminder the student set for themselves (see docs/superpowers/specs/2026-10-30-my-reminders-design.md).
 // Its day and time are in the student's own time zone, so "every day at 08:00" stays at 08:00 when the clocks change.
 export type Repeat = 'once' | 'daily' | 'weekdays' | 'weekly'
-export interface MyReminder { id: string; title: string; day: DayKey; at: string; repeat: Repeat }
+export interface MyReminder { id: string; title: string; day: DayKey; at: string; repeat: Repeat; href?: string | null; link_label?: string | null }
 
 export const REPEATS: { value: Repeat; label: string }[] = [
   { value: 'once', label: 'Once' }, { value: 'daily', label: 'Every day' }, { value: 'weekdays', label: 'Weekdays' }, { value: 'weekly', label: 'Every week' },
@@ -43,7 +43,7 @@ export function dueMine(rs: MyReminder[], now: Date, tz: string): Reminder[] {
   for (const r of rs) for (const day of [addDaysToKey(today, -1), today]) {
     if (!occursOn(r, day)) continue
     const d = now.getTime() - momentOn(r, day, tz).getTime()
-    if (d >= 0 && d < WINDOW_MIN * 60_000) out.push({ key: `custom:${r.id}:${day}:${hhmm(r)}`, title: 'Reminder', body: r.title, href: '/reminders' })
+    if (d >= 0 && d < WINDOW_MIN * 60_000) out.push({ key: `custom:${r.id}:${day}:${hhmm(r)}`, title: 'Reminder', body: r.title, href: r.href || '/planner?list=reminders' })
   }
   return out
 }

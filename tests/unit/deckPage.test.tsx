@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import type { Card } from '@/lib/types'
 
 let resolveCreate: ((c: Card[]) => void) | null = null
@@ -31,5 +31,24 @@ describe('Deck page', () => {
     await act(async () => { resolveCreate!([{ id: 'c1', deck_id: 'd', front: 'Q1', back: 'A1', due_at: new Date().toISOString(), interval_days: 0, ease: 2.5, reps: 0, lapses: 0 }]) })
     expect(front.value).toBe('Q2')
     expect(screen.getByText('Q1')).toBeTruthy()
+  })
+})
+
+async function heard(act: () => void | Promise<void>) {
+  const { OPEN_REMINDER } = await import('@/lib/reminders/events')
+  const got: unknown[] = []
+  const on = (e: Event) => got.push((e as CustomEvent).detail)
+  window.addEventListener(OPEN_REMINDER, on)
+  await act()
+  window.removeEventListener(OPEN_REMINDER, on)
+  return got
+}
+
+describe('Remind me on a deck', () => {
+  it('asks for a reminder to review the deck, which opens the deck', async () => {
+    cleanup() // the tests above leave their pages on screen
+    await act(async () => { render(<ToastProvider><DeckPage /></ToastProvider>) })
+    const got = await heard(() => { fireEvent.click(screen.getByRole('button', { name: 'Remind me' })) })
+    expect(got).toEqual([{ title: 'Review Cells', href: '/flashcards/d', link_label: 'Cells' }])
   })
 })

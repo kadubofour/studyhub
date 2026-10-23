@@ -42,3 +42,12 @@ describe('my reminders', () => {
     expect(EXPORT_TABLES).toContain('reminders')
   })
 })
+
+describe('a reminder about something', () => {
+  it('keeps the page it is about and its name, and only ever a path inside Studyhub', async () => {
+    const r = await createReminder(A.sb, { title: 'Review Cells', day: '2026-10-24', at: '18:00', repeat: 'daily', href: '/flashcards/d1', link_label: 'Cells' })
+    expect((await listReminders(A.sb)).find(x => x.id === r.id)).toMatchObject({ href: '/flashcards/d1', link_label: 'Cells' })
+    const ok = { title: 'x', day: '2026-10-24', at: '08:00' }
+    for (const href of ['https://evil.example', '//evil.example', 'javascript:alert(1)']) expect((await A.sb.from('reminders').insert({ ...ok, href })).error, href).toBeTruthy()
+  })
+})

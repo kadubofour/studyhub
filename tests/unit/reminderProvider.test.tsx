@@ -118,12 +118,12 @@ describe('reminders while the app is open', () => {
 
   describe('my own reminders', () => {
     const own = { id: 'm1', title: 'Email my tutor', day: '2026-10-16', at: '18:00:00', repeat: 'once' }
-    it('show at their time even with the automatic reminders off, opening the Reminders page', async () => {
+    it('show at their time even with the automatic reminders off, opening the reminders in the Planner', async () => {
       mine = [own]
       mount(); await flush()
       expect(screen.getByText('Reminder: Email my tutor')).toBeTruthy()
       act(() => { screen.getByText('Open').click() })
-      expect(push).toHaveBeenCalledWith('/reminders')
+      expect(push).toHaveBeenCalledWith('/planner?list=reminders')
     })
     it('show in quiet hours too: the student chose that time', async () => {
       mine = [own]

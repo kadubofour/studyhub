@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { Trash2 } from 'lucide-react'
+import { BellPlus, Trash2 } from 'lucide-react'
+import { requestReminder } from '@/lib/reminders/events'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CardFace } from '@/components/flashcards/CardFace'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
@@ -86,6 +87,7 @@ export default function DeckPage() {
         {cards.length >= 4
           ? <><Link href={`/flashcards/${deckId}/play?game=match`} className="btn">Match</Link><Link href={`/flashcards/${deckId}/play?game=speed`} className="btn">Speed round</Link></>
           : <span className="self-center text-xs text-muted">Add 4 cards to play games</span>}
+        {deck && <button type="button" className="btn" title="Remind me to review this deck" onClick={() => requestReminder({ title: `Review ${deck.name}`, href: `/flashcards/${deckId}`, link_label: deck.name })}><BellPlus size={14} aria-hidden />Remind me</button>}
         <button className="btn-ghost text-danger" onClick={removeDeck}>Delete deck</button>
       </>} />
       <form onSubmit={add} className="card mb-4 grid gap-2 sm:grid-cols-2"

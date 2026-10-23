@@ -2,8 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MyReminder, Repeat } from '@/lib/reminders/mine'
 import { check, must } from './util'
 
-const COLS = 'id,title,day,at,repeat'
-export type ReminderInput = { title: string; day: string; at: string; repeat: Repeat }
+const COLS = 'id,title,day,at,repeat,href,link_label'
+/** href and link_label: what it is about, if anything (a page inside Studyhub and its name) */
+export type ReminderInput = { title: string; day: string; at: string; repeat: Repeat; href?: string | null; link_label?: string | null }
 
 // Soonest day first, then by time
 export async function listReminders(sb: SupabaseClient): Promise<MyReminder[]> {

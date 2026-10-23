@@ -15,6 +15,8 @@ vi.mock('@/components/xp/useXp', () => ({ useXp: () => ({ xp: { level: { level: 
 vi.mock('@/components/plan/usePlans', () => ({ usePlans: () => ({ views: [], setDone: vi.fn() }) }))
 vi.mock('@/components/plan/useWarmup', () => ({ useWarmup: () => ({ start: vi.fn(), busy: null, error: null }) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [] }))
+let mine: unknown[] = []
+vi.mock('@/lib/data/reminders', () => ({ listReminders: async () => mine, REMINDERS_CHANGED: 'studyhub:reminders-changed' }))
 vi.mock('@/lib/data/tasks', () => ({ listOpenTasks: async () => [], countTasksDoneSince: async () => 0, createTask: vi.fn(), setTaskDone: vi.fn() }))
 vi.mock('@/lib/data/classes', () => ({ listClasses: async () => [] }))
 vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => 0 }))
@@ -78,5 +80,23 @@ describe('Home lines up', () => {
     const row = screen.getByRole('region', { name: 'Today' }).parentElement!
     expect(row.className).not.toContain('items-start')
     expect(screen.getByRole('region', { name: 'This week' }).className).toContain('flex-1')
+  })
+})
+
+describe('reminders on Home', () => {
+  afterEach(() => { mine = []; vi.useRealTimers() })
+  it('Today lists the reminders still to come today, with their time, and not later ones', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-23T10:00:00Z'))
+    mine = [
+      { id: 'a', title: 'Email my tutor', day: '2026-10-23', at: '16:00:00', repeat: 'once' },
+      { id: 'b', title: 'Earlier today', day: '2026-10-23', at: '08:00:00', repeat: 'once' },
+      { id: 'c', title: 'Tomorrow', day: '2026-10-24', at: '09:00:00', repeat: 'once' },
+    ]
+    await home({ timezone: 'UTC' } as Partial<Profile>)
+    const today = within(screen.getByRole('region', { name: 'Today' }))
+    expect(today.getByRole('list', { name: 'Reminders today' }).textContent).toContain('16:00')
+    expect(today.getByRole('list', { name: 'Reminders today' }).textContent).toContain('Email my tutor')
+    expect(today.queryByText('Earlier today')).toBeNull()
+    expect(today.queryByText('Tomorrow')).toBeNull()
   })
 })

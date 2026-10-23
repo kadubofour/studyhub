@@ -7,6 +7,9 @@ create table public.reminders (
   day date not null,
   at time not null,
   repeat text not null default 'once' check (repeat in ('once', 'daily', 'weekdays', 'weekly')),
+  -- what it is about: a page inside Studyhub (a single / then a letter or digit, so never another site) and its name
+  href text check (href is null or (href ~ '^/[A-Za-z0-9]' and length(href) <= 300)),
+  link_label text check (link_label is null or length(link_label) <= 120),
   created_at timestamptz not null default now()
 );
 create index reminders_user on public.reminders (user_id, day);

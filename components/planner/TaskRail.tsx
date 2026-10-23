@@ -1,5 +1,5 @@
 'use client'
-import { Calendar, CalendarCheck, CheckCircle2, Inbox, ListTodo, type LucideIcon } from 'lucide-react'
+import { BellRing, Calendar, CalendarCheck, CheckCircle2, Inbox, ListTodo, type LucideIcon } from 'lucide-react'
 import { LISTS, type ListId } from '@/lib/tasks/lists'
 import type { TaskType } from '@/lib/types'
 
@@ -10,9 +10,11 @@ const TYPES: { id: TypeFilter; label: string }[] = [
 ]
 
 // The left side of the Tasks tab: which list to look at, and which type of task. A strip across the top on a phone.
-export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
-  list: ListId; onList: (l: ListId) => void; counts: Record<ListId, number>
+export function TaskRail({ list, onList, counts, type, onType, typeCounts, reminders }: {
+  list: ListId | null; onList: (l: ListId) => void; counts: Record<ListId, number>
   type: TypeFilter; onType: (t: TypeFilter) => void; typeCounts: Record<TypeFilter, number>
+  /** The student's own reminders, as one more list: how many are coming, whether it is open, and opening it */
+  reminders?: { count: number; on: boolean; onOpen: () => void }
 }) {
   return (
     <div className="min-w-0 space-y-2 lg:sticky lg:top-4 lg:space-y-4 lg:self-start">
@@ -27,8 +29,15 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
             </button>
           )
         })}
+        {reminders && (
+          <button type="button" aria-current={reminders.on ? 'true' : undefined} onClick={reminders.onOpen}
+            className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition lg:mt-2 lg:border-t lg:border-line lg:pt-3 ${reminders.on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+            <BellRing size={16} aria-hidden /><span className="flex-1 text-left">Reminders</span>{' '}<span className={`text-xs ${reminders.on ? 'text-accent' : 'text-muted'}`}>{reminders.count}</span>
+          </button>
+        )}
       </nav>
-      <div>
+      {/* the type of task is for the task lists, not for reminders */}
+      {!reminders?.on && <div>
         <p className="section-label !mb-1.5 hidden px-3 !text-sm lg:block">Type</p>
         <div role="group" aria-label="Task type" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0">
           {TYPES.map(t => {
@@ -41,7 +50,7 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts }: {
             )
           })}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

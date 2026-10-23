@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { CalendarClock, Flag, FileText, GraduationCap, BookOpenText, Trash2 } from 'lucide-react'
+import { CalendarClock, Flag, FileText, GraduationCap, BookOpenText, Trash2, BellPlus } from 'lucide-react'
+import { requestReminder } from '@/lib/reminders/events'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { BTN_ICON } from '@/components/ui/buttonStyles'
 import { formatDue, localDayKey } from '@/lib/dates'
@@ -59,6 +60,8 @@ export function TaskCard({ task, course, tz, now, onToggle, onEdit, onMove, onDe
         {task.type === 'exam' && task.covers && <p className="mt-0.5 line-clamp-2 text-xs text-muted">Covers: {task.covers}</p>}
       </div>
       <div ref={box} className="relative flex shrink-0 items-center gap-0.5 opacity-100 transition lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
+        <button type="button" aria-label={`Remind me about ${task.title}`} title="Remind me" disabled={saving} className={BTN_ICON}
+          onClick={() => requestReminder({ title: task.title, ...(task.due_at ? { day: localDayKey(task.due_at, tz) } : {}), href: '/planner', link_label: task.title })}><BellPlus size={16} aria-hidden /></button>
         <button type="button" aria-label={`Move ${task.title}`} aria-haspopup="menu" aria-expanded={menu} disabled={saving} onClick={() => setMenu(m => !m)} className={BTN_ICON}><CalendarClock size={16} aria-hidden /></button>
         {onDelete && <button type="button" aria-label={`Delete ${task.title}`} disabled={saving} onClick={onDelete} className={`${BTN_ICON} hover:text-danger`}><Trash2 size={16} aria-hidden /></button>}
         {menu && (

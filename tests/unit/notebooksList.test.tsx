@@ -207,3 +207,22 @@ describe('moving notes into a notebook', () => {
     expect(bar().getByRole('radio', { name: /^Unfiled \(1\)/ })).toBeTruthy()
   })
 })
+
+async function heard(act: () => void | Promise<void>) {
+  const { OPEN_REMINDER } = await import('@/lib/reminders/events')
+  const got: unknown[] = []
+  const on = (e: Event) => got.push((e as CustomEvent).detail)
+  window.addEventListener(OPEN_REMINDER, on)
+  await act()
+  window.removeEventListener(OPEN_REMINDER, on)
+  return got
+}
+
+describe('Remind me on a note', () => {
+  it('asks for a reminder to review the note, which opens the note', async () => {
+    await open()
+    await act(async () => { fireEvent.contextMenu(screen.getByRole('link', { name: /Krebs cycle/ }), { clientX: 10, clientY: 10 }) })
+    const got = await heard(() => { fireEvent.click(within(screen.getByRole('menu', { name: 'Krebs cycle' })).getByRole('menuitem', { name: /Remind me/ })) })
+    expect(got).toEqual([{ title: 'Review Krebs cycle', href: '/notes/a', link_label: 'Krebs cycle' }])
+  })
+})

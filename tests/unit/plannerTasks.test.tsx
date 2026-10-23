@@ -19,7 +19,7 @@ vi.mock('@/lib/data/tasks', () => ({
   createTask: (...a: [unknown, object]) => createTask(...a), setTaskDone: (...a: unknown[]) => setTaskDone(...a),
   updateTask: (...a: unknown[]) => updateTask(...a), deleteTask: (...a: unknown[]) => deleteTask(...a),
 }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }))
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import PlannerPage from '@/app/(app)/planner/page'

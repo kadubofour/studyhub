@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useId, useState, useSyncExternalStore } from 'react'
 import { Switch } from '@/components/ui/Switch'
 import { BTN_OUTLINE } from '@/components/ui/buttonStyles'
@@ -80,6 +81,7 @@ export function RemindersCard() {
         </div>
         {note && <p role="alert" className="mt-2 text-xs text-danger">{note}</p>}
         {prefs.on && <button type="button" className={`${BTN_OUTLINE} mt-3`} onClick={test}>Send a test reminder</button>}
+        <p className="mt-3 border-t border-line pt-3 text-xs text-muted">These are the automatic ones. <Link href="/planner?list=reminders" className="font-medium text-accent hover:underline">Your own reminders</Link> are in the Planner, and they show whether these are on or not.</p>
       </section>
 
       {prefs.on && (

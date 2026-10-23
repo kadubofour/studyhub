@@ -45,7 +45,7 @@ describe('nextOccurrence', () => {
 describe('dueMine', () => {
   it('shows a reminder in the 15 minutes after its time, once per day, with the Reminders page to open', () => {
     expect(dueMine([r()], at('2026-10-23T15:59:00Z'), TZ)).toEqual([])
-    expect(dueMine([r()], at('2026-10-23T16:05:00Z'), TZ)).toEqual([{ key: 'custom:r1:2026-10-23:16:00', title: 'Reminder', body: 'Email my tutor', href: '/reminders' }])
+    expect(dueMine([r()], at('2026-10-23T16:05:00Z'), TZ)).toEqual([{ key: 'custom:r1:2026-10-23:16:00', title: 'Reminder', body: 'Email my tutor', href: '/planner?list=reminders' }])
     expect(dueMine([r()], at('2026-10-23T16:20:00Z'), TZ)).toEqual([])
   })
   it('catches one set just before midnight, a few minutes into the next day', () => {
@@ -75,5 +75,14 @@ describe('words', () => {
     expect(whenLabel(at('2026-10-23T16:00:00Z'), TZ, now)).toBe('Today 16:00')
     expect(whenLabel(at('2026-10-24T08:00:00Z'), TZ, now)).toBe('Tomorrow 08:00')
     expect(whenLabel(at('2026-10-30T16:00:00Z'), TZ, now)).toBe('Fri 30 Oct 16:00')
+  })
+})
+
+describe('a reminder about something', () => {
+  it('opens what it is about when it shows', () => {
+    expect(dueMine([r({ href: '/notes/n1', link_label: 'Krebs cycle' })], at('2026-10-23T16:05:00Z'), TZ)[0].href).toBe('/notes/n1')
+  })
+  it('opens the Planner\'s reminders when it is about nothing', () => {
+    expect(dueMine([r()], at('2026-10-23T16:05:00Z'), TZ)[0].href).toBe('/planner?list=reminders')
   })
 })

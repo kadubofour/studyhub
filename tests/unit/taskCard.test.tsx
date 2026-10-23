@@ -68,3 +68,15 @@ describe('TaskCard', () => {
     expect(screen.queryByText('Fri')).toBeNull()
   })
 })
+
+describe('Remind me', () => {
+  it('asks for a reminder about the task, on its due day, that opens the Planner', async () => {
+    const { OPEN_REMINDER } = await import('@/lib/reminders/events')
+    const heard = vi.fn()
+    window.addEventListener(OPEN_REMINDER, heard as EventListener)
+    setup(task({ title: 'Essay draft', due_at: '2026-10-16T23:59:00Z' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remind me about Essay draft' }))
+    expect((heard.mock.calls[0][0] as CustomEvent).detail).toEqual({ title: 'Essay draft', day: '2026-10-16', href: '/planner', link_label: 'Essay draft' })
+    window.removeEventListener(OPEN_REMINDER, heard as EventListener)
+  })
+})

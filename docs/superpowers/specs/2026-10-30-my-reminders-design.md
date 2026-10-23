@@ -1,72 +1,64 @@
 # My reminders
 
-The student asked for "a reminders function". Studyhub already has automatic reminders, set up under Settings → Reminders: tasks due, exams, classes, cards due, the daily goal and the morning plan. They are off by default and easy to miss. What is missing is a reminder the student sets for themselves: "Remind me to email my tutor, Friday at 16:00", or "Take my vitamins, every day at 08:00".
+The student asked for "a reminders function". Studyhub already has automatic reminders, set up under Settings → Reminders: tasks due, exams, classes, cards due, the daily goal and the morning plan. What was missing was a reminder the student sets for themselves, such as "Remind me to email my tutor, Friday at 16:00" or "Review the Cells deck, every day at 18:00".
 
-## What the student gets
+**Revised (second request):** reminders have no page of their own. They are part of what they are about, and of where the student already plans their time.
 
-- **A Reminders page** (`/reminders`), in the sidebar after Planner, and in Search or jump.
-  - **Upcoming:** each reminder shows what it says, when it is next due ("Today 16:00", "Tomorrow 08:00", "Fri 24 Oct 16:00") and how it repeats. They are sorted soonest first.
-  - **Past:** one-off reminders whose time has gone, newest first, with **Clear past**.
-  - Each reminder can be edited or deleted.
-  - **Automatic reminders:** a card saying whether they are on, with a link to Settings → Reminders.
-  - A line saying how they arrive: "Reminders show while Studyhub is open in a tab, and as a notification when your browser allows it."
-- **New reminder** opens a dialog with:
-  - What (required, up to 120 characters);
-  - Date (today by default);
-  - Time (the next whole hour by default);
-  - Repeat: Once, Every day, Weekdays or Every week.
+## Where reminders are
 
-  The dialog is reached from the page, from the Create menu ("New reminder"), and from `/reminders?new=1`.
-- **When it is due**, it appears the way the other reminders do: a toast with Open (it opens the Reminders page), and a browser notification when the tab is not in view.
-  - A reminder the student set always shows. It does not depend on the automatic reminders' master switch or their quiet hours, because the student chose that time themselves.
-  - As with the others, it is shown within 15 minutes of its time, and not replayed later.
-- **Notification permission:** saving the first reminder asks the browser for it, if it has not been asked before.
+- **Made from anywhere.**
+  - "New reminder" in the Create menu, and in Search or jump, opens the reminder dialog over the page the student is on, the way Upload and Scan do.
+  - Saving keeps them on that page.
+- **"Remind me…" on the things they are about.** This opens the same dialog filled in for that thing. The reminder is linked to it, and its Open goes back there.
+  - A **task**, from its row in the Planner: "Remind me about <task>". It is set for the task's due day (today if it has none) and points at the Planner.
+  - A **note**, from its menu on the Notes page: "Review <note>". It points at the note.
+  - A **deck**, on the deck's page: "Review <deck>". It points at the deck.
+- **The Planner** lists them.
+  - A **Reminders** entry in the Tasks tab's list of lists, with the number coming up, sits beside Today, Upcoming and the rest.
+  - It shows **Upcoming** (soonest first, with when and how it repeats, and what it is about) and **Past** one-offs (with **Clear past**), each with edit and delete.
+  - `/planner?list=reminders` opens it.
+- **Home, Today:** today's reminders that are still to come are listed with their time, for example "16:00 · Email my tutor".
+- **Settings → Reminders** (the automatic ones) says that the student's own reminders are in the Planner, with a link to them.
+
+## The dialog
+
+It has:
+- What (required, up to 120 characters);
+- Date (today by default);
+- Time (the next whole hour by default);
+- Repeat: Once, Every day, Weekdays or Every week;
+- "About <thing>", when the dialog was opened from a thing, which the student can remove.
+
+A one-off cannot be saved in the past, and this is checked again on Save. If saving fails, the dialog stays open with what was typed. The first time a reminder is saved, the browser is asked for permission to show notifications.
+
+## When one is due
+
+It shows as a toast with Open, and as a browser notification when the tab is not in view.
+- Open goes to its thing, or to the Planner's Reminders list.
+- It shows whatever the automatic reminders' master switch and quiet hours are, because the student chose the time.
+- It is shown within 15 minutes of its time and not replayed later.
+
+Reminders show while Studyhub is open in a tab. When it is closed they need web push, which is a later piece of work.
 
 ## Rules
 
-- Times are in the student's time zone (`profile.timezone`). A reminder stores a local date, a local time and how it repeats, so "every day at 08:00" stays 08:00 when the clocks change.
+- Times are in the student's time zone. A reminder stores its local date, local time and repeat.
 - **Repeats:**
-  - Once: on its date only.
+  - Once: on its date.
   - Every day: on its date and every day after.
   - Weekdays: Monday to Friday, from its date.
-  - Every week: the same weekday as its date, from its date.
-- A repeating reminder is never "past". Its next time is shown.
-- **Keys** for "already shown": `custom:<id>:<local day>`. Editing a reminder's time gives it a new moment, so it can show again that day.
+  - Every week: the same weekday as its date.
+- The "already shown" key is `custom:<id>:<day>:<HH:MM>`.
+- A link is a path inside Studyhub. It starts with a single `/`, so it can never send the student to another site.
 
 ## Data
 
-Migration `reminders`:
+Migration `20261106000000_reminders.sql` creates `public.reminders`:
+- `id`, `user_id`, `created_at`;
+- `title` (1 to 120 characters);
+- `day date`, `at time`;
+- `repeat` (`once`, `daily`, `weekdays` or `weekly`);
+- `href text null` (an in-app path);
+- `link_label text null` (up to 120 characters).
 
-```sql
-create table public.reminders (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid() references auth.users on delete cascade,
-  title text not null check (length(btrim(title)) between 1 and 120),
-  day date not null,
-  at time not null,
-  repeat text not null default 'once' check (repeat in ('once', 'daily', 'weekdays', 'weekly')),
-  created_at timestamptz not null default now()
-);
-```
-
-It has an index on `(user_id, day)`, row-level security limited to the student's own rows, and is part of the data download and account deletion as the other tables are.
-
-## Code
-
-- **`lib/reminders/mine.ts`** holds the pure functions:
-  - `occursOn(r, dayKey)`;
-  - `nextOccurrence(r, now, tz)`, which returns a `Date` or `null` for a one-off in the past;
-  - `dueMine(rs, now, tz)`, which returns the `Reminder`s to show now (the occurrence today, or yesterday when 15 minutes before midnight cross the day);
-  - `describeRepeat(r)` and `whenLabel(date, tz, now)`.
-- **`lib/data/reminders.ts`** holds the data functions: `listReminders`, `createReminder`, `updateReminder`, `deleteReminder` and `deleteReminders(ids)`.
-- **`ReminderProvider`** checks the student's own reminders whenever there are any, even with the automatic ones off. It reloads them on the same schedule, and when the Reminders page changes them (a `studyhub:reminders-changed` event).
-- **The page:** `app/(app)/reminders/page.tsx` and `components/reminders/ReminderDialog.tsx`.
-- **The shell:**
-  - `PLACES` gets Reminders, with a Bell icon.
-  - The Create menu gets `new-reminder`, which goes to `/reminders?new=1`.
-
-## Not in this
-
-- Reminders while Studyhub is closed. That needs web push (a service worker, a push service and a server-side schedule) and is a later piece of work.
-- Snooze.
-- Linking a reminder to a note or a task.
+It is covered by row-level security limited to the student's own rows, and it is included in the data download and in account deletion.
