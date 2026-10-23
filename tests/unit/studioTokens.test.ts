@@ -81,3 +81,20 @@ describe('the Home hero', () => {
     expect(rule).toContain('color: #fff')
   })
 })
+
+describe('glow, kept low', () => {
+  it('no shadow is coloured by the accent: buttons, panels and the hero cast plain shadows', () => {
+    const shadows = css.match(/box-shadow:[^;]*;/g) ?? []
+    expect(shadows.filter(s => /--accent-solid|--accent-glow/.test(s))).toEqual([])
+  })
+  it('the accent wash at the top of the page is faint', () => {
+    const light = Number(/--aurora-strength:\s*(\d+)%/.exec(block(':root'))![1])
+    const dark = Number(/--aurora-strength:\s*(\d+)%/.exec(block('.dark'))![1])
+    expect(light).toBeLessThanOrEqual(6)
+    expect(dark).toBeLessThanOrEqual(10)
+  })
+  it('the shell has no accent halos on the active item, the logo or the Create button', () => {
+    const shell = fs.readFileSync('components/shell/AppShell.tsx', 'utf8')
+    expect(shell).not.toMatch(/shadow-\[[^\]]*var\(--accent-solid\)\]/)
+  })
+})

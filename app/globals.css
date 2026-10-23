@@ -8,7 +8,7 @@
   --glass: rgb(255 255 255 / 0.78); --glass-strong: rgb(255 255 255 / 0.92); --edge: rgb(255 255 255 / 0.9);
   --danger: #C2364A; --danger-soft: #FBE9EC; --success: #12795A; --warn: #8F5200;
   --shadow: 0 1px 2px rgb(21 22 40 / 0.04), 0 10px 32px -14px rgb(21 22 40 / 0.18);
-  --aurora-strength: 13%;
+  --aurora-strength: 5%;
   /* Accent defaults (blue preset) for pages outside the signed-in app */
   --accent: #3B5BDB; --accent-soft: #EEF1FD; --accent-solid: #3B5BDB; --accent-glow: #7C5CFF;
   --app-font: var(--font-inter);
@@ -20,7 +20,7 @@
   --glass: rgb(23 25 39 / 0.72); --glass-strong: rgb(27 29 45 / 0.92); --edge: rgb(255 255 255 / 0.07);
   --danger: #FF8095; --danger-soft: #3A1621; --success: #4FD1A5; --warn: #F0B45A;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 44px -18px rgb(0 0 0 / 0.75);
-  --aurora-strength: 26%;
+  --aurora-strength: 10%;
   --accent: #8DA2FB; --accent-soft: #1B2550;
   --tile-a: var(--glass); --tile-b: var(--glass); --tile-c: var(--glass);
 }
@@ -153,8 +153,8 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
   /* Buttons: 40 px (44 on touch), 10 px corners. Primary is the accent lit from within; secondary is glass; quiet is text that fills on hover. */
   .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-line px-4 py-2 text-[15px] font-medium whitespace-nowrap text-fg transition disabled:opacity-60 pointer-coarse:min-h-11; background: var(--glass); box-shadow: inset 0 1px 0 var(--edge); }
   .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--fg) 8%, var(--glass-strong)); }
-  .btn-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] bg-accent-solid px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 6px 18px -8px var(--accent-solid); }
-  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 10px 26px -8px var(--accent-solid); }
+  .btn-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] bg-accent-solid px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18); }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
   .btn-danger { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] bg-danger px-[1.125rem] py-2 text-[15px] font-semibold whitespace-nowrap text-white transition hover:brightness-110 active:translate-y-px disabled:opacity-60 pointer-coarse:min-h-11; }
   .dark .btn-danger { @apply text-black; }
   .btn-ghost { @apply inline-flex min-h-9 items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-[15px] whitespace-nowrap text-muted transition hover:bg-surface hover:text-fg pointer-coarse:min-h-11 pointer-coarse:px-3; }
@@ -199,7 +199,7 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
   /* The hero: a larger glass panel with the accent glowing in from its corner */
   .hero {
     @apply rounded-3xl p-8 text-fg;
-    background: radial-gradient(520px 260px at 0% 0%, color-mix(in srgb, var(--accent-solid) 32%, transparent), transparent 70%), var(--glass);
+    background: radial-gradient(520px 260px at 0% 0%, color-mix(in srgb, var(--accent-solid) 12%, transparent), transparent 70%), var(--glass);
     border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow);
     -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
   }
@@ -207,7 +207,7 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
   /* Home's hero, as it always was: the top of a notebook page in the accent colour, with faint ruled lines and a margin line */
   .hero.hero-page {
     --hero-margin: 1.5rem; padding-left: calc(var(--hero-margin) + 1.1rem); color: #fff; border-color: transparent;
-    box-shadow: 0 18px 40px -22px var(--accent-solid);
+    box-shadow: var(--shadow);
     background-color: var(--accent-solid);
     background-image:
       linear-gradient(90deg, transparent var(--hero-margin), rgb(255 255 255 / .32) var(--hero-margin), rgb(255 255 255 / .32) calc(var(--hero-margin) + 1.5px), transparent calc(var(--hero-margin) + 1.5px)),
@@ -235,7 +235,6 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
 .app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; border-color: transparent; box-shadow: var(--shadow); }
 .app-root[data-look="vivid"] .card { padding: 1.75rem; }
 .app-root[data-look="vivid"] .btn, .app-root[data-look="vivid"] .btn-primary, .app-root[data-look="vivid"] .btn-danger { border-radius: 9999px; padding-inline: 1.1rem; }
-.app-root[data-look="vivid"] .btn-primary { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent); }
 .app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] .field select,
 .app-root[data-look="vivid"] input.input, .app-root[data-look="vivid"] select.input { border-radius: 9999px; }
 .app-root[data-look="vivid"] .field input, .app-root[data-look="vivid"] input.input { padding-inline: 1rem; }

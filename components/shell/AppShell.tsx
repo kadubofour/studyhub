@@ -161,7 +161,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     // titles: the display face with the default Sans; the student's own font when they picked another
     '--display-font': profile.font && profile.font !== 'sans' && FONTS[profile.font] ? `var(${FONTS[profile.font].cssVar})` : 'var(--font-instrument)',
   } as React.CSSProperties
-  const lit = 'bg-accent-soft text-accent shadow-[0_0_24px_-8px_var(--accent-solid)]'
+  const lit = 'bg-accent-soft text-accent'
   const railItem = (on: boolean) => wide
     ? `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
     : `group relative grid size-11 place-items-center rounded-xl transition ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
@@ -187,7 +187,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           <div className={`mb-3 flex items-center ${wide ? 'justify-between px-1' : 'flex-col gap-2'}`}>
             {/* the mark; Home is the first item below it */}
             <span className="flex items-center gap-2.5">
-              <span title="Studyhub" className="grid size-10 place-items-center rounded-xl bg-accent-solid text-white shadow-[0_6px_20px_-6px_var(--accent-solid)]"><GraduationCap size={19} aria-hidden /></span>
+              <span title="Studyhub" className="grid size-10 place-items-center rounded-xl bg-accent-solid text-white"><GraduationCap size={19} aria-hidden /></span>
               {wide && <span className="font-display text-lg font-semibold tracking-tight">Studyhub</span>}
             </span>
             <button type="button" onClick={() => setCollapsed(wide)} aria-label={wide ? 'Shrink sidebar' : 'Expand sidebar'} title={wide ? 'Shrink sidebar' : 'Expand sidebar'}
@@ -246,7 +246,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         <nav aria-label="Main" className="no-print glass fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 mx-auto grid max-w-md grid-cols-5 items-center rounded-[22px] px-2 py-1.5 md:hidden" style={{ background: 'var(--glass-strong)' }}>
           {DOCK.slice(0, 2).map(dockLink)}
           <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => setCreating(c => (c ? null : 'dock'))}
-            className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-solid text-white shadow-[0_8px_22px_-6px_var(--accent-solid)]">
+            className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-solid text-white">
             <Plus size={22} aria-hidden />
           </button>
           {DOCK.slice(2).map(dockLink)}
