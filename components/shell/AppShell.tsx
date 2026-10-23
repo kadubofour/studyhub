@@ -50,6 +50,7 @@ const DO: PaletteItem[] = [
   { id: 'do:upload', group: 'Do', label: 'Upload', keywords: 'pdf slides word powerpoint file import', run: { action: 'upload' } },
   { id: 'do:scan', group: 'Do', label: 'Scan', keywords: 'photo camera pages', run: { action: 'scan' } },
   { id: 'do:task', group: 'Do', label: 'New task', keywords: 'todo assignment exam planner', run: { action: 'new-task' } },
+  { id: 'do:reminder', group: 'Do', label: 'New reminder', keywords: 'remind me alarm alert', run: { action: 'new-reminder' } },
 ]
 
 export function AppShell({ children, initialCollapsed = false }: { children: React.ReactNode; initialCollapsed?: boolean }) {
@@ -136,6 +137,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     else if (a === 'new-deck') go('/flashcards?new=1')
     else if (a === 'record') go('/lectures/record')
     else if (a === 'new-task') go('/planner')
+    else if (a === 'new-reminder') go('/reminders?new=1')
     else if (a === 'upload') setUploading(true)
     else if (a === 'scan') { setScanFiles(undefined); setScanning(true) }
     else if (a === 'quiz') setQuizzing(true)

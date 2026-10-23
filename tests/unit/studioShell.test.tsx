@@ -48,7 +48,7 @@ describe('the rail', () => {
   it('has every place, in order, each a link with its name, and marks the one you are on', async () => {
     await shell()
     expect(rail().getAllByRole('link').map(l => l.getAttribute('aria-label'))).toEqual(
-      ['Home', 'Planner', 'Focus', 'Notes', 'Flashcards', 'Lectures', 'Tutor', 'Quiz', 'Library', 'Progress', 'Settings', 'Kwadwo'])
+      ['Home', 'Planner', 'Reminders', 'Focus', 'Notes', 'Flashcards', 'Lectures', 'Tutor', 'Quiz', 'Library', 'Progress', 'Settings', 'Kwadwo'])
     expect(rail().getByRole('link', { name: 'Planner' }).getAttribute('aria-current')).toBe('page')
     expect(rail().getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBeNull()
     expect(rail().getByRole('link', { name: 'Kwadwo' }).getAttribute('href')).toBe('/profile')
@@ -107,7 +107,7 @@ describe('Create', () => {
     await shell()
     fireEvent.click(rail().getByRole('button', { name: 'Create new' }))
     const menu = within(screen.getByRole('menu', { name: 'Create' }))
-    expect(menu.getAllByRole('menuitem').map(m => m.getAttribute('aria-label'))).toEqual(['New note', 'New deck', 'Record lecture', 'New task', 'Upload', 'Scan'])
+    expect(menu.getAllByRole('menuitem').map(m => m.getAttribute('aria-label'))).toEqual(['New note', 'New deck', 'Record lecture', 'New task', 'New reminder', 'Upload', 'Scan'])
   })
   it('makes a note and opens it, and opens Upload and Scan (Scan starting on what the page holds)', async () => {
     await shell()
@@ -217,5 +217,14 @@ describe('the frame', () => {
     expect(screen.getByRole('dialog', { name: 'Upload material' })).toBeTruthy()
     await act(async () => { requestQuiz() })
     expect(screen.getByRole('dialog', { name: 'Quiz yourself' })).toBeTruthy()
+  })
+})
+
+describe('reminders from anywhere', () => {
+  it('New reminder in the Create menu opens the Reminders page ready to write one', async () => {
+    await shell()
+    fireEvent.click(rail().getByRole('button', { name: 'Create new' }))
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'New reminder' })) })
+    expect(push).toHaveBeenCalledWith('/reminders?new=1')
   })
 })

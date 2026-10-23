@@ -7,6 +7,9 @@ import type { Profile } from '@/lib/types'
 const push = vi.fn()
 const notify = vi.fn()
 let tasks: unknown[] = []
+let mine: unknown[] = []
+let mineReads = 0
+vi.mock('@/lib/data/reminders', () => ({ listReminders: async () => { mineReads++; return mine }, REMINDERS_CHANGED: 'studyhub:reminders-changed' }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams() }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/tasks', () => ({ listOpenTasks: async () => tasks, setTaskDone: async () => {} }))
@@ -37,7 +40,7 @@ const flush = async () => { await act(async () => { await vi.advanceTimersByTime
 beforeEach(() => {
   window.localStorage.clear()
   reminderPrefs.set(DEFAULT_REMINDERS); shownReminders.set({})
-  tasks = []; push.mockClear(); notify.mockClear(); hidden('visible')
+  tasks = []; mine = []; mineReads = 0; push.mockClear(); notify.mockClear(); hidden('visible')
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date'] })
   vi.setSystemTime(new Date('2026-10-16T18:02:00Z')) // two minutes after the flashcard time
 })
@@ -111,5 +114,30 @@ describe('reminders while the app is open', () => {
     mount(); await flush()
     act(() => { reminders!.test() })
     expect(screen.getByText('Reminders are on: This is what a reminder looks like.')).toBeTruthy()
+  })
+
+  describe('my own reminders', () => {
+    const own = { id: 'm1', title: 'Email my tutor', day: '2026-10-16', at: '18:00:00', repeat: 'once' }
+    it('show at their time even with the automatic reminders off, opening the Reminders page', async () => {
+      mine = [own]
+      mount(); await flush()
+      expect(screen.getByText('Reminder: Email my tutor')).toBeTruthy()
+      act(() => { screen.getByText('Open').click() })
+      expect(push).toHaveBeenCalledWith('/reminders')
+    })
+    it('show in quiet hours too: the student chose that time', async () => {
+      mine = [own]
+      setReminderPrefs({ on: true, quiet: { from: '18:00', to: '19:00' } })
+      mount(); await flush()
+      expect(screen.getByText(/Email my tutor/)).toBeTruthy()
+    })
+    it('are read again when the Reminders page changes them', async () => {
+      mount(); await flush()
+      const before = mineReads
+      mine = [own]
+      await act(async () => { window.dispatchEvent(new Event('studyhub:reminders-changed')); await vi.advanceTimersByTimeAsync(500) })
+      expect(mineReads).toBeGreaterThan(before)
+      expect(screen.getByText('Reminder: Email my tutor')).toBeTruthy()
+    })
   })
 })

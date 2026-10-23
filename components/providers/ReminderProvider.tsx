@@ -11,6 +11,8 @@ import { listDecksWithDue } from '@/lib/data/decks'
 import { notify } from '@/lib/focus/alert'
 import { localStore } from '@/lib/ui/localStore'
 import { dueReminders, type Reminder } from '@/lib/reminders/engine'
+import { dueMine, type MyReminder } from '@/lib/reminders/mine'
+import { listReminders, REMINDERS_CHANGED } from '@/lib/data/reminders'
 import { reminderPrefs, useReminderPrefs } from '@/lib/reminders/prefs'
 import type { ClassSlot, Task } from '@/lib/types'
 
@@ -37,6 +39,8 @@ export function ReminderProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const prefs = useReminderPrefs()
   const data = useRef<{ tasks: Task[]; classes: ClassSlot[]; dueCards: number }>({ tasks: [], classes: [], dueCards: 0 })
+  // the student's own reminders: shown whether or not the automatic ones are on
+  const mine = useRef<MyReminder[]>([])
   const live = useRef({ todayMinutes, profile })
   useEffect(() => { live.current = { todayMinutes, profile } })
 
@@ -56,7 +60,10 @@ export function ReminderProvider({ children }: { children: React.ReactNode }) {
     const id = (r: Reminder) => `${p.id}|${r.key}`
     // A tab that is not being looked at records its reminders as negative: the student has had the notification but not seen the page say it,
     // so the first tab they look at shows it once more (without another notification)
-    const due = dueReminders({ now, tz: p.timezone, prefs: reminderPrefs.get(), ...data.current, todayMinutes: minutes, goalMinutes: p.daily_goal_minutes })
+    const due = [
+      ...dueReminders({ now, tz: p.timezone, prefs: reminderPrefs.get(), ...data.current, todayMinutes: minutes, goalMinutes: p.daily_goal_minutes }),
+      ...dueMine(mine.current, now, p.timezone),
+    ]
     const fresh = due.filter(r => shown[id(r)] === undefined)
     const unseen = visible ? due.filter(r => (shown[id(r)] ?? 0) < 0) : []
     if (fresh.length === 0 && unseen.length === 0) return
@@ -69,12 +76,19 @@ export function ReminderProvider({ children }: { children: React.ReactNode }) {
 
   const uid = profile.id
   useEffect(() => {
-    if (!prefs.on) return
     let live = true
+    const on = prefs.on
     const load = () => {
       const sb = supabase()
-      Promise.all([listOpenTasks(sb), listClasses(sb), listDecksWithDue(sb, new Date())])
-        .then(([tasks, classes, decks]) => { if (live) { data.current = { tasks, classes, dueCards: decks.reduce((n, d) => n + d.due, 0) }; check() } })
+      // the student's own reminders always; what the automatic ones need only while they are on. Read together, so one check sees it all.
+      const automatic = on ? Promise.all([listOpenTasks(sb), listClasses(sb), listDecksWithDue(sb, new Date())]) : Promise.resolve(null)
+      Promise.all([listReminders(sb), automatic])
+        .then(([rs, auto]) => {
+          if (!live) return
+          mine.current = rs
+          data.current = auto ? { tasks: auto[0], classes: auto[1], dueCards: auto[2].reduce((n, d) => n + d.due, 0) } : { tasks: [], classes: [], dueCards: 0 }
+          check()
+        })
         .catch(() => { /* offline: the next try will do */ })
     }
     load()
@@ -82,7 +96,8 @@ export function ReminderProvider({ children }: { children: React.ReactNode }) {
     const tick = setInterval(check, CHECK_MS)
     const back = () => { if (document.visibilityState === 'visible') load() }
     document.addEventListener('visibilitychange', back)
-    return () => { live = false; clearInterval(reload); clearInterval(tick); document.removeEventListener('visibilitychange', back) }
+    window.addEventListener(REMINDERS_CHANGED, load)
+    return () => { live = false; clearInterval(reload); clearInterval(tick); document.removeEventListener('visibilitychange', back); window.removeEventListener(REMINDERS_CHANGED, load) }
   }, [prefs.on, uid, check])
 
   const test = useCallback(() => show([{ key: `test:${Date.now()}`, title: 'Reminders are on', body: 'This is what a reminder looks like.', href: '/settings?section=reminders' }]), [show])

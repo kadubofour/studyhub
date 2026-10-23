@@ -1,10 +1,11 @@
-import { BarChart3, CalendarDays, FolderOpen, Home, Layers, ListChecks, MessagesSquare, Mic, NotebookPen, Timer, type LucideIcon } from 'lucide-react'
+import { BarChart3, Bell, CalendarDays, FolderOpen, Home, Layers, ListChecks, MessagesSquare, Mic, NotebookPen, Timer, type LucideIcon } from 'lucide-react'
 
 // The places in the app, in the order the rail shows them. The palette lists them too, with words they can also be found by.
 export interface Place { href: string; label: string; icon: LucideIcon; keywords?: string }
 export const PLACES: Place[] = [
   { href: '/home', label: 'Home', icon: Home, keywords: 'today dashboard start' },
   { href: '/planner', label: 'Planner', icon: CalendarDays, keywords: 'tasks calendar exams timetable classes week' },
+  { href: '/reminders', label: 'Reminders', icon: Bell, keywords: 'remind alarm alert notification' },
   { href: '/focus', label: 'Focus', icon: Timer, keywords: 'timer pomodoro study session sounds' },
   { href: '/notes', label: 'Notes', icon: NotebookPen, keywords: 'notebooks write' },
   { href: '/flashcards', label: 'Flashcards', icon: Layers, keywords: 'cards decks review' },

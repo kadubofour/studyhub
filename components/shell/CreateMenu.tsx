@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { FilePlus, Layers, ListPlus, Mic, ScanLine, Upload, type LucideIcon } from 'lucide-react'
+import { BellPlus, FilePlus, Layers, ListPlus, Mic, ScanLine, Upload, type LucideIcon } from 'lucide-react'
 
-export type CreateAction = 'new-note' | 'new-deck' | 'record' | 'new-task' | 'upload' | 'scan'
+export type CreateAction = 'new-note' | 'new-deck' | 'record' | 'new-task' | 'new-reminder' | 'upload' | 'scan'
 const ITEMS: { id: CreateAction; label: string; hint: string; icon: LucideIcon }[] = [
   { id: 'new-note', label: 'New note', hint: 'Write it here', icon: FilePlus },
   { id: 'new-deck', label: 'New deck', hint: 'Flashcards', icon: Layers },
   { id: 'record', label: 'Record lecture', hint: 'Transcribed as you go', icon: Mic },
   { id: 'new-task', label: 'New task', hint: 'In the Planner', icon: ListPlus },
+  { id: 'new-reminder', label: 'New reminder', hint: 'At a time you choose', icon: BellPlus },
   { id: 'upload', label: 'Upload', hint: 'A PDF, slides or a document', icon: Upload },
   { id: 'scan', label: 'Scan', hint: 'Photos of pages', icon: ScanLine },
 ]

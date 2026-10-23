@@ -1,32 +1,24 @@
 import { test, expect } from '@playwright/test'
-import { signUp } from './helpers'
+import AxeBuilder from '@axe-core/playwright'
+import { create, signUp } from './helpers'
 
-test('reminders live in Settings, turn on, and the focus alerts moved there', async ({ page }) => {
+test('my reminders: made from the Create menu, listed with when and how often, kept after a reload, and deleted', async ({ page }) => {
   await signUp(page)
-  await page.goto('/settings?section=reminders')
-  await expect(page.getByRole('heading', { name: 'Reminders', level: 2 })).toBeVisible()
-  // Off until the student turns them on; the focus alerts are here, not on the Focus page
-  await expect(page.getByRole('switch', { name: 'Remind me' })).toHaveAttribute('aria-checked', 'false')
-  await expect(page.getByRole('region', { name: 'When time is up' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'What to remind me about' })).toHaveCount(0)
+  await create(page, 'New reminder')
+  await expect(page).toHaveURL(/\/reminders/)
+  const dialog = page.getByRole('dialog', { name: 'New reminder' })
+  await dialog.getByLabel('What').fill('Email my tutor')
+  await dialog.getByRole('radio', { name: 'Every day' }).click()
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  const upcoming = page.getByRole('list', { name: 'Upcoming' })
+  await expect(upcoming).toContainText('Email my tutor')
+  await expect(upcoming).toContainText('Every day')
 
-  await page.getByRole('switch', { name: 'Remind me' }).click()
-  await expect(page.getByRole('switch', { name: 'Remind me' })).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByRole('region', { name: 'What to remind me about' })).toBeVisible()
-  await page.getByRole('switch', { name: 'Tasks due' }).click() // off
-  await page.getByRole('switch', { name: 'Flashcards to review' }).click() // off
-  await page.getByLabel('Classes starting: when').selectOption('30')
-
-  await page.getByRole('button', { name: 'Send a test reminder' }).click()
-  await expect(page.getByText('Reminders are on: This is what a reminder looks like.')).toBeVisible()
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+  expect(axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 
   await page.reload()
-  await expect(page.getByRole('switch', { name: 'Remind me' })).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByRole('switch', { name: 'Tasks due' })).toHaveAttribute('aria-checked', 'false')
-  await expect(page.getByLabel('Classes starting: when')).toHaveValue('30')
-
-  await page.goto('/focus')
-  await expect(page.getByRole('region', { name: 'When time is up' })).toHaveCount(0)
-  await page.getByRole('link', { name: 'Settings', exact: true }).last().click()
-  await expect(page).toHaveURL(/section=reminders/)
+  await expect(page.getByRole('list', { name: 'Upcoming' })).toContainText('Email my tutor') // it was saved
+  await page.getByRole('button', { name: 'Delete Email my tutor' }).click()
+  await expect(page.getByRole('heading', { name: 'No reminders yet' })).toBeVisible()
 })

@@ -42,7 +42,7 @@ export async function becomePremium(page: Page) {
 }
 
 // The + that makes things: in the rail on a computer, in the dock on a phone. Picks an item from its menu.
-export async function create(page: Page, item: 'New note' | 'New deck' | 'Record lecture' | 'New task' | 'Upload' | 'Scan') {
+export async function create(page: Page, item: 'New note' | 'New deck' | 'Record lecture' | 'New task' | 'New reminder' | 'Upload' | 'Scan') {
   await page.locator('button[aria-label="Create new"]:visible').click()
   await page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: item }).click()
 }
