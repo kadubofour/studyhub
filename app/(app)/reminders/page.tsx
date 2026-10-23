@@ -43,7 +43,11 @@ export default function RemindersPage() {
 
   const openNew = () => { setEditing(null); setStart(freshReminder(new Date(), tz)) }
   const openEdit = (r: MyReminder) => { setEditing(r); setStart({ title: r.title, day: r.day, at: r.at.slice(0, 5), repeat: r.repeat }) }
-  const close = () => { setStart(null); setEditing(null) }
+  const close = () => {
+    setStart(null); setEditing(null)
+    // the Create menu's ?new=1 has done its job: without it, a reload does not open the dialog again
+    if (fromAddress) window.history.replaceState(null, '', window.location.pathname)
+  }
 
   async function save(input: ReminderInput) {
     const was = editing

@@ -105,10 +105,14 @@ describe('the Reminders page', () => {
     expect(deleteReminders).toHaveBeenCalledWith({}, ['c'])
     expect(screen.queryByRole('list', { name: 'Past' })).toBeNull()
   })
-  it('opens New reminder from the address, as the Create menu does', async () => {
+  it('opens New reminder from the address, as the Create menu does, and takes it out of the address once closed', async () => {
     search = 'new=1'
+    const replace = vi.spyOn(window.history, 'replaceState')
     await open()
     expect(screen.getByRole('dialog', { name: 'New reminder' })).toBeTruthy()
+    await click(within(screen.getByRole('dialog', { name: 'New reminder' })).getByRole('button', { name: 'Cancel' }))
+    expect(String(replace.mock.calls.at(-1)![2])).not.toContain('new=1') // a reload does not open it again
+    replace.mockRestore()
   })
   it('invites a first reminder when there are none', async () => {
     rows = []

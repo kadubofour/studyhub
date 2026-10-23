@@ -12,7 +12,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
 
   await page.goto('/library')
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible()
-  const list = page.getByRole('list').filter({ has: page.getByRole('link', { name: /Krebs cycle/ }) })
+  const list = page.getByRole('region', { name: 'Library items' }) // each kind in its own section
   await expect(list.getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
   await expect(list.getByRole('link', { name: /Cells/ })).toBeVisible()
 
