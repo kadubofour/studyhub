@@ -158,7 +158,7 @@ export default function HomePage() {
         </>)}
       </section>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section aria-label="Today" className="card">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="section-label !mb-0">Today</h2>
@@ -182,7 +182,7 @@ export default function HomePage() {
           <QuickAdd courses={courses} defaultCourseId={null} tz={tz} onAdd={add} compact implicitDue="Today" />
         </section>
 
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           {!bold && (
             <section aria-label="Focus" className="card text-center">
               <h2 className="section-label">{MODE_LABEL[focus.timer.mode]}</h2>
@@ -195,9 +195,9 @@ export default function HomePage() {
               </div>
             </section>
           )}
-          <section aria-label="This week" className="card">
+          <section aria-label="This week" className="card flex flex-1 flex-col">
             <h2 className="section-label">This week</h2>
-            <div className="flex h-32 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
+            <div className="mt-auto flex h-32 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
               {weekKeys.map(k => {
                 const m = week.get(k) ?? 0
                 const isToday = k === todayKey

@@ -54,12 +54,18 @@ beforeAll(() => {
 })
 
 describe('Library', () => {
-  it('lists everything, newest first, with what it is and where it belongs', async () => {
+  it('sorts everything into a section per kind, in a fixed order, each named with its count', async () => {
+    await open()
+    const items = within(screen.getByRole('region', { name: 'Library items' }))
+    expect(items.getAllByRole('heading', { level: 2 }).map(h => h.textContent)).toEqual(['Notes2', 'Decks2', 'Lectures1', 'Quizzes1', 'Tutor chats1'])
+    expect(within(items.getByRole('list', { name: 'Decks' })).getAllByRole('listitem').map(li => li.textContent ?? '').every(t => /Cells|Spanish verbs/.test(t))).toBe(true)
+  })
+  it('lists everything, newest first within each kind, with where it belongs', async () => {
     await open()
     const r = rows()
     expect(r).toHaveLength(7)
     expect(r[0]).toContain('Loose thoughts')
-    expect(r[1]).toContain('Krebs quiz')
+    expect(r[1]).toContain('Krebs cycle')
     expect(r.find(t => t.includes('Cells'))).toContain('12 cards · 3 due')
     expect(r.find(t => t.includes('Cells'))).toContain('Biology')
     expect(screen.getByText('7 items')).toBeTruthy()
@@ -73,6 +79,7 @@ describe('Library', () => {
   describe('finding things', () => {
     it('filters by kind, and the chips say how many each holds', async () => {
       await open()
+      expect(screen.getByRole('button', { name: /^Tutor chats 1$/ })).toBeTruthy() // named as its section is
       const chip = screen.getByRole('button', { name: /^Decks 2$/ })
       expect(chip.getAttribute('aria-pressed')).toBe('false')
       await click(chip)
@@ -139,7 +146,8 @@ describe('Library', () => {
     it('sorts by name', async () => {
       await open()
       await click(screen.getByRole('radio', { name: 'Name' }))
-      expect(rows()[0]).toContain('Cells')
+      expect(rows().slice(0, 2).map(t => t.includes('Krebs cycle') ? 'K' : t.includes('Loose thoughts') ? 'L' : '?')).toEqual(['K', 'L'])
+      expect(rows()[2]).toContain('Cells')
     })
   })
 
@@ -265,7 +273,7 @@ describe('Library', () => {
       { ...item('note', 'n4', 'Mitochondria', 'bio', '2026-10-01T10:00:00Z'), notebook_id: 'cell' },
     ]
     const shelf = () => within(screen.getByRole('list', { name: 'Notebooks' }))
-    const listed = () => within(screen.getByRole('list', { name: 'Library items' })).getAllByRole('listitem').map(li => li.textContent ?? '')
+    const listed = () => within(screen.getByRole('region', { name: 'Library items' })).getAllByRole('listitem').map(li => li.textContent ?? '')
     beforeEach(() => { items = FILED; notebooks = [{ id: 'cell', name: 'Cell biology', created_at: '' }, { id: 'old', name: 'Archive', created_at: '' }] })
 
     it('shows each notebook as a folder with its note count, and keeps filed notes inside it', async () => {

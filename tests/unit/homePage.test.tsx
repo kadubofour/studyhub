@@ -71,3 +71,12 @@ describe('Home, as it was, in the new design', () => {
     expect(within(screen.getByRole('region', { name: 'Welcome' })).queryByRole('button', { name: /Start focus/ })).toBeNull()
   })
 })
+
+describe('Home lines up', () => {
+  it('Today and This week are the same height: the row stretches and This week fills its column', async () => {
+    await home()
+    const row = screen.getByRole('region', { name: 'Today' }).parentElement!
+    expect(row.className).not.toContain('items-start')
+    expect(screen.getByRole('region', { name: 'This week' }).className).toContain('flex-1')
+  })
+})

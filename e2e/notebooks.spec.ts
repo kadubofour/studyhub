@@ -57,7 +57,7 @@ test('Library: notebooks are folders: make one, file a note in it, open it, and 
   await page.getByRole('dialog', { name: 'Move to notebook' }).getByRole('button', { name: 'Cell biology' }).click()
   await expect(page.getByText('Moved 1 note to Cell biology.')).toBeVisible()
   await expect(shelf.getByRole('button', { name: 'Open Cell biology, 1 note' })).toBeVisible()
-  await expect(page.getByRole('list', { name: 'Library items' }).getByRole('link', { name: /Krebs cycle/ })).toHaveCount(0) // inside the folder now
+  await expect(page.getByRole('region', { name: 'Library items' }).getByRole('link', { name: /Krebs cycle/ })).toHaveCount(0) // inside the folder now
 
   await shelf.getByRole('button', { name: /Cell biology/ }).click()
   await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Cell biology')

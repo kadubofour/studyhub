@@ -23,12 +23,13 @@ import { useView } from '@/lib/ui/listView'
 import { countsByKind, folders, isMovable, visible, withKnownNotebooks, type Kind, type LibraryItem, type View } from '@/lib/library/items'
 import type { Course, Notebook } from '@/lib/types'
 
-const KIND: Record<Kind, { label: string; plural: string; icon: LucideIcon }> = {
-  note: { label: 'Note', plural: 'Notes', icon: FileText },
-  deck: { label: 'Deck', plural: 'Decks', icon: Layers },
-  lecture: { label: 'Lecture', plural: 'Lectures', icon: Mic },
-  quiz: { label: 'Quiz', plural: 'Quizzes', icon: ListChecks },
-  chat: { label: 'Tutor chat', plural: 'Chats', icon: MessagesSquare },
+// Each kind has its own section, in this order, named with its heading
+const KIND: Record<Kind, { heading: string; icon: LucideIcon }> = {
+  note: { heading: 'Notes', icon: FileText },
+  deck: { heading: 'Decks', icon: Layers },
+  lecture: { heading: 'Lectures', icon: Mic },
+  quiz: { heading: 'Quizzes', icon: ListChecks },
+  chat: { heading: 'Tutor chats', icon: MessagesSquare },
 }
 const KINDS = Object.keys(KIND) as Kind[]
 const key = (i: { kind: Kind; id: string }) => `${i.kind}:${i.id}`
@@ -74,7 +75,8 @@ export default function LibraryPage() {
   const open = bookOf(view.folder)
   const current: View = { ...view, course, folder: open?.id ?? null }
   const known = items ? withKnownNotebooks(items, notebooks) : null
-  const shown = known ? visible(known, current) : []
+  // grouped by kind in the sections' order (each group keeps the chosen sort), so ticking and the screen agree on the order
+  const shown = known ? (list => KINDS.flatMap(k => list.filter(i => i.kind === k)))(visible(known, current)) : []
   const shelf = known ? folders(known, notebooks, current) : []
   const counts = known ? countsByKind(known, current) : null
   // Only what is shown can be moved, so a tick hidden by a filter never goes along unseen
@@ -223,7 +225,7 @@ export default function LibraryPage() {
               {KINDS.map(k => (
                 <button key={k} type="button" aria-pressed={view.kind === k} onClick={() => setView(v => ({ ...v, kind: v.kind === k ? null : k }))}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm pointer-coarse:py-2 transition ${view.kind === k ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>
-                  {KIND[k].plural} <span className="text-muted">{counts![k]}</span>
+                  {KIND[k].heading} <span className="text-muted">{counts![k]}</span>
                 </button>
               ))}
             </div>
@@ -276,24 +278,36 @@ export default function LibraryPage() {
               <div className="card py-8 text-center text-sm text-muted">{course === 'none' ? 'Everything is in a course.' : courseName ? 'Nothing in this course yet.' : 'Nothing here yet.'}</div>
             )
           ) : (
-            <ItemList label="Library items" layout={layout}>
-              {shown.map(i => {
-                const k = KIND[i.kind]
-                const movable = isMovable(i)
-                const c = courseOf(i.course_id)
-                const book = !open && i.kind === 'note' ? bookOf(i.notebook_id) : null
+            <section aria-label="Library items" className="space-y-8">
+              {KINDS.filter(k => shown.some(i => i.kind === k)).map(kind => {
+                const k = KIND[kind]
+                const group = shown.filter(i => i.kind === kind)
                 return (
-                  <ItemTile key={key(i)} layout={layout} icon={k.icon} color={c?.color} title={i.title} href={i.href}
-                    subtitle={book ? `${k.label} in ${book.name}` : k.label}
-                    meta={<CourseTag course={c} />}
-                    aside={[i.meta, day(i.at)].filter(Boolean).join(' · ')}
-                    corner={
-                      <input type="checkbox" className="size-4" checked={selected.has(key(i))} disabled={!movable} onChange={() => toggle(i)} aria-label={`Select ${i.title}`}
-                        title={movable ? undefined : 'Quizzes stay with their note. Move the note to move its quiz.'} />
-                    } />
+                  <section key={kind} aria-labelledby={`lib-${kind}`}>
+                    <h2 id={`lib-${kind}`} className="section-label flex items-center gap-2">
+                      <k.icon size={17} className="text-accent" aria-hidden />{k.heading}<span className="text-[15px] font-normal text-muted">{group.length}</span>
+                    </h2>
+                    <ItemList label={k.heading} layout={layout}>
+                      {group.map(i => {
+                        const movable = isMovable(i)
+                        const c = courseOf(i.course_id)
+                        const book = !open && i.kind === 'note' ? bookOf(i.notebook_id) : null
+                        return (
+                          <ItemTile key={key(i)} layout={layout} icon={k.icon} color={c?.color} title={i.title} href={i.href}
+                            subtitle={book ? `In ${book.name}` : undefined}
+                            meta={<CourseTag course={c} />}
+                            aside={[i.meta, day(i.at)].filter(Boolean).join(' · ')}
+                            corner={
+                              <input type="checkbox" className="size-4" checked={selected.has(key(i))} disabled={!movable} onChange={() => toggle(i)} aria-label={`Select ${i.title}`}
+                                title={movable ? undefined : 'Quizzes stay with their note. Move the note to move its quiz.'} />
+                            } />
+                        )
+                      })}
+                    </ItemList>
+                  </section>
                 )
               })}
-            </ItemList>
+            </section>
           )}
           {items.some(i => !isMovable(i)) && !open && <p className="mt-3 text-xs text-muted">Quizzes stay with their note. Move the note to move its quiz.</p>}
         </>
