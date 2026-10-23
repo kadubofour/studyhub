@@ -10,7 +10,7 @@ import { ReminderDialog, freshReminder } from '@/components/reminders/ReminderDi
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
-import { announceRemindersChanged, createReminder, deleteReminder, deleteReminders, listReminders, updateReminder, type ReminderInput } from '@/lib/data/reminders'
+import { REMINDERS_CHANGED, announceRemindersChanged, createReminder, deleteReminder, deleteReminders, listReminders, updateReminder, type ReminderInput } from '@/lib/data/reminders'
 import { askNotificationPermission, notificationPermission } from '@/lib/focus/alert'
 import { describeRepeat, nextOccurrence, whenLabel, type MyReminder } from '@/lib/reminders/mine'
 import { useReminderPrefs } from '@/lib/reminders/prefs'
@@ -26,6 +26,21 @@ export default function RemindersPage() {
   const [failed, setFailed] = useState(false)
   const [editing, setEditing] = useState<MyReminder | null>(null)
   const [start, setStart] = useState<ReminderInput | null>(() => (fromAddress ? freshReminder(new Date(), tz) : null))
+  // The Create menu can ask again while this page is open (the address gains ?new=1 once more): open a new one each time it does
+  const [askedNew, setAskedNew] = useState(fromAddress)
+  if (fromAddress !== askedNew) {
+    setAskedNew(fromAddress)
+    if (fromAddress) { setEditing(null); setStart(freshReminder(new Date(), tz)) }
+  }
+  // The time the lists are drawn for, moved on every half minute, so a reminder whose time comes moves on without a reload
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    const every = setInterval(tick, 30_000)
+    window.addEventListener(REMINDERS_CHANGED, tick)
+    document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(every); window.removeEventListener(REMINDERS_CHANGED, tick); document.removeEventListener('visibilitychange', tick) }
+  }, [])
 
   const load = useCallback(async () => {
     try { setRows(await listReminders(supabase())); setFailed(false) } catch { setFailed(true) }
@@ -36,7 +51,6 @@ export default function RemindersPage() {
     return () => { live = false }
   }, [])
 
-  const now = new Date()
   const withNext = (rows ?? []).map(r => ({ r, next: nextOccurrence(r, now, tz) }))
   const upcoming = withNext.filter(x => x.next).sort((a, b) => a.next!.getTime() - b.next!.getTime())
   const past = withNext.filter(x => !x.next).map(x => x.r).sort((a, b) => `${b.day}${b.at}`.localeCompare(`${a.day}${a.at}`))
@@ -49,18 +63,18 @@ export default function RemindersPage() {
     if (fromAddress) window.history.replaceState(null, '', window.location.pathname)
   }
 
+  // The dialog closes once it is saved; if saving fails it stays open with what was typed
   async function save(input: ReminderInput) {
-    const was = editing
-    close()
     try {
-      if (was) await updateReminder(supabase(), was.id, input)
+      if (editing) await updateReminder(supabase(), editing.id, input)
       else {
         await createReminder(supabase(), input)
         // the first time, ask the browser to let reminders through as notifications when Studyhub is in another tab
         if (notificationPermission() === 'default') void askNotificationPermission()
       }
-      announceRemindersChanged()
-    } catch { toast('Could not save that reminder.') }
+    } catch { toast('Could not save that reminder.'); return }
+    close()
+    announceRemindersChanged()
     await load()
   }
   async function remove(r: MyReminder) {

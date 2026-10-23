@@ -239,7 +239,7 @@ export default function LibraryPage() {
                 {shelf.map(({ notebook, count }) => (
                   <li key={notebook.id} className="w-32">
                     <button type="button" onClick={() => openFolder(notebook.id)} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
-                      className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-4 focus-visible:ring-accent-soft">
+                      className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent">
                       <NotebookCover name={notebook.name} count={count} color={coverColor(notebook.id)} />
                     </button>
                   </li>

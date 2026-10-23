@@ -38,7 +38,7 @@ export function NotesSidebar() {
   const [q, setQ] = useState('')
   const [course, setCourse] = useState('')
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
-  const [notebook, setNotebook] = useState('') // '' is all notes, 'none' the unfiled ones, otherwise a notebook's id
+  const [picked, setNotebook] = useState('') // '' is all notes, 'none' the unfiled ones, otherwise a notebook's id
   const [naming, setNaming] = useState<null | 'new' | 'rename'>(null)
   const [moving, setMoving] = useState<string[] | null>(null) // the notes being moved to a notebook
   const [version, setVersion] = useState(0)
@@ -152,8 +152,10 @@ export function NotesSidebar() {
   ]
 
   const view = useView('notes')
-  const shown = sortNotes(filterNotes(notes ?? [], { notebook, course }), view.sort, Object.fromEntries(courses.map(c => [c.id, c.name])))
   const counts = countByNotebook(notes ?? [])
+  // The choice in use: one that is no longer on the shelf (Unfiled once it empties, a notebook gone) falls back to All notes
+  const notebook = picked === 'none' ? (counts.unfiled > 0 ? 'none' : '') : picked && !notebooks.some(b => b.id === picked) ? '' : picked
+  const shown = sortNotes(filterNotes(notes ?? [], { notebook, course }), view.sort, Object.fromEntries(courses.map(c => [c.id, c.name])))
   const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
   const empty = notes?.length === 0 && !q.trim()
@@ -255,12 +257,14 @@ function NotebookShelf({ choices, notebook, onChoose, onNew }: { choices: ShelfC
       {choices.length > 0 && (
         <div role="radiogroup" aria-label="Notebook" className="flex gap-3">
           {choices.map((c, i) => {
+            // when nothing on the shelf matches, the first cover keeps the group reachable with Tab
             const on = notebook === c.value
+            const stop = on || (i === 0 && !choices.some(x => x.value === notebook))
             return (
-              <button key={c.value || 'all'} type="button" role="radio" aria-checked={on} aria-label={c.label} tabIndex={on ? 0 : -1}
+              <button key={c.value || 'all'} type="button" role="radio" aria-checked={on} aria-label={c.label} tabIndex={stop ? 0 : -1}
                 onClick={() => onChoose(c.value)}
                 onKeyDown={e => { const to = radioKeyTarget(e.key, i, choices.length); if (to === null) return; e.preventDefault(); onChoose(choices[to].value); focusRadio(e.currentTarget, to) }}
-                className="w-28 shrink-0 rounded-xl outline-none transition hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-accent-soft">
+                className="w-28 shrink-0 rounded-xl outline-none transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-accent">
                 <NotebookCover name={c.name} count={c.count} kind={c.kind} color={c.kind === 'notebook' ? coverColor(c.value) : undefined} on={on} />
               </button>
             )

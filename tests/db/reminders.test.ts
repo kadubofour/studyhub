@@ -20,6 +20,9 @@ describe('my reminders', () => {
     expect((await listReminders(A.sb)).find(r => r.id === later.id)).toMatchObject({ title: 'Pay the rent', repeat: 'daily' })
     expect(await listReminders(B.sb)).toEqual([])
     expect((await B.sb.from('reminders').update({ title: 'hacked' }).eq('id', later.id).select('id')).data).toEqual([])
+    expect((await B.sb.from('reminders').select('id').eq('id', later.id)).data).toEqual([])
+    expect((await B.sb.from('reminders').delete().eq('id', later.id).select('id')).data).toEqual([])
+    expect((await B.sb.from('reminders').insert({ user_id: A.id, title: 'Planted', day: '2026-10-24', at: '08:00' })).error).toBeTruthy()
   })
   it('refuse an empty title, a very long one, and a repeat it does not know', async () => {
     const ok = { day: '2026-10-24', at: '08:00' }

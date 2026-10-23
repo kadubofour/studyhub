@@ -37,7 +37,7 @@ export function NotebookCover({ name, count, color, kind = 'notebook', on = fals
         <span className="rounded-md bg-white/92 px-1.5 py-1.5 text-[12.5px] font-semibold leading-tight text-[#151628] shadow-sm [overflow-wrap:anywhere]">
           <span className="line-clamp-2">{name}</span>
         </span>
-        <span className="text-[11px] font-medium text-white/90">{plural(count)}</span>
+        <span className="text-[11px] font-semibold text-white">{plural(count)}</span>
       </span>
       {/* the page edges showing at the side */}
       <span className="w-1 shrink-0 bg-white/30" />

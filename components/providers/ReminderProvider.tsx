@@ -78,7 +78,9 @@ export function ReminderProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let live = true
     const on = prefs.on
+    let last = 0
     const load = () => {
+      last = Date.now()
       const sb = supabase()
       // the student's own reminders always; what the automatic ones need only while they are on. Read together, so one check sees it all.
       const automatic = on ? Promise.all([listOpenTasks(sb), listClasses(sb), listDecksWithDue(sb, new Date())]) : Promise.resolve(null)
@@ -94,7 +96,8 @@ export function ReminderProvider({ children }: { children: React.ReactNode }) {
     load()
     const reload = setInterval(load, RELOAD_MS)
     const tick = setInterval(check, CHECK_MS)
-    const back = () => { if (document.visibilityState === 'visible') load() }
+    // coming back to the tab reads again only after a minute away, so glancing between tabs costs nothing
+    const back = () => { if (document.visibilityState === 'visible' && Date.now() - last > 60_000) load() }
     document.addEventListener('visibilitychange', back)
     window.addEventListener(REMINDERS_CHANGED, load)
     return () => { live = false; clearInterval(reload); clearInterval(tick); document.removeEventListener('visibilitychange', back); window.removeEventListener(REMINDERS_CHANGED, load) }

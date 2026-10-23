@@ -17,7 +17,7 @@ vi.mock('@/lib/data/reminders', () => ({
   listReminders: async () => rows,
   createReminder: (sb: unknown, r: Omit<MyReminder, 'id'>) => createReminder(sb, r), updateReminder: (sb: unknown, id: string, p: Partial<MyReminder>) => updateReminder(sb, id, p),
   deleteReminder: (sb: unknown, id: string) => deleteReminder(sb, id), deleteReminders: (sb: unknown, ids: string[]) => deleteReminders(sb, ids),
-  announceRemindersChanged: () => changed(),
+  announceRemindersChanged: () => changed(), REMINDERS_CHANGED: 'studyhub:reminders-changed',
 }))
 const ask = vi.fn(async () => 'granted')
 let permission = 'default'
@@ -29,6 +29,7 @@ import RemindersPage from '@/app/(app)/reminders/page'
 import { DEFAULT_REMINDERS, reminderPrefs } from '@/lib/reminders/prefs'
 
 const profile = { id: 'u', display_name: 'Ama', timezone: 'Africa/Accra', daily_goal_minutes: 120, theme: 'light', accent: 'blue', font: 'sans', look: 'studio', onboarded: true } as Profile
+const tree = () => <ProfileProvider initial={profile}><ToastProvider><RemindersPage /></ToastProvider></ProfileProvider>
 const open = async () => { await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><RemindersPage /></ToastProvider></ProfileProvider>) }) }
 const click = async (el: HTMLElement) => { await act(async () => { fireEvent.click(el) }) }
 const titles = (list: string) => within(screen.getByRole('list', { name: list })).getAllByRole('listitem').map(li => li.querySelector('[data-title]')!.textContent)
@@ -113,6 +114,46 @@ describe('the Reminders page', () => {
     await click(within(screen.getByRole('dialog', { name: 'New reminder' })).getByRole('button', { name: 'Cancel' }))
     expect(String(replace.mock.calls.at(-1)![2])).not.toContain('new=1') // a reload does not open it again
     replace.mockRestore()
+  })
+  it('opens New reminder again when the Create menu asks while the page is already open', async () => {
+    let view!: ReturnType<typeof render>
+    await act(async () => { view = render(tree()) })
+    search = 'new=1'
+    await act(async () => { view.rerender(tree()) })
+    expect(screen.getByRole('dialog', { name: 'New reminder' })).toBeTruthy()
+    await click(within(screen.getByRole('dialog', { name: 'New reminder' })).getByRole('button', { name: 'Cancel' }))
+    search = ''
+    await act(async () => { view.rerender(tree()) })
+    search = 'new=1'
+    await act(async () => { view.rerender(tree()) })
+    expect(screen.getByRole('dialog', { name: 'New reminder' })).toBeTruthy() // and every time after
+  })
+  it('keeps itself up to date: a reminder whose time comes moves to Past without a reload', async () => {
+    rows = [{ id: 's', title: 'Soon', day: '2026-10-23', at: '10:30:00', repeat: 'once' }]
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] }); vi.setSystemTime(new Date('2026-10-23T10:20:00Z'))
+    await open()
+    expect(titles('Upcoming')).toEqual(['Soon'])
+    await act(async () => { vi.setSystemTime(new Date('2026-10-23T10:31:00Z')); vi.advanceTimersByTime(60_000) })
+    expect(titles('Past')).toEqual(['Soon'])
+  })
+  it('keeps what was typed when saving fails', async () => {
+    createReminder.mockRejectedValueOnce(new Error('offline'))
+    await open()
+    await click(screen.getByRole('button', { name: 'New reminder' }))
+    fireEvent.change(within(screen.getByRole('dialog', { name: 'New reminder' })).getByLabelText('What'), { target: { value: 'Call home' } })
+    await click(within(screen.getByRole('dialog', { name: 'New reminder' })).getByRole('button', { name: 'Save' }))
+    expect(screen.getByText('Could not save that reminder.')).toBeTruthy()
+    expect((within(screen.getByRole('dialog', { name: 'New reminder' })).getByLabelText('What') as HTMLInputElement).value).toBe('Call home')
+  })
+  it('will not save a one-off whose time passed while the dialog was open', async () => {
+    await open()
+    await click(screen.getByRole('button', { name: 'New reminder' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'New reminder' }))
+    fireEvent.change(dialog.getByLabelText('What'), { target: { value: 'Late' } })
+    vi.setSystemTime(new Date('2026-10-23T11:05:00Z')) // the default 11:00 is now behind
+    await click(dialog.getByRole('button', { name: 'Save' }))
+    expect(createReminder).not.toHaveBeenCalled()
+    expect(dialog.getByText('That time has passed.')).toBeTruthy()
   })
   it('invites a first reminder when there are none', async () => {
     rows = []

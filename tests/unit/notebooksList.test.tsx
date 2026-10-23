@@ -134,6 +134,18 @@ describe('making, renaming and deleting a notebook', () => {
 })
 
 describe('moving notes into a notebook', () => {
+  it('when Unfiled empties while chosen, All notes is chosen again, so the shelf keeps a choice to tab to', async () => {
+    await open()
+    fireEvent.click(bar().getByRole('radio', { name: /^Unfiled/ }))
+    await act(async () => { fireEvent.contextMenu(screen.getByRole('link', { name: /Loose note/ }), { clientX: 10, clientY: 10 }) })
+    fireEvent.click(within(screen.getByRole('menu', { name: 'Loose note' })).getByRole('menuitem', { name: /Move to notebook/ }))
+    await act(async () => { fireEvent.click(within(screen.getByRole('dialog', { name: 'Move to notebook' })).getByRole('button', { name: 'Physics' })) })
+    expect(bar().queryByRole('radio', { name: /^Unfiled/ })).toBeNull()
+    const all = bar().getByRole('radio', { name: /^All/ })
+    expect(all.getAttribute('aria-checked')).toBe('true')
+    expect(all.getAttribute('tabindex')).toBe('0')
+    expect(screen.getByText('Krebs cycle')).toBeTruthy()
+  })
   it('moves one note from its menu, and its tile shows the notebook', async () => {
     await open()
     await act(async () => { fireEvent.contextMenu(screen.getByRole('link', { name: /Loose note/ }), { clientX: 10, clientY: 10 }) })

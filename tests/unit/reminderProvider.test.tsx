@@ -140,4 +140,13 @@ describe('reminders while the app is open', () => {
       expect(screen.getByText('Reminder: Email my tutor')).toBeTruthy()
     })
   })
+
+  it('reads the reminders again on coming back to the tab only when it has been a while', async () => {
+    mount(); await flush()
+    const before = mineReads
+    for (let i = 0; i < 3; i++) await act(async () => { hidden('visible'); document.dispatchEvent(new Event('visibilitychange')) })
+    expect(mineReads).toBe(before) // a few seconds later: nothing new to read
+    await act(async () => { vi.advanceTimersByTime(90_000); document.dispatchEvent(new Event('visibilitychange')) })
+    expect(mineReads).toBeGreaterThan(before) // after a while away it reads again
+  })
 })

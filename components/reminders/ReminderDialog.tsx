@@ -31,13 +31,15 @@ export function ReminderDialog({ editing, start, tz, onClose, onSave }: {
 
 function Form({ start, tz, onClose, onSave }: { start: ReminderInput; tz: string; onClose: () => void; onSave: (r: ReminderInput) => void }) {
   const [r, setR] = useState(start)
-  const [openedAt] = useState(() => Date.now()) // the moment the dialog opened: what "passed" is measured against
-  const set = (patch: Partial<ReminderInput>) => setR(v => ({ ...v, ...patch }))
+  const [openedAt] = useState(() => Date.now()) // the moment the dialog opened: what "passed" is measured against while typing
+  const [late, setLate] = useState(false) // the time went by while the dialog was open (checked again on Save)
+  const set = (patch: Partial<ReminderInput>) => { setLate(false); setR(v => ({ ...v, ...patch })) }
   // a one-off must be ahead; a repeating one simply starts on its next day
-  const passed = r.repeat === 'once' && !!r.day && !!r.at && fromZonedTime(`${r.day}T${r.at}:00`, tz).getTime() < openedAt
+  const behind = (ms: number) => r.repeat === 'once' && !!r.day && !!r.at && fromZonedTime(`${r.day}T${r.at}:00`, tz).getTime() < ms
+  const passed = behind(openedAt) || late
   const ready = r.title.trim() !== '' && !!r.day && !!r.at && !passed
   return (
-    <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (ready) onSave({ ...r, title: r.title.trim() }) }}>
+    <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (!ready) return; if (behind(Date.now())) { setLate(true); return } onSave({ ...r, title: r.title.trim() }) }}>
       <label className="field"><span>What</span>
         <input autoFocus value={r.title} maxLength={120} placeholder="Email my tutor" onChange={e => set({ title: e.target.value })} />
       </label>

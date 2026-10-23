@@ -52,6 +52,13 @@ describe('dueMine', () => {
     const late = r({ at: '23:55:00', repeat: 'daily' })
     expect(dueMine([late], at('2026-10-24T00:03:00Z'), TZ).map(x => x.key)).toEqual(['custom:r1:2026-10-23:23:55'])
   })
+  it('a weekday reminder late on Friday still shows just after midnight, on Saturday', () => {
+    expect(dueMine([r({ at: '23:55:00', repeat: 'weekdays' })], at('2026-10-24T00:03:00Z'), TZ).map(x => x.key)).toEqual(['custom:r1:2026-10-23:23:55'])
+  })
+  it('a time the clocks skip (London, 28 March 2027 01:30) still has a next time', () => {
+    const skipped = r({ day: '2027-03-28', at: '01:30:00', repeat: 'daily' })
+    expect(nextOccurrence(skipped, at('2027-03-27T12:00:00Z'), 'Europe/London')).not.toBeNull()
+  })
   it('a moved time is a new moment, so it can show again', () => {
     const a = dueMine([r({ at: '16:00:00' })], at('2026-10-23T16:01:00Z'), TZ)[0].key
     const b = dueMine([r({ at: '17:00:00' })], at('2026-10-23T17:01:00Z'), TZ)[0].key
