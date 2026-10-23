@@ -279,6 +279,7 @@ describe('Library', () => {
     it('shows each notebook as a folder with its note count, and keeps filed notes inside it', async () => {
       await open()
       expect(shelf().getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Open Archive, 0 notes', 'Open Cell biology, 2 notes'])
+      expect(shelf().getAllByRole('button').every(b => b.querySelector('[data-notebook-cover]'))).toBe(true) // drawn as notebooks, not folders
       expect(listed().some(t => t.includes('Glycolysis'))).toBe(false)
       expect(listed()).toHaveLength(7)
     })

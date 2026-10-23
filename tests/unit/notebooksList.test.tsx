@@ -53,7 +53,15 @@ const bar = () => within(screen.getByRole('radiogroup', { name: 'Notebook' }))
 describe('the notebook bar', () => {
   it('shows All, each notebook and the unfiled notes, with how many are in each', async () => {
     await open()
-    expect(bar().getAllByRole('radio').map(r => r.textContent)).toEqual(['All (4)', 'Biology (2)', 'Physics (1)', 'Unfiled (1)'])
+    expect(bar().getAllByRole('radio').map(r => r.getAttribute('aria-label'))).toEqual(['All (4)', 'Biology (2)', 'Physics (1)', 'Unfiled (1)'])
+  })
+  it('draws each notebook as a notebook cover with its name and count, and keeps New notebook beside them', async () => {
+    await open()
+    const biology = bar().getByRole('radio', { name: /^Biology/ })
+    expect(biology.querySelector('[data-notebook-cover]')).toBeTruthy()
+    expect(biology.textContent).toContain('Biology')
+    expect(biology.textContent).toContain('2 notes')
+    expect(screen.getByRole('button', { name: 'New notebook' })).toBeTruthy()
   })
   it('choosing a notebook shows only its notes, and Unfiled shows the rest', async () => {
     await open()

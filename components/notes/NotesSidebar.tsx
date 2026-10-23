@@ -1,13 +1,14 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderClosed, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
-import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
 import { sortNotes, useView } from '@/lib/ui/listView'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
+import { NotebookCover, coverColor } from '@/components/notes/NotebookCover'
+import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 import { countByNotebook, filterNotes } from '@/lib/notes/notebooks'
 import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -182,14 +183,11 @@ export function NotesSidebar() {
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        {notebooks.length > 0 && (
-          <ChoiceChips label="Notebook" size="sm" value={notebook} onChange={setNotebook} options={[
-            { value: '', label: `All (${counts.all})` },
-            ...notebooks.map(b => ({ value: b.id, label: `${b.name} (${counts.byId[b.id] ?? 0})` })),
-            ...(counts.unfiled > 0 ? [{ value: 'none', label: `Unfiled (${counts.unfiled})` }] : []),
-          ]} />
-        )}
-        <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs" aria-label="New notebook" onClick={() => setNaming('new')}><FolderPlus size={14} aria-hidden />Notebook</button>
+        <NotebookShelf notebook={notebook} onChoose={setNotebook} onNew={() => setNaming('new')} choices={notebooks.length === 0 ? [] : [
+          { value: '', name: 'All notes', label: `All (${counts.all})`, count: counts.all, kind: 'all' as const },
+          ...notebooks.map(b => ({ value: b.id, name: b.name, label: `${b.name} (${counts.byId[b.id] ?? 0})`, count: counts.byId[b.id] ?? 0, kind: 'notebook' as const })),
+          ...(counts.unfiled > 0 ? [{ value: 'none', name: 'Unfiled', label: `Unfiled (${counts.unfiled})`, count: counts.unfiled, kind: 'loose' as const }] : []),
+        ]} />
         {notebook && notebook !== 'none' && (
           <span className="ml-auto flex gap-1">
             <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setNaming('rename')}><Pencil size={13} aria-hidden />Rename notebook</button>
@@ -228,12 +226,12 @@ export function NotesSidebar() {
           if (view.layout === 'grid') return (
             <StackTile key={n.id} motif="sheets" color={c?.color} title={n.title} href={`/notes/${n.id}`} tag={c && <CourseTag course={c} />}
               big={new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} bigLabel="last edited"
-              side={book && <span className="inline-flex max-w-full items-center gap-1"><FolderClosed size={12} aria-hidden /><span className="truncate">{book.name}</span></span>}
+              side={book && <span className="inline-flex max-w-full items-center gap-1"><span aria-hidden className="h-3 w-2.5 shrink-0 rounded-l-[2px] rounded-r-[3px]" style={{ background: coverColor(book.id) }} /><span className="truncate">{book.name}</span></span>}
               select={select} onMenu={e => openMenu(e, n)} onContextMenu={e => openMenu(e, n)} />
           )
           return (
             <ItemTile key={n.id} layout={view.layout} icon={FileText} color={c?.color} title={n.title} href={`/notes/${n.id}`}
-              subtitle={book && <span className="inline-flex min-w-0 items-center gap-1"><FolderClosed size={12} aria-hidden /><span className="truncate">{book.name}</span></span>}
+              subtitle={book && <span className="inline-flex min-w-0 items-center gap-1"><span aria-hidden className="h-3 w-2.5 shrink-0 rounded-l-[2px] rounded-r-[3px]" style={{ background: coverColor(book.id) }} /><span className="truncate">{book.name}</span></span>}
               meta={c && <CourseTag course={c} />} aside={formatDistanceToNow(new Date(n.updated_at), { addSuffix: true })}
               select={select}
               onMenu={e => openMenu(e, n)} onContextMenu={e => openMenu(e, n)} />
@@ -245,6 +243,34 @@ export function NotesSidebar() {
         initial={naming === 'rename' ? bookOf(notebook)?.name ?? '' : ''} onSubmit={name => { void (naming === 'rename' ? renameChosen(name) : addNotebook(name)) }} />
       <MoveToNotebookDialog open={moving !== null} onClose={() => setMoving(null)} notebooks={notebooks} onMove={id => { void moveTo(moving ?? [], id) }} onCreateAndMove={name => { void createAndMove(name) }} />
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
+    </div>
+  )
+}
+
+type ShelfChoice = { value: string; name: string; label: string; count: number; kind: 'all' | 'notebook' | 'loose' }
+// The notebooks as a row of covers you choose between (All notes first, the loose notes last), and a blank one to start a new notebook
+function NotebookShelf({ choices, notebook, onChoose, onNew }: { choices: ShelfChoice[]; notebook: string; onChoose: (v: string) => void; onNew: () => void }) {
+  return (
+    <div className="-mx-1.5 flex w-[calc(100%+0.75rem)] gap-3 overflow-x-auto p-1.5">
+      {choices.length > 0 && (
+        <div role="radiogroup" aria-label="Notebook" className="flex gap-3">
+          {choices.map((c, i) => {
+            const on = notebook === c.value
+            return (
+              <button key={c.value || 'all'} type="button" role="radio" aria-checked={on} aria-label={c.label} tabIndex={on ? 0 : -1}
+                onClick={() => onChoose(c.value)}
+                onKeyDown={e => { const to = radioKeyTarget(e.key, i, choices.length); if (to === null) return; e.preventDefault(); onChoose(choices[to].value); focusRadio(e.currentTarget, to) }}
+                className="w-28 shrink-0 rounded-xl outline-none transition hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-accent-soft">
+                <NotebookCover name={c.name} count={c.count} kind={c.kind} color={c.kind === 'notebook' ? coverColor(c.value) : undefined} on={on} />
+              </button>
+            )
+          })}
+        </div>
+      )}
+      <button type="button" aria-label="New notebook" onClick={onNew}
+        className="flex aspect-[4/5] w-28 shrink-0 flex-col items-center justify-center gap-1.5 rounded-l-md rounded-r-xl border-2 border-dashed border-line text-xs font-medium text-muted transition hover:border-accent hover:text-accent">
+        <FolderPlus size={18} aria-hidden />New notebook
+      </button>
     </div>
   )
 }

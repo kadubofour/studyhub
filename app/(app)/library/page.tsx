@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ChevronRight, FileText, Folder, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Pencil, Search, Trash2, Upload, type LucideIcon } from 'lucide-react'
+import { ChevronRight, FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Pencil, Search, Trash2, Upload, type LucideIcon } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -11,6 +11,7 @@ import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
+import { NotebookCover, coverColor } from '@/components/notes/NotebookCover'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -201,7 +202,7 @@ export default function LibraryPage() {
                   <li><button type="button" className="rounded-lg px-1.5 py-0.5 text-muted transition hover:bg-surface hover:text-fg" onClick={() => openFolder(null)}>Library</button></li>
                   <li aria-hidden className="text-muted"><ChevronRight size={16} /></li>
                   <li className="flex items-center gap-2 font-display font-semibold">
-                    <FolderOpen size={20} className="text-accent" aria-hidden /><span aria-current="page">{open.name}</span>
+                    <span aria-hidden className="h-5 w-4 rounded-l-[3px] rounded-r-md" style={{ background: coverColor(open.id) }} /><span aria-current="page">{open.name}</span>
                   </li>
                 </ol>
               </nav>
@@ -234,10 +235,13 @@ export default function LibraryPage() {
           {shelf.length > 0 && (
             <section aria-labelledby="lib-notebooks" className="mb-7">
               <h2 id="lib-notebooks" className="section-label">Notebooks</h2>
-              <ul aria-label="Notebooks" className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <ul aria-label="Notebooks" className="flex flex-wrap gap-4">
                 {shelf.map(({ notebook, count }) => (
-                  <li key={notebook.id}>
-                    <FolderTile name={notebook.name} count={count} onOpen={() => openFolder(notebook.id)} />
+                  <li key={notebook.id} className="w-32">
+                    <button type="button" onClick={() => openFolder(notebook.id)} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
+                      className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-4 focus-visible:ring-accent-soft">
+                      <NotebookCover name={notebook.name} count={count} color={coverColor(notebook.id)} />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -321,22 +325,3 @@ export default function LibraryPage() {
   )
 }
 
-// A notebook drawn as a folder: a tab on top, the body in the accent's tint, the name and how many notes are inside
-function FolderTile({ name, count, onOpen }: { name: string; count: number; onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen} aria-label={`Open ${name}, ${plural(count, 'note')}`}
-      className="group relative block w-full pt-3 text-left outline-none transition hover:-translate-y-0.5 focus-visible:-translate-y-0.5">
-      <span aria-hidden className="absolute left-0 top-0 h-5 w-[42%] rounded-t-xl border border-b-0 border-line"
-        style={{ background: 'color-mix(in srgb, var(--accent-solid) 26%, var(--raised))' }} />
-      <span aria-hidden className="relative flex min-h-[7.5rem] flex-col justify-between gap-3 rounded-2xl rounded-tl-none border border-line p-4 shadow-[var(--shadow)] transition group-hover:border-accent group-focus-visible:border-accent group-focus-visible:ring-4 group-focus-visible:ring-accent-soft"
-        style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent-solid) 16%, var(--raised)), color-mix(in srgb, var(--accent-solid) 8%, var(--raised)))' }}>
-        <Folder size={22} className="text-accent transition group-hover:hidden" />
-        <FolderOpen size={22} className="hidden text-accent transition group-hover:block" />
-        <span>
-          <span className="line-clamp-2 font-display font-semibold leading-tight">{name}</span>
-          <span className="mt-0.5 block text-xs text-muted">{plural(count, 'note')}</span>
-        </span>
-      </span>
-    </button>
-  )
-}
