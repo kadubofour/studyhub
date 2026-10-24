@@ -252,7 +252,7 @@ function NoteEditor({ id }: { id: string }) {
   const width = fullWidth ? 'max-w-none' : reading || mode === 'rich' ? 'max-w-3xl' : 'max-w-6xl'
 
   return (
-    <div className={`min-h-dvh ${studyOpen ? 'md:pr-[380px]' : ''}`}>
+    <div data-note-page className={`min-h-dvh ${studyOpen ? 'md:pr-[380px]' : ''}`}>
       <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur sm:gap-2 md:px-6">
         <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}

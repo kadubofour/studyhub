@@ -183,3 +183,10 @@ describe('Studio is ethereal', () => {
     expect(rule('.app-root[data-look] :is(.glass, .card, .tile, .hero, .menu-panel, .app-sidebar)')).toContain('backdrop-filter: none')
   })
 })
+
+describe('Studio around a note', () => {
+  it('an open note keeps the plain page, with no wash behind the writing', () => {
+    expect(fs.readFileSync('app/(app)/notes/[id]/page.tsx', 'utf8')).toContain('<div data-note-page className=')
+    expect(rule('.app-root[data-look="studio"]:has([data-note-page])')).toContain('background-image: none')
+  })
+})

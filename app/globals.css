@@ -83,6 +83,8 @@ body:has(.app-root[data-look="classic"]) { background: #F7F6F0; }
   --accent-soft: #262A40; --accent: var(--fg);
   --glow: 44%;
 }
+/* an open note keeps the plain page: nothing behind the writing */
+.app-root[data-look="studio"]:has([data-note-page]) { background-image: none; }
 .app-root[data-look="studio"] .app-sidebar,
 .app-root .app-root[data-look="studio"] .app-sidebar { background: color-mix(in srgb, var(--bg) 55%, transparent); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border-color: var(--line); }
 .app-root[data-look="studio"] .app-topbar,
