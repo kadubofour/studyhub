@@ -98,7 +98,8 @@ test('create a deck, add cards, and review them', async ({ page }) => {
   await expect(page.getByText('2 reviews')).toBeVisible()
 })
 
-test('a note persists after reload, including math', async ({ page }) => {
+test('a note persists after reload, including math', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Markdown is switched on from the View menu, which is for wider screens')
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()
@@ -113,7 +114,8 @@ test('a note persists after reload, including math', async ({ page }) => {
   await expect(page.locator('.katex').first()).toBeVisible()
 })
 
-test('notes: search finds words inside a note', async ({ page }) => {
+test('notes: search finds words inside a note', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Markdown is switched on from the View menu, which is for wider screens')
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()
