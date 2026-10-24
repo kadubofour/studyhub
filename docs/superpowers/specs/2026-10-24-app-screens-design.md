@@ -26,7 +26,7 @@ Made with the taste skill's app-screen run (`design-taste-frontend`, `references
 - Page titles are app-sized (26-28px, `PAGE_TITLE`); `PageHeader` takes a one-line `summary`. Panel titles are 18px.
 - The page is flat in every look but Studio: the old aurora and the hero's corner glow are gone. Studio, at the
   student's request, glows: four soft radial lights in the accent and glow colours (two from above, a wisp at the
-  right, a haze from below), fixed while scrolling, stronger by night ( 24% / 44%). Its cards, menus, sidebar
+  right, a haze from below), fixed while scrolling, stronger by night (`--glow` 24% by day, 44% by night). Its cards, menus, sidebar
   and top bar are frosted so the light shows through.
 - Classic's soft surface is the warm grey `#EFEEEA`, not the banned cream `#F0EEE6`.
 - Jump back in marks each kind with a plain grey icon.
