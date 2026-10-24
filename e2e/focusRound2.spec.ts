@@ -31,8 +31,8 @@ test('the background sound is remembered, in the app and after a reload', async 
   // Moving around the app (no reload) and coming back, then a reload: still Rain, same volume
   await page.getByRole('link', { name: 'Planner' }).first().click()
   await expect(page).toHaveURL(/\/planner/)
-  // back to Focus without a reload: the sidebar on a computer, Home's Open on a phone (the bottom bar has no Focus)
-  if (isMobile) { await page.getByRole('link', { name: 'Home' }).first().click(); await page.getByRole('main').getByRole('link', { name: 'Open', exact: true }).click() }
+  // back to Focus without a reload: the sidebar on a computer, the top bar's timer on a phone (the bottom bar has no Focus)
+  if (isMobile) await page.getByRole('link', { name: /timer, .* left$/ }).click()
   else await page.getByRole('link', { name: 'Focus' }).first().click()
   await expect(page.getByRole('button', { name: 'Rain', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.reload()

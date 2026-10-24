@@ -119,5 +119,5 @@ test('the page names itself, and the floating dock has four places and Create, w
   const results = page.getByRole('listbox', { name: 'Results' })
   for (const n of ['Courses', 'Library', 'Profile', 'Progress', 'Settings', 'Lectures', 'Tutor']) await expect(results.getByRole('option', { name: n, exact: true })).toBeAttached()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('link', { name: 'Open' })).toBeVisible() // the focus timer's way in
+  await expect(page.getByRole('link', { name: /timer, .* left$/ })).toBeVisible() // the focus timer's way in: the top bar's timer
 })

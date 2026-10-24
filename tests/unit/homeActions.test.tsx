@@ -56,8 +56,7 @@ describe('Home quick actions in the accent colour', () => {
     const tiles = [...screen.getByRole('group', { name: 'Quick actions' }).querySelectorAll('a, button')]
     expect(tiles).toHaveLength(4)
     for (const t of tiles) {
-      expect(t.className).toContain('bg-accent-soft')
-      expect(t.className).toContain('border-accent')
+      expect(t.className).toContain('quick-tile') // the student's own soft colour, which Classic, Studio and Paper do not neutralise
       expect(t.hasAttribute('data-tint')).toBe(false) // Classic turns data-tint tiles plain
       expect(t.querySelector('span[aria-hidden]')!.className).toContain('bg-accent-solid')
     }
@@ -79,5 +78,13 @@ describe('Home quick action names', () => {
   it('are never cut off: a long one wraps instead', () => {
     render(<HomeActions />)
     expect(screen.getByText('Record lecture').className).not.toContain('truncate')
+  })
+})
+
+describe('Home quick actions keep the student\'s colour in the quiet looks', () => {
+  it('read the student\'s own soft colour and edge, not the look\'s quiet tint', async () => {
+    const css = (await import('node:fs')).readFileSync('app/globals.css', 'utf8')
+    expect(css).toMatch(/\.quick-tile \{[^}]*background: var\(--a-soft\)[^}]*border-color: color-mix\(in srgb, var\(--a-solid\) 30%, transparent\)/)
+    expect(css).toMatch(/\.dark \.quick-tile \{[^}]*background: var\(--a-soft-dark\)/)
   })
 })

@@ -87,7 +87,7 @@ export default function FocusPage() {
       )}
       {timer.mode === 'focus' && <div className="mb-5"><FocusTaskPicker /></div>}
       <div className="flex flex-wrap justify-center gap-1.5 px-1 sm:gap-2 sm:px-3">
-        <button className="btn-primary min-w-24 max-sm:!px-3 sm:min-w-28" onClick={toggle}>
+        <button className="btn-primary btn-mode min-w-24 max-sm:!px-3 sm:min-w-28" onClick={toggle}>
           {running ? <><Pause size={14} aria-hidden />Pause</> : <><Play size={14} aria-hidden />{timer.accumulatedMs ? 'Resume' : 'Start'}</>}
         </button>
         <button className="btn max-sm:!px-2.5" onClick={restart} disabled={!canRestart(timer, now)} title="Start this session over"><RotateCcw size={14} aria-hidden />Restart</button>

@@ -14,8 +14,8 @@ const ACTIONS: Action[] = [
   { label: 'Upload', hint: 'A PDF, slides or a file', icon: Upload, onClick: requestUpload },
 ]
 
-// In the accent colour, in every look: the tiles are the one place on Home that is tinted with the student's own colour, so they stand out from the figures above
-const tile = 'group flex items-center gap-2.5 rounded-2xl border border-accent/30 bg-accent-soft px-3 py-2.5 text-left transition hover:border-accent/60 hover:brightness-95 active:scale-[.98]'
+// In the accent colour, in every look (quick-tile reads the student's own colour, which the quiet looks do not neutralise): the tiles are the one place on Home that is tinted with the student's own colour, so they stand out from the figures above
+const tile = 'group flex items-center gap-2.5 quick-tile rounded-2xl border px-3 py-2.5 text-left transition hover:brightness-95 active:scale-[.98]'
 
 // Compact tiles you can tap: a small coloured icon beside what it does, and a few words saying what it is for
 export function HomeActions() {

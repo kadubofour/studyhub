@@ -190,3 +190,12 @@ describe('Studio around a note', () => {
     expect(rule('.app-root[data-look="studio"]:has([data-note-page])')).toContain('background-image: none')
   })
 })
+
+describe('the Focus page in every look', () => {
+  it('its Start button wears the session\'s own colour (focus, short break, long break), not the look\'s ink', () => {
+    expect(fs.readFileSync('app/(app)/focus/page.tsx', 'utf8')).toContain('className="btn-primary btn-mode ')
+    const r = rule('.app-root[data-look] .btn-primary.btn-mode')
+    expect(r).toContain('background: var(--accent-solid)')
+    expect(r).toContain('color: #fff')
+  })
+})

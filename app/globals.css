@@ -151,6 +151,11 @@ body:has(.app-root[data-look="playful"]) { background: #FFF7E8; }
 :is(.app-root[data-look="classic"], .app-root[data-look="studio"], .app-root[data-look="paper"]) [data-tint-icon] { background: var(--surface); }
 :is(.app-root[data-look="classic"], .app-root[data-look="studio"], .app-root[data-look="paper"]) [data-block] { background: var(--surface); color: var(--fg); box-shadow: inset 4px 0 0 var(--c); }
 
+/* Home's quick cards: the student's own soft colour and edge, in every look (the quiet looks turn --accent-soft into a grey) */
+.quick-tile { background: var(--a-soft); border-color: color-mix(in srgb, var(--a-solid) 30%, transparent); }
+.dark .quick-tile { background: var(--a-soft-dark); }
+.quick-tile:hover { border-color: color-mix(in srgb, var(--a-solid) 60%, transparent); }
+
 /* Whatever is scrolled into view (by the keyboard, a link, a screen reader) clears the status strip, and on a phone the dock at the bottom */
 html { scroll-padding-top: 4.5rem; }
 @media (max-width: 767px) { html { scroll-padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); } }
@@ -291,6 +296,12 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .app-root .app-root[data-look] .app-sidebar :is(a, button):not([role="menuitem"]) { border-radius: 9999px; }
 .app-root[data-look] .app-sidebar .section-label,
 .app-root .app-root[data-look] .app-sidebar .section-label { font-size: 13px; }
+
+/* The Focus page's Start button wears the session's own colour in every look (lib/focus/modeColors.ts), not the look's ink */
+.app-root[data-look] .btn-primary.btn-mode,
+.app-root .app-root[data-look] .btn-primary.btn-mode { background: var(--accent-solid); color: #fff; }
+.app-root[data-look] .btn-primary.btn-mode:hover:not(:disabled),
+.app-root .app-root[data-look] .btn-primary.btn-mode:hover:not(:disabled) { background: var(--accent-solid); filter: brightness(1.08); }
 
 /* Studio: frosted cards and menus, so its glow shows softly through them */
 .app-root[data-look="studio"] :is(.card, .tile),

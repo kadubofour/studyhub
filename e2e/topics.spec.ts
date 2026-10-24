@@ -1,10 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { newNoteFromNote, noteWithText, signUp } from './helpers'
 
-async function menu(page: Page, name: string, item: string) {
-  await page.getByRole('menuitem', { name, exact: true }).click()
-  await page.getByRole('menu', { name }).locator('[role^="menuitem"]', { hasText: item }).click()
-}
 async function inBiology(page: Page) {
   await Promise.all([
     page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
@@ -12,7 +8,7 @@ async function inBiology(page: Page) {
   ])
 }
 async function secondNote(page: Page, title: string, text: string) {
-  await menu(page, 'File', 'New note')
+  await newNoteFromNote(page)
   await expect(page.getByLabel('Title')).toHaveValue('Untitled')
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Note', { exact: true }).click()

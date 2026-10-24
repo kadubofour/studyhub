@@ -10,11 +10,11 @@ test('accent colour and font apply instantly and survive a reload', async ({ pag
   await page.goto('/settings')
   await page.getByRole('radio', { name: 'Teal accent' }).click()
   await page.getByRole('radio', { name: /Serif \(Lora\)/ }).click()
-  const root = page.locator('.app-root')
+  const root = page.locator('.app-root').first()
   await expect(root).toHaveAttribute('style', /--a-solid:\s*#0B7A5E/i)
   await expect(root).toHaveAttribute('style', /--app-font:\s*var\(--font-lora\)/)
   await page.reload()
-  await expect(page.locator('.app-root')).toHaveAttribute('style', /--a-solid:\s*#0B7A5E/i)
+  await expect(page.locator('.app-root').first()).toHaveAttribute('style', /--a-solid:\s*#0B7A5E/i)
   await expect(page.getByRole('radio', { name: 'Teal accent' })).toHaveAttribute('aria-checked', 'true')
 })
 
@@ -30,7 +30,9 @@ test('writing a note is full screen, and Esc goes back to the list', async ({ pa
   await expect(page.getByRole('link', { name: /Fullscreen/ })).toBeVisible()
 })
 
-test('import a Word document with equations, then export it back to Word', async ({ page }) => {
+test('import a Word document with equations, then export it back to Word', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Upload' }).first().click()
@@ -70,7 +72,9 @@ test('a PDF falls back to plain text when the AI cannot convert it', async ({ pa
   await expect(page.getByLabel('Title')).toHaveValue('cells-fallback')
 })
 
-test('printing from dark mode gives dark text on white paper', async ({ page }) => {
+test('printing from dark mode gives dark text on white paper', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+
   await signUp(page)
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()

@@ -24,7 +24,9 @@ async function storedToken(page: Page) {
   return md.match(/studyhub-image:[^)\s]+/)?.[0] ?? null
 }
 
-test('add a picture from a file: it shows in the note and is still there after a reload', async ({ page }) => {
+test('add a picture from a file: it shows in the note and is still there after a reload', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+
   await signUp(page)
   await newNote(page, 'Cell notes')
   await addCell(page)
@@ -51,7 +53,9 @@ test('a picture can be selected and removed', async ({ page }) => {
   await expect(page.locator('.ProseMirror img')).toHaveCount(0)
 })
 
-test('a picture shows in the reading view', async ({ page }) => {
+test('a picture shows in the reading view', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+
   await signUp(page)
   await newNote(page, 'Reading')
   await addCell(page)
@@ -60,7 +64,9 @@ test('a picture shows in the reading view', async ({ page }) => {
   await expect(page.getByRole('article').locator('img[alt="cell"]')).toBeVisible()
 })
 
-test('highlight words in a note: one button, it stays after a reload and shows in the reading view', async ({ page }) => {
+test('highlight words in a note: one button, it stays after a reload and shows in the reading view', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+
   await signUp(page)
   await newNote(page, 'Marked words')
   await page.getByLabel('Note', { exact: true }).click()

@@ -46,3 +46,17 @@ export async function create(page: Page, item: 'New note' | 'New deck' | 'Record
   await page.locator('button[aria-label="Create new"]:visible').click()
   await page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: item }).click()
 }
+
+// A new note from inside a note: File > New note on a computer; a phone has no File menu, so from the Notes list
+export async function newNoteFromNote(page: Page) {
+  const file = page.getByRole('menuitem', { name: 'File', exact: true })
+  if (await file.isVisible()) {
+    await file.click()
+    await page.getByRole('menu', { name: 'File' }).locator('[role^="menuitem"]', { hasText: 'New note' }).click()
+  } else {
+    await page.goto('/notes')
+    await page.getByRole('button', { name: 'Note', exact: true }).click()
+    await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
+    await page.waitForLoadState('networkidle')
+  }
+}
