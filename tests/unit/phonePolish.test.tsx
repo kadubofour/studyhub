@@ -125,3 +125,20 @@ describe('the Flashcards view controls', () => {
     expect(src).toContain('<ViewOptions page="decks" className="mb-3" />')
   })
 })
+
+describe('a note\'s top bar on a phone', () => {
+  const src = () => fs.readFileSync('app/(app)/notes/[id]/page.tsx', 'utf8')
+  it('fits on one line: the course picker gives up room first, so Study stays up beside the tutor', () => {
+    expect(src()).toContain('<select className="input min-w-0 flex-1 basis-0 max-w-32 sm:flex-none sm:basis-auto sm:max-w-44"')
+    expect(src()).toMatch(/className=\{`btn max-sm:!px-3 \$\{studyOpen/)
+  })
+  it('puts Study beside the tutor, and the ⋯ menu last, at the far right', () => {
+    const s = src()
+    const tutor = s.indexOf('<AskTutorButton'), study = s.indexOf('aria-expanded={studyOpen}'), menu = s.indexOf('<NoteSheet ')
+    expect(tutor).toBeLessThan(study)
+    expect(study).toBeLessThan(menu)
+  })
+  it('the find bar still takes a line of its own', () => {
+    expect(src()).toContain('{findOpen && <div className="basis-full">')
+  })
+})

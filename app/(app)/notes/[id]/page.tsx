@@ -259,18 +259,19 @@ function NoteEditor({ id }: { id: string }) {
         <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}
         <div className="hidden md:block"><NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} /></div>
-        <select className="input min-w-0 max-w-32 sm:max-w-44" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })} aria-label="Course">
+        {/* on a phone the course picker gives up room first, so the buttons stay on one line */}
+        <select className="input min-w-0 flex-1 basis-0 max-w-32 sm:flex-none sm:basis-auto sm:max-w-44" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })} aria-label="Course">
           <option value="">No course</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} compact /></span>
+        <button type="button" className={`btn max-sm:!px-3 ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦<span className="max-sm:sr-only"> Study</span></button>
         {/* a phone has no File, Edit and View menus: their actions are in this sheet */}
         <NoteSheet actions={actions} mode={mode} reading={reading} autoMath={profile.auto_math}
           onRemind={() => requestReminder({ title: `Review ${draft.title || 'Untitled'}`, href: `/notes/${draft.id}`, link_label: draft.title || 'Untitled' })} />
-        <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦<span className="max-sm:sr-only"> Study</span></button>
-        {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
+        {findOpen && <div className="basis-full"><FindBar search={search} onClose={closeFind} /></div>}
       </header>
       <div className={`relative mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
         {mode === 'rich' && <InkLayer key={note.id} marks={inkAtOpen} active={inking && !reading} onChange={marks => change({ ink: marks })} onDone={() => setInking(false)} />}
