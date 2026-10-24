@@ -1,14 +1,13 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Studio: one design, dark first. A midnight ink page lit from the top by the student's accent (the aurora), and layered glass panels on it.
+/* The base tokens, for the pages outside the signed-in app (sign in, onboarding): a flat page and panels.
    Light mode keeps the same structure, paler. Contrast of text on every surface is checked by tests/unit/studioTokens.test.ts. */
 :root {
   --bg: #F5F6FB; --raised: #FFFFFF; --surface: #ECEEF6; --line: #DFE2EE; --fg: #151628; --muted: #5A5E80;
   --glass: rgb(255 255 255 / 0.78); --glass-strong: rgb(255 255 255 / 0.92); --edge: rgb(255 255 255 / 0.9);
   --danger: #C2364A; --danger-soft: #FBE9EC; --success: #12795A; --warn: #8F5200;
   --shadow: 0 1px 2px rgb(21 22 40 / 0.04), 0 10px 32px -14px rgb(21 22 40 / 0.18);
-  --aurora-strength: 5%;
   /* Accent defaults (blue preset) for pages outside the signed-in app */
   --accent: #3B5BDB; --accent-soft: #EEF1FD; --accent-solid: #3B5BDB; --accent-glow: #7C5CFF;
   --app-font: var(--font-inter);
@@ -20,7 +19,6 @@
   --glass: rgb(23 25 39 / 0.72); --glass-strong: rgb(27 29 45 / 0.92); --edge: rgb(255 255 255 / 0.07);
   --danger: #FF8095; --danger-soft: #3A1621; --success: #4FD1A5; --warn: #F0B45A;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 44px -18px rgb(0 0 0 / 0.75);
-  --aurora-strength: 10%;
   --accent: #8DA2FB; --accent-soft: #1B2550;
   --tile-a: var(--glass); --tile-b: var(--glass); --tile-c: var(--glass);
 }
@@ -31,17 +29,12 @@
   /* the student's own accent under names a page can keep when it recolours --accent-* (the Focus page's breaks do) */
   --user-solid: var(--a-solid); --user-glow: var(--a-glow);
   font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif;
-  /* the aurora: the accent glowing from the top of every page, fixed while the page scrolls */
   background-color: var(--bg);
-  background-image:
-    radial-gradient(900px 420px at 18% -160px, color-mix(in srgb, var(--accent-solid) var(--aurora-strength), transparent), transparent 72%),
-    radial-gradient(700px 360px at 92% -120px, color-mix(in srgb, var(--accent-glow) calc(var(--aurora-strength) * 0.7), transparent), transparent 70%);
-  background-attachment: fixed; background-repeat: no-repeat;
 }
 .dark .app-root { --accent: var(--a-text-dark); --accent-soft: var(--a-soft-dark); }
 
 /* The looks (docs/superpowers/specs/2026-11-01-ink-look-design.md). Every look is built on one system: flat raised cards with a hairline,
-   pill buttons, a dark sidebar with pill items and no glass, glow or wash. Each look sets its colours, its title face and its character.
+   pill buttons, a sidebar with pill items and no glass, glow or wash. Each look sets its colours, its title face and its character.
    Colours are checked against lib/appearance.ts (LOOKS), and for contrast, by tests/unit/looks.test.ts */
 .app-root[data-look] {
   --glass: var(--raised); --glass-strong: var(--raised); --edge: transparent;
@@ -49,11 +42,12 @@
   background-image: none;
 }
 .dark .app-root[data-look] { --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -10px rgb(0 0 0 / 0.6); }
-/* The sidebar's own surface, so a look can colour it; every look's is dark, with its own readable tokens */
+/* The sidebar's own surface, so a look can set it: the quiet looks keep it on the page ground with a hairline, so it recedes;
+   Playful's is its purple, with its own readable tokens */
 .app-sidebar { background: var(--glass); }
 /* Classic: warm paper, white cards, ink buttons, serif titles */
 .app-root[data-look="classic"] {
-  --bg: #F7F6F0; --raised: #FFFFFF; --surface: #F0EEE6; --line: #E4E2DA; --fg: #191918; --muted: #66655E;
+  --bg: #F7F6F0; --raised: #FFFFFF; --surface: #EFEEEA; --line: #E4E2DA; --fg: #191918; --muted: #66655E;
   --tile-a: #ECE1FA; --tile-b: #FAF0B4; --tile-c: #CDEFF0;
   --title-font: var(--font-newsreader);
   /* selection is a quiet tint with text-coloured text; the student's colour (--accent-solid) stays on the hero, the timer, progress and icons */
@@ -65,13 +59,7 @@
   --accent-soft: #2F2F2D; --accent: var(--fg);
 }
 .app-root[data-look="classic"] .app-sidebar,
-.app-root .app-root[data-look="classic"] .app-sidebar {
-  background: #191918; --fg: #EDEDE8; --muted: #A3A29B; --line: #2C2C2A; --surface: #262624; --raised: #2F2F2D;
-  --glass: var(--raised); --glass-strong: var(--raised); --accent: var(--fg); --accent-soft: #2F2F2D;
-  color: var(--fg); color-scheme: dark; border-color: #191918;
-}
-.dark .app-root[data-look="classic"] .app-sidebar,
-.dark .app-root .app-root[data-look="classic"] .app-sidebar { background: #111110; border-color: #262624; }
+.app-root .app-root[data-look="classic"] .app-sidebar { background: var(--bg); border-color: var(--line); }
 body:has(.app-root[data-look="classic"]) { background: #F7F6F0; }
 .dark body:has(.app-root[data-look="classic"]) { background: #151514; }
 /* Studio: cool midnight blue, flat, clean sans titles */
@@ -88,13 +76,7 @@ body:has(.app-root[data-look="classic"]) { background: #F7F6F0; }
   --accent-soft: #262A40; --accent: var(--fg);
 }
 .app-root[data-look="studio"] .app-sidebar,
-.app-root .app-root[data-look="studio"] .app-sidebar {
-  background: #151628; --fg: #E8E9F5; --muted: #9DA1C2; --line: #262A40; --surface: #1F2236; --raised: #2A2E4A;
-  --glass: var(--raised); --glass-strong: var(--raised); --accent: var(--fg); --accent-soft: #2A2E4A;
-  color: var(--fg); color-scheme: dark; border-color: #151628;
-}
-.dark .app-root[data-look="studio"] .app-sidebar,
-.dark .app-root .app-root[data-look="studio"] .app-sidebar { background: #090A12; border-color: #1F2236; }
+.app-root .app-root[data-look="studio"] .app-sidebar { background: var(--bg); border-color: var(--line); }
 body:has(.app-root[data-look="studio"]) { background: #F5F6FB; }
 .dark body:has(.app-root[data-look="studio"]) { background: #0E0F1A; }
 /* Paper: cream pages and a bookish serif. It is for light mode only: in dark mode the app shows Classic (components/providers/useLook.ts), and these are Classic's dark values, so nothing cream shows in the moment before the page knows the theme */
@@ -111,13 +93,7 @@ body:has(.app-root[data-look="studio"]) { background: #F5F6FB; }
   --accent-soft: #2F2F2D; --accent: var(--fg);
 }
 .app-root[data-look="paper"] .app-sidebar,
-.app-root .app-root[data-look="paper"] .app-sidebar {
-  background: #2A2520; --fg: #F1EADB; --muted: #BBAF99; --line: #3A332B; --surface: #332C25; --raised: #3E362D;
-  --glass: var(--raised); --glass-strong: var(--raised); --accent: var(--fg); --accent-soft: #3E362D;
-  color: var(--fg); color-scheme: dark; border-color: #2A2520;
-}
-.dark .app-root[data-look="paper"] .app-sidebar,
-.dark .app-root .app-root[data-look="paper"] .app-sidebar { background: #111110; border-color: #332C25; }
+.app-root .app-root[data-look="paper"] .app-sidebar { background: var(--bg); border-color: var(--line); }
 body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
 .dark body:has(.app-root[data-look="paper"]) { background: #151514; }
 /* Vivid: a light neutral page with the student's colour on the main button and on what is chosen */
@@ -131,13 +107,7 @@ body:has(.app-root[data-look="paper"]) { background: #F6F0E4; }
   --tile-a: #4D2B22; --tile-b: #1E4034; --tile-c: #4C3C12;
 }
 .app-root[data-look="vivid"] .app-sidebar,
-.app-root .app-root[data-look="vivid"] .app-sidebar {
-  background: #1F2127; --fg: #ECEDF1; --muted: #A9ACB8; --line: #343742; --surface: #2A2D37; --raised: #353945;
-  --glass: var(--raised); --glass-strong: var(--raised); --accent: var(--fg); --accent-soft: #353945;
-  color: var(--fg); color-scheme: dark; border-color: #1F2127;
-}
-.dark .app-root[data-look="vivid"] .app-sidebar,
-.dark .app-root .app-root[data-look="vivid"] .app-sidebar { background: #0E0E11; border-color: #2A2D37; }
+.app-root .app-root[data-look="vivid"] .app-sidebar { background: var(--bg); border-color: var(--line); --accent: var(--fg); --accent-soft: color-mix(in srgb, var(--fg) 9%, var(--bg)); }
 body:has(.app-root[data-look="vivid"]) { background: #FAFAF8; }
 .dark body:has(.app-root[data-look="vivid"]) { background: #18181C; }
 /* Playful: a sunny page, bold dark outlines (--outline) with solid offset shadows, rounded titles and buttons you press into their shadow; plum by night */
@@ -195,7 +165,7 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .kbd { @apply inline-flex min-w-5 items-center justify-center rounded-md border border-line bg-surface px-1.5 font-mono text-[11px] leading-5 text-muted; }
 
 @layer components {
-  /* Glass: the surface of every panel. A blurred, slightly see-through layer over the aurora, with a lit top edge. */
+  /* Glass: the surface of every panel. A blurred, slightly see-through layer, with a lit top edge (every look turns it flat). */
   .glass { background: var(--glass); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); }
 
   /* Buttons: 40 px (44 on touch), 10 px corners. Primary is the accent lit from within; secondary is glass; quiet is text that fills on hover. */
@@ -244,10 +214,10 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
   .tile { @apply rounded-2xl px-6 py-5; background: var(--glass); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); }
   a.tile:hover, button.tile:hover { border-color: color-mix(in srgb, var(--accent-solid) 45%, var(--line)); }
   .tile-a, .tile-b, .tile-c { background: var(--glass); }
-  /* The hero: a larger glass panel with the accent glowing in from its corner */
+  /* The hero: a larger panel */
   .hero {
     @apply rounded-3xl p-8 text-fg;
-    background: radial-gradient(520px 260px at 0% 0%, color-mix(in srgb, var(--accent-solid) 12%, transparent), transparent 70%), var(--glass);
+    background: var(--glass);
     border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--edge), var(--shadow);
     -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
   }
@@ -257,9 +227,10 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
     --hero-margin: 1.5rem; padding-left: calc(var(--hero-margin) + 1.1rem); color: #fff; border-color: transparent;
     box-shadow: var(--shadow);
     background-color: var(--accent-solid);
+    /* taste-skill-ignore: not a colour fill but the drawn lines of a notebook page, the hero's identity */
     background-image:
-      linear-gradient(90deg, transparent var(--hero-margin), rgb(255 255 255 / .32) var(--hero-margin), rgb(255 255 255 / .32) calc(var(--hero-margin) + 1.5px), transparent calc(var(--hero-margin) + 1.5px)),
-      repeating-linear-gradient(to bottom, transparent 0 1.9rem, rgb(255 255 255 / .11) 1.9rem calc(1.9rem + 1px));
+      linear-gradient(90deg, transparent var(--hero-margin), rgb(255 255 255 / .32) var(--hero-margin), rgb(255 255 255 / .32) calc(var(--hero-margin) + 1.5px), transparent calc(var(--hero-margin) + 1.5px)), /* taste-skill-ignore */
+      repeating-linear-gradient(to bottom, transparent 0 1.9rem, rgb(255 255 255 / .11) 1.9rem calc(1.9rem + 1px)); /* taste-skill-ignore */
   }
   /* A panel's title: the display face, in the text colour */
   .section-label { @apply mb-4 text-[17px] leading-tight font-semibold text-fg; font-family: var(--display-font), var(--app-font), ui-sans-serif, sans-serif; letter-spacing: -0.01em; }
@@ -303,7 +274,7 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .app-root[data-look] .menu-panel,
 .app-root .app-root[data-look] .menu-panel { background: var(--raised); box-shadow: 0 2px 6px rgb(20 20 19 / 0.06), 0 14px 32px rgb(20 20 19 / 0.12); }
 .app-root[data-look] .section-label,
-.app-root .app-root[data-look] .section-label { font-weight: 500; font-size: 1.375rem; letter-spacing: -0.01em; }
+.app-root .app-root[data-look] .section-label { font-weight: 500; font-size: 1.125rem; letter-spacing: -0.01em; }
 .app-root[data-look] .app-sidebar :is(a, button):not([role="menuitem"]),
 .app-root .app-root[data-look] .app-sidebar :is(a, button):not([role="menuitem"]) { border-radius: 9999px; }
 .app-root[data-look] .app-sidebar .section-label,

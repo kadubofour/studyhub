@@ -33,7 +33,7 @@ export function CourseAccess({ courses, counts, recent, coursesClassName = '' }:
               const Icon = ICON[r.kind]
               return (
                 <li key={`${r.kind}-${r.id}`} className="tile relative flex items-center gap-3.5 !px-4 !py-3.5 transition">
-                  <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><Icon size={18} /></span>
+                  <Icon size={18} aria-hidden className="shrink-0 text-muted" />
                   <div className="min-w-0 flex-1">
                     <Link href={r.href} className="block truncate font-medium after:absolute after:inset-0 hover:text-accent">{r.title}</Link>
                     <CourseTag course={courses.find(c => c.id === r.course_id)} />

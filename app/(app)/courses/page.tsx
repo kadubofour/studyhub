@@ -5,6 +5,7 @@ import { BookOpen } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SplitCard } from '@/components/ui/cards'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { NewCourseButton } from '@/components/quick/NewCourseButton'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary } from '@/lib/data/library'
@@ -28,17 +29,19 @@ export default function CoursesPage() {
 
   if (failed) return <div><PageHeader title="Courses" /><p role="alert" className="text-sm text-danger">Could not load your courses. Check your connection.</p></div>
   if (!courses) return <div><PageHeader title="Courses" /><p className="text-sm text-muted">Loading…</p></div>
+  const add = (c: Course) => setCourses(cs => [...(cs ?? []), c])
   if (courses.length === 0) return (
     <div>
       <PageHeader title="Courses" />
-      <EmptyState icon={BookOpen} tone="b" title="No courses yet" body="A course gathers its notes, decks, lectures and topics in one place. Add your first one in the Planner.">
-        <Link href="/planner" className="btn-primary">Open the Planner</Link>
+      <EmptyState icon={BookOpen} tone="b" title="No courses yet" body="A course gathers its notes, decks, lectures and topics in one place. Add your first one here, or with its timetable in the Planner.">
+        <NewCourseButton count={0} onAdded={add} />
+        <Link href="/planner" className="btn">Open the Planner</Link>
       </EmptyState>
     </div>
   )
   return (
     <div>
-      <PageHeader title="Courses" />
+      <PageHeader title="Courses" actions={<NewCourseButton count={courses.length} onAdded={add} />} />
       <ul aria-label="Your courses" className="grid gap-3 sm:grid-cols-2">
         {courses.map(c => (
           <li key={c.id}>

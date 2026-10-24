@@ -19,14 +19,15 @@ let mine: unknown[] = []
 vi.mock('@/lib/data/reminders', () => ({ listReminders: async () => mine, REMINDERS_CHANGED: 'studyhub:reminders-changed' }))
 vi.mock('@/lib/data/tasks', () => ({ listOpenTasks: async () => [], countTasksDoneSince: async () => 0, createTask: vi.fn(), setTaskDone: vi.fn() }))
 vi.mock('@/lib/data/classes', () => ({ listClasses: async () => [] }))
-vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => 0 }))
+let dueCards = 0
+vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => dueCards }))
 vi.mock('@/lib/data/focus', () => ({ listSessionsSince: async () => [] }))
 vi.mock('@/lib/data/notes', () => ({ listNotes: async () => [] }))
 vi.mock('@/lib/data/decks', () => ({ listDecks: async () => [] }))
 vi.mock('@/lib/data/lectures', () => ({ listLectures: async () => [] }))
 vi.mock('@/components/topics/WeakSpotsCard', () => ({ WeakSpotsCard: () => <section aria-label="Weak spots" /> }))
 vi.mock('@/components/home/CourseAccess', () => ({ CourseAccess: () => <section aria-label="Jump back in" /> }))
-vi.mock('@/components/home/HomeActions', () => ({ HomeActions: () => <nav aria-label="Quick actions" /> }))
+vi.mock('@/components/home/HomeActions', () => ({ HomeActions: (p: { due: number; nextClass: string | null }) => <nav aria-label="Quick actions" data-due={p.due} data-next={p.nextClass ?? ''} /> }))
 
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -114,5 +115,43 @@ describe('Home on a phone', () => {
     const goal = within(screen.getByRole('region', { name: 'Welcome' })).getByRole('progressbar', { name: 'Focus goal progress' })
     expect(goal.querySelector('svg')!.getAttribute('class')).toContain('hidden sm:block')
     expect(goal.querySelector('[data-goal-bar]')!.className).toContain('sm:hidden')
+  })
+})
+
+describe('Home, less generic', () => {
+  afterEach(() => { dueCards = 0 })
+  it("under the greeting: the date and today's one fact, in words", async () => {
+    await home()
+    const hero = within(screen.getByRole('region', { name: 'Welcome' }))
+    expect(hero.getByText(/Nothing due today./).tagName).toBe('P')
+  })
+  it('the quick actions come straight after the greeting, on every screen, with the cards due', async () => {
+    dueCards = 7
+    await home()
+    const nav = screen.getByRole('navigation', { name: 'Quick actions' })
+    expect(nav.getAttribute('data-due')).toBe('7')
+    expect(nav.closest('[class~="md:hidden"]')).toBeNull()
+    const welcome = screen.getByRole('region', { name: 'Welcome' }), today = screen.getByRole('region', { name: 'Today' })
+    expect(welcome.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(nav.compareDocumentPosition(today) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  it('Today leaves the cards to review to the quick actions, so the count is in one place', async () => {
+    dueCards = 7
+    await home()
+    expect(within(screen.getByRole('region', { name: 'Today' })).queryByText(/cards to review/)).toBeNull()
+  })
+  it('This week states its total and draws the goal as a dashed line; only today is in colour', async () => {
+    await home()
+    const week = screen.getByRole('region', { name: 'This week' })
+    expect(within(week).getByText('0m in all')).toBeTruthy()
+    const goal = week.querySelector('[data-goal-line]') as HTMLElement
+    expect(goal.className).toContain('border-dashed')
+    expect(goal.textContent).toBe('Goal 2h')
+    const bars = [...week.querySelectorAll('[data-bar]')] as HTMLElement[]
+    expect(bars).toHaveLength(7)
+    const today = bars.filter(b => b.hasAttribute('data-today'))
+    expect(today).toHaveLength(1)
+    expect(today[0].style.background).toBe('var(--accent-solid)')
+    for (const b of bars.filter(x => !x.hasAttribute('data-today'))) expect(b.style.background).not.toContain('accent')
   })
 })

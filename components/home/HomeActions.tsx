@@ -1,36 +1,31 @@
 'use client'
 import Link from 'next/link'
-import { ListChecks, MessagesSquare, type LucideIcon } from 'lucide-react'
 import { requestQuiz } from '@/lib/quiz/events'
 
-type Action = { label: string; hint: string; icon: LucideIcon; href?: string; onClick?: () => void }
+type Cell = { label: string; value: string; href?: string; onClick?: () => void; figure?: boolean }
 
-// What is nowhere else on a phone. (Notes, decks, lectures, Upload and Scan are in the Create button, so they are not repeated here.)
-const ACTIONS: Action[] = [
-  { label: 'Take a quiz', hint: 'Quiz yourself on a note', icon: ListChecks, onClick: requestQuiz },
-  { label: 'Ask the tutor', hint: 'Get help with a topic', icon: MessagesSquare, href: '/tutor' },
-]
+// One strip of what to do next, split by hairlines: the cards due and the next class (said nowhere else on Home), then a quiz and the tutor
+const cell = 'group flex min-w-0 flex-col gap-1 bg-raised px-4 py-3.5 text-left transition hover:bg-surface focus-visible:relative focus-visible:z-10'
 
-// In the accent colour, in every look: the tiles are the one place on Home that is tinted with the student's own colour, so they stand out from the figures above
-const tile = 'group flex items-center gap-3 rounded-[20px] border border-accent/30 bg-accent-soft p-4 text-left transition hover:border-accent/60 hover:brightness-95 active:scale-[.98] md:flex-col md:items-start md:gap-2.5 md:p-3.5'
-
-// Large tiles you can tap: a coloured icon, what it does, and a few words saying what it is for
-export function HomeActions() {
+export function HomeActions({ due, nextClass }: { due: number; nextClass: string | null }) {
+  const cells: Cell[] = [
+    due > 0 ? { label: 'Cards to review', value: `${due} due`, href: '/review', figure: true } : { label: 'Cards to review', value: 'All caught up', href: '/flashcards' },
+    { label: 'Next class', value: nextClass ?? '—', href: '/planner', figure: !!nextClass },
+    { label: 'Quiz yourself', value: 'Pick a note', onClick: requestQuiz },
+    { label: 'Ask the tutor', value: 'Start a chat', href: '/tutor' },
+  ]
   return (
-    <section role="group" aria-label="Quick actions" className="grid grid-cols-2 gap-2.5 md:gap-3">
-      {ACTIONS.map(a => {
+    <section role="group" aria-label="Quick actions" className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-4">
+      {cells.map(c => {
         const inner = (
           <>
-            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-solid text-white md:size-9"><a.icon size={19} aria-hidden /></span>
-            <span className="min-w-0">
-              <span className="block text-[15px] font-medium leading-tight text-accent">{a.label}</span>
-              <span className="mt-0.5 block text-xs leading-snug text-muted max-md:hidden">{a.hint}</span>
-            </span>
+            <span data-label className="text-[13px] text-muted">{c.label}</span>
+            <span data-value className={`truncate text-[17px] font-medium leading-snug group-hover:underline group-hover:underline-offset-4 ${c.figure ? 'tabular-nums' : ''} ${c.value === '—' ? 'text-muted' : ''}`}>{c.value}</span>
           </>
         )
-        return a.href
-          ? <Link key={a.label} href={a.href} className={tile}>{inner}</Link>
-          : <button key={a.label} type="button" className={tile} onClick={a.onClick}>{inner}</button>
+        return c.href
+          ? <Link key={c.label} href={c.href} className={cell}>{inner}</Link>
+          : <button key={c.label} type="button" className={cell} onClick={c.onClick}>{inner}</button>
       })}
     </section>
   )

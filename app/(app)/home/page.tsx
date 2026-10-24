@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Bell, Play, Pause, BarChart3, Settings, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -16,6 +16,7 @@ import { HeroFocus } from '@/components/home/HeroFocus'
 import { CourseAccess } from '@/components/home/CourseAccess'
 import { HomeActions } from '@/components/home/HomeActions'
 import { homeMaterial, type Recent, type CourseCounts } from '@/lib/home/material'
+import { todayLine } from '@/lib/home/todayLine'
 import { listNotes } from '@/lib/data/notes'
 import { listDecks } from '@/lib/data/decks'
 import { listLectures } from '@/lib/data/lectures'
@@ -102,7 +103,8 @@ export default function HomePage() {
   const look = useLook()
   const bold = look !== 'paper'
   const weekKeys = weekKeysFor(todayKey)
-  const maxWeek = Math.max(goal, ...weekKeys.map(k => week.get(k) ?? 0), 1)
+  const maxWeek = Math.max(goal * 1.25, ...weekKeys.map(k => week.get(k) ?? 0), 1)
+  const weekTotal = weekKeys.reduce((sum, k) => sum + (week.get(k) ?? 0), 0)
 
   function toggle(t: Task) {
     const wasDone = doneIds.has(t.id)
@@ -135,8 +137,9 @@ export default function HomePage() {
       <section aria-label="Welcome" className="hero hero-page">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-[15px] opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
-            <h1 className="font-display mt-1 text-[1.875rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+            <h1 className="font-display text-[1.875rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+            {/* the date after the greeting, and today's one fact from the data */}
+            <p className="mt-2 text-[15px] opacity-90">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length })}`}</p>
           </div>
           {/* phones have no sidebar: the places it holds are a tap away here */}
           <div className="-ml-2 flex gap-0.5 md:hidden">
@@ -155,12 +158,14 @@ export default function HomePage() {
         ) : (<>
           <div className="mt-5 flex items-center gap-3">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25" role="progressbar" aria-valuenow={focusPct} aria-valuemin={0} aria-valuemax={100} aria-label="Focus goal progress">
-              <div className="h-2 rounded-full bg-white transition-all" style={{ width: `${focusPct}%` }} />
+              <div className="h-2 rounded-full bg-white transition-[width]" style={{ width: `${focusPct}%` }} />
             </div>
             <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
           </div>
         </>)}
       </section>
+
+      <HomeActions due={due} nextClass={nextCourse ? `${nextCourse.name}, ${nextLabel}` : null} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section aria-label="Today" className="card">
@@ -175,12 +180,6 @@ export default function HomePage() {
                   <Bell size={17} className="text-accent" aria-hidden /><span className="font-medium tabular-nums">{formatInTimeZone(at, tz, 'HH:mm')}</span><span className="text-muted" aria-hidden>·</span>{r.title}
                 </Link></li>
               ))}
-            </ul>
-          )}
-          {(nextCourse || due > 0) && (
-            <ul className="mb-4 space-y-2 text-[15px]">
-              {nextCourse && <li><Link href="/planner" className="inline-flex items-center gap-2.5 hover:text-accent"><School size={17} className="text-muted" aria-hidden />Next class: {nextCourse.name}, {nextLabel}</Link></li>}
-              {due > 0 && <li><Link href="/review" className="inline-flex items-center gap-2.5 font-medium text-accent hover:underline"><Layers size={17} aria-hidden />{due} {due === 1 ? 'card' : 'cards'} to review<ArrowRight size={15} aria-hidden /></Link></li>}
             </ul>
           )}
           {sessions.map(({ v, s }) => (
@@ -209,26 +208,32 @@ export default function HomePage() {
             </section>
           )}
           <section aria-label="This week" className="card flex flex-1 flex-col">
-            <h2 className="section-label">This week</h2>
-            <div className="mt-auto flex h-32 items-end gap-2.5" role="img" aria-label="Focus minutes per day this week">
-              {weekKeys.map(k => {
-                const m = week.get(k) ?? 0
-                const isToday = k === todayKey
-                return (
-                  <div key={k} className="flex flex-1 flex-col items-center gap-1.5" title={`${k}: ${fmtMin(m)}`}>
-                    <div className="w-full rounded-md transition-all"
-                      style={{ height: `${Math.max(6, (m / maxWeek) * 100)}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--accent) 26%, transparent)' }} />
-                    <span className={`text-xs ${isToday ? 'font-semibold text-accent' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>
-                  </div>
-                )
-              })}
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <h2 className="section-label !mb-0">This week</h2>
+              <span className="text-sm tabular-nums text-muted">{fmtMin(weekTotal)} in all</span>
+            </div>
+            {/* focus per day on one scale: today in the student's colour, the other days in grey, the daily goal as a dashed line */}
+            <div className="mt-auto" role="img" aria-label={`Focus minutes per day this week, against a goal of ${fmtMin(goal)} a day`}>
+              <div className="relative flex h-[100px] items-end gap-2.5">
+                <div data-goal-line aria-hidden className="pointer-events-none absolute inset-x-0 border-t border-dashed border-muted/60 text-right text-xs leading-none text-muted" style={{ bottom: `${(goal / maxWeek) * 100}px` }}>
+                  <span className="relative -top-4">Goal {fmtMin(goal)}</span>
+                </div>
+                {weekKeys.map(k => {
+                  const m = week.get(k) ?? 0
+                  const isToday = k === todayKey
+                  return (
+                    <div key={k} data-bar data-today={isToday || undefined} title={`${k}: ${fmtMin(m)}`} className="flex-1 rounded-t-[4px] transition-[height]"
+                      style={{ height: `${m ? Math.max(3, (m / maxWeek) * 100) : 0}px`, background: isToday ? 'var(--accent-solid)' : 'color-mix(in srgb, var(--fg) 22%, transparent)' }} />
+                  )
+                })}
+              </div>
+              <div className="mt-1.5 flex gap-2.5 border-t border-line pt-1.5">
+                {weekKeys.map(k => <span key={k} className={`flex-1 text-center text-xs ${k === todayKey ? 'font-semibold text-fg' : 'text-muted'}`}>{DAY_LETTER[weekdayOfKey(k)]}</span>)}
+              </div>
             </div>
           </section>
         </div>
       </div>
-
-      {/* phones have no sidebar: there, Home is where these are reached */}
-      <div className="md:hidden"><HomeActions /></div>
 
       <CourseAccess courses={courses} counts={material.counts} recent={material.recent} coursesClassName="md:hidden" />
 

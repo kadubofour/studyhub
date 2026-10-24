@@ -24,6 +24,7 @@ import { LISTS, listCounts, taskGroups, tasksForList, type ListId } from '@/lib/
 import { TaskRail, type TypeFilter } from '@/components/planner/TaskRail'
 import type { ClassSlot, Course, Task } from '@/lib/types'
 import { useScanSaved } from '@/lib/scan/events'
+import { PAGE_TITLE } from '@/components/ui/PageHeader'
 
 type Tab = 'tasks' | 'week' | 'timetable'
 const DONE_DAYS = 7
@@ -196,7 +197,7 @@ export default function PlannerPage() {
   return (
     <div>
       <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <h1 className="page-title font-display text-[2.125rem] font-semibold leading-[1.1] tracking-tight sm:text-[2.5rem]">Planner</h1>
+        <h1 className={PAGE_TITLE}>Planner</h1>
         <div role="tablist" className="flex gap-1">
           {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}

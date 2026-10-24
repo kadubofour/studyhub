@@ -32,7 +32,7 @@ export type ModeColors = { bg: string; raised: string; surface: string; line: st
 export const LOOKS = {
   classic: {
     label: 'Classic', blurb: 'Warm paper, black ink buttons, serif titles',
-    light: { bg: '#F7F6F0', raised: '#FFFFFF', surface: '#F0EEE6', line: '#E4E2DA', fg: '#191918', muted: '#66655E', tiles: ['#ECE1FA', '#FAF0B4', '#CDEFF0'] },
+    light: { bg: '#F7F6F0', raised: '#FFFFFF', surface: '#EFEEEA', line: '#E4E2DA', fg: '#191918', muted: '#66655E', tiles: ['#ECE1FA', '#FAF0B4', '#CDEFF0'] },
     dark: { bg: '#151514', raised: '#1E1E1C', surface: '#262624', line: '#33322F', fg: '#F2F1EC', muted: '#A3A29B', tiles: ['#332B47', '#38331A', '#193A3C'] },
   },
   studio: {

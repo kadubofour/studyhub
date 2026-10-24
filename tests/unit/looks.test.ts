@@ -33,6 +33,9 @@ describe('the looks', () => {
   it('Classic is the paper and ink of the redesign', () => {
     expect(LOOKS.classic.light).toMatchObject({ bg: '#F7F6F0', raised: '#FFFFFF', fg: '#191918' })
   })
+  it('Classic\'s soft surface is a warm grey, not the cream of another brand', () => {
+    expect(LOOKS.classic.light.surface).toBe('#EFEEEA')
+  })
   it('every look keeps its text readable on its page, panels, soft surface and tiles', () => {
     for (const [name, look] of Object.entries(LOOKS)) for (const mode of ['light', 'dark'] as const) {
       const c = look[mode]
@@ -122,14 +125,19 @@ describe('each look keeps its character', () => {
   })
 })
 
-describe('the dark sidebar of every look', () => {
-  it.each(NAMES.flatMap(l => [[l, 'light'], [l, 'dark']]))('%s, %s mode: its text is readable on it, and the current place stands out', (look, mode) => {
-    const base = block(`.app-root[data-look="${look}"] .app-sidebar`)
-    const b = mode === 'dark' && css.includes(`\n.dark .app-root[data-look="${look}"] .app-sidebar {`) ? block(`.dark .app-root[data-look="${look}"] .app-sidebar`) : base
+describe('the sidebar of every look', () => {
+  // Classic, Studio, Paper and Vivid set it on the page ground (lessGeneric.test.tsx); its current place is the look's quiet pill
+  it.each([['classic', 'light'], ['classic', 'dark'], ['studio', 'light'], ['studio', 'dark'], ['paper', 'light']] as const)('%s, %s mode: the current place stands out', (look, mode) => {
+    const b = block(mode === 'dark' ? `.dark .app-root[data-look="${look}"]` : `.app-root[data-look="${look}"]`)
+    expect(contrastRatio(LOOKS[look][mode].fg, value(b, '--accent-soft')!.toUpperCase())).toBeGreaterThanOrEqual(7)
+  })
+  it.each(['light', 'dark'])('Playful, %s mode: its text is readable on its purple, and the current place stands out', mode => {
+    const base = block('.app-root[data-look="playful"] .app-sidebar')
+    const b = mode === 'dark' ? block('.dark .app-root[data-look="playful"] .app-sidebar') : base
     const v = (t: string) => (value(b, t) ?? value(base, t))!.toUpperCase()
     for (const t of ['--fg', '--muted']) expect(contrastRatio(v(t), v('background')), t).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio(v('--fg'), v('--accent-soft')), 'the current place').toBeGreaterThanOrEqual(7)
-    expect(value(base, '--glass-strong')).toBe('var(--raised)') // its tooltips are dark too
+    expect(value(base, '--glass-strong')).toBe('var(--raised)')
   })
 })
 

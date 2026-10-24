@@ -19,6 +19,7 @@ import { listCourses } from '@/lib/data/courses'
 import { notebookColor, notebookCourse } from '@/lib/notes/notebooks'
 import { sortNotes, useView } from '@/lib/ui/listView'
 import type { Course, Notebook, NoteSummary } from '@/lib/types'
+import { PAGE_TITLE } from '@/components/ui/PageHeader'
 
 const plural = (n: number) => `${n} note${n === 1 ? '' : 's'}`
 
@@ -80,7 +81,7 @@ export default function NotebookPage() {
       <div className="mb-8 flex flex-wrap items-end gap-6">
         <div data-testid="notebook-cover" className="w-28 shrink-0 sm:w-32"><NotebookCover name={book.name} count={inside.length} color={color} /></div>
         <div className="min-w-0 flex-1">
-          <h1 className="page-title font-display text-[2.125rem] font-semibold leading-[1.1] tracking-tight sm:text-[2.5rem]">{book.name}</h1>
+          <h1 className={PAGE_TITLE}>{book.name}</h1>
           <p className="mt-1.5 text-[15px] text-muted">{plural(inside.length)}{course ? ` · ${course.name}` : ''}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" className="btn-primary" onClick={() => { void newNote() }}><Plus size={15} aria-hidden />New note</button>
