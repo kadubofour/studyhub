@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ChevronRight, FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Pencil, Search, Trash2, Upload, type LucideIcon } from 'lucide-react'
+import { FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Search, Upload, type LucideIcon } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -11,13 +11,13 @@ import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
-import { NotebookCover, coverColor } from '@/components/notes/NotebookCover'
+import { NotebookCover } from '@/components/notes/NotebookCover'
+import { notebookColor } from '@/lib/notes/notebooks'
 import { useToast } from '@/components/providers/ToastProvider'
-import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary, moveItems } from '@/lib/data/library'
-import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
+import { createNotebook, listNotebooks, moveNotes } from '@/lib/data/notebooks'
 import { requestUpload } from '@/lib/scan/events'
 import { requestQuiz } from '@/lib/quiz/events'
 import { useView } from '@/lib/ui/listView'
@@ -37,11 +37,10 @@ const key = (i: { kind: Kind; id: string }) => `${i.kind}:${i.id}`
 const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '')
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
 
-// Everything the student has made in one place. Notebooks are folders: a note in one lives inside it, and opening the folder shows its notes.
-// Filter by course and kind, search (which looks inside every folder), and move things between courses and notebooks.
+// Everything the student has made in one place. A note in a notebook lives inside it, and a notebook opens on its own page.
+// Filter by course and kind, search (which looks inside every notebook), and move things between courses and notebooks.
 export default function LibraryPage() {
   const toast = useToast()
-  const confirm = useConfirm()
   const { layout } = useView('library')
   const address = useSearchParams()
   const fromAddress = address.get('course')
@@ -50,11 +49,11 @@ export default function LibraryPage() {
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
   const [items, setItems] = useState<LibraryItem[] | null>(null)
   const [failed, setFailed] = useState(false)
-  const [view, setView] = useState<View>(() => ({ course: fromAddress ?? 'all', kind: null, q: '', sort: 'recent', folder: address.get('notebook') }))
+  const [view, setView] = useState<View>(() => ({ course: fromAddress ?? 'all', kind: null, q: '', sort: 'recent' }))
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [target, setTarget] = useState('')
   const [moving, setMoving] = useState(false)
-  const [dialog, setDialog] = useState<null | 'new' | 'rename' | 'file'>(null)
+  const [dialog, setDialog] = useState<null | 'new' | 'file'>(null)
 
   // The items and the notebooks are read together, so a note never shows (or hides) against an out-of-date list of folders
   const read = () => Promise.all([loadLibrary(supabase(), new Date()), listNotebooks(supabase())])
@@ -72,9 +71,7 @@ export default function LibraryPage() {
   const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id) ?? null
   // An address naming a course that is gone (or never was) shows everything instead of an empty list
   const course = view.course === 'all' || view.course === 'none' || !coursesLoaded || courses.some(c => c.id === view.course) ? view.course : 'all'
-  // A folder whose notebook is gone is closed
-  const open = bookOf(view.folder)
-  const current: View = { ...view, course, folder: open?.id ?? null }
+  const current: View = { ...view, course }
   const known = items ? withKnownNotebooks(items, notebooks) : null
   // grouped by kind in the sections' order (each group keeps the chosen sort), so ticking and the screen agree on the order
   const shown = known ? (list => KINDS.flatMap(k => list.filter(i => i.kind === k)))(visible(known, current)) : []
@@ -94,17 +91,12 @@ export default function LibraryPage() {
   function toggleAll() {
     setSelected(s => { const n = new Set(s); for (const i of movableShown) { if (allShownPicked) n.delete(key(i)); else n.add(key(i)) } return n })
   }
-  // The open folder and the course are kept in the address (without new history entries), so coming back from a note finds them again
-  function remember(name: 'notebook' | 'course', value: string | null) {
+  // The course is kept in the address (without a new history entry), so coming back from a note finds it again
+  function remember(name: 'course', value: string | null) {
     const params = new URLSearchParams(window.location.search)
     if (value) params.set(name, value); else params.delete(name)
     const qs = params.toString()
     window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
-  }
-  function openFolder(id: string | null) {
-    setView(v => ({ ...v, folder: id, kind: null, q: '' }))
-    setSelected(new Set())
-    remember('notebook', id)
   }
   function chooseCourse(id: string) {
     setView(v => ({ ...v, course: id }))
@@ -137,31 +129,16 @@ export default function LibraryPage() {
   }
   async function fileInNew(name: string) {
     try {
-      const book = await createNotebook(supabase(), name)
+      const book = await createNotebook(supabase(), name, null)
       setNotebooks(b => [...b, book])
       await file(book)
     } catch { setDialog(null); toast('Could not make that notebook.') }
   }
-  async function create(name: string) {
+  // a new notebook starts in the course the Library is showing
+  async function create(name: string, courseId: string | null) {
     setDialog(null)
-    try { const book = await createNotebook(supabase(), name); setNotebooks(b => [...b, book]) } catch { toast('Could not make that notebook.') }
+    try { const book = await createNotebook(supabase(), name, courseId); setNotebooks(b => [...b, book]) } catch { toast('Could not make that notebook.') }
   }
-  async function rename(name: string) {
-    if (!open) return
-    setDialog(null)
-    try { await renameNotebook(supabase(), open.id, name); setNotebooks(b => b.map(x => (x.id === open.id ? { ...x, name } : x))) } catch { toast('Could not rename the notebook.') }
-  }
-  async function remove() {
-    if (!open) return
-    if (!await confirm({ title: `Delete ${open.name}?`, body: 'Its notes are kept: they go back to the Library, outside any notebook.', confirmLabel: 'Delete', danger: true })) return
-    try {
-      await deleteNotebook(supabase(), open.id)
-      setNotebooks(b => b.filter(x => x.id !== open.id))
-      openFolder(null)
-      await load()
-    } catch { toast('Could not delete the notebook.') }
-  }
-
   if (failed) return (
     <div>
       <PageHeader title="Library" />
@@ -195,33 +172,15 @@ export default function LibraryPage() {
               unsorted={{ active: course === 'none', onClick: () => chooseCourse('none') }} />
           </div>
 
-          {open && (
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <nav aria-label="Breadcrumb">
-                <ol className="flex items-center gap-1.5 text-lg">
-                  <li><button type="button" className="rounded-lg px-1.5 py-0.5 text-muted transition hover:bg-surface hover:text-fg" onClick={() => openFolder(null)}>Library</button></li>
-                  <li aria-hidden className="text-muted"><ChevronRight size={16} /></li>
-                  <li className="flex items-center gap-2 font-display font-semibold">
-                    <span aria-hidden className="h-5 w-4 rounded-l-[3px] rounded-r-md" style={{ background: coverColor(open.id) }} /><span aria-current="page">{open.name}</span>
-                  </li>
-                </ol>
-              </nav>
-              <div className="flex gap-1">
-                <button type="button" className="btn-ghost" onClick={() => setDialog('rename')}><Pencil size={14} aria-hidden />Rename notebook</button>
-                <button type="button" className="btn-ghost hover:!text-danger" onClick={() => { void remove() }}><Trash2 size={14} aria-hidden />Delete notebook</button>
-              </div>
-            </div>
-          )}
-
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="relative min-w-48 flex-1">
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
-              <input className="input w-full pl-9" placeholder={open ? `Search ${open.name}` : 'Search the library'} aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
+              <input className="input w-full pl-9" placeholder="Search the library" aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
             </div>
             <ChoiceChips label="Sort" value={view.sort} options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} onChange={v => setView(prev => ({ ...prev, sort: v as View['sort'] }))} />
             <ViewOptions page="library" sort={false} />
           </div>
-          {!open && (
+          {(
             <div className="mb-5 flex flex-wrap gap-1.5">
               {KINDS.map(k => (
                 <button key={k} type="button" aria-pressed={view.kind === k} onClick={() => setView(v => ({ ...v, kind: v.kind === k ? null : k }))}
@@ -238,10 +197,10 @@ export default function LibraryPage() {
               <ul aria-label="Notebooks" className="flex flex-wrap gap-4">
                 {shelf.map(({ notebook, count }) => (
                   <li key={notebook.id} className="w-32">
-                    <button type="button" onClick={() => openFolder(notebook.id)} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
+                    <Link href={`/notebooks/${notebook.id}`} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
                       className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent">
-                      <NotebookCover name={notebook.name} count={count} color={coverColor(notebook.id)} />
-                    </button>
+                      <NotebookCover name={notebook.name} count={count} color={notebookColor(notebook, known ?? [], courses)} />
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -267,16 +226,10 @@ export default function LibraryPage() {
 
           <span role="status" className="sr-only">{picked.length > 0 ? `${plural(picked.length, 'item')} selected` : ''}</span>
           {shown.length === 0 ? (
-            open ? (
-              view.q.trim()
-                ? <div className="card space-y-2 py-8 text-center"><p className="text-sm">Nothing matches.</p><button type="button" className="btn" onClick={() => setView(v => ({ ...v, q: '' }))}>Clear search</button></div>
-                : course !== 'all'
-                  ? <div className="card space-y-2 py-8 text-center"><p className="text-sm">{course === 'none' ? `No unsorted notes in ${open.name}.` : `No notes from ${courseName ?? 'this course'} in ${open.name}.`}</p><button type="button" className="btn" onClick={() => chooseCourse('all')}>Show all courses</button></div>
-                  : <div className="card py-8 text-center text-sm text-muted">No notes in this notebook yet.</div>
-            ) : shelf.length > 0 ? null : filtered && items.some(i => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)) ? (
+            shelf.length > 0 ? null : filtered && items.some(i => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)) ? (
               <div className="card space-y-2 py-8 text-center">
                 <p className="text-sm">Nothing matches.</p>
-                <button type="button" className="btn" onClick={() => { setView({ course: 'all', kind: null, q: '', sort: view.sort, folder: null }); remember('course', null) }}>Clear filters</button>
+                <button type="button" className="btn" onClick={() => { setView({ course: 'all', kind: null, q: '', sort: view.sort }); remember('course', null) }}>Clear filters</button>
               </div>
             ) : (
               <div className="card py-8 text-center text-sm text-muted">{course === 'none' ? 'Everything is in a course.' : courseName ? 'Nothing in this course yet.' : 'Nothing here yet.'}</div>
@@ -295,7 +248,7 @@ export default function LibraryPage() {
                       {group.map(i => {
                         const movable = isMovable(i)
                         const c = courseOf(i.course_id)
-                        const book = !open && i.kind === 'note' ? bookOf(i.notebook_id) : null
+                        const book = i.kind === 'note' ? bookOf(i.notebook_id) : null
                         return (
                           <ItemTile key={key(i)} layout={layout} icon={k.icon} color={c?.color} title={i.title} href={i.href}
                             subtitle={book ? `In ${book.name}` : undefined}
@@ -313,12 +266,12 @@ export default function LibraryPage() {
               })}
             </section>
           )}
-          {items.some(i => !isMovable(i)) && !open && <p className="mt-3 text-xs text-muted">Quizzes stay with their note. Move the note to move its quiz.</p>}
+          {items.some(i => !isMovable(i)) && <p className="mt-3 text-xs text-muted">Quizzes stay with their note. Move the note to move its quiz.</p>}
         </>
       )}
 
-      <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create" onSubmit={n => { void create(n) }} />
-      <NotebookNameDialog open={dialog === 'rename'} onClose={() => setDialog(null)} title="Rename notebook" submitLabel="Save" initial={open?.name ?? ''} onSubmit={n => { void rename(n) }} />
+      <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create"
+        courses={courses} initialCourse={course !== 'all' && course !== 'none' ? course : null} onSubmit={(n, cid) => { void create(n, cid) }} />
       <MoveToNotebookDialog open={dialog === 'file'} onClose={() => setDialog(null)} notebooks={notebooks}
         onMove={id => { void file(bookOf(id)) }} onCreateAndMove={n => { void fileInNew(n) }} />
     </div>

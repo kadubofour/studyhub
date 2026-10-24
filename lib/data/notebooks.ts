@@ -3,11 +3,16 @@ import type { Notebook } from '../types'
 import { check, must } from './util'
 
 export async function listNotebooks(sb: SupabaseClient): Promise<Notebook[]> {
-  return must(await sb.from('notebooks').select('id,name,created_at').order('created_at').order('id'))
+  return must(await sb.from('notebooks').select('id,name,course_id,created_at').order('created_at').order('id'))
 }
 
-export async function createNotebook(sb: SupabaseClient, name: string): Promise<Notebook> {
-  return must(await sb.from('notebooks').insert({ name: name.trim() }).select('id,name,created_at').single())
+export async function createNotebook(sb: SupabaseClient, name: string, courseId: string | null = null): Promise<Notebook> {
+  return must(await sb.from('notebooks').insert({ name: name.trim(), course_id: courseId }).select('id,name,course_id,created_at').single())
+}
+
+/** Its name, its course (null for none), or both */
+export async function updateNotebook(sb: SupabaseClient, id: string, patch: { name?: string; course_id?: string | null }): Promise<void> {
+  check(await sb.from('notebooks').update(patch.name === undefined ? patch : { ...patch, name: patch.name.trim() }).eq('id', id))
 }
 
 export async function renameNotebook(sb: SupabaseClient, id: string, name: string): Promise<void> {

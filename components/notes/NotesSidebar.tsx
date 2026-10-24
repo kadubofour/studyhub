@@ -1,17 +1,17 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BellPlus, Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, Pencil, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { BellPlus, Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
 import { sortNotes, useView } from '@/lib/ui/listView'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
-import { NotebookCover, coverColor } from '@/components/notes/NotebookCover'
-import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
+import { NotebookCover } from '@/components/notes/NotebookCover'
+import Link from 'next/link'
 import { requestReminder } from '@/lib/reminders/events'
-import { countByNotebook, filterNotes } from '@/lib/notes/notebooks'
-import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
+import { countByNotebook, filterNotes, notebookColor } from '@/lib/notes/notebooks'
+import { createNotebook, listNotebooks, moveNotes } from '@/lib/data/notebooks'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useScanSaved } from '@/lib/scan/events'
 import { formatDistanceToNow } from 'date-fns'
@@ -39,8 +39,7 @@ export function NotesSidebar() {
   const [q, setQ] = useState('')
   const [course, setCourse] = useState('')
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
-  const [picked, setNotebook] = useState('') // '' is all notes, 'none' the unfiled ones, otherwise a notebook's id
-  const [naming, setNaming] = useState<null | 'new' | 'rename'>(null)
+  const [naming, setNaming] = useState(false) // the New notebook dialog
   const [moving, setMoving] = useState<string[] | null>(null) // the notes being moved to a notebook
   const [version, setVersion] = useState(0)
   const [selecting, setSelecting] = useState(false)
@@ -73,7 +72,7 @@ export function NotesSidebar() {
 
   async function create() {
     try {
-      const n = await createNote(supabase(), { course_id: course || null, notebook_id: notebook && notebook !== 'none' ? notebook : null })
+      const n = await createNote(supabase(), { course_id: course || null })
       router.push(`/notes/${n.id}`)
     } catch { toast('Couldn\'t create a note.') }
   }
@@ -101,23 +100,10 @@ export function NotesSidebar() {
     } catch { toast('Couldn\'t delete the note.') }
   }
 
-  async function addNotebook(name: string) {
-    setNaming(null)
-    try { const b = await createNotebook(supabase(), name); setNotebooks(bs => [...bs, b]); setNotebook(b.id) } catch { toast("Couldn't make the notebook.") }
-  }
-  async function renameChosen(name: string) {
-    setNaming(null)
-    try { await renameNotebook(supabase(), notebook, name); setNotebooks(bs => bs.map(b => (b.id === notebook ? { ...b, name } : b))) } catch { toast("Couldn't rename the notebook.") }
-  }
-  async function removeChosen() {
-    const b = notebooks.find(x => x.id === notebook)
-    if (!b) return
-    const ok = await confirm({ title: 'Delete this notebook?', body: `“${b.name}” will be deleted. Its notes are kept; they move to Unfiled.`, confirmLabel: 'Delete', danger: true })
-    if (!ok) return
-    try {
-      await deleteNotebook(supabase(), b.id)
-      setNotebooks(bs => bs.filter(x => x.id !== b.id)); setNotes(ns => ns?.map(n => (n.notebook_id === b.id ? { ...n, notebook_id: null } : n)) ?? ns); setNotebook('')
-    } catch { toast("Couldn't delete the notebook.") }
+  // A new notebook stays here as one more cover; it starts in the course the list is filtered to
+  async function addNotebook(name: string, courseId: string | null) {
+    setNaming(false)
+    try { const b = await createNotebook(supabase(), name, courseId); setNotebooks(bs => [...bs, b]) } catch { toast("Couldn't make the notebook.") }
   }
   async function moveTo(ids: string[], target: string | null) {
     setMoving(null)
@@ -134,7 +120,7 @@ export function NotesSidebar() {
     const ids = moving ?? []
     try {
       let made: Notebook
-      try { made = await createNotebook(supabase(), name) } catch { setMoving(null); toast("Couldn't make the notebook."); return }
+      try { made = await createNotebook(supabase(), name, null) } catch { setMoving(null); toast("Couldn't make the notebook."); return }
       setNotebooks(bs => [...bs, made]) // it exists now, whether or not the move works
       await moveTo(ids, made.id)
     } finally { making.current = false }
@@ -155,9 +141,8 @@ export function NotesSidebar() {
 
   const view = useView('notes')
   const counts = countByNotebook(notes ?? [])
-  // The choice in use: one that is no longer on the shelf (Unfiled once it empties, a notebook gone) falls back to All notes
-  const notebook = picked === 'none' ? (counts.unfiled > 0 ? 'none' : '') : picked && !notebooks.some(b => b.id === picked) ? '' : picked
-  const shown = sortNotes(filterNotes(notes ?? [], { notebook, course }), view.sort, Object.fromEntries(courses.map(c => [c.id, c.name])))
+  const shown = sortNotes(filterNotes(notes ?? [], { notebook: '', course }), view.sort, Object.fromEntries(courses.map(c => [c.id, c.name])))
+  const colorOf = (b: Notebook) => notebookColor(b, notes ?? [], courses)
   const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
   const empty = notes?.length === 0 && !q.trim()
@@ -186,18 +171,8 @@ export function NotesSidebar() {
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <NotebookShelf notebook={notebook} onChoose={setNotebook} onNew={() => setNaming('new')} choices={notebooks.length === 0 ? [] : [
-          { value: '', name: 'All notes', label: `All (${counts.all})`, count: counts.all, kind: 'all' as const },
-          ...notebooks.map(b => ({ value: b.id, name: b.name, label: `${b.name} (${counts.byId[b.id] ?? 0})`, count: counts.byId[b.id] ?? 0, kind: 'notebook' as const })),
-          ...(counts.unfiled > 0 ? [{ value: 'none', name: 'Unfiled', label: `Unfiled (${counts.unfiled})`, count: counts.unfiled, kind: 'loose' as const }] : []),
-        ]} />
-        {notebook && notebook !== 'none' && (
-          <span className="ml-auto flex gap-1">
-            <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setNaming('rename')}><Pencil size={13} aria-hidden />Rename notebook</button>
-            <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs text-danger" onClick={() => { void removeChosen() }}><Trash2 size={13} aria-hidden />Delete notebook</button>
-          </span>
-        )}
+      <div className="mb-3">
+        <NotebookShelf books={notebooks.map(b => ({ id: b.id, name: b.name, count: counts.byId[b.id] ?? 0, color: colorOf(b) }))} onNew={() => setNaming(true)} />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -219,23 +194,23 @@ export function NotesSidebar() {
         </EmptyState>
       )}
       {notes && !empty && shown.length === 0 && (
-        <p className="py-2 text-sm text-muted">{!q.trim() && !course && notebook && notebook !== 'none' ? 'This notebook is empty. Move notes into it from their menu.' : 'No notes match.'}</p>
+        <p className="py-2 text-sm text-muted">No notes match.</p>
       )}
 
       <ItemList label="Notes" layout={view.layout}>
         {shown.map(n => {
           const c = courseOf(n.course_id)
-          const book = !notebook ? bookOf(n.notebook_id) : undefined
+          const book = bookOf(n.notebook_id)
           const select = selecting ? { on: selected.includes(n.id), onToggle: () => toggle(n.id) } : undefined
           if (view.layout === 'grid') return (
             <StackTile key={n.id} motif="sheets" color={c?.color} title={n.title} href={`/notes/${n.id}`} tag={c && <CourseTag course={c} />}
               big={new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} bigLabel="last edited"
-              side={book && <span className="inline-flex max-w-full items-center gap-1"><span aria-hidden className="h-3 w-2.5 shrink-0 rounded-l-[2px] rounded-r-[3px]" style={{ background: coverColor(book.id) }} /><span className="truncate">{book.name}</span></span>}
+              side={book && <span className="inline-flex max-w-full items-center gap-1"><span aria-hidden className="h-3 w-2.5 shrink-0 rounded-l-[2px] rounded-r-[3px]" style={{ background: colorOf(book) }} /><span className="truncate">{book.name}</span></span>}
               select={select} onMenu={e => openMenu(e, n)} onContextMenu={e => openMenu(e, n)} />
           )
           return (
             <ItemTile key={n.id} layout={view.layout} icon={FileText} color={c?.color} title={n.title} href={`/notes/${n.id}`}
-              subtitle={book && <span className="inline-flex min-w-0 items-center gap-1"><span aria-hidden className="h-3 w-2.5 shrink-0 rounded-l-[2px] rounded-r-[3px]" style={{ background: coverColor(book.id) }} /><span className="truncate">{book.name}</span></span>}
+              subtitle={book && <span className="inline-flex min-w-0 items-center gap-1"><span aria-hidden className="h-3 w-2.5 shrink-0 rounded-l-[2px] rounded-r-[3px]" style={{ background: colorOf(book) }} /><span className="truncate">{book.name}</span></span>}
               meta={c && <CourseTag course={c} />} aside={formatDistanceToNow(new Date(n.updated_at), { addSuffix: true })}
               select={select}
               onMenu={e => openMenu(e, n)} onContextMenu={e => openMenu(e, n)} />
@@ -243,35 +218,29 @@ export function NotesSidebar() {
         })}
       </ItemList>
 
-      <NotebookNameDialog open={naming !== null} onClose={() => setNaming(null)} title={naming === 'rename' ? 'Rename notebook' : 'New notebook'} submitLabel={naming === 'rename' ? 'Save' : 'Create'}
-        initial={naming === 'rename' ? bookOf(notebook)?.name ?? '' : ''} onSubmit={name => { void (naming === 'rename' ? renameChosen(name) : addNotebook(name)) }} />
+      <NotebookNameDialog open={naming} onClose={() => setNaming(false)} title="New notebook" submitLabel="Create"
+        courses={courses} initialCourse={course || null} onSubmit={(name, cid) => { void addNotebook(name, cid) }} />
       <MoveToNotebookDialog open={moving !== null} onClose={() => setMoving(null)} notebooks={notebooks} onMove={id => { void moveTo(moving ?? [], id) }} onCreateAndMove={name => { void createAndMove(name) }} />
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
     </div>
   )
 }
 
-type ShelfChoice = { value: string; name: string; label: string; count: number; kind: 'all' | 'notebook' | 'loose' }
-// The notebooks as a row of covers you choose between (All notes first, the loose notes last), and a blank one to start a new notebook
-function NotebookShelf({ choices, notebook, onChoose, onNew }: { choices: ShelfChoice[]; notebook: string; onChoose: (v: string) => void; onNew: () => void }) {
+// The notebooks as a row of covers, each opening its own page, and a blank one to start a new notebook
+function NotebookShelf({ books, onNew }: { books: { id: string; name: string; count: number; color: string }[]; onNew: () => void }) {
   return (
     <div className="-mx-1.5 flex w-[calc(100%+0.75rem)] gap-3 overflow-x-auto p-1.5">
-      {choices.length > 0 && (
-        <div role="radiogroup" aria-label="Notebook" className="flex gap-3">
-          {choices.map((c, i) => {
-            // when nothing on the shelf matches, the first cover keeps the group reachable with Tab
-            const on = notebook === c.value
-            const stop = on || (i === 0 && !choices.some(x => x.value === notebook))
-            return (
-              <button key={c.value || 'all'} type="button" role="radio" aria-checked={on} aria-label={c.label} tabIndex={stop ? 0 : -1}
-                onClick={() => onChoose(c.value)}
-                onKeyDown={e => { const to = radioKeyTarget(e.key, i, choices.length); if (to === null) return; e.preventDefault(); onChoose(choices[to].value); focusRadio(e.currentTarget, to) }}
-                className="w-28 shrink-0 rounded-xl outline-none transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-accent">
-                <NotebookCover name={c.name} count={c.count} kind={c.kind} color={c.kind === 'notebook' ? coverColor(c.value) : undefined} on={on} />
-              </button>
-            )
-          })}
-        </div>
+      {books.length > 0 && (
+        <ul aria-label="Notebooks" className="flex gap-3">
+          {books.map(b => (
+            <li key={b.id} className="w-28 shrink-0">
+              <Link href={`/notebooks/${b.id}`} aria-label={`Open ${b.name}, ${b.count} note${b.count === 1 ? '' : 's'}`}
+                className="block rounded-xl outline-none transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-accent">
+                <NotebookCover name={b.name} count={b.count} color={b.color} />
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
       <button type="button" aria-label="New notebook" onClick={onNew}
         className="flex aspect-[4/5] w-28 shrink-0 flex-col items-center justify-center gap-1.5 rounded-l-md rounded-r-xl border-2 border-dashed border-line text-xs font-medium text-muted transition hover:border-accent hover:text-accent">

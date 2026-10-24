@@ -47,7 +47,7 @@ const open = async () => {
   await act(async () => { render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><NotesSidebar /></ConfirmProvider></ToastProvider></ProfileProvider>) })
   await screen.findByText('Krebs cycle')
 }
-const titles = () => screen.getAllByRole('link').map(l => l.querySelector('[data-title]')?.textContent)
+const titles = () => within(screen.getByRole('list', { name: 'Notes' })).getAllByRole('link').map(l => l.querySelector('[data-title]')?.textContent)
 const layoutOf = () => screen.getByRole('list', { name: 'Notes' }).getAttribute('data-layout')
 beforeEach(() => localStorage.clear())
 

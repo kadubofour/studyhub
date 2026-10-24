@@ -143,11 +143,11 @@ describe('TopBar celebrations', () => {
 })
 
 describe('TopBar', () => {
-  it('on Home leaves out the timer, next class and cards due: Home shows them itself', async () => {
+  it('shows the timer and the cards due on every page, Home included', async () => {
     path = '/home'; due = 3
     await open()
-    expect(screen.queryByRole('link', { name: /timer/ })).toBeNull()
-    expect(screen.queryByRole('link', { name: /cards? due/ })).toBeNull()
+    expect(screen.getByRole('link', { name: /Focus timer/ })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '3 cards due' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Search or jump' })).toBeTruthy()
   })
   it('is a labelled region that does not repeat the page name (the page shows its own title)', async () => {

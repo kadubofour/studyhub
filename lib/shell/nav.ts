@@ -24,4 +24,4 @@ export const MORE_PLACES: Place[] = [
 // A phone's dock: four places, with Create in the middle
 export const DOCK = ['/home', '/planner', '/notes', '/flashcards']
 
-export const isActive = (path: string, href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review'))
+export const isActive = (path: string, href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review')) || (href === '/notes' && path.startsWith('/notebooks/'))

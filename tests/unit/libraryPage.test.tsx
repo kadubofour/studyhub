@@ -276,41 +276,20 @@ describe('Library', () => {
     const listed = () => within(screen.getByRole('region', { name: 'Library items' })).getAllByRole('listitem').map(li => li.textContent ?? '')
     beforeEach(() => { items = FILED; notebooks = [{ id: 'cell', name: 'Cell biology', created_at: '' }, { id: 'old', name: 'Archive', created_at: '' }] })
 
+    it('opens each notebook on its own page, in its course\'s colour', async () => {
+      await open()
+      expect(shelf().getByRole('link', { name: /Cell biology/ }).getAttribute('href')).toBe('/notebooks/cell')
+      // its notes are all in Biology, so it is Biology green; Archive has none, so it takes the accent
+      const [archive, cell] = shelf().getAllByRole('link').map(l => (l.querySelector('[data-notebook-cover]') as HTMLElement).style.background)
+      expect(cell).toBe('rgb(29, 158, 117)')
+      expect(archive).toBe('var(--accent-solid)')
+    })
     it('shows each notebook as a folder with its note count, and keeps filed notes inside it', async () => {
       await open()
-      expect(shelf().getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Open Archive, 0 notes', 'Open Cell biology, 2 notes'])
-      expect(shelf().getAllByRole('button').every(b => b.querySelector('[data-notebook-cover]'))).toBe(true) // drawn as notebooks, not folders
+      expect(shelf().getAllByRole('link').map(b => b.getAttribute('aria-label'))).toEqual(['Open Archive, 0 notes', 'Open Cell biology, 2 notes'])
+      expect(shelf().getAllByRole('link').every(b => b.querySelector('[data-notebook-cover]'))).toBe(true) // drawn as notebooks, not folders
       expect(listed().some(t => t.includes('Glycolysis'))).toBe(false)
       expect(listed()).toHaveLength(7)
-    })
-    it('opens a folder: its notes, and a way back to the whole Library', async () => {
-      await open()
-      await click(shelf().getByRole('button', { name: /Cell biology/ }))
-      const trail = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
-      expect(trail.getByText('Cell biology').getAttribute('aria-current')).toBe('page')
-      expect(listed().map(t => t.includes('Glycolysis') || t.includes('Mitochondria'))).toEqual([true, true])
-      expect(screen.queryByRole('list', { name: 'Notebooks' })).toBeNull()
-      await click(trail.getByRole('button', { name: 'Library' }))
-      expect(screen.getByRole('list', { name: 'Notebooks' })).toBeTruthy()
-      expect(listed()).toHaveLength(7)
-    })
-    it('keeps the open folder in the address, so coming back from a note opens it again', async () => {
-      const replace = vi.spyOn(window.history, 'replaceState')
-      await open()
-      await click(shelf().getByRole('button', { name: /Cell biology/ }))
-      expect(String(replace.mock.calls.at(-1)![2])).toMatch(/[?&]notebook=cell/)
-      await click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: 'Library' }))
-      expect(String(replace.mock.calls.at(-1)![2])).not.toContain('notebook=')
-      cleanup()
-      search = 'notebook=cell'
-      await open()
-      expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Cell biology')).toBeTruthy()
-      replace.mockRestore()
-    })
-    it('says so when a folder is empty', async () => {
-      await open()
-      await click(shelf().getByRole('button', { name: /Archive/ }))
-      expect(screen.getByText('No notes in this notebook yet.')).toBeTruthy()
     })
     it('finds notes inside folders when searching, and says which notebook each is in', async () => {
       await open()
@@ -326,23 +305,7 @@ describe('Library', () => {
       fireEvent.change(dialog.getByLabelText('Name'), { target: { value: 'Genetics' } })
       await click(dialog.getByRole('button', { name: 'Create' }))
       expect(createNotebook).toHaveBeenCalledWith({}, 'Genetics')
-      expect(shelf().getByRole('button', { name: 'Open Genetics, 0 notes' })).toBeTruthy()
-    })
-    it('renames and deletes the open notebook; deleting keeps its notes, loose again', async () => {
-      await open()
-      await click(shelf().getByRole('button', { name: /Cell biology/ }))
-      await click(screen.getByRole('button', { name: 'Rename notebook' }))
-      const dialog = within(screen.getByRole('dialog', { name: 'Rename notebook' }))
-      fireEvent.change(dialog.getByLabelText('Name'), { target: { value: 'Cells' } })
-      await click(dialog.getByRole('button', { name: 'Save' }))
-      expect(renameNotebook).toHaveBeenCalledWith({}, 'cell', 'Cells')
-      expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Cells')).toBeTruthy()
-      await click(screen.getByRole('button', { name: 'Delete notebook' }))
-      await click(screen.getByRole('button', { name: 'Delete' }))
-      expect(deleteNotebook).toHaveBeenCalledWith({}, 'cell')
-      expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull()
-      expect(loadLibrary).toHaveBeenCalledTimes(2)
-      expect(listed().some(t => t.includes('Glycolysis'))).toBe(true) // its notes are loose again
+      expect(shelf().getByRole('link', { name: 'Open Genetics, 0 notes' })).toBeTruthy()
     })
     it('moves ticked notes into a notebook', async () => {
       await open()
@@ -368,7 +331,7 @@ describe('Library', () => {
       await click(screen.getByRole('checkbox', { name: /Loose thoughts/ }))
       await click(within(screen.getByRole('radiogroup', { name: 'Move to' })).getByRole('radio', { name: 'Biology' }))
       await click(screen.getByRole('button', { name: 'Move' }))
-      expect(shelf().getByRole('button', { name: 'Open Genetics, 1 note' })).toBeTruthy()
+      expect(shelf().getByRole('link', { name: 'Open Genetics, 1 note' })).toBeTruthy()
     })
     it('a note in a notebook it cannot find stays in view, loose', async () => {
       notebooks = []
@@ -391,19 +354,11 @@ describe('Library', () => {
       expect(String(replace.mock.calls.at(-1)![2])).toContain('course=lang')
       replace.mockRestore()
     })
-    it('inside a folder with a course chosen, says the folder has nothing from that course, and offers all courses', async () => {
-      await open()
-      await click(shelf().getByRole('button', { name: /Cell biology/ }))
-      await click(screen.getByRole('button', { name: 'Spanish' }))
-      expect(screen.getByText('No notes from Spanish in Cell biology.')).toBeTruthy()
-      await click(screen.getByRole('button', { name: 'Show all courses' }))
-      expect(listed()).toHaveLength(2)
-    })
     it('does not say nothing matches when the course\'s notes are all in folders', async () => {
       items = FILED.filter(i => i.course_id === 'bio' && i.kind === 'note' && i.notebook_id)
       search = 'course=bio'
       await open()
-      expect(shelf().getByRole('button', { name: /Cell biology/ })).toBeTruthy()
+      expect(shelf().getByRole('link', { name: /Cell biology/ })).toBeTruthy()
       expect(screen.queryByText('Nothing matches.')).toBeNull()
     })
     it('shows only the folders with notes in the chosen course', async () => {

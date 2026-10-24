@@ -3,23 +3,36 @@ import { useState } from 'react'
 import { FolderInput, FolderPlus } from 'lucide-react'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
-import type { Notebook } from '@/lib/types'
+import type { Course, Notebook } from '@/lib/types'
 
-// Make or rename a notebook
-export function NotebookNameDialog({ open, onClose, title, submitLabel, initial = '', onSubmit }: {
-  open: boolean; onClose: () => void; title: string; submitLabel: string; initial?: string; onSubmit: (name: string) => void
+// Make or rename a notebook, and choose the course it belongs to (it takes that course's colour)
+export function NotebookNameDialog({ open, onClose, title, submitLabel, initial = '', courses = [], initialCourse = null, onSubmit }: {
+  open: boolean; onClose: () => void; title: string; submitLabel: string; initial?: string
+  courses?: Pick<Course, 'id' | 'name'>[]; initialCourse?: string | null
+  onSubmit: (name: string, courseId: string | null) => void
 }) {
   return (
     <Dialog open={open} onClose={onClose} title={title} icon={FolderPlus}>
-      {open && <NameForm onClose={onClose} submitLabel={submitLabel} initial={initial} onSubmit={onSubmit} />}
+      {open && <NameForm onClose={onClose} submitLabel={submitLabel} initial={initial} courses={courses} initialCourse={initialCourse} onSubmit={onSubmit} />}
     </Dialog>
   )
 }
-function NameForm({ onClose, submitLabel, initial, onSubmit }: { onClose: () => void; submitLabel: string; initial: string; onSubmit: (name: string) => void }) {
+function NameForm({ onClose, submitLabel, initial, courses, initialCourse, onSubmit }: {
+  onClose: () => void; submitLabel: string; initial: string; courses: Pick<Course, 'id' | 'name'>[]; initialCourse: string | null; onSubmit: (name: string, courseId: string | null) => void
+}) {
   const [name, setName] = useState(initial)
+  const [course, setCourse] = useState(initialCourse && courses.some(c => c.id === initialCourse) ? initialCourse : '')
   return (
-    <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (name.trim()) onSubmit(name.trim()) }}>
+    <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (name.trim()) onSubmit(name.trim(), course || null) }}>
       <label className="field"><span>Name</span><input autoFocus value={name} maxLength={80} placeholder="Biology year 1" onChange={e => setName(e.target.value)} /></label>
+      {courses.length > 0 && (
+        <label className="field"><span>Course</span>
+          <select value={course} onChange={e => setCourse(e.target.value)}>
+            <option value="">No course</option>
+            {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+      )}
       <DialogFooter>
         <button type="button" className={BTN_OUTLINE} onClick={onClose}>Cancel</button>
         <button className={BTN_SOLID} disabled={!name.trim()}>{submitLabel}</button>

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { newUser } from './helpers'
-import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
+import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook, updateNotebook } from '@/lib/data/notebooks'
+import { must } from '@/lib/data/util'
 import { createNote, listNotes, searchNotes } from '@/lib/data/notes'
 
 type U = { sb: SupabaseClient; id: string }
@@ -84,5 +85,23 @@ describe('notebooks', () => {
     const fresh = await newUser()
     await createNotebook(fresh.sb, 'Mine')
     expect((await listNotebooks(fresh.sb)).length).toBe(1)
+  })
+})
+
+describe('a notebook\'s course', () => {
+  it('can be chosen when making or changing it, and only from the student\'s own courses', async () => {
+    const mine = must<{ id: string }>(await A.sb.from('courses').insert({ name: 'Chemistry', color: '#BA7517' }).select('id').single())
+    const theirs = must<{ id: string }>(await B.sb.from('courses').insert({ name: 'Theirs', color: '#1D9E75' }).select('id').single())
+    const book = await createNotebook(A.sb, 'Organic', mine.id)
+    expect(book.course_id).toBe(mine.id)
+    await updateNotebook(A.sb, book.id, { name: 'Organic chem', course_id: null })
+    expect((await listNotebooks(A.sb)).find(b => b.id === book.id)).toMatchObject({ name: 'Organic chem', course_id: null })
+    expect((await A.sb.from('notebooks').update({ course_id: theirs.id }).eq('id', book.id)).error).toBeTruthy()
+  })
+  it('is let go when the course is deleted', async () => {
+    const c = must<{ id: string }>(await A.sb.from('courses').insert({ name: 'Short lived', color: '#BA7517' }).select('id').single())
+    const book = await createNotebook(A.sb, 'Kept', c.id)
+    await A.sb.from('courses').delete().eq('id', c.id)
+    expect((await listNotebooks(A.sb)).find(b => b.id === book.id)!.course_id).toBeNull()
   })
 })
