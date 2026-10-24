@@ -57,7 +57,7 @@ describe('TopBar keeping up', () => {
     xp = summary({ streak: 4 })
     await open()
     const bar = screen.getByRole('banner')
-    for (const text of ['12', '12 cards due', 'Lv 2', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
+    for (const text of ['12', '12 cards due', '2', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
   })
   it('keeps the streak short: the flame and the number, with the words only for screen readers', async () => {
     xp = summary({ streak: 4 })
@@ -281,5 +281,20 @@ describe('TopBar class period', () => {
     classes = [slot('08:00:00', '09:00:00')]
     await open()
     expect(screen.queryByRole('link', { name: /Biology/ })).toBeNull()
+  })
+})
+
+describe('the top bar on a phone', () => {
+  it('has the page behind it, so nothing scrolls under the chips, and the chips scroll without a scrollbar', async () => {
+    await open()
+    const bar = screen.getByRole('banner', { name: 'Today at a glance' })
+    expect(bar.className).toContain('bg-bg')
+    expect(bar.querySelector('.no-scrollbar')).toBeTruthy()
+  })
+  it('names the level briefly on a phone: the number, with "Level" kept for wider screens', async () => {
+    xp = summary()
+    await open()
+    const short = screen.getByText('2', { selector: 'span.sm\\:hidden' })
+    expect(short).toBeTruthy()
   })
 })

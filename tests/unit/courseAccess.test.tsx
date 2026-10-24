@@ -41,3 +41,10 @@ describe('CourseAccess', () => {
     expect(container.firstElementChild).toBeNull()
   })
 })
+
+describe('Jump back in looks like the rest', () => {
+  it('each item is a tile, so it takes the card style of the look', () => {
+    render(<CourseAccess courses={courses} counts={counts} recent={recent} />)
+    for (const li of within(screen.getByRole('list', { name: 'Jump back in' })).getAllByRole('listitem')) expect(li.className).toContain('tile')
+  })
+})

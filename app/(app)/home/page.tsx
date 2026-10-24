@@ -152,7 +152,7 @@ export default function HomePage() {
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
             {xp && look === 'playful' && (
-              <div className="flex flex-wrap gap-2 text-sm font-medium">
+              <div className="hidden md:flex flex-wrap gap-2 text-sm font-medium">{/* on a phone the top bar shows these */}
                 <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
                 <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>
                 {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}

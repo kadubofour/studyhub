@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { signUp } from './helpers'
 
+// File, Edit and View are for wider screens: a phone has the toolbar (and the note page hides this bar there)
+test.beforeEach(({}, info) => { test.skip(info.project.name === 'mobile', 'the menu bar is not on phones') })
+
 async function newNote(page: Page, title: string) {
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Write your first note' }).click()

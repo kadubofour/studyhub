@@ -100,3 +100,17 @@ describe('reminders on Home', () => {
     expect(today.queryByText('Tomorrow')).toBeNull()
   })
 })
+
+describe('Home on a phone', () => {
+  it('Playful\'s level, XP and streak chips are left to the top bar on a phone', async () => {
+    await home({ look: 'playful' } as Partial<Profile>)
+    const chips = within(screen.getByRole('region', { name: 'Welcome' })).getByText('Level 3').parentElement!
+    expect(chips.className).toContain('hidden md:flex')
+  })
+  it('the goal is a slim bar on a phone and the ring on wider screens, in one progress bar', async () => {
+    await home()
+    const goal = within(screen.getByRole('region', { name: 'Welcome' })).getByRole('progressbar', { name: 'Focus goal progress' })
+    expect(goal.querySelector('svg')!.getAttribute('class')).toContain('hidden sm:block')
+    expect(goal.querySelector('[data-goal-bar]')!.className).toContain('sm:hidden')
+  })
+})

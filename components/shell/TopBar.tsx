@@ -71,13 +71,13 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const verb = running ? 'Pause' : timer.accumulatedMs > 0 ? 'Resume' : 'Start'
 
   return (
-    <header aria-label="Today at a glance" className="no-print sticky top-0 z-30 flex items-center gap-3 px-5 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10">
+    <header aria-label="Today at a glance" className="no-print sticky top-0 z-30 flex items-center gap-3 bg-bg px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10">
       <button type="button" onClick={onSearch} aria-label="Search or jump"
         className="glass flex min-h-10 min-w-0 items-center gap-2.5 rounded-xl px-3.5 text-[15px] text-muted transition hover:text-fg md:w-80">
         <Search size={16} aria-hidden /><span aria-hidden className="hidden truncate md:inline">Search or jump…</span>
         <span aria-hidden className="ml-auto hidden items-center gap-1 md:flex"><span className="kbd">Ctrl</span><span className="kbd">K</span></span>
       </button>
-      <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto">
+      <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto sm:gap-2">
         {burst && (
           <span className={`${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>
             {burst.levelUp ? `Level up! Level ${burst.levelUp}` : `+${burst.gained} XP`}
@@ -106,7 +106,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
         {xp && xp.streak > 0 && <span role="img" aria-label={`${xp.streak}-day streak`} className={`${chip} tile-c text-fg`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
         {xp && (
           <span className={`${chip} bg-surface text-fg`}>
-            <Zap size={15} className="text-accent" aria-hidden /><span className="sm:hidden">Lv {xp.level.level}</span><span className="hidden sm:inline">Level {xp.level.level}</span>
+            <Zap size={15} className="text-accent" aria-hidden /><span className="sm:hidden">{xp.level.level}</span><span className="hidden sm:inline">Level {xp.level.level}</span><span className="sr-only sm:hidden"> level</span>
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
               className="block h-1.5 w-8 overflow-hidden rounded-full bg-line max-[419px]:sr-only sm:w-14">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />

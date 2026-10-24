@@ -162,7 +162,8 @@ export function NotesSidebar() {
             </>
           ) : (
             <>
-              <button className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
+              {/* on a phone, Upload is in the Create button */}
+              <button className="btn max-sm:hidden" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
               {!empty && <button className="btn" onClick={() => setSelecting(true)}><CheckSquare size={14} aria-hidden />Select</button>}
               {!empty && <ExportMenu label="Export all" fileName="Studyhub notes" />}
               <button className="btn-primary" onClick={create}><Plus size={14} aria-hidden />Note</button>

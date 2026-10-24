@@ -343,7 +343,20 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
 .app-root .app-root[data-look="playful"] .field textarea,
 .app-root .app-root[data-look="playful"] input.input,
 .app-root .app-root[data-look="playful"] select.input,
-.app-root .app-root[data-look="playful"] textarea.input { border: 2px solid var(--outline); border-radius: 1rem; }
+.app-root .app-root[data-look="playful"] textarea.input { border: 2px solid var(--line); border-radius: 1rem; }
+/* a soft border at rest; the bold outline while typing */
+.app-root[data-look="playful"] .field input:focus,
+.app-root[data-look="playful"] .field select:focus,
+.app-root[data-look="playful"] .field textarea:focus,
+.app-root[data-look="playful"] input.input:focus,
+.app-root[data-look="playful"] select.input:focus,
+.app-root[data-look="playful"] textarea.input:focus,
+.app-root .app-root[data-look="playful"] .field input:focus,
+.app-root .app-root[data-look="playful"] .field select:focus,
+.app-root .app-root[data-look="playful"] .field textarea:focus,
+.app-root .app-root[data-look="playful"] input.input:focus,
+.app-root .app-root[data-look="playful"] select.input:focus,
+.app-root .app-root[data-look="playful"] textarea.input:focus { border-color: var(--outline); }
 @media (prefers-reduced-motion: reduce) { .app-root[data-look="playful"] :is(.btn, .btn-primary, .btn-danger):active, .app-root[data-look="playful"] :is(a.tile, button.tile):hover { transform: none; } }
 }
 

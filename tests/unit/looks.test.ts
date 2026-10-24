@@ -110,6 +110,11 @@ describe('each look keeps its character', () => {
     expect(css).toMatch(/data-look="playful"\] :is\(\.btn, \.btn-primary, \.btn-danger\):active[^{]*\{[^}]*translate\(3px, 3px\)[^}]*box-shadow: none/)
     expect(value(block('.app-root[data-look="playful"]'), '--outline')).toBe('#2b2a33')
   })
+  it('Playful fields have a soft border that turns bold while typing, so a card is not outlined twice', () => {
+    const f = rule('.app-root[data-look="playful"] .field input')
+    expect(f).toContain('border: 2px solid var(--line)')
+    expect(css).toMatch(/data-look="playful"\] \.field input:focus[^{]*\{[^}]*border-color: var\(--outline\)/)
+  })
   it('Playful outlines stand out from its page in light and dark', () => {
     expect(contrastRatio('#2B2A33', LOOKS.playful.light.bg)).toBeGreaterThanOrEqual(3)
     const dark = value(block('.dark .app-root[data-look="playful"]'), '--outline')!.toUpperCase()

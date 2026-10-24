@@ -239,3 +239,10 @@ describe('the title font', () => {
     expect((document.querySelector('.app-root') as HTMLElement).style.getPropertyValue('--display-font')).toBe('var(--font-lora)')
   })
 })
+
+describe('the sidebar on a short screen', () => {
+  it('scrolls its places without showing a scrollbar', async () => {
+    await shell()
+    expect(rail().getByRole('link', { name: 'Home' }).parentElement!.className).toContain('no-scrollbar')
+  })
+})

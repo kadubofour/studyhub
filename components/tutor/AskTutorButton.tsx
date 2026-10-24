@@ -6,8 +6,10 @@ import { supabase } from '@/lib/supabase/client'
 import { createChat, findChat } from '@/lib/data/tutor'
 
 // Opens the chat about this note or lecture (the newest one), or starts it
-export function AskTutorButton({ target, title, courseId, className = 'btn' }: {
+export function AskTutorButton({ target, title, courseId, className = 'btn', compact = false }: {
   target: { note_id: string } | { lecture_id: string }; title: string; courseId: string | null; className?: string
+  /** On a phone, only the icon shows (the name is kept for screen readers) */
+  compact?: boolean
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -19,5 +21,5 @@ export function AskTutorButton({ target, title, courseId, className = 'btn' }: {
       router.push(`/tutor/${chat.id}`)
     } catch { setBusy(false) }
   }
-  return <button type="button" className={className} disabled={busy} onClick={open}><MessagesSquare size={14} aria-hidden />Ask the tutor</button>
+  return <button type="button" className={className} disabled={busy} onClick={open}><MessagesSquare size={14} aria-hidden /><span className={compact ? 'max-sm:sr-only' : undefined}>Ask the tutor</span></button>
 }

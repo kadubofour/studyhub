@@ -28,3 +28,11 @@ describe('AskTutorButton', () => {
     expect(push).toHaveBeenCalledWith('/tutor/old1')
   })
 })
+
+describe('on a phone', () => {
+  it('can show only its icon, keeping its name for screen readers', () => {
+    render(<AskTutorButton target={{ note_id: 'n1' }} title="Krebs cycle" courseId={null} compact />)
+    const b = screen.getByRole('button', { name: 'Ask the tutor' })
+    expect(b.querySelector('span')!.className).toContain('max-sm:sr-only')
+  })
+})

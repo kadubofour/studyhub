@@ -203,7 +203,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             className={`group relative mb-3 border border-dashed border-line text-muted transition hover:border-accent hover:text-accent ${wide ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium' : 'grid size-11 place-items-center rounded-xl'}`}>
             <Plus size={19} aria-hidden />{tip('Create')}
           </button>
-          <div className={`flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto ${wide ? '' : 'items-center'}`}>
+          <div className={`no-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto ${wide ? '' : 'items-center'}`}>
             {PLACES.map(({ href, label, icon: Icon }) => {
               const on = isActive(path, href)
               return (
