@@ -42,12 +42,12 @@ describe('Content width', () => {
 
 
 describe('Look picker', () => {
-  it('offers Ink first, then Studio and the older looks, and marks the current one', () => {
+  it('offers Classic first, then Studio, Paper, Vivid and Playful, and marks the current one', () => {
     open()
     const names = screen.getAllByRole('radio').filter(r => r.getAttribute('aria-label')?.endsWith(' look')).map(r => r.getAttribute('aria-label'))
-    expect(names).toEqual(['Ink look', 'Studio look', 'Classic look', 'Paper look', 'Vivid look', 'Playful look'])
+    expect(names).toEqual(['Classic look', 'Studio look', 'Paper look', 'Vivid look', 'Playful look'])
     expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-    expect(screen.getByText('Warm cream, softer edges')).toBeTruthy()
+    expect(screen.getByText('Cream pages and a bookish serif')).toBeTruthy()
   })
   it('applies the new look at once and saves it', async () => {
     open()
@@ -64,13 +64,13 @@ describe('Look picker', () => {
   it('works from the keyboard like Accent and Font', async () => {
     open()
     await act(async () => { fireEvent.keyDown(screen.getByRole('radio', { name: 'Classic look' }), { key: 'ArrowRight' }) })
-    expect(screen.getByTestId('look').textContent).toBe('paper')
+    expect(screen.getByTestId('look').textContent).toBe('studio')
   })
-  it('an old profile without a look shows Studio selected', () => {
+  it('an old profile without a look shows Classic selected', () => {
     const old = { ...base } as Record<string, unknown>
     delete old.look
     open(old as unknown as Profile)
-    expect(screen.getByRole('radio', { name: 'Ink look' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
   })
   it('Paper is for light mode: in dark mode it is not offered and a saved Paper shows as Classic, kept', async () => {
     resolved = 'dark'

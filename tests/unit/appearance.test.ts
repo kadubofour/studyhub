@@ -38,16 +38,16 @@ describe('contrastRatio', () => {
 })
 
 describe('looks', () => {
-  it('offers Studio, Classic, Paper, Vivid and Playful', () => {
-    expect(Object.keys(LOOKS)).toEqual(['ink', 'studio', 'classic', 'paper', 'vivid', 'playful'])
+  it('offers Classic, Studio, Paper, Vivid and Playful', () => {
+    expect(Object.keys(LOOKS)).toEqual(['classic', 'studio', 'paper', 'vivid', 'playful'])
     expect(isLook('paper')).toBe(true)
     expect(isLook('vivid')).toBe(true)
     expect(isLook('playful')).toBe(true)
     expect(isLook('neon')).toBe(false)
   })
-  it('falls back to Studio for a missing or unknown look', () => {
-    expect(lookOf(undefined)).toBe('ink')
-    expect(lookOf('neon')).toBe('ink')
+  it('falls back to Classic for a missing or unknown look', () => {
+    expect(lookOf(undefined)).toBe('classic')
+    expect(lookOf('neon')).toBe('classic')
     expect(lookOf('paper')).toBe('paper')
     expect(lookOf('vivid')).toBe('vivid')
   })
@@ -69,9 +69,9 @@ describe('looks', () => {
     expect(effectiveLook('paper', 'dark')).toBe('classic')
     expect(effectiveLook('paper', 'light')).toBe('paper')
     expect(effectiveLook('paper', undefined)).toBe('paper')
-    for (const l of ['ink', 'studio', 'classic', 'vivid', 'playful']) expect(effectiveLook(l, 'dark')).toBe(l)
-    expect(lookChoices('dark')).toEqual(['ink', 'studio', 'classic', 'vivid', 'playful'])
-    expect(lookChoices('light')).toEqual(['ink', 'studio', 'classic', 'paper', 'vivid', 'playful'])
+    for (const l of ['classic', 'studio', 'vivid', 'playful']) expect(effectiveLook(l, 'dark')).toBe(l)
+    expect(lookChoices('dark')).toEqual(['classic', 'studio', 'vivid', 'playful'])
+    expect(lookChoices('light')).toEqual(['classic', 'studio', 'paper', 'vivid', 'playful'])
   })
   it('Paper dark colours are Classic dark, so nothing cream shows in dark mode', () => {
     expect(LOOKS.paper.dark).toEqual(LOOKS.classic.dark)

@@ -44,8 +44,8 @@ describe('surfaces', () => {
   it('the page is lit by the accent from the top (the aurora)', () => {
     expect(block('.app-root')).toMatch(/radial-gradient\([^)]*var\(--accent-solid\)/)
   })
-  it('Studio is the base: no rule sets its colours apart from :root and .dark', () => {
-    expect(css).not.toMatch(/data-look="studio"\] \{/)
+  it('every look sets its own colours; :root and .dark keep Studio\'s for the pages outside the app (sign in, onboarding)', () => {
+    for (const look of ['classic', 'studio', 'paper', 'vivid', 'playful']) expect(css).toContain(`\n.app-root[data-look="${look}"] {`)
   })
 })
 

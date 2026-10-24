@@ -30,34 +30,29 @@ export const isFont = (v: unknown): v is FontName => typeof v === 'string' && v 
 export type ModeColors = { bg: string; raised: string; surface: string; line: string; fg: string; muted: string; tiles: [string, string, string] }
 
 export const LOOKS = {
-  ink: {
-    label: 'Ink', blurb: 'Warm paper, black ink buttons, serif titles',
+  classic: {
+    label: 'Classic', blurb: 'Warm paper, black ink buttons, serif titles',
     light: { bg: '#F7F6F0', raised: '#FFFFFF', surface: '#F0EEE6', line: '#E4E2DA', fg: '#191918', muted: '#66655E', tiles: ['#ECE1FA', '#FAF0B4', '#CDEFF0'] },
     dark: { bg: '#151514', raised: '#1E1E1C', surface: '#262624', line: '#33322F', fg: '#F2F1EC', muted: '#A3A29B', tiles: ['#332B47', '#38331A', '#193A3C'] },
   },
   studio: {
-    label: 'Studio', blurb: 'Midnight glass, lit by your colour',
-    light: { bg: '#F5F6FB', raised: '#FFFFFF', surface: '#ECEEF6', line: '#DFE2EE', fg: '#151628', muted: '#5A5E80', tiles: ['#FFFFFF', '#FFFFFF', '#FFFFFF'] },
-    dark: { bg: '#0E0F1A', raised: '#171927', surface: '#1D2032', line: '#282B42', fg: '#ECEDF7', muted: '#9196B3', tiles: ['#171927', '#171927', '#171927'] },
-  },
-  classic: {
-    label: 'Classic', blurb: 'Calm and minimal, dark sidebar',
-    light: { bg: '#fbfbfa', raised: '#ffffff', surface: '#f3f3f0', line: '#e6e5e0', fg: '#1f1f1d', muted: '#6b6a65', tiles: ['#ffffff', '#ffffff', '#ffffff'] },
-    dark: { bg: '#121211', raised: '#1a1a19', surface: '#222220', line: '#30302d', fg: '#ededea', muted: '#9a9993', tiles: ['#1a1a19', '#1a1a19', '#1a1a19'] },
+    label: 'Studio', blurb: 'Cool midnight blue, clean sans titles',
+    light: { bg: '#F5F6FB', raised: '#FFFFFF', surface: '#ECEEF6', line: '#DFE2EE', fg: '#151628', muted: '#5A5E80', tiles: ['#E3E6FB', '#F1E6FB', '#DCF1F3'] },
+    dark: { bg: '#0E0F1A', raised: '#171927', surface: '#1D2032', line: '#282B42', fg: '#ECEDF7', muted: '#9196B3', tiles: ['#22263F', '#2A2140', '#16302F'] },
   },
   paper: {
-    label: 'Paper', blurb: 'Warm cream, softer edges',
+    label: 'Paper', blurb: 'Cream pages and a bookish serif',
     light: { bg: '#F6F0E4', raised: '#FFFBF2', surface: '#EFE7D6', line: '#E2D8C3', fg: '#2A2520', muted: '#6E6455', tiles: ['#F8E4D4', '#F7EDC4', '#DDEEE3'] },
     // Paper is for light mode only: in dark mode it is Classic (see effectiveLook), so these are Classic's dark colours
-    dark: { bg: '#121211', raised: '#1a1a19', surface: '#222220', line: '#30302d', fg: '#ededea', muted: '#9a9993', tiles: ['#1a1a19', '#1a1a19', '#1a1a19'] },
+    dark: { bg: '#151514', raised: '#1E1E1C', surface: '#262624', line: '#33322F', fg: '#F2F1EC', muted: '#A3A29B', tiles: ['#332B47', '#38331A', '#193A3C'] },
   },
   vivid: {
-    label: 'Vivid', blurb: 'Bold colour, dark sidebar, top bar',
+    label: 'Vivid', blurb: 'Your colour on the buttons and choices',
     light: { bg: '#FAFAF8', raised: '#FFFFFF', surface: '#F1F1EE', line: '#E4E3DE', fg: '#1B1B1F', muted: '#5D5C66', tiles: ['#FFDCCB', '#CDEFE0', '#FFEBB0'] },
     dark: { bg: '#18181C', raised: '#212127', surface: '#2B2B33', line: '#3A3A44', fg: '#F2F2F5', muted: '#A9A9B6', tiles: ['#4D2B22', '#1E4034', '#4C3C12'] },
   },
   playful: {
-    label: 'Playful', blurb: 'Chunky buttons, thick outlines',
+    label: 'Playful', blurb: 'Thick outlines, buttons that press down',
     light: { bg: '#F7FBF4', raised: '#FFFFFF', surface: '#EAF2E5', line: '#CFDACA', fg: '#26301F', muted: '#556350', tiles: ['#FFEFBF', '#D6F1DD', '#D5E8FF'] },
     dark: { bg: '#131F24', raised: '#1E2D34', surface: '#26373F', line: '#3A4B54', fg: '#F0F6F9', muted: '#A9BBC4', tiles: ['#3D3515', '#1E3B2A', '#1C3447'] },
   },
@@ -65,8 +60,8 @@ export const LOOKS = {
 
 export type LookName = keyof typeof LOOKS
 export const isLook = (v: unknown): v is LookName => typeof v === 'string' && v in LOOKS
-// An old cached profile, or a look this version doesn't know, shows Ink
-export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'ink')
+// An old cached profile, or a look this version doesn't know, shows Classic
+export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'classic')
 
 // Paper only looks right on light: in dark mode it shows as Classic (the student's choice is kept for when they go back to light)
 export const effectiveLook = (look: unknown, resolvedTheme: string | undefined): LookName => {

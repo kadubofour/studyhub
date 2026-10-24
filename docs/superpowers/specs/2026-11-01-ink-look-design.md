@@ -1,50 +1,32 @@
-# Ink: a look that does not read as machine-made
+# The looks, rebuilt on Ink
 
-The student compared Studyhub with StudyFetch and found Studyhub "too claude-made". Studio's midnight glass, accent glow and gradient wash are the usual signs. StudyFetch reads as a product: warm paper, flat white cards, a serif for titles, black pill buttons and a dark sidebar. Ink takes those principles. It does not take StudyFetch's brand: not its name, mascot, illustrations or exact typefaces.
+**Ink was the first version** (the student compared Studyhub with StudyFetch and found it "too claude-made"). The student then asked for two things: **make Ink the Classic theme, and model every other theme on it.** Ink's design is now Classic, the default, and the `ink` value goes. The other looks are built on the same system and keep their own character.
 
-Ink becomes the default look. Studio, Classic, Paper, Vivid and Playful stay in Settings.
+## The system every look shares
 
-## Tokens
+- **No glass, blur, accent glow or gradient wash.** The page is a flat colour.
+- **Cards and tiles:** the raised colour, a 1px line border, 16px corners and no shadow. A tile you can click gets a faint neutral shadow on hover.
+- **Main button:** a pill. By default it is filled with the text colour (an "ink pill"), with the page colour as its text.
+- **Other buttons:** raised pills with a 1px line. Quiet and danger buttons are pills too.
+- **Fields:** the raised colour with 12px corners. **Menus:** raised, a 1px border and a small neutral shadow.
+- **Section titles:** 22px at weight 500, in the look's title face (`--title-font`), unless the student chose a font.
+- **The sidebar** is dark in every look and both modes, with its own readable text. The current place is a lighter pill, and every item is a pill.
+- **Selected chips and list items** (`--accent-soft` and `--accent`) are a quiet tint of the page with text-coloured text, except where a look below says otherwise.
+- **Pastel tiles** (`--tile-a/b/c`) are the look's own.
 
-| | Light | Dark |
-|---|---|---|
-| page | `#F7F6F0` warm paper | `#151514` |
-| raised (cards) | `#FFFFFF` | `#1E1E1C` |
-| surface (side panels, quiet fills) | `#F0EEE6` | `#262624` |
-| line | `#E4E2DA` | `#33322F` |
-| text | `#191918` | `#F2F1EC` |
-| quiet text | `#66655E` | `#A3A29B` |
+## The looks
 
-- **Surfaces:** no glass, no blur, no aurora, no coloured shadows.
-- **Shadows:** cards have none. A tile you can click lifts with a faint neutral shadow on hover.
-- **Pastel blocks** are the only big areas of colour. They are used for `.tile-a/b/c` and feature tiles: lilac `#ECE1FA`, butter `#FAF0B4` and aqua `#CDEFF0`. In dark mode they are deep versions of the same colours.
+| Look | Character | Title face | Main button and selection | Sidebar |
+|---|---|---|---|---|
+| **Classic** (default) | warm paper `#F7F6F0`, white cards | Newsreader (serif) | ink pill, neutral selection | `#191918` |
+| **Studio** | cool midnight-blue, flat | Instrument Sans | ink pill, neutral selection | `#151628`; `#090A12` in dark |
+| **Paper** (light only; Classic in dark) | cream `#F6F0E4`, cream cards | Lora (serif) | ink pill, neutral selection | warm brown `#2A2520` |
+| **Vivid** | light neutral, with colour where it counts | Instrument Sans, bold | the accent pill, accent selection | `#1F2127` |
+| **Playful** | fresh green, 2px outlines | Nunito (rounded) | the accent pill with a darker bottom edge that presses down, accent selection | deep green `#22301C` |
 
-## Type
+The colours of each look are listed in `lib/appearance.ts` (LOOKS) and checked against `app/globals.css`, and for contrast, by `tests/unit/looks.test.ts`.
 
-- **Titles** (page titles, section titles, the greeting and tile titles) use the serif **Newsreader**, weight 500. Section titles are 22px.
-- **Body text** is the student's chosen font (Inter by default).
-- A student who chose a font other than Sans keeps it for titles too.
+## Data
 
-## Controls
-
-- **Primary button:** an ink pill. The background is the text colour (near-black in light mode, near-white in dark mode), the text is the page colour, the weight is 500 and there is no shadow.
-- **Secondary button:** a white pill with a 1px line border. On hover it fills with the surface colour.
-- **Quiet buttons** and **danger buttons** are pills too.
-- **Fields:** white, with a 1px line border and 12px corners. The focus ring is in the accent.
-- **Cards and tiles:** white, with a 1px line border, 16px corners and no shadow.
-- **Side panels** (for example Home's This week) use the surface colour.
-- **Menus and dialogs:** white, with a 1px border and a small neutral shadow.
-- **The student's accent** is kept for small things: the focus ring, selection, progress, small icons, links and the Home hero.
-
-## The sidebar
-
-- It is dark in both modes (`#191918`), with text `#EDEDE8` and quiet text `#A3A29B`.
-- The current place is a lighter pill (`#2F2F2D`) with white text.
-- Every item is a pill.
-- Tooltips and menus inside it are dark too.
-
-## Default
-
-- New accounts start on Ink. The unreleased look migration `20261105000000_look_studio.sql` changes to allow `ink` and to make it the default.
-- `lookOf` falls back to Ink.
-- Existing accounts keep the look they saved.
+- `profiles.look` takes `classic`, `studio`, `paper`, `vivid` or `playful`, and **new accounts start on Classic**. The look migration `20261105000000_look_studio.sql` has not been released, so it is changed in place.
+- Existing accounts keep what they chose. Those on Classic now see the new Classic.
