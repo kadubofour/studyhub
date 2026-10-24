@@ -41,10 +41,15 @@ describe('surfaces', () => {
       expect(rule, sel).toContain('inset 0 1px 0 var(--edge)')
     }
   })
-  it('the page is flat: no accent glowing from the top, and the hero is a flat panel', () => {
+  it('the page is flat in every look but Studio, and the hero is a flat panel', () => {
     expect(block('.app-root')).not.toContain('gradient')
     expect(css).not.toContain('--aurora-strength')
-    expect(css).not.toContain('radial-gradient')
+    expect(css.match(/\s\.hero \{[^}]*\}/)![0]).not.toContain('radial-gradient')
+    // the only radial glows are Studio's
+    const glows = css.split('\n').filter(l => l.includes('radial-gradient('))
+    expect(glows.length).toBeGreaterThan(0)
+    const studio = block('.app-root[data-look="studio"]')
+    for (const g of glows) expect(studio).toContain(g.trim().replace(/,$/, '').replace(/;$/, ''))
   })
   it('every look sets its own colours; :root and .dark keep Studio\'s for the pages outside the app (sign in, onboarding)', () => {
     for (const look of ['classic', 'studio', 'paper', 'vivid', 'playful']) expect(css).toContain(`\n.app-root[data-look="${look}"] {`)

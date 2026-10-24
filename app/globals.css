@@ -69,14 +69,27 @@ body:has(.app-root[data-look="classic"]) { background: #F7F6F0; }
   --title-font: var(--font-instrument);
   /* selection is a quiet tint with text-coloured text; the student's colour (--accent-solid) stays on the hero, the timer, progress and icons */
   --accent-soft: #E4E7F2; --accent: var(--fg);
+  /* Studio glows: the student's colours drift in from above like light through mist, with a fainter haze rising from below.
+     Fixed while the page scrolls; its panels are frosted so the light shows softly through them. */
+  --glow: 24%;
+  /* taste-skill-ignore: the glow is Studio's character, asked for by the student */
+  background-image:
+    radial-gradient(1100px 700px at 22% 0%, color-mix(in srgb, var(--accent-solid) var(--glow), transparent), transparent 70%),
+    radial-gradient(900px 620px at 84% 6%, color-mix(in srgb, var(--accent-glow) calc(var(--glow) * 0.9), transparent), transparent 70%),
+    radial-gradient(760px 560px at 100% 58%, color-mix(in srgb, var(--accent-solid) calc(var(--glow) * 0.45), transparent), transparent 70%),
+    radial-gradient(1400px 760px at 45% 115%, color-mix(in srgb, var(--accent-glow) calc(var(--glow) * 0.6), transparent), transparent 70%);
+  background-attachment: fixed; background-repeat: no-repeat;
 }
 .dark .app-root[data-look="studio"] {
   --bg: #0E0F1A; --raised: #171927; --surface: #1D2032; --line: #282B42; --fg: #ECEDF7; --muted: #9196B3;
   --tile-a: #22263F; --tile-b: #2A2140; --tile-c: #16302F;
   --accent-soft: #262A40; --accent: var(--fg);
+  --glow: 44%;
 }
 .app-root[data-look="studio"] .app-sidebar,
-.app-root .app-root[data-look="studio"] .app-sidebar { background: var(--bg); border-color: var(--line); }
+.app-root .app-root[data-look="studio"] .app-sidebar { background: color-mix(in srgb, var(--bg) 55%, transparent); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border-color: var(--line); }
+.app-root[data-look="studio"] .app-topbar,
+.app-root .app-root[data-look="studio"] .app-topbar { background: color-mix(in srgb, var(--bg) 55%, transparent); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
 body:has(.app-root[data-look="studio"]) { background: #F5F6FB; }
 .dark body:has(.app-root[data-look="studio"]) { background: #0E0F1A; }
 /* Paper: cream pages and a bookish serif. It is for light mode only: in dark mode the app shows Classic (components/providers/useLook.ts), and these are Classic's dark values, so nothing cream shows in the moment before the page knows the theme */
@@ -279,6 +292,12 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .app-root .app-root[data-look] .app-sidebar :is(a, button):not([role="menuitem"]) { border-radius: 9999px; }
 .app-root[data-look] .app-sidebar .section-label,
 .app-root .app-root[data-look] .app-sidebar .section-label { font-size: 13px; }
+
+/* Studio: frosted cards and menus, so its glow shows softly through them */
+.app-root[data-look="studio"] :is(.card, .tile),
+.app-root .app-root[data-look="studio"] :is(.card, .tile) { background: color-mix(in srgb, var(--raised) 74%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.2); backdrop-filter: blur(20px) saturate(1.2); }
+.app-root[data-look="studio"] .menu-panel,
+.app-root .app-root[data-look="studio"] .menu-panel { background: color-mix(in srgb, var(--raised) 88%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 
 /* Vivid: the student's colour on the main button, softer larger corners */
 .app-root[data-look="vivid"] .btn-primary,

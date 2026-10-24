@@ -153,3 +153,34 @@ describe('a look drawn inside another (the previews in Settings)', () => {
     }
   })
 })
+
+describe('Studio is ethereal', () => {
+  const studio = () => block('.app-root[data-look="studio"]')
+  it('glows: soft light in the student\'s accent and glow colours from above, a fainter haze from below, fixed while the page scrolls', () => {
+    const b = studio()
+    expect(b).toMatch(/radial-gradient\([^)]*at \d+% [0-9]%, color-mix\(in srgb, var\(--accent-solid\)/)
+    expect(b).toContain('var(--accent-glow)')
+    expect(b).toMatch(/at \d+% 1\d\d%/)
+    expect(value(b, 'background-attachment')).toBe('fixed')
+    expect(b.split('radial-gradient(').length - 1).toBe(4) // two from above, a wisp at the side, the haze from below
+  })
+  it('its top bar is frosted too, so the light from above is not cut off under it', () => {
+    expect(fs.readFileSync('components/shell/TopBar.tsx', 'utf8')).toContain('className="app-topbar no-print sticky top-0')
+    const t = rule('.app-root[data-look="studio"] .app-topbar')
+    expect(t).toContain('background: color-mix(in srgb, var(--bg) 55%, transparent)')
+    expect(t).toContain('backdrop-filter: blur(24px)')
+  })
+  it('glows more by night than by day, and never loud', () => {
+    const day = Number(value(studio(), '--glow')!.replace('%', ''))
+    const night = Number(value(block('.dark .app-root[data-look="studio"]'), '--glow')!.replace('%', ''))
+    expect(day).toBeLessThanOrEqual(26)
+    expect(night).toBeGreaterThan(day)
+    expect(night).toBeLessThanOrEqual(48)
+  })
+  it('its cards are frosted, so the glow shows softly through them; the other looks stay flat', () => {
+    const c = rule('.app-root[data-look="studio"] :is(.card, .tile)')
+    expect(c).toContain('background: color-mix(in srgb, var(--raised) 74%, transparent)')
+    expect(c).toContain('backdrop-filter: blur(20px) saturate(1.2)')
+    expect(rule('.app-root[data-look] :is(.glass, .card, .tile, .hero, .menu-panel, .app-sidebar)')).toContain('backdrop-filter: none')
+  })
+})

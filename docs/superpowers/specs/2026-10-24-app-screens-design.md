@@ -20,12 +20,14 @@ Made with the taste skill's app-screen run (`design-taste-frontend`, `references
 
 ## What changed in the shared system
 
-- The sidebar recedes in Classic, Studio, Paper and Vivid: it sits on the page ground with a hairline, and the
+- The sidebar recedes in Classic, Paper and Vivid (Studio's is frosted): it sits on the page ground with a hairline, and the
   current place is a neutral pill. Vivid keeps the student's colour off it. Playful keeps its purple sidebar,
   which is its character.
 - Page titles are app-sized (26-28px, `PAGE_TITLE`); `PageHeader` takes a one-line `summary`. Panel titles are 18px.
-- The page is flat: the leftover accent glow (the aurora, never shown since every app root has a look) and the
-  hero's corner glow are gone.
+- The page is flat in every look but Studio: the old aurora and the hero's corner glow are gone. Studio, at the
+  student's request, glows: four soft radial lights in the accent and glow colours (two from above, a wisp at the
+  right, a haze from below), fixed while scrolling, stronger by night ( 24% / 44%). Its cards, menus, sidebar
+  and top bar are frosted so the light shows through.
 - Classic's soft surface is the warm grey `#EFEEEA`, not the banned cream `#F0EEE6`.
 - Jump back in marks each kind with a plain grey icon.
 - This week: today in the student's colour, the other days in grey, the daily goal as a dashed line and the

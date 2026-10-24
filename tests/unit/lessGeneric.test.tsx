@@ -34,7 +34,7 @@ describe('page titles are app-sized', () => {
 })
 
 describe('the sidebar recedes', () => {
-  it.each(['classic', 'studio', 'paper', 'vivid'])('%s: the sidebar sits on the page ground with a hairline, in light and dark', look => {
+  it.each(['classic', 'paper', 'vivid'])('%s: the sidebar sits on the page ground with a hairline, in light and dark', look => {
     const b = rule(`.app-root[data-look="${look}"] .app-sidebar`)
     expect(b).toContain('background: var(--bg)')
     expect(b).toContain('border-color: var(--line)')
@@ -45,6 +45,12 @@ describe('the sidebar recedes', () => {
     const b = rule('.app-root[data-look="vivid"] .app-sidebar')
     expect(b).toContain('--accent: var(--fg)')
     expect(b).toContain('--accent-soft: color-mix(in srgb, var(--fg) 9%, var(--bg))')
+  })
+  it('Studio\'s sidebar is frosted, so its glow shows through, with a hairline', () => {
+    const b = rule('.app-root[data-look="studio"] .app-sidebar')
+    expect(b).toContain('background: color-mix(in srgb, var(--bg) 55%, transparent)')
+    expect(b).toContain('backdrop-filter: blur(24px)')
+    expect(b).toContain('border-color: var(--line)')
   })
   it('Playful keeps its purple sidebar', () => {
     expect(rule('.app-root[data-look="playful"] .app-sidebar')).toContain('background: #3B2A6B')
