@@ -58,11 +58,18 @@ describe('Home, as it was, in the new design', () => {
     for (let i = 1; i < order.length; i++) expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Today' }).parentElement!.className).toContain('lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]')
   })
-  it('Playful shows the level, XP and streak in the hero', async () => {
-    await home({ look: 'playful' })
+  it.each(['playful', 'paper', 'classic'] as const)('%s: the greeting leaves the level, XP and streak to the top bar', async look => {
+    await home({ look })
     const hero = within(screen.getByRole('region', { name: 'Welcome' }))
-    expect(hero.getByText('Level 3')).toBeTruthy()
-    expect(hero.getByText('4-day streak')).toBeTruthy()
+    expect(hero.queryByText(/Level 3/)).toBeNull()
+    expect(hero.queryByText(/streak/)).toBeNull()
+    expect(hero.queryByText(/240 XP/)).toBeNull()
+  })
+  it('the focus timer sits at the right of the greeting, after the goal', async () => {
+    await home({ look: 'playful' })
+    const row = within(screen.getByRole('region', { name: 'Welcome' })).getByRole('progressbar', { name: 'Focus goal progress' }).parentElement!
+    expect(row.children).toHaveLength(2)
+    expect(row.lastElementChild!.textContent).toContain('Start focus')
   })
   it('Paper shows the goal as a bar and the timer in its own card', async () => {
     await home({ look: 'paper' })
@@ -102,11 +109,6 @@ describe('reminders on Home', () => {
 })
 
 describe('Home on a phone', () => {
-  it('Playful\'s level, XP and streak chips are left to the top bar on a phone', async () => {
-    await home({ look: 'playful' } as Partial<Profile>)
-    const chips = within(screen.getByRole('region', { name: 'Welcome' })).getByText('Level 3').parentElement!
-    expect(chips.className).toContain('hidden md:flex')
-  })
   it('the goal is a slim bar on a phone and the ring on wider screens, in one progress bar', async () => {
     await home()
     const goal = within(screen.getByRole('region', { name: 'Welcome' })).getByRole('progressbar', { name: 'Focus goal progress' })

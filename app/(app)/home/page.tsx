@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, Flame, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -64,7 +64,7 @@ export default function HomePage() {
     window.addEventListener(REMINDERS_CHANGED, read)
     return () => { live = false; window.removeEventListener(REMINDERS_CHANGED, read) }
   }, [])
-  const { xp, reload: reloadXp } = useXp(focus.todayMinutes)
+  const { reload: reloadXp } = useXp(focus.todayMinutes) // the level, XP and streak are in the top bar
   const plans = usePlans(reloadXp)
   const warmup = useWarmup()
 
@@ -151,13 +151,6 @@ export default function HomePage() {
           <div className="mt-7 flex flex-wrap items-center justify-between gap-6">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
-            {xp && look === 'playful' && (
-              <div className="hidden md:flex flex-wrap gap-2 text-sm font-medium">{/* on a phone the top bar shows these */}
-                <span className="rounded-full bg-black/25 px-3 py-1">Level {xp.level.level}</span>
-                <span className="rounded-full bg-black/25 px-3 py-1">{xp.total} XP</span>
-                {xp.streak > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-3 py-1"><Flame size={14} aria-hidden />{xp.streak}-day streak</span>}
-              </div>
-            )}
           </div>
         ) : (<>
           <div className="mt-5 flex items-center gap-3">
@@ -166,7 +159,6 @@ export default function HomePage() {
             </div>
             <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
           </div>
-          {xp && <p className="mt-2 text-sm opacity-90">Level {xp.level.level} · {xp.total} XP{xp.streak > 0 && ` · ${xp.streak}-day streak`}</p>}
         </>)}
       </section>
 
