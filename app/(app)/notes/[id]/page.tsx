@@ -10,6 +10,8 @@ import { MarkdownView } from '@/components/notes/MarkdownView'
 import { InkLayer } from '@/components/notes/InkLayer'
 import { sanitizeInk } from '@/lib/markup/ink'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
+import { NoteSheet } from '@/components/notes/NoteSheet'
+import { requestReminder } from '@/lib/reminders/events'
 import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
 import { FindBar } from '@/components/notes/FindBar'
@@ -264,6 +266,9 @@ function NoteEditor({ id }: { id: string }) {
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} compact /></span>
+        {/* a phone has no File, Edit and View menus: their actions are in this sheet */}
+        <NoteSheet actions={actions} mode={mode} reading={reading} autoMath={profile.auto_math}
+          onRemind={() => requestReminder({ title: `Review ${draft.title || 'Untitled'}`, href: `/notes/${draft.id}`, link_label: draft.title || 'Untitled' })} />
         <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦<span className="max-sm:sr-only"> Study</span></button>
         {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>

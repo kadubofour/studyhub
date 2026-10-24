@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { signUp, switchToMarkdown } from './helpers'
+import { noteFileAction, signUp, switchToMarkdown } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -30,8 +30,7 @@ test('writing a note is full screen, and Esc goes back to the list', async ({ pa
   await expect(page.getByRole('link', { name: /Fullscreen/ })).toBeVisible()
 })
 
-test('import a Word document with equations, then export it back to Word', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+test('import a Word document with equations, then export it back to Word', async ({ page }) => {
 
   await signUp(page)
   await page.goto('/notes')
@@ -45,9 +44,8 @@ test('import a Word document with equations, then export it back to Word', async
   await page.getByRole('button', { name: 'Save note' }).click()
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
 
-  await page.getByRole('menuitem', { name: 'File' }).click()
   const download = page.waitForEvent('download')
-  await page.getByRole('menuitem', { name: 'Export as Word' }).click()
+  await noteFileAction(page, 'Export as Word')
   expect((await download).suggestedFilename()).toBe('Quadratics.docx')
 })
 
@@ -72,8 +70,7 @@ test('a PDF falls back to plain text when the AI cannot convert it', async ({ pa
   await expect(page.getByLabel('Title')).toHaveValue('cells-fallback')
 })
 
-test('printing from dark mode gives dark text on white paper', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+test('printing from dark mode gives dark text on white paper', async ({ page }) => {
 
   await signUp(page)
   await page.goto('/notes')

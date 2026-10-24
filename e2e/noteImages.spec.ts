@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import path from 'node:path'
-import { signUp, switchToMarkdown } from './helpers'
+import { readingMode, signUp, switchToMarkdown } from './helpers'
 
 const CELL = path.join(__dirname, 'fixtures', 'cell.png')
 
@@ -24,8 +24,7 @@ async function storedToken(page: Page) {
   return md.match(/studyhub-image:[^)\s]+/)?.[0] ?? null
 }
 
-test('add a picture from a file: it shows in the note and is still there after a reload', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+test('add a picture from a file: it shows in the note and is still there after a reload', async ({ page }) => {
 
   await signUp(page)
   await newNote(page, 'Cell notes')
@@ -53,19 +52,16 @@ test('a picture can be selected and removed', async ({ page }) => {
   await expect(page.locator('.ProseMirror img')).toHaveCount(0)
 })
 
-test('a picture shows in the reading view', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+test('a picture shows in the reading view', async ({ page }) => {
 
   await signUp(page)
   await newNote(page, 'Reading')
   await addCell(page)
-  await page.getByRole('menuitem', { name: 'View', exact: true }).click()
-  await page.getByRole('menuitemcheckbox', { name: /Reading mode/ }).click()
+  await readingMode(page)
   await expect(page.getByRole('article').locator('img[alt="cell"]')).toBeVisible()
 })
 
-test('highlight words in a note: one button, it stays after a reload and shows in the reading view', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'Reading mode, Markdown and Word export are in the View and File menus of a note, which phones do not show')
+test('highlight words in a note: one button, it stays after a reload and shows in the reading view', async ({ page }) => {
 
   await signUp(page)
   await newNote(page, 'Marked words')
@@ -80,8 +76,7 @@ test('highlight words in a note: one button, it stays after a reload and shows i
   await expect(page.getByText('Saved')).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror mark.hl-yellow')).toContainText('Krebs')
-  await page.getByRole('menuitem', { name: 'View', exact: true }).click()
-  await page.getByRole('menuitemcheckbox', { name: /Reading mode/ }).click()
+  await readingMode(page)
   await expect(page.getByRole('article').locator('mark.hl-yellow')).toContainText('Krebs')
 })
 

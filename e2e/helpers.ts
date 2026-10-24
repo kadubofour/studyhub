@@ -16,9 +16,29 @@ export async function signUp(page: Page) {
   return email
 }
 
+// A phone has no File, Edit and View menus on a note: their actions are in the Note options sheet
+const onPhone = async (page: Page) => (page.viewportSize()?.width ?? 1280) < 768 // the menus show from md (768px) up
+async function inSheet(page: Page) {
+  await page.getByRole('button', { name: 'Note options' }).click()
+  return page.getByRole('dialog', { name: 'Note options' })
+}
+
 export async function switchToMarkdown(page: Page) {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('radio', { name: 'Markdown' }).click(); await page.keyboard.press('Escape'); return }
   await page.getByRole('menuitem', { name: 'View' }).click()
   await page.getByRole('menuitemradio', { name: 'Markdown editor' }).click()
+}
+
+export async function readingMode(page: Page) {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('radio', { name: 'Read' }).click(); await page.keyboard.press('Escape'); return }
+  await page.getByRole('menuitem', { name: 'View', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: /Reading mode/ }).click()
+}
+
+export async function noteFileAction(page: Page, item: 'Export as Word' | 'Export as PDF') {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('button', { name: item }).click(); return }
+  await page.getByRole('menuitem', { name: 'File', exact: true }).click()
+  await page.getByRole('menuitem', { name: item }).click()
 }
 
 // A note with enough text for the AI study tools (they need at least 40 words)
