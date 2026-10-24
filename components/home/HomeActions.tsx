@@ -1,14 +1,17 @@
 'use client'
 import Link from 'next/link'
-import { ListChecks, MessagesSquare, type LucideIcon } from 'lucide-react'
+import { ListChecks, Mic, MessagesSquare, Upload, type LucideIcon } from 'lucide-react'
 import { requestQuiz } from '@/lib/quiz/events'
+import { requestUpload } from '@/lib/scan/events'
 
 type Action = { label: string; hint: string; icon: LucideIcon; href?: string; onClick?: () => void }
 
-// What is nowhere else on a phone. (Notes, decks, lectures, Upload and Scan are in the Create button, so they are not repeated here.)
+// Home keeps these four on every screen. (Notes, decks and Scan are in the Create button, so they are not repeated here.)
 const ACTIONS: Action[] = [
   { label: 'Take a quiz', hint: 'Quiz yourself on a note', icon: ListChecks, onClick: requestQuiz },
+  { label: 'Record lecture', hint: 'Record and write it up', icon: Mic, href: '/lectures/record' },
   { label: 'Ask the tutor', hint: 'Get help with a topic', icon: MessagesSquare, href: '/tutor' },
+  { label: 'Upload', hint: 'A PDF, slides or a file', icon: Upload, onClick: requestUpload },
 ]
 
 // In the accent colour, in every look: the tiles are the one place on Home that is tinted with the student's own colour, so they stand out from the figures above
@@ -17,7 +20,7 @@ const tile = 'group flex items-center gap-3 rounded-[20px] border border-accent/
 // Large tiles you can tap: a coloured icon, what it does, and a few words saying what it is for
 export function HomeActions() {
   return (
-    <section role="group" aria-label="Quick actions" className="grid grid-cols-2 gap-2.5 md:gap-3">
+    <section role="group" aria-label="Quick actions" className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
       {ACTIONS.map(a => {
         const inner = (
           <>

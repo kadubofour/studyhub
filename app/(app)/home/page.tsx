@@ -239,8 +239,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* phones have no sidebar: there, Home is where these are reached */}
-      <div className="md:hidden"><HomeActions /></div>
+      <HomeActions />
 
       <CourseAccess courses={courses} counts={material.counts} recent={material.recent} coursesClassName="md:hidden" />
 

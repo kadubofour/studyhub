@@ -140,6 +140,13 @@ describe('Home, less generic', () => {
   })
 })
 
+describe('the quick cards', () => {
+  it('are on Home on every screen, not on phones only', async () => {
+    await home()
+    expect(screen.getByRole('navigation', { name: 'Quick actions' }).closest('[class~="md:hidden"]')).toBeNull()
+  })
+})
+
 describe('Today when everything is done', () => {
   afterEach(() => { doneSince = 0 })
   it('says so, rather than nothing is due', async () => {

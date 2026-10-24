@@ -33,5 +33,5 @@ Made with the taste skill's app-screen run (`design-taste-frontend`, `references
 
 ## Kept, by the student's earlier choices
 
-The accent hero on Home, Home's quick cards (Take a quiz, Ask the tutor) exactly as they were, the Create button holding New note, deck and upload (the Library does not repeat them),
+The accent hero on Home, Home's four quick cards (Take a quiz, Record lecture, Ask the tutor, Upload) on every screen, the Create button holding New note, deck and upload (the Library does not repeat them),
 and each look's title face.
