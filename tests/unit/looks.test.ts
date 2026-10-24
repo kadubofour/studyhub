@@ -11,21 +11,21 @@ function block(selector: string): string {
 }
 const value = (b: string, name: string) => new RegExp(`${name}:\\s*([^;]+);`, 'i').exec(b)?.[1].trim().toLowerCase()
 const KEYS = ['bg', 'raised', 'surface', 'line', 'fg', 'muted'] as const
-const OLD = ['classic', 'paper', 'vivid', 'playful'] as const
+const OLD = ['ink', 'classic', 'paper', 'vivid', 'playful'] as const
 
 describe('the looks', () => {
-  it('are Studio first, then Classic, Paper, Vivid and Playful', () => {
-    expect(Object.keys(LOOKS)).toEqual(['studio', 'classic', 'paper', 'vivid', 'playful'])
+  it('are Ink first, then Studio, Classic, Paper, Vivid and Playful', () => {
+    expect(Object.keys(LOOKS)).toEqual(['ink', 'studio', 'classic', 'paper', 'vivid', 'playful'])
   })
-  it('an old cached profile, or a look this version does not know, shows Studio', () => {
-    expect(lookOf(undefined)).toBe('studio')
-    expect(lookOf('neon')).toBe('studio')
+  it('an old cached profile, or a look this version does not know, shows Ink', () => {
+    expect(lookOf(undefined)).toBe('ink')
+    expect(lookOf('neon')).toBe('ink')
     expect(lookOf('vivid')).toBe('vivid')
   })
   it('Paper is still light only: Classic in dark mode, and not offered there', () => {
     expect(effectiveLook('paper', 'dark')).toBe('classic')
     expect(lookChoices('dark')).not.toContain('paper')
-    expect(lookChoices('light')).toEqual(['studio', 'classic', 'paper', 'vivid', 'playful'])
+    expect(lookChoices('light')).toEqual(['ink', 'studio', 'classic', 'paper', 'vivid', 'playful'])
   })
   it('every look keeps its text readable on its page, panels and soft surface', () => {
     for (const [name, look] of Object.entries(LOOKS)) for (const mode of ['light', 'dark'] as const) {
@@ -90,5 +90,43 @@ describe('review fixes', () => {
   })
   it.each(['.app-root[data-look="classic"]', '.dark .app-root[data-look="classic"]'])('%s sets its own tile colours, so no Studio glass tint shows on its chips', sel => {
     for (const t of ['a', 'b', 'c']) expect(value(block(sel), `--tile-${t}`)).toBe('var(--raised)')
+  })
+})
+
+describe('Ink', () => {
+  const ink = (sel: string) => css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\{[^}]*\\}'))?.[0] ?? ''
+  it('main buttons are ink pills: the text colour as the fill, the page colour as the text, no glow', () => {
+    const b = ink('.app-root[data-look="ink"] .btn-primary')
+    expect(b).toContain('background: var(--fg)')
+    expect(b).toContain('color: var(--bg)')
+    expect(b).toContain('border-radius: 9999px')
+    expect(b).toContain('box-shadow: none')
+  })
+  it('other buttons are white pills with a hairline', () => {
+    const b = ink('.app-root[data-look="ink"] .btn')
+    expect(b).toContain('background: var(--raised)')
+    expect(b).toContain('border: 1px solid var(--line)')
+    expect(b).toContain('border-radius: 9999px')
+  })
+  it('cards are flat: white, a hairline and no shadow', () => {
+    const c = ink('.app-root[data-look="ink"] :is(.card, .tile)')
+    expect(c).toContain('box-shadow: none')
+    expect(c).toContain('border: 1px solid var(--line)')
+  })
+  it('selected chips and list items are a warm grey with ink text, not tinted with the accent', () => {
+    expect(value(block('.app-root[data-look="ink"]'), '--accent-soft')).toBe('#ebe8de')
+    expect(value(block('.app-root[data-look="ink"]'), '--accent')).toBe('var(--fg)')
+    expect(value(block('.dark .app-root[data-look="ink"]'), '--accent-soft')).toBe('#2f2f2d')
+    expect(value(block('.dark .app-root[data-look="ink"]'), '--accent')).toBe('var(--fg)')
+  })
+  it('titles are set in a serif', () => {
+    expect(block('.app-root[data-look="ink"]')).toContain('--title-font: var(--font-newsreader)')
+  })
+  it.each(['light', 'dark'])('the sidebar is dark and readable in %s mode, with a lighter pill for the current place', mode => {
+    const b = block(mode === 'light' ? '.app-root[data-look="ink"] .app-sidebar' : '.dark .app-root[data-look="ink"] .app-sidebar')
+    const base = block('.app-root[data-look="ink"] .app-sidebar')
+    const v = (t: string) => (value(b, t) ?? value(base, t))!.toUpperCase()
+    for (const t of ['--fg', '--muted']) expect(contrastRatio(v(t), v('background')), t).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio('#FFFFFF', v('--accent-soft'))).toBeGreaterThanOrEqual(7)
   })
 })

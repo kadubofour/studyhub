@@ -42,10 +42,10 @@ describe('Content width', () => {
 
 
 describe('Look picker', () => {
-  it('offers Studio first, then the older looks, and marks the current one', () => {
+  it('offers Ink first, then Studio and the older looks, and marks the current one', () => {
     open()
     const names = screen.getAllByRole('radio').filter(r => r.getAttribute('aria-label')?.endsWith(' look')).map(r => r.getAttribute('aria-label'))
-    expect(names).toEqual(['Studio look', 'Classic look', 'Paper look', 'Vivid look', 'Playful look'])
+    expect(names).toEqual(['Ink look', 'Studio look', 'Classic look', 'Paper look', 'Vivid look', 'Playful look'])
     expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
     expect(screen.getByText('Warm cream, softer edges')).toBeTruthy()
   })
@@ -70,7 +70,7 @@ describe('Look picker', () => {
     const old = { ...base } as Record<string, unknown>
     delete old.look
     open(old as unknown as Profile)
-    expect(screen.getByRole('radio', { name: 'Studio look' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('radio', { name: 'Ink look' }).getAttribute('aria-checked')).toBe('true')
   })
   it('Paper is for light mode: in dark mode it is not offered and a saved Paper shows as Classic, kept', async () => {
     resolved = 'dark'

@@ -163,7 +163,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     '--a-solid': a.solid, '--a-text': a.text, '--a-text-dark': a.textDark, '--a-soft': a.soft,
     '--a-soft-dark': a.softDark, '--a-glow': a.glow, '--app-font': `var(${(FONTS[profile.font] ?? FONTS.sans).cssVar})`,
     // titles: the display face with the default Sans; the student's own font when they picked another
-    '--display-font': profile.font && profile.font !== 'sans' && FONTS[profile.font] ? `var(${FONTS[profile.font].cssVar})` : 'var(--font-instrument)',
+    '--display-font': profile.font && profile.font !== 'sans' && FONTS[profile.font] ? `var(${FONTS[profile.font].cssVar})` : 'var(--title-font, var(--font-instrument))', // each look can have its own title face
   } as React.CSSProperties
   const lit = 'bg-accent-soft text-accent'
   const railItem = (on: boolean) => wide

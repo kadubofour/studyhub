@@ -137,11 +137,11 @@ describe('appearance settings', () => {
     const bad = await u.sb.from('profiles').update({ accent: 'neon' }).eq('id', u.id)
     expect(bad.error).not.toBeNull()
   })
-  it('defaults a new student to the Studio look, saves each look, and rejects unknown looks', async () => {
+  it('defaults a new student to the Ink look, saves each look, and rejects unknown looks', async () => {
     const u = await newUser()
     const { data: p } = await u.sb.from('profiles').select('look').eq('id', u.id).single()
-    expect(p).toEqual({ look: 'studio' })
-    for (const look of ['paper', 'vivid', 'playful', 'classic', 'studio']) expect((await u.sb.from('profiles').update({ look }).eq('id', u.id)).error, look).toBeNull()
+    expect(p).toEqual({ look: 'ink' })
+    for (const look of ['paper', 'vivid', 'playful', 'classic', 'studio', 'ink']) expect((await u.sb.from('profiles').update({ look }).eq('id', u.id)).error, look).toBeNull()
     expect((await u.sb.from('profiles').update({ look: 'neon' }).eq('id', u.id)).error).not.toBeNull()
     expect((await u.sb.from('profiles').update({ look: 'paper' }).eq('id', u.id)).error).toBeNull()
     expect((await u.sb.from('profiles').select('look').eq('id', u.id).single()).data).toEqual({ look: 'paper' })

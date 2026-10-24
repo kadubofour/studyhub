@@ -49,6 +49,30 @@
   --glass: var(--raised); --glass-strong: var(--raised); --edge: transparent;
   background-image: none;
 }
+/* Ink: warm paper, flat white cards, black ink buttons, serif titles and a dark sidebar (docs/superpowers/specs/2026-11-01-ink-look-design.md) */
+.app-root[data-look="ink"] {
+  --bg: #F7F6F0; --raised: #FFFFFF; --surface: #F0EEE6; --line: #E4E2DA; --fg: #191918; --muted: #66655E;
+  --shadow: 0 1px 2px rgb(25 25 24 / 0.04), 0 6px 18px -10px rgb(25 25 24 / 0.16);
+  --tile-a: #ECE1FA; --tile-b: #FAF0B4; --tile-c: #CDEFF0;
+  --title-font: var(--font-newsreader);
+  /* selected states are a warm grey with ink text; the accent itself (--accent-solid) is kept for the hero, the timer, progress and icons */
+  --accent-soft: #EBE8DE; --accent: var(--fg);
+}
+.dark .app-root[data-look="ink"] {
+  --bg: #151514; --raised: #1E1E1C; --surface: #262624; --line: #33322F; --fg: #F2F1EC; --muted: #A3A29B;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -10px rgb(0 0 0 / 0.6);
+  --tile-a: #332B47; --tile-b: #38331A; --tile-c: #193A3C;
+  --accent-soft: #2F2F2D; --accent: var(--fg);
+}
+/* its sidebar is dark in both modes; the current place is a lighter pill */
+.app-root[data-look="ink"] .app-sidebar {
+  background: #191918; --fg: #EDEDE8; --muted: #A3A29B; --line: #2C2C2A; --surface: #262624; --raised: #2F2F2D;
+  --glass: var(--raised); --glass-strong: var(--raised);
+  --accent: #FFFFFF; --accent-soft: #2F2F2D; color: var(--fg); color-scheme: dark; border-color: #191918;
+}
+.dark .app-root[data-look="ink"] .app-sidebar { background: #111110; border-color: #262624; }
+body:has(.app-root[data-look="ink"]) { background: #F7F6F0; }
+.dark body:has(.app-root[data-look="ink"]) { background: #151514; }
 /* Classic: calm and minimal, warm neutrals, a dark sidebar */
 .app-root[data-look="classic"] {
   --bg: #fbfbfa; --raised: #ffffff; --surface: #f3f3f0; --line: #e6e5e0; --fg: #1f1f1d; --muted: #6b6a65;
@@ -230,6 +254,21 @@ body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.
 .app-root[data-look]:not([data-look="studio"]) .tile-b { background: var(--tile-b); }
 .app-root[data-look]:not([data-look="studio"]) .tile-c { background: var(--tile-c); }
 .app-root[data-look]:not([data-look="studio"]) .hero { border-radius: 1.75rem; }
+
+/* Ink shapes: ink pills for the main action, white pills for the rest, flat cards with a hairline */
+.app-root[data-look="ink"] .btn-primary { background: var(--fg); color: var(--bg); border-radius: 9999px; box-shadow: none; font-weight: 500; padding-inline: 1.15rem; }
+.app-root[data-look="ink"] .btn-primary:hover:not(:disabled) { filter: none; background: color-mix(in srgb, var(--fg) 86%, var(--bg)); }
+.app-root[data-look="ink"] .btn { background: var(--raised); border: 1px solid var(--line); border-radius: 9999px; box-shadow: none; padding-inline: 1rem; }
+.app-root[data-look="ink"] .btn:hover:not(:disabled) { background: var(--surface); border-color: var(--line); }
+.app-root[data-look="ink"] .btn-danger, .app-root[data-look="ink"] .btn-ghost { border-radius: 9999px; }
+.app-root[data-look="ink"] :is(.card, .tile) { background: var(--raised); border: 1px solid var(--line); border-radius: 1rem; box-shadow: none; }
+.app-root[data-look="ink"] :is(a.tile, button.tile):hover { box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--fg) 22%, var(--line)); }
+.app-root[data-look="ink"] .field input, .app-root[data-look="ink"] .field select, .app-root[data-look="ink"] .field textarea,
+.app-root[data-look="ink"] input.input, .app-root[data-look="ink"] select.input, .app-root[data-look="ink"] textarea.input { background: var(--raised); border-radius: 0.75rem; }
+.app-root[data-look="ink"] .menu-panel { background: var(--raised); box-shadow: 0 2px 6px rgb(25 25 24 / 0.06), 0 14px 32px rgb(25 25 24 / 0.12); }
+.app-root[data-look="ink"] .section-label { font-weight: 500; font-size: 1.375rem; letter-spacing: -0.01em; }
+.app-root[data-look="ink"] .app-sidebar :is(a, button):not([role="menuitem"]) { border-radius: 9999px; }
+.app-root[data-look="ink"] .app-sidebar .section-label { font-size: 13px; }
 
 /* Vivid shapes: soft large corners, pill buttons and fields */
 .app-root[data-look="vivid"] .card, .app-root[data-look="vivid"] .tile { border-radius: 1.5rem; border-color: transparent; box-shadow: var(--shadow); }

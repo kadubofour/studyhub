@@ -87,9 +87,9 @@ describe('the sidebar', () => {
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=0')
     expect(rail().getByRole('group', { name: 'Courses' })).toBeTruthy()
   })
-  it('wears the chosen look: Studio by default, or the one in Settings, and the sidebar can be coloured by it', async () => {
+  it('wears the chosen look: Ink by default, or the one in Settings, and the sidebar can be coloured by it', async () => {
     const { container } = await (async () => { let r!: ReturnType<typeof render>; await act(async () => { r = render(<ProfileProvider initial={{ ...profile, look: undefined } as unknown as Profile}><ToastProvider><ConfirmProvider><AppShell><p>page</p></AppShell></ConfirmProvider></ToastProvider></ProfileProvider>) }); return r })()
-    expect(container.querySelector('.app-root')!.getAttribute('data-look')).toBe('studio')
+    expect(container.querySelector('.app-root')!.getAttribute('data-look')).toBe('ink')
     cleanup()
     await shell({ look: 'vivid' } as Partial<Profile>)
     expect(document.querySelector('.app-root')!.getAttribute('data-look')).toBe('vivid')
@@ -227,5 +227,15 @@ describe('reminders from anywhere', () => {
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'New reminder' })) })
     expect(screen.getByRole('dialog', { name: 'New reminder' })).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+  })
+})
+
+describe('the title font', () => {
+  it('is the look\'s own title face unless the student chose a font', async () => {
+    await shell()
+    expect((document.querySelector('.app-root') as HTMLElement).style.getPropertyValue('--display-font')).toBe('var(--title-font, var(--font-instrument))')
+    cleanup()
+    await shell({ font: 'serif' } as Partial<Profile>)
+    expect((document.querySelector('.app-root') as HTMLElement).style.getPropertyValue('--display-font')).toBe('var(--font-lora)')
   })
 })
