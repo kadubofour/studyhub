@@ -41,7 +41,7 @@ export function AppearanceCard() {
   return (
     <div className="card divide-y divide-line p-0">
       <SettingRow title="Look" hint="The style of the whole app.">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="Look">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3" role="radiogroup" aria-label="Look">
           {LOOK_NAMES.map((name, i) => {
             const on = look === name
             return (
@@ -116,7 +116,7 @@ export function AppearanceCard() {
 // A small app drawn in the look itself: the look's own colours, title face, sidebar, card and buttons apply, because it is an app-root with that data-look
 function LookPreview({ look, ownFont }: { look: LookName; ownFont: boolean }) {
   return (
-    <div data-look-preview data-look={look} aria-hidden className="app-root pointer-events-none flex h-36 overflow-hidden rounded-xl border border-line"
+    <div data-look-preview data-look={look} aria-hidden className="app-root pointer-events-none flex h-32 overflow-hidden rounded-xl border border-line sm:h-36"
       style={ownFont ? undefined : ({ '--display-font': 'var(--title-font, var(--font-instrument))' } as React.CSSProperties)}>
       <div className="app-sidebar flex w-12 shrink-0 flex-col items-center gap-1.5 py-2.5">
         <span className="mb-1 size-4 rounded-md bg-accent-solid" />

@@ -29,17 +29,26 @@ export function CreateMenu({ from, onPick, onClose }: { from: 'rail' | 'wide' | 
     else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length]?.focus() }
     else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus() }
   }
+  // From the phone dock it is a sheet over a dimmed page, with large tiles; from the sidebar, a short list beside it
+  const sheet = from === 'dock'
   return (
-    <div ref={ref} role="menu" aria-label="Create" onKeyDown={move}
-      className={`glass create-in fixed z-50 w-72 rounded-2xl p-1.5 ${from === 'rail' ? 'left-[84px] top-16' : from === 'wide' ? 'left-[272px] top-16' : 'inset-x-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] mx-auto max-w-sm'}`}
-      style={{ background: 'var(--glass-strong)' }}>
-      {ITEMS.map(({ id, label, hint, icon: Icon }) => (
-        <button key={id} type="button" role="menuitem" aria-label={label} onClick={() => { onClose(); onPick(id) }}
-          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left outline-none transition hover:bg-accent-soft focus-visible:bg-accent-soft">
-          <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-surface text-accent"><Icon size={17} /></span>
-          <span className="min-w-0"><span className="block text-[15px] font-medium">{label}</span><span aria-hidden className="block text-xs text-muted">{hint}</span></span>
-        </button>
-      ))}
-    </div>
+    <>
+      {sheet && <div data-create-backdrop aria-hidden className="create-in fixed inset-0 z-40 bg-black/45" />}
+      <div ref={ref} role="menu" aria-label="Create" onKeyDown={move}
+        className={sheet
+          ? 'create-in fixed inset-x-3 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-50 mx-auto grid max-w-md grid-cols-2 gap-2 rounded-3xl border border-line p-3 shadow-[0_20px_50px_-12px_rgb(0_0_0/0.45)]'
+          : `glass create-in fixed z-50 w-72 rounded-2xl p-1.5 ${from === 'rail' ? 'left-[84px] top-16' : 'left-[272px] top-16'}`}
+        style={{ background: 'var(--glass-strong)' }}>
+        {ITEMS.map(({ id, label, hint, icon: Icon }) => (
+          <button key={id} type="button" role="menuitem" aria-label={label} onClick={() => { onClose(); onPick(id) }}
+            className={sheet
+              ? 'flex min-h-24 flex-col items-start justify-between gap-2 rounded-2xl bg-surface p-3.5 text-left outline-none transition active:scale-[.98] focus-visible:ring-2 focus-visible:ring-[var(--accent-solid)]'
+              : 'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left outline-none transition hover:bg-accent-soft focus-visible:bg-accent-soft'}>
+            <span aria-hidden className={`grid shrink-0 place-items-center text-accent ${sheet ? 'size-10 rounded-xl bg-raised' : 'size-9 rounded-[10px] bg-surface'}`}><Icon size={sheet ? 19 : 17} /></span>
+            <span className="min-w-0"><span className="block text-[15px] font-medium">{label}</span><span aria-hidden className="block text-xs text-muted">{hint}</span></span>
+          </button>
+        ))}
+      </div>
+    </>
   )
 }

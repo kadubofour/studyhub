@@ -31,7 +31,7 @@ export function CommandPalette({ items, onRun, onClose }: { items: PaletteItem[]
             aria-activedescendant={shown[at] ? `palette-${shown[at].id}` : undefined}
             className="h-14 w-full bg-transparent text-[17px] outline-none placeholder:text-muted" placeholder="Search or jump to anything…"
             value={query} onChange={e => { setQuery(e.target.value); setIndex(0) }} onKeyDown={key} />
-          <span className="kbd shrink-0">Esc</span>
+          <span className="kbd shrink-0 pointer-coarse:hidden">Esc</span>
         </div>
         {shown.length === 0
           ? <p className="px-5 py-10 text-center text-[15px] text-muted">Nothing matches.</p>
@@ -57,7 +57,7 @@ export function CommandPalette({ items, onRun, onClose }: { items: PaletteItem[]
               })}
             </ul>
           )}
-        <div aria-hidden className="flex items-center gap-4 border-t border-line px-5 py-2.5 text-xs text-muted">
+        <div aria-hidden className="flex items-center gap-4 border-t border-line px-5 py-2.5 text-xs text-muted pointer-coarse:hidden">
           <span className="flex items-center gap-1.5"><span className="kbd">↑</span><span className="kbd">↓</span>to move</span>
           <span className="flex items-center gap-1.5"><span className="kbd">Enter</span>to open</span>
         </div>

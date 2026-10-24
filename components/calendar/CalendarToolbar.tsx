@@ -23,7 +23,7 @@ function AddFab({ onAdd }: { onAdd: (k: AddKind) => void }) {
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc) }
   }, [open])
   return (
-    <div ref={box} className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end gap-2 md:hidden">
+    <div ref={box} className="fixed bottom-[calc(7.25rem+env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end gap-2 md:hidden">
       {open && (
         <div role="menu" aria-label="Add to the calendar" className="flex flex-col items-end gap-2">
           {ADD.map(a => (
