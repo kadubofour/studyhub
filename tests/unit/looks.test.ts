@@ -156,19 +156,12 @@ describe('a look drawn inside another (the previews in Settings)', () => {
 
 describe('Studio is ethereal', () => {
   const studio = () => block('.app-root[data-look="studio"]')
-  it('is lit by rays fanning down from above the page, not by the round drifting glows of the Focus backdrop', () => {
+  it('is a soft colour wash with no shapes: the page shifts from the accent at the top to the second colour lower down', () => {
     const b = studio()
-    expect(b).toMatch(/repeating-conic-gradient\(from \d+deg at \d+% -\d+%/)
-    expect(b).not.toContain('radial-gradient(') // no round blobs: those are Focus's (components/focus/ChillBackdrop.tsx)
-    expect(value(b, 'background-attachment')).toContain('fixed')
-  })
-  it('has a thin aurora ribbon along the top in the student\'s two colours', () => {
-    const b = studio()
-    expect(b).toMatch(/linear-gradient\(100deg, [^;]*var\(--accent-solid\)[^;]*var\(--accent-glow\)/)
-    expect(b).toMatch(/\d+% 9rem/) // the ribbon's size: full width, a few rem tall
-  })
-  it('fades the light into the page well before the middle, so reading is undisturbed', () => {
-    expect(studio()).toMatch(/linear-gradient\(to bottom, transparent 0, var\(--bg\) \d\d%\)/)
+    expect(b).toMatch(/background-image:\s*linear-gradient\(to bottom, color-mix\(in srgb, var\(--accent-solid\) [^;]*color-mix\(in srgb, var\(--accent-glow\)[^;]*\);/)
+    expect(b.split('gradient(').length - 1).toBe(1) // one wash, nothing else
+    for (const shape of ['radial-gradient(', 'conic-gradient(']) expect(b).not.toContain(shape) // no blobs (Focus's) and no rays
+    expect(value(b, 'background-attachment')).toBe('fixed')
   })
   it('its top bar is frosted too, so the light from above is not cut off under it', () => {
     expect(fs.readFileSync('components/shell/TopBar.tsx', 'utf8')).toContain('className="app-topbar no-print sticky top-0')

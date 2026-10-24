@@ -25,9 +25,9 @@ Made with the taste skill's app-screen run (`design-taste-frontend`, `references
   which is its character.
 - Page titles are app-sized (26-28px, `PAGE_TITLE`); `PageHeader` takes a one-line `summary`. Panel titles are 18px.
 - The page is flat in every look but Studio: the old aurora and the hero's corner glow are gone. Studio, at the
-  student's request, is lit: soft rays fanning down from above the page and a thin aurora ribbon in the accent and
-  glow colours along the top, faded into the page before the middle and fixed while scrolling (`--glow` 24% by day,
-  44% by night). It has no round glows, which are the Focus backdrop's (`ChillBackdrop`). Its cards, menus, sidebar
+  student's request, has a soft colour wash with no shapes: the page shifts from the accent at the top to the glow
+  colour lower down and settles to the plain page at the bottom, fixed while scrolling (`--glow` 24% by day, 44% by
+  night). No round glows (the Focus backdrop's) and no rays, both turned down by the student. Its cards, menus, sidebar
   and top bar are frosted so the light shows through.
 - Classic's soft surface is the warm grey `#EFEEEA`, not the banned cream `#F0EEE6`.
 - Jump back in marks each kind with a plain grey icon.
