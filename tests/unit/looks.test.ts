@@ -186,7 +186,7 @@ describe('Studio is ethereal', () => {
 
 describe('Studio around a note', () => {
   it('an open note keeps the plain page, with no wash behind the writing', () => {
-    expect(fs.readFileSync('app/(app)/notes/[id]/page.tsx', 'utf8')).toContain('<div data-note-page className=')
+    expect(fs.readFileSync('app/(app)/notes/[id]/page.tsx', 'utf8')).toContain('<div data-note-page ')
     expect(rule('.app-root[data-look="studio"]:has([data-note-page])')).toContain('background-image: none')
   })
 })

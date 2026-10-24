@@ -85,6 +85,17 @@ function NoteEditor({ id }: { id: string }) {
   const draftRef = useRef<Note | null>(null)
   const markdownRef = useRef<HTMLTextAreaElement>(null)
   const renderedRef = useRef<HTMLDivElement>(null) // Markdown preview or reading view
+  // The top bar can wrap (the find bar, a narrow screen): the formatting toolbar sticks right under it, at its real height
+  const pageRef = useRef<HTMLDivElement>(null)
+  const headRef = useRef<HTMLElement>(null)
+  const loaded = !!draft
+  useEffect(() => {
+    const head = headRef.current, pageEl = pageRef.current
+    if (!head || !pageEl || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => pageEl.style.setProperty('--note-head', `${head.offsetHeight}px`))
+    ro.observe(head)
+    return () => ro.disconnect()
+  }, [loaded])
   const { update, status, flush } = useAutosave<Patch>(patch => updateNote(supabase(), id, patch).then(notifyList))
 
   useEffect(() => {
@@ -254,8 +265,8 @@ function NoteEditor({ id }: { id: string }) {
   const width = fullWidth ? 'max-w-none' : reading || mode === 'rich' ? 'max-w-3xl' : 'max-w-6xl'
 
   return (
-    <div data-note-page className={`min-h-dvh ${studyOpen ? 'md:pr-[380px]' : ''}`}>
-      <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur sm:gap-2 md:px-6">
+    <div data-note-page ref={pageRef} className={`min-h-dvh ${studyOpen ? 'md:pr-[380px]' : ''}`}>
+      <header ref={headRef} className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur sm:gap-2 md:px-6">
         <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}
         <div className="hidden md:block"><NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} /></div>
@@ -283,7 +294,8 @@ function NoteEditor({ id }: { id: string }) {
         ) : (
           <>
             <input className="mb-1 w-full bg-transparent text-3xl font-semibold outline-none placeholder:text-muted" value={draft.title} placeholder="Untitled"
-              onChange={e => change({ title: e.target.value })} aria-label="Title" />
+              onChange={e => change({ title: e.target.value })} aria-label="Title"
+              onFocus={e => { if (e.target.value === 'Untitled') e.target.select() }} />
             {mode === 'rich' ? (
               <RichEditor key={`rich-${note.id}`} markdown={draft.content_md} onChange={md => change({ content_md: md })}
                 onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} drawing={inking} onDraw={() => setInking(i => !i)} autoMath={profile.auto_math} />

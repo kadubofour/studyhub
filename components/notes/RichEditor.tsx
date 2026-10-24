@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
+import { Placeholder } from '@tiptap/extensions'
 import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilLine, Sigma, Table, type LucideIcon } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
@@ -101,7 +102,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   const editorRef = useRef<Editor | null>(null)
   const addRef = useRef<(files: File[]) => void>(() => {})
   // Built once: a new array each render would make Tiptap reconfigure the editor every time
-  const [extensions] = useState(() => [...noteExtensions({ onEditMath, imageView: true }), FindHighlight])
+  const [extensions] = useState(() => [...noteExtensions({ onEditMath, imageView: true }), FindHighlight, Placeholder.configure({ placeholder: 'Start writing…' })])
   const [highlightColor, setHighlightColor] = useState<HighlightName>('yellow') // what the Highlight button uses; right-click it to change
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -162,6 +163,19 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
     return () => onReady?.(null)
   }, [editor, onReady])
 
+  // While tools are off the toolbar's right edge (a phone), the edge fades, so it is clear the row scrolls
+  const barRef = useRef<HTMLDivElement>(null)
+  const [more, setMore] = useState(false)
+  useEffect(() => {
+    const bar = barRef.current
+    if (!bar) return
+    const check = () => setMore(bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 1)
+    check()
+    bar.addEventListener('scroll', check, { passive: true })
+    window.addEventListener('resize', check)
+    return () => { bar.removeEventListener('scroll', check); window.removeEventListener('resize', check) }
+  }, [editor])
+
   if (!editor) return null
   const active = (name: string) => editor.isActive(name)
 
@@ -200,7 +214,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
 
   return (
     <div>
-      <div className="sticky top-[57px] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none]">
+      <div ref={barRef} data-more={more || undefined} className="sticky top-[var(--note-head,57px)] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none]">
         {tool('Bold', Bold, () => editor.chain().focus().toggleBold().run(), active('bold'))}
         {tool('Italic', Italic, () => editor.chain().focus().toggleItalic().run(), active('italic'))}
         {tool('Underline', UnderlineIcon, () => editor.chain().focus().toggleUnderline().run(), active('underline'))}
