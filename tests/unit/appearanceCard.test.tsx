@@ -82,3 +82,22 @@ describe('Look picker', () => {
     expect(screen.getByTestId('look').textContent).toBe('paper')
   })
 })
+
+describe('the look previews', () => {
+  it('draw a small app in each look itself: its sidebar, a title, a card, a chosen chip and both buttons', () => {
+    open()
+    for (const look of ['classic', 'studio', 'paper', 'vivid', 'playful']) {
+      const radio = screen.getByRole('radio', { name: new RegExp('^' + look + ' look', 'i') })
+      const preview = radio.querySelector('[data-look-preview]') as HTMLElement
+      expect(preview.getAttribute('data-look')).toBe(look)
+      expect(preview.classList.contains('app-root')).toBe(true) // so the look's own colours and shapes apply
+      expect(preview.getAttribute('aria-hidden')).toBe('true')
+      for (const sel of ['.app-sidebar', '.card', '.btn-primary', '.btn', '.font-display']) expect(preview.querySelector(sel), `${look} ${sel}`).toBeTruthy()
+    }
+  })
+  it('use the look\'s own title face unless the student chose a font', () => {
+    open()
+    const preview = screen.getByRole('radio', { name: /^Classic look/ }).querySelector('[data-look-preview]') as HTMLElement
+    expect(preview.style.getPropertyValue('--display-font')).toBe('var(--title-font, var(--font-instrument))')
+  })
+})

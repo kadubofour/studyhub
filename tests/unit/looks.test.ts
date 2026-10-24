@@ -4,14 +4,15 @@ import { LOOKS, contrastRatio, effectiveLook, lookChoices, lookOf } from '@/lib/
 
 // Every look is built on one system (docs/superpowers/specs/2026-11-01-ink-look-design.md); each keeps its own colours and character
 const css = fs.readFileSync('app/globals.css', 'utf8').replace(/\r\n/g, '\n')
-// The declarations inside the first rule whose selector is exactly `selector`
+// The declarations inside the first rule whose selector is exactly `selector` (a rule may list a twin after it: see the last test)
 function block(selector: string): string {
-  const start = css.indexOf(`\n${selector} {`)
-  expect(start, `no rule for ${selector}`).toBeGreaterThanOrEqual(0)
-  return css.slice(start, css.indexOf('}', start))
+  const at = [' {', ',\n'].map(end => css.indexOf(`\n${selector}${end}`)).filter(i => i >= 0)
+  expect(at.length, `no rule for ${selector}`).toBeGreaterThan(0)
+  const start = Math.min(...at)
+  return css.slice(css.indexOf('{', start), css.indexOf('}', start))
 }
 const value = (b: string, name: string) => new RegExp(`${name}:\\s*([^;]+);`, 'i').exec(b)?.[1].trim().toLowerCase()
-const rule = (sel: string) => css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\{[^}]*\\}'))?.[0] ?? ''
+const rule = (sel: string) => css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(,[^{]*)? \\{[^}]*\\}'))?.[0] ?? ''
 const KEYS = ['bg', 'raised', 'surface', 'line', 'fg', 'muted'] as const
 const NAMES = ['classic', 'studio', 'paper', 'vivid', 'playful'] as const
 
@@ -100,9 +101,19 @@ describe('each look keeps its character', () => {
     expect(rule(`.app-root[data-look="${look}"] .btn-primary`)).toContain('background: var(--accent-solid)')
     expect(value(block(`.app-root[data-look="${look}"]`), '--accent')).toBeUndefined()
   })
-  it('Playful has thick outlines and buttons that press down', () => {
-    expect(rule('.app-root[data-look="playful"] :is(.card, .tile)')).toContain('border-width: 2px')
-    expect(css).toMatch(/data-look="playful"\] \.btn-primary:active[^{]*\{[^}]*translateY\(2px\)/)
+  it('Playful is sunny and bold: dark outlines, solid offset shadows, and buttons that press into them', () => {
+    expect(LOOKS.playful.light.bg).toBe('#FFF7E8')
+    const card = rule('.app-root[data-look="playful"] :is(.card, .tile)')
+    expect(card).toContain('border: 2px solid var(--outline)')
+    expect(card).toContain('box-shadow: 4px 4px 0 var(--outline)')
+    expect(rule('.app-root[data-look="playful"] :is(.btn, .btn-primary, .btn-danger)')).toContain('box-shadow: 3px 3px 0 var(--outline)')
+    expect(css).toMatch(/data-look="playful"\] :is\(\.btn, \.btn-primary, \.btn-danger\):active[^{]*\{[^}]*translate\(3px, 3px\)[^}]*box-shadow: none/)
+    expect(value(block('.app-root[data-look="playful"]'), '--outline')).toBe('#2b2a33')
+  })
+  it('Playful outlines stand out from its page in light and dark', () => {
+    expect(contrastRatio('#2B2A33', LOOKS.playful.light.bg)).toBeGreaterThanOrEqual(3)
+    const dark = value(block('.dark .app-root[data-look="playful"]'), '--outline')!.toUpperCase()
+    expect(contrastRatio(dark, LOOKS.playful.dark.bg)).toBeGreaterThanOrEqual(3) // lavender by night, so the outlines still read
   })
 })
 
@@ -114,5 +125,18 @@ describe('the dark sidebar of every look', () => {
     for (const t of ['--fg', '--muted']) expect(contrastRatio(v(t), v('background')), t).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio(v('--fg'), v('--accent-soft')), 'the current place').toBeGreaterThanOrEqual(7)
     expect(value(base, '--glass-strong')).toBe('var(--raised)') // its tooltips are dark too
+  })
+})
+
+describe('a look drawn inside another (the previews in Settings)', () => {
+  it('every rule a look sets on what is inside it has a twin for a look nested in the app, so a preview shows its own look', () => {
+    const selectors = [...css.matchAll(/(^|\})\s*([^{}@]+)\{/g)].flatMap(m => m[2].split(',').map(s => s.trim()))
+    // a look's own rules, and the ones every look shares: a nested look must win over the outer look's own
+    const own = selectors.filter(s => /^(\.dark )?\.app-root\[data-look(="\w+")?\] .+/.test(s))
+    expect(own.length).toBeGreaterThan(20)
+    for (const s of own) {
+      const twin = s.replace(/^(\.dark )?\.app-root\[/, (_m, d) => `${d ?? ''}.app-root .app-root[`)
+      expect(selectors, s).toContain(twin)
+    }
   })
 })

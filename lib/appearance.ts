@@ -52,9 +52,9 @@ export const LOOKS = {
     dark: { bg: '#18181C', raised: '#212127', surface: '#2B2B33', line: '#3A3A44', fg: '#F2F2F5', muted: '#A9A9B6', tiles: ['#4D2B22', '#1E4034', '#4C3C12'] },
   },
   playful: {
-    label: 'Playful', blurb: 'Thick outlines, buttons that press down',
-    light: { bg: '#F7FBF4', raised: '#FFFFFF', surface: '#EAF2E5', line: '#CFDACA', fg: '#26301F', muted: '#556350', tiles: ['#FFEFBF', '#D6F1DD', '#D5E8FF'] },
-    dark: { bg: '#131F24', raised: '#1E2D34', surface: '#26373F', line: '#3A4B54', fg: '#F0F6F9', muted: '#A9BBC4', tiles: ['#3D3515', '#1E3B2A', '#1C3447'] },
+    label: 'Playful', blurb: 'Sunny, bold outlines, buttons you press in',
+    light: { bg: '#FFF7E8', raised: '#FFFFFF', surface: '#FFEFD2', line: '#EADBC0', fg: '#23222B', muted: '#5E5A66', tiles: ['#FFD6E7', '#C8F2DC', '#FFE7A3'] },
+    dark: { bg: '#1C1A2B', raised: '#262338', surface: '#302C45', line: '#433E5E', fg: '#F7F4FF', muted: '#B7B0CC', tiles: ['#4A2440', '#1F4636', '#4A3F17'] },
   },
 } as const satisfies Record<string, { label: string; blurb: string; light: ModeColors; dark: ModeColors }>
 

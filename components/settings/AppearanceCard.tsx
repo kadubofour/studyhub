@@ -41,10 +41,9 @@ export function AppearanceCard() {
   return (
     <div className="card divide-y divide-line p-0">
       <SettingRow title="Look" hint="The style of the whole app.">
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-5" role="radiogroup" aria-label="Look">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="Look">
           {LOOK_NAMES.map((name, i) => {
             const on = look === name
-            const c = LOOKS[name][mode]
             return (
               <button key={name} type="button" role="radio" aria-checked={on} aria-label={`${LOOKS[name].label} look`}
                 tabIndex={on ? 0 : -1}
@@ -54,15 +53,10 @@ export function AppearanceCard() {
                   e.preventDefault(); choose({ look: LOOK_NAMES[to] }); focusRadio(e.currentTarget, to)
                 }}
                 onClick={() => choose({ look: name })}
-                className={`rounded-xl border p-2 text-left transition ${on ? 'border-accent ring-2 ring-accent-soft' : 'border-line hover:bg-surface'}`}>
-                <div className="flex h-14 items-end gap-1.5 rounded-lg p-2" aria-hidden
-                  style={{ background: name === 'studio' ? `radial-gradient(120px 50px at 20% 0%, color-mix(in srgb, ${ACCENTS[profile.accent]?.solid ?? ACCENTS.blue.solid} 35%, transparent), transparent), ${c.bg}` : c.bg, border: `1px solid ${c.line}` }}>
-                  <div className="h-8 flex-1 rounded-md" style={{ background: c.tiles[0], border: `1px solid ${c.line}` }} />
-                  <div className="h-8 flex-1 rounded-md" style={{ background: c.tiles[1], border: `1px solid ${c.line}` }} />
-                  <div className="h-5 w-8 rounded-md" style={{ background: ACCENTS[profile.accent]?.solid ?? ACCENTS.blue.solid }} />
-                </div>
-                <div className="mt-1.5 text-sm font-medium">{LOOKS[name].label}</div>
-                <div className="text-xs text-muted">{LOOKS[name].blurb}</div>
+                className={`rounded-2xl border p-2 text-left transition ${on ? 'border-transparent ring-2 ring-[var(--accent-solid)]' : 'border-line hover:border-[color-mix(in_srgb,var(--fg)_25%,var(--line))]'}`}>
+                <LookPreview look={name} ownFont={profile.font !== undefined && profile.font !== 'sans'} />
+                <div className="mt-2 flex items-center justify-between gap-2 px-1 text-sm font-medium">{LOOKS[name].label}{on && <Check size={15} className="shrink-0 text-[var(--accent-solid)]" aria-hidden />}</div>
+                <div className="px-1 pb-0.5 text-xs text-muted">{LOOKS[name].blurb}</div>
               </button>
             )
           })}
@@ -115,6 +109,36 @@ export function AppearanceCard() {
           })}
         </div>
       </SettingRow>
+    </div>
+  )
+}
+
+// A small app drawn in the look itself: the look's own colours, title face, sidebar, card and buttons apply, because it is an app-root with that data-look
+function LookPreview({ look, ownFont }: { look: LookName; ownFont: boolean }) {
+  return (
+    <div data-look-preview data-look={look} aria-hidden className="app-root pointer-events-none flex h-36 overflow-hidden rounded-xl border border-line"
+      style={ownFont ? undefined : ({ '--display-font': 'var(--title-font, var(--font-instrument))' } as React.CSSProperties)}>
+      <div className="app-sidebar flex w-12 shrink-0 flex-col items-center gap-1.5 py-2.5">
+        <span className="mb-1 size-4 rounded-md bg-accent-solid" />
+        <span className="h-2.5 w-8 rounded-full bg-accent-soft" />
+        {[0, 1, 2, 3].map(i => <span key={i} className="h-1.5 w-6 rounded-full bg-muted/50" />)}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-2.5">
+        <span className="font-display text-[15px] font-semibold leading-none text-fg">Today</span>
+        <div className="card space-y-1.5 !rounded-lg !p-2">
+          <span className="block h-1.5 w-4/5 rounded-full bg-line" />
+          <span className="block h-1.5 w-1/2 rounded-full bg-line" />
+          <span className="flex gap-1 pt-0.5">
+            <span className="rounded-full bg-accent-soft px-1.5 text-[8px] font-medium leading-4 text-accent">Chosen</span>
+            <span className="tile-a w-6 rounded-full" />
+            <span className="tile-b w-6 rounded-full" />
+          </span>
+        </div>
+        <span className="mt-auto flex gap-1.5">
+          <span className="btn-primary !min-h-0 !gap-0 !px-2.5 !py-1 !text-[9px] !leading-none">Start</span>
+          <span className="btn !min-h-0 !gap-0 !px-2.5 !py-1 !text-[9px] !leading-none">Open</span>
+        </span>
+      </div>
     </div>
   )
 }
