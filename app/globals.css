@@ -405,10 +405,10 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 @keyframes xp-pop { from { opacity: 0; transform: translateY(6px) scale(.9); } 60% { transform: translateY(-2px) scale(1.06); } to { opacity: 1; transform: none; } }
 .xp-pop { animation: xp-pop .45s ease-out; }
 @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
-/* A sheet rising from the bottom of a phone */
-@keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
-.sheet-in { animation: sheet-in .22s cubic-bezier(.2, .8, .2, 1); }
-@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } .sheet-in { animation: none; } }
+/* A panel sliding in from the right edge of a phone */
+@keyframes side-in { from { transform: translateX(100%); } to { transform: none; } }
+.side-in { animation: side-in .22s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } .side-in { animation: none; } }
 @media (pointer: coarse) { .menu-kbd { display: none; } }
 
 /* Highlights in the words of a note: soft colours with dark text, so they read the same in light and dark and print as they look */

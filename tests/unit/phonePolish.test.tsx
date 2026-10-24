@@ -118,3 +118,10 @@ describe('Library filters on a phone', () => {
     expect(src()).toContain('<div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">')
   })
 })
+
+describe('the Flashcards view controls', () => {
+  it('start at the left edge, flush with the decks, like Notes and Library', () => {
+    const src = fs.readFileSync('app/(app)/flashcards/page.tsx', 'utf8')
+    expect(src).toContain('<ViewOptions page="decks" className="mb-3" />')
+  })
+})

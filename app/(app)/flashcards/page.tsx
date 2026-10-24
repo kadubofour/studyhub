@@ -63,7 +63,7 @@ export default function FlashcardsPage() {
           <button className="btn-primary" onClick={() => setOpen(true)}>Create a deck</button>
         </EmptyState>
       )}
-      {decks && decks.length > 0 && <ViewOptions page="decks" className="mb-3 justify-end" />}
+      {decks && decks.length > 0 && <ViewOptions page="decks" className="mb-3" />}
       <ItemList label="Decks" layout={view.layout}>
         {shown.map(d => {
           const c = courseOf(d.course_id)

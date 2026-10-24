@@ -25,13 +25,17 @@ describe('the note options sheet on a phone', () => {
     expect(b.getAttribute('aria-haspopup')).toBe('dialog')
     expect(screen.queryByRole('dialog')).toBeNull()
   })
-  it('is a sheet from the bottom over a dimmed page, with a handle', () => {
+  it('is a panel sliding in from the right side, full height, over a dimmed page', () => {
     open()
     const d = screen.getByRole('dialog', { name: 'Note options' })
-    expect(d.className).toContain('bottom-0')
-    expect(d.className).toContain('rounded-t-3xl')
-    expect(d.querySelector('[data-sheet-handle]')).toBeTruthy()
+    for (const c of ['inset-y-0', 'right-0', 'rounded-l-3xl', 'side-in']) expect(d.className).toContain(c)
+    expect(d.className).not.toContain('bottom-0')
     expect(document.querySelector('[data-sheet-backdrop]')).toBeTruthy()
+  })
+  it('has a close button at its top', () => {
+    open()
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
   it('switches between writing and reading with one segmented control', () => {
     const { a, sheet } = open()

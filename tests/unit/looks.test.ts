@@ -199,3 +199,10 @@ describe('the Focus page in every look', () => {
     expect(r).toContain('color: #fff')
   })
 })
+
+describe('the side panel animation', () => {
+  it('slides in from the right edge, and not at all for those who ask for less motion', () => {
+    expect(css).toMatch(/@keyframes side-in \{ from \{ transform: translateX\(100%\); \}/)
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)[^\n]*\.side-in \{ animation: none; \}/)
+  })
+})
