@@ -63,3 +63,21 @@ describe('Home quick actions in the accent colour', () => {
     }
   })
 })
+
+describe('Home quick actions are compact', () => {
+  it('each is one short row: a small icon beside its words, on every screen', () => {
+    render(<HomeActions />)
+    for (const t of screen.getByRole('group', { name: 'Quick actions' }).querySelectorAll('a, button')) {
+      expect(t.className).toContain('px-3 py-2.5')
+      expect(t.className).not.toContain('md:flex-col')
+      expect(t.querySelector('span[aria-hidden]')!.className).toContain('size-8')
+    }
+  })
+})
+
+describe('Home quick action names', () => {
+  it('are never cut off: a long one wraps instead', () => {
+    render(<HomeActions />)
+    expect(screen.getByText('Record lecture').className).not.toContain('truncate')
+  })
+})
