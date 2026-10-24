@@ -165,7 +165,8 @@ export function NotesSidebar() {
               {/* on a phone, Upload is in the Create button */}
               <button className="btn max-sm:hidden" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
               {!empty && <button className="btn" onClick={() => setSelecting(true)}><CheckSquare size={14} aria-hidden />Select</button>}
-              {!empty && <ExportMenu label="Export all" fileName="Studyhub notes" />}
+              {/* on a phone, Select then Export selected does this */}
+              {!empty && <span className="max-sm:hidden"><ExportMenu label="Export all" fileName="Studyhub notes" /></span>}
               <button className="btn-primary" onClick={create}><Plus size={14} aria-hidden />Note</button>
             </>
           )}

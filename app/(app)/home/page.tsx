@@ -136,7 +136,7 @@ export default function HomePage() {
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-[15px] opacity-85">{formatInTimeZone(now, tz, 'EEEE, MMMM d')}</p>
-            <h1 className="font-display mt-1 text-[2.25rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+            <h1 className="font-display mt-1 text-[1.875rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
           </div>
           {/* phones have no sidebar: the places it holds are a tap away here */}
           <div className="-ml-2 flex gap-0.5 md:hidden">

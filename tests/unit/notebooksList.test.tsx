@@ -173,5 +173,6 @@ describe('the Notes page on a phone', () => {
   it('leaves Upload to the Create button there, so the actions fit on one row', async () => {
     await open()
     expect(screen.getByRole('button', { name: 'Upload' }).className).toContain('max-sm:hidden')
+    expect(screen.getByRole('button', { name: /Export all/ }).closest('[class*="max-sm:hidden"]')).toBeTruthy() // Select then Export selected still exports
   })
 })

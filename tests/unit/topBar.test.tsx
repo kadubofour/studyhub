@@ -57,7 +57,7 @@ describe('TopBar keeping up', () => {
     xp = summary({ streak: 4 })
     await open()
     const bar = screen.getByRole('banner')
-    for (const text of ['12', '12 cards due', '2', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
+    for (const text of ['12', '12 cards due', 'Level 2']) expect(within(bar).getAllByText(text).length, text).toBeGreaterThan(0)
   })
   it('keeps the streak short: the flame and the number, with the words only for screen readers', async () => {
     xp = summary({ streak: 4 })
@@ -291,10 +291,11 @@ describe('the top bar on a phone', () => {
     expect(bar.className).toContain('bg-bg')
     expect(bar.querySelector('.no-scrollbar')).toBeTruthy()
   })
-  it('names the level briefly on a phone: the number, with "Level" kept for wider screens', async () => {
-    xp = summary()
+  it('keeps the level whole on a phone, and leaves cards due to Home and Flashcards there', async () => {
+    xp = summary(); due = 3
     await open()
-    const short = screen.getByText('2', { selector: 'span.sm\\:hidden' })
-    expect(short).toBeTruthy()
+    expect(screen.queryByText('2', { selector: 'span.sm\\:hidden' })).toBeNull()
+    expect(screen.getByText('Level 2')).toBeTruthy()
+    expect(screen.getByRole('link', { name: '3 cards due' }).className).toContain('max-sm:hidden')
   })
 })

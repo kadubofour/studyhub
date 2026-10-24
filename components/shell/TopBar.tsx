@@ -96,7 +96,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
         )}
         {due !== null && (
           <Link href={due > 0 ? '/review' : '/flashcards'} aria-label={due === 0 ? 'No cards due' : `${due} card${due === 1 ? '' : 's'} due`}
-            className={`${chip} ${due > 0 ? 'tile-a text-fg' : 'text-muted'}`}>
+            className={`${chip} ${due > 0 ? 'tile-a text-fg' : 'text-muted'} max-sm:hidden`}>{/* on a phone, Home and Flashcards say what is due */}
             <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? <><span className="sm:hidden">0</span><span className="hidden sm:inline">No cards due</span></> : <><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></>}</span>
           </Link>
         )}
@@ -106,7 +106,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
         {xp && xp.streak > 0 && <span role="img" aria-label={`${xp.streak}-day streak`} className={`${chip} tile-c text-fg`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
         {xp && (
           <span className={`${chip} bg-surface text-fg`}>
-            <Zap size={15} className="text-accent" aria-hidden /><span className="sm:hidden">{xp.level.level}</span><span className="hidden sm:inline">Level {xp.level.level}</span><span className="sr-only sm:hidden"> level</span>
+            <Zap size={15} className="text-accent" aria-hidden /><span>Level {xp.level.level}</span>
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
               className="block h-1.5 w-8 overflow-hidden rounded-full bg-line max-[419px]:sr-only sm:w-14">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />

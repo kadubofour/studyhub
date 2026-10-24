@@ -98,3 +98,9 @@ describe('glow, kept low', () => {
     expect(shell).not.toMatch(/shadow-\[[^\]]*var\(--accent-solid\)\]/)
   })
 })
+
+describe('room on a phone', () => {
+  it('the whole app is a little larger on a phone: text, spacing and tap targets grow together', () => {
+    expect(css).toMatch(/@media \(max-width: 639px\) \{\s*html \{ font-size: 17px; \}/)
+  })
+})

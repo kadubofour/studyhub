@@ -172,6 +172,10 @@ body:has(.app-root[data-look="playful"]) { background: #FFF7E8; }
 /* Whatever is scrolled into view (by the keyboard, a link, a screen reader) clears the status strip, and on a phone the dock at the bottom */
 html { scroll-padding-top: 4.5rem; }
 @media (max-width: 767px) { html { scroll-padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); } }
+/* A phone gets a little more room: the whole app is drawn larger, so text, spacing and tap targets grow together */
+@media (max-width: 639px) {
+  html { font-size: 17px; }
+}
 
 /* A scrollable area without its scrollbar: it still scrolls (wheel, touch, keyboard) */
 .no-scrollbar { scrollbar-width: none; }
@@ -184,7 +188,7 @@ html { scroll-padding-top: 4.5rem; }
   --color-success: var(--success); --color-warn: var(--warn);
 }
 
-body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.6; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.6; font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 /* The display face: page titles, panel titles, tile titles and numbers */
 .font-display { font-family: var(--display-font), var(--app-font), ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.015em; font-feature-settings: "tnum" 1; }
 /* A keycap for a keyboard shortcut */
