@@ -69,15 +69,18 @@ body:has(.app-root[data-look="classic"]) { background: #F7F6F0; }
   --title-font: var(--font-instrument);
   /* selection is a quiet tint with text-coloured text; the student's colour (--accent-solid) stays on the hero, the timer, progress and icons */
   --accent-soft: #E4E7F2; --accent: var(--fg);
-  /* Studio glows: the student's colours drift in from above like light through mist, with a fainter haze rising from below.
-     Fixed while the page scrolls; its panels are frosted so the light shows softly through them. */
+  /* Studio's light: rays fanning down from above the page, like light through mist, and a thin aurora ribbon in the student's
+     two colours along the top. It fades into the page well before the middle. (Not the round drifting glows of the Focus
+     backdrop.) Fixed while the page scrolls; its panels are frosted so the light shows softly through them. */
   --glow: 24%;
-  /* taste-skill-ignore: the glow is Studio's character, asked for by the student */
+  /* taste-skill-ignore: the light is Studio's character, asked for by the student. Layers, top first: the fade into the page,
+     the rays, the fade under the ribbon, the ribbon */
   background-image:
-    radial-gradient(1100px 700px at 22% 0%, color-mix(in srgb, var(--accent-solid) var(--glow), transparent), transparent 70%),
-    radial-gradient(900px 620px at 84% 6%, color-mix(in srgb, var(--accent-glow) calc(var(--glow) * 0.9), transparent), transparent 70%),
-    radial-gradient(760px 560px at 100% 58%, color-mix(in srgb, var(--accent-solid) calc(var(--glow) * 0.45), transparent), transparent 70%),
-    radial-gradient(1400px 760px at 45% 115%, color-mix(in srgb, var(--accent-glow) calc(var(--glow) * 0.6), transparent), transparent 70%);
+    linear-gradient(to bottom, transparent 0, var(--bg) 58%),
+    repeating-conic-gradient(from 150deg at 32% -40%, transparent 0deg, color-mix(in srgb, var(--accent-glow) calc(var(--glow) * 0.3), transparent) 3deg, transparent 7deg, transparent 12deg),
+    linear-gradient(to bottom, transparent 0, var(--bg) 9rem),
+    linear-gradient(100deg, transparent 0%, color-mix(in srgb, var(--accent-solid) calc(var(--glow) * 1.3), transparent) 22%, color-mix(in srgb, var(--accent-glow) calc(var(--glow) * 1.3), transparent) 55%, color-mix(in srgb, var(--accent-solid) calc(var(--glow) * 0.7), transparent) 82%, transparent 100%);
+  background-size: 100% 100%, 100% 100%, 100% 9rem, 100% 9rem;
   background-attachment: fixed; background-repeat: no-repeat;
 }
 .dark .app-root[data-look="studio"] {

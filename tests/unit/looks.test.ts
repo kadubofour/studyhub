@@ -156,13 +156,19 @@ describe('a look drawn inside another (the previews in Settings)', () => {
 
 describe('Studio is ethereal', () => {
   const studio = () => block('.app-root[data-look="studio"]')
-  it('glows: soft light in the student\'s accent and glow colours from above, a fainter haze from below, fixed while the page scrolls', () => {
+  it('is lit by rays fanning down from above the page, not by the round drifting glows of the Focus backdrop', () => {
     const b = studio()
-    expect(b).toMatch(/radial-gradient\([^)]*at \d+% [0-9]%, color-mix\(in srgb, var\(--accent-solid\)/)
-    expect(b).toContain('var(--accent-glow)')
-    expect(b).toMatch(/at \d+% 1\d\d%/)
-    expect(value(b, 'background-attachment')).toBe('fixed')
-    expect(b.split('radial-gradient(').length - 1).toBe(4) // two from above, a wisp at the side, the haze from below
+    expect(b).toMatch(/repeating-conic-gradient\(from \d+deg at \d+% -\d+%/)
+    expect(b).not.toContain('radial-gradient(') // no round blobs: those are Focus's (components/focus/ChillBackdrop.tsx)
+    expect(value(b, 'background-attachment')).toContain('fixed')
+  })
+  it('has a thin aurora ribbon along the top in the student\'s two colours', () => {
+    const b = studio()
+    expect(b).toMatch(/linear-gradient\(100deg, [^;]*var\(--accent-solid\)[^;]*var\(--accent-glow\)/)
+    expect(b).toMatch(/\d+% 9rem/) // the ribbon's size: full width, a few rem tall
+  })
+  it('fades the light into the page well before the middle, so reading is undisturbed', () => {
+    expect(studio()).toMatch(/linear-gradient\(to bottom, transparent 0, var\(--bg\) \d\d%\)/)
   })
   it('its top bar is frosted too, so the light from above is not cut off under it', () => {
     expect(fs.readFileSync('components/shell/TopBar.tsx', 'utf8')).toContain('className="app-topbar no-print sticky top-0')

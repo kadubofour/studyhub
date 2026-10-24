@@ -45,11 +45,8 @@ describe('surfaces', () => {
     expect(block('.app-root')).not.toContain('gradient')
     expect(css).not.toContain('--aurora-strength')
     expect(css.match(/\s\.hero \{[^}]*\}/)![0]).not.toContain('radial-gradient')
-    // the only radial glows are Studio's
-    const glows = css.split('\n').filter(l => l.includes('radial-gradient('))
-    expect(glows.length).toBeGreaterThan(0)
-    const studio = block('.app-root[data-look="studio"]')
-    for (const g of glows) expect(studio).toContain(g.trim().replace(/,$/, '').replace(/;$/, ''))
+    // no round glows anywhere in the app; Studio's light is rays and a ribbon (looks.test.ts)
+    expect(css).not.toContain('radial-gradient(')
   })
   it('every look sets its own colours; :root and .dark keep Studio\'s for the pages outside the app (sign in, onboarding)', () => {
     for (const look of ['classic', 'studio', 'paper', 'vivid', 'playful']) expect(css).toContain(`\n.app-root[data-look="${look}"] {`)
