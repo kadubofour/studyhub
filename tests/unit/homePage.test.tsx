@@ -17,7 +17,8 @@ vi.mock('@/components/plan/useWarmup', () => ({ useWarmup: () => ({ start: vi.fn
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [] }))
 let mine: unknown[] = []
 vi.mock('@/lib/data/reminders', () => ({ listReminders: async () => mine, REMINDERS_CHANGED: 'studyhub:reminders-changed' }))
-vi.mock('@/lib/data/tasks', () => ({ listOpenTasks: async () => [], countTasksDoneSince: async () => 0, createTask: vi.fn(), setTaskDone: vi.fn() }))
+let doneSince = 0
+vi.mock('@/lib/data/tasks', () => ({ listOpenTasks: async () => [], countTasksDoneSince: async () => doneSince, createTask: vi.fn(), setTaskDone: vi.fn() }))
 vi.mock('@/lib/data/classes', () => ({ listClasses: async () => [] }))
 vi.mock('@/lib/data/cards', () => ({ countDueCards: async () => 0 }))
 vi.mock('@/lib/data/focus', () => ({ listSessionsSince: async () => [] }))
@@ -136,5 +137,20 @@ describe('Home, less generic', () => {
     expect(today).toHaveLength(1)
     expect(today[0].style.background).toBe('var(--accent-solid)')
     for (const b of bars.filter(x => !x.hasAttribute('data-today'))) expect(b.style.background).not.toContain('accent')
+  })
+})
+
+describe('Today when everything is done', () => {
+  afterEach(() => { doneSince = 0 })
+  it('says so, rather than nothing is due', async () => {
+    doneSince = 2
+    await home()
+    const today = within(screen.getByRole('region', { name: 'Today' }))
+    expect(today.getByText('All done for today. Add something below if you like.')).toBeTruthy()
+    expect(today.queryByText(/Nothing due today/)).toBeNull()
+  })
+  it('still says nothing is due when nothing was', async () => {
+    await home()
+    expect(within(screen.getByRole('region', { name: 'Today' })).getByText('Nothing due today. Add something below.')).toBeTruthy()
   })
 })

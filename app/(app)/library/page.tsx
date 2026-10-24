@@ -173,15 +173,17 @@ export default function LibraryPage() {
           </div>
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="relative min-w-48 flex-1">
+            <div className="relative min-w-48 flex-1 max-sm:basis-full">
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
               <input className="input w-full pl-9" placeholder="Search the library" aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
             </div>
+            <div data-filter-row className="flex items-center gap-2 max-sm:w-full max-sm:justify-between">
             <ChoiceChips label="Sort" value={view.sort} options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} onChange={v => setView(prev => ({ ...prev, sort: v as View['sort'] }))} />
             <ViewOptions page="library" sort={false} />
+            </div>
           </div>
           {(
-            <div className="mb-5 flex flex-wrap gap-1.5">
+            <div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
               {KINDS.map(k => (
                 <button key={k} type="button" aria-pressed={view.kind === k} onClick={() => setView(v => ({ ...v, kind: v.kind === k ? null : k }))}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm pointer-coarse:py-2 transition ${view.kind === k ? 'border-transparent bg-accent-soft font-medium text-accent' : 'border-line bg-raised hover:bg-surface'}`}>

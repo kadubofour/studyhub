@@ -178,15 +178,18 @@ export function NotesSidebar() {
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <div className="relative min-w-48 flex-1">
+        <div className="relative min-w-48 flex-1 max-sm:basis-full">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
           <input className="input w-full pl-9" placeholder="Search notes" value={q} onChange={e => setQ(e.target.value)} aria-label="Search notes" />
         </div>
+        {/* on a phone, one row that scrolls sideways rather than two stacked rows */}
+        <div data-filter-row className="no-scrollbar -mx-5 flex min-w-0 gap-2 overflow-x-auto px-5 sm:mx-0 sm:overflow-visible sm:px-0 [&>*]:shrink-0">
         <select className="input" value={course} onChange={e => setCourse(e.target.value)} aria-label="Filter by course">
           <option value="">All courses</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <ViewOptions page="notes" />
+        </div>
       </div>
 
       {empty && (

@@ -174,12 +174,12 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     <span aria-hidden className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line px-2.5 py-1 text-[13px] font-medium text-fg opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100" style={{ background: 'var(--glass-strong)' }}>{label}</span>
   )
   const dockLink = (href: string) => {
-    const { label, icon: Icon } = PLACES.find(p => p.href === href)!
+    const { label, short, icon: Icon } = PLACES.find(p => p.href === href)!
     const on = isActive(path, href)
     return (
       <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined}
         className={`flex min-w-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium ${on ? 'text-accent' : 'text-muted'}`}>
-        <Icon size={21} aria-hidden /><span aria-hidden>{label}</span>
+        <Icon size={21} aria-hidden /><span aria-hidden>{short ?? label}</span>
       </Link>
     )
   }

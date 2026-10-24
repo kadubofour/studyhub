@@ -134,12 +134,12 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <section aria-label="Welcome" className="hero hero-page">
+      <section aria-label="Welcome" className="hero hero-page max-sm:!pb-6 max-sm:!pt-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="font-display text-[1.875rem] font-semibold leading-[1.05] tracking-tight sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
             {/* the date after the greeting, and today's one fact from the data */}
-            <p className="mt-2 text-[15px] opacity-90">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length })}`}</p>
+            <p className="mt-2 text-[15px] opacity-90">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length, done: doneToday })}`}</p>
           </div>
           {/* phones have no sidebar: the places it holds are a tap away here */}
           <div className="-ml-2 flex gap-0.5 md:hidden">
@@ -151,7 +151,7 @@ export default function HomePage() {
           </div>
         </div>
         {bold ? (
-          <div className="mt-7 flex flex-wrap items-center justify-between gap-6">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 sm:mt-7 sm:gap-6">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
           </div>
@@ -191,7 +191,7 @@ export default function HomePage() {
               onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
           ))}
           {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
-          {list.length === 0 && sessions.length === 0 && <p className="py-2 text-[15px] text-muted">Nothing due today. Add something below.</p>}
+          {list.length === 0 && sessions.length === 0 && <p className="py-2 text-[15px] text-muted">{doneToday > 0 ? 'All done for today. Add something below if you like.' : 'Nothing due today. Add something below.'}</p>}
           {list.map(t => (
             <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done={doneIds.has(t.id)} onToggle={() => toggle(t)} showType={false} />
           ))}

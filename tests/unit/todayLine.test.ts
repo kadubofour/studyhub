@@ -19,3 +19,12 @@ describe('todayLine', () => {
     expect(todayLine({ overdue: 0, dueToday: 0, reminders: 2 })).toBe('2 reminders today.')
   })
 })
+
+describe('todayLine once the day is done', () => {
+  it('says all is done, the same words as Today', () => {
+    expect(todayLine({ overdue: 0, dueToday: 0, reminders: 0, done: 2 })).toBe('All done for today.')
+  })
+  it('still counts what is left when some is done', () => {
+    expect(todayLine({ overdue: 0, dueToday: 1, reminders: 0, done: 2 })).toBe('1 task due today.')
+  })
+})
