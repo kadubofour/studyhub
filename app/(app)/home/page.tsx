@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Bell, Play, Pause, BarChart3, Settings, FolderOpen, User, BookOpen } from 'lucide-react'
+import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, FolderOpen, User, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -165,8 +165,6 @@ export default function HomePage() {
         </>)}
       </section>
 
-      <HomeActions due={due} nextClass={nextCourse ? `${nextCourse.name}, ${nextLabel}` : null} />
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section aria-label="Today" className="card">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -180,6 +178,12 @@ export default function HomePage() {
                   <Bell size={17} className="text-accent" aria-hidden /><span className="font-medium tabular-nums">{formatInTimeZone(at, tz, 'HH:mm')}</span><span className="text-muted" aria-hidden>·</span>{r.title}
                 </Link></li>
               ))}
+            </ul>
+          )}
+          {(nextCourse || due > 0) && (
+            <ul className="mb-4 space-y-2 text-[15px]">
+              {nextCourse && <li><Link href="/planner" className="inline-flex items-center gap-2.5 hover:text-accent"><School size={17} className="text-muted" aria-hidden />Next class: {nextCourse.name}, {nextLabel}</Link></li>}
+              {due > 0 && <li><Link href="/review" className="inline-flex items-center gap-2.5 font-medium text-accent hover:underline"><Layers size={17} aria-hidden />{due} {due === 1 ? 'card' : 'cards'} to review<ArrowRight size={15} aria-hidden /></Link></li>}
             </ul>
           )}
           {sessions.map(({ v, s }) => (
@@ -234,6 +238,9 @@ export default function HomePage() {
           </section>
         </div>
       </div>
+
+      {/* phones have no sidebar: there, Home is where these are reached */}
+      <div className="md:hidden"><HomeActions /></div>
 
       <CourseAccess courses={courses} counts={material.counts} recent={material.recent} coursesClassName="md:hidden" />
 

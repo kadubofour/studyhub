@@ -13,8 +13,7 @@ Made with the taste skill's app-screen run (`design-taste-frontend`, `references
 
 ## Each screen's question
 
-- **Home:** "What do I do today?" The greeting's line answers it. A strip of quick actions follows: cards to
-  review, the next class, a quiz and the tutor. Then Today, with the This week chart beside it.
+- **Home:** "What do I do today?" The greeting's line answers it, then Today with the This week chart beside it.
 - **Courses:** "What am I taking?" New course is one click from the title, and also in the empty state.
 - **Progress:** "How am I doing?" Start focus, Review cards, Ask the tutor and New note sit by the title on every
   screen, not on phones only.
@@ -28,13 +27,11 @@ Made with the taste skill's app-screen run (`design-taste-frontend`, `references
 - The page is flat: the leftover accent glow (the aurora, never shown since every app root has a look) and the
   hero's corner glow are gone.
 - Classic's soft surface is the warm grey `#EFEEEA`, not the banned cream `#F0EEE6`.
-- Home's quick actions are plain cells split by hairlines, with no tinted tiles and no icons in coloured circles.
-  Jump back in marks each kind with a plain grey icon.
+- Jump back in marks each kind with a plain grey icon.
 - This week: today in the student's colour, the other days in grey, the daily goal as a dashed line and the
   week's total in the header.
-- Facts said once: the cards due and the next class moved from Today to the quick actions.
 
 ## Kept, by the student's earlier choices
 
-The accent hero on Home, the Create button holding New note, deck and upload (the Library does not repeat them),
+The accent hero on Home, Home's quick cards (Take a quiz, Ask the tutor) exactly as they were, the Create button holding New note, deck and upload (the Library does not repeat them),
 and each look's title face.
