@@ -142,3 +142,9 @@ describe('a note\'s top bar on a phone', () => {
     expect(src()).toContain('{findOpen && <div className="basis-full">')
   })
 })
+
+describe('the soft button', () => {
+  it('is a pill and nothing else: no squarer corner fighting it', () => {
+    expect(BTN_SOFT.split(' ').filter(c => c.startsWith('rounded-'))).toEqual(['rounded-full'])
+  })
+})

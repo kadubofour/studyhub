@@ -7,6 +7,7 @@ import { createCourse, deleteCourse, updateCourse } from '@/lib/data/courses'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/components/providers/ToastProvider'
 import type { Course } from '@/lib/types'
+import { useEdgeFade } from '@/lib/ui/useEdgeFade'
 
 // `unsorted` adds an "Unsorted" chip for what is in no course (the Library); while it is active no course chip is
 export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
@@ -14,6 +15,7 @@ export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
   unsorted?: { active: boolean; onClick: () => void }
 }) {
   const none = !!unsorted?.active
+  const { ref: rowRef, more: rowMore } = useEdgeFade<HTMLDivElement>()
   const toast = useToast()
   const [editing, setEditing] = useState<Course | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Course | null>(null)
@@ -49,11 +51,11 @@ export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
   }
 
   // Course filters: a coloured square + name; the active one gets a tinted background in its colour (the text stays the normal colour, which is always readable)
-  const chip = (active: boolean) => `inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition ${active ? 'border-transparent font-medium' : 'border-line bg-raised hover:bg-surface'}`
+  const chip = (active: boolean) => `inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition ${active ? 'border-transparent font-medium' : 'border-transparent text-fg hover:bg-surface'}`
   const tint = (color: string, active: boolean) => (active ? { background: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined)
 
   return (
-    <div className="no-scrollbar -mx-4 mb-3 flex items-center gap-1.5 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 [&>button]:shrink-0 [&>button]:whitespace-nowrap">
+    <div ref={rowRef} data-more={rowMore || undefined} className="no-scrollbar -mx-4 mb-3 flex items-center gap-1.5 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 [&>button]:shrink-0 [&>button]:whitespace-nowrap">
       <button className={chip(selected === null && !none)} aria-pressed={selected === null && !none} style={tint('var(--accent)', selected === null && !none)} onClick={() => onSelect(null)}>All</button>
       {unsorted && <button className={chip(none)} aria-pressed={none} style={tint('var(--muted)', none)} onClick={unsorted.onClick}>Unsorted</button>}
       {courses.map(c => (

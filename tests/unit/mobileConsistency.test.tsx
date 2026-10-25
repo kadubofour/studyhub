@@ -42,3 +42,22 @@ describe('Library filters on a phone', () => {
     expect(src('app/(app)/library/page.tsx')).toContain('className="flex-nowrap"')
   })
 })
+
+describe('the Planner on a phone', () => {
+  const planner = () => src('app/(app)/planner/page.tsx')
+  it('keeps its header close to what follows', () => {
+    expect(planner()).toContain('<div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3 md:mb-8 md:gap-y-4">')
+  })
+  it('lets the chosen list chip name the list below a computer\'s width, rather than a heading that repeats it', () => {
+    expect(planner()).toContain('<h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight max-lg:sr-only">{title}</h2>')
+  })
+  it('fades the edge of each chip row while more chips are off-screen', () => {
+    const rail = src('components/planner/TaskRail.tsx'), bar = src('components/planner/CourseBar.tsx')
+    expect(rail.match(/data-more=\{/g)).toHaveLength(2)
+    expect(bar).toContain('data-more={')
+    expect(src('lib/ui/useEdgeFade.ts')).toContain('export function useEdgeFade')
+  })
+  it('draws a course chip that is not chosen like the other chips: plain, with its colour square', () => {
+    expect(src('components/planner/CourseBar.tsx')).toContain("'border-transparent text-fg hover:bg-surface'")
+  })
+})

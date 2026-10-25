@@ -196,7 +196,7 @@ export default function PlannerPage() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+      <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3 md:mb-8 md:gap-y-4">
         <h1 className={PAGE_TITLE}>Planner</h1>
         <div role="tablist" className="flex gap-1">
           {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
@@ -231,7 +231,7 @@ export default function PlannerPage() {
           ) : (
           <div className="min-w-0">
             <div className="mb-5">
-              <h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight">{title}</h2>
+              <h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight max-lg:sr-only">{title}</h2>
               <p className="mt-0.5 text-sm text-muted" aria-live="polite">{subtitle}</p>
             </div>
             {list !== 'done' && <QuickAdd variant="card" courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />}

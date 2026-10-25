@@ -2,6 +2,7 @@
 import { BellRing, Calendar, CalendarCheck, CheckCircle2, Inbox, ListTodo, type LucideIcon } from 'lucide-react'
 import { LISTS, type ListId } from '@/lib/tasks/lists'
 import type { TaskType } from '@/lib/types'
+import { useEdgeFade } from '@/lib/ui/useEdgeFade'
 
 export type TypeFilter = 'all' | TaskType
 const ICON: Record<ListId, LucideIcon> = { all: ListTodo, today: CalendarCheck, upcoming: Calendar, someday: Inbox, done: CheckCircle2 }
@@ -16,9 +17,12 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts, remin
   /** The student's own reminders, as one more list: how many are coming, whether it is open, and opening it */
   reminders?: { count: number; on: boolean; onOpen: () => void }
 }) {
+  // on a phone each row scrolls sideways; its edge fades while more is off-screen
+  const { ref: listsRef, more: listsMore } = useEdgeFade<HTMLElement>()
+  const { ref: typesRef, more: typesMore } = useEdgeFade<HTMLDivElement>()
   return (
     <div className="min-w-0 space-y-2 lg:sticky lg:top-4 lg:space-y-4 lg:self-start">
-      <nav aria-label="Task lists" className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
+      <nav ref={listsRef} data-more={listsMore || undefined} aria-label="Task lists" className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
         {LISTS.map(l => {
           const Icon = ICON[l.id]
           const on = list === l.id
@@ -39,7 +43,7 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts, remin
       {/* the type of task is for the task lists, not for reminders */}
       {!reminders?.on && <div>
         <p className="section-label !mb-1.5 hidden px-3 !text-sm lg:block">Type</p>
-        <div role="group" aria-label="Task type" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0">
+        <div ref={typesRef} data-more={typesMore || undefined} role="group" aria-label="Task type" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0">
           {TYPES.map(t => {
             const on = type === t.id
             return (
