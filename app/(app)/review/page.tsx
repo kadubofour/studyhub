@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { CardFace } from '@/components/flashcards/CardFace'
 import { TypedAnswer } from '@/components/flashcards/TypedAnswer'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Layers } from 'lucide-react'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listDueCards, listPracticeCards, rateCard } from '@/lib/data/cards'
@@ -90,15 +92,14 @@ function Review() {
   if (!card) {
     const title = practice ? (stats.reviewed ? 'Practice complete' : 'No cards to practise') : (stats.reviewed ? 'Session complete' : 'Nothing due right now')
     return (
-      <div className="mx-auto max-w-md py-12 text-center">
-        <h1 className="mb-2 text-lg font-medium">{title}</h1>
-        {stats.reviewed > 0 && <p className="mb-4 text-muted">{stats.reviewed} reviews{practice ? '' : ` · ${stats.again} marked Again`}</p>}
-        <div className="flex flex-wrap justify-center gap-2">
+      <div className="mx-auto max-w-md pt-6">
+        <EmptyState icon={Layers} tone="a" title={title} level={1}
+          body={stats.reviewed > 0 ? `${stats.reviewed} reviews${practice ? '' : ` · ${stats.again} marked Again`}` : practice ? 'This deck has no cards yet.' : 'Every card is up to date. Come back when some are due, or practise them now.'}>
           {practice
             ? stats.reviewed > 0 && <a href={practiceHref} className="btn-primary">Practise again</a> // a fresh load, so the cards are shuffled again
             : <Link href={practiceHref} className="btn-primary">Practise these cards</Link>}
           <Link href="/flashcards" className="btn">Back to decks</Link>
-        </div>
+        </EmptyState>
       </div>
     )
   }

@@ -43,7 +43,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
         <SettingsRail section={section} onSection={setSection} billing={billing} />
         <div className="min-w-0">
-          <h2 className="text-2xl font-semibold">{current.label}</h2>
+          <h2 className="section-label !mb-1">{current.label}</h2>
           <p className="mb-4 text-sm text-muted">{current.blurb}</p>
           {section === 'appearance' && <AppearanceCard />}
           {section === 'reminders' && <RemindersCard />}

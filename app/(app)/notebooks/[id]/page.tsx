@@ -20,6 +20,7 @@ import { notebookColor, notebookCourse } from '@/lib/notes/notebooks'
 import { sortNotes, useView } from '@/lib/ui/listView'
 import type { Course, Notebook, NoteSummary } from '@/lib/types'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
+import { BackLink } from '@/components/ui/BackLink'
 
 const plural = (n: number) => `${n} note${n === 1 ? '' : 's'}`
 
@@ -77,7 +78,7 @@ export default function NotebookPage() {
 
   return (
     <div>
-      <Link href="/notes" className="btn-ghost -ml-2.5 mb-4 text-sm"><ArrowLeft size={15} aria-hidden />Notes</Link>
+      <BackLink href="/notes">Notes</BackLink>
       <div className="mb-8 flex flex-wrap items-end gap-6">
         <div data-testid="notebook-cover" className="w-28 shrink-0 sm:w-32"><NotebookCover name={book.name} count={inside.length} color={color} /></div>
         <div className="min-w-0 flex-1">

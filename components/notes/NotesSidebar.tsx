@@ -13,6 +13,7 @@ import { requestReminder } from '@/lib/reminders/events'
 import { countByNotebook, filterNotes, notebookColor } from '@/lib/notes/notebooks'
 import { createNotebook, listNotebooks, moveNotes } from '@/lib/data/notebooks'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PAGE_TITLE } from '@/components/ui/PageHeader'
 import { useScanSaved } from '@/lib/scan/events'
 import { formatDistanceToNow } from 'date-fns'
 import { CourseTag } from '@/components/ui/CourseTag'
@@ -151,7 +152,7 @@ export function NotesSidebar() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Notes</h1>
+        <h1 className={PAGE_TITLE}>Notes</h1>
         <div className="flex flex-wrap items-center gap-2">
           {selecting ? (
             <>

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { BellPlus, Trash2 } from 'lucide-react'
 import { requestReminder } from '@/lib/reminders/events'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BackLink } from '@/components/ui/BackLink'
 import { CardFace } from '@/components/flashcards/CardFace'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
@@ -81,6 +82,7 @@ export default function DeckPage() {
 
   return (
     <div>
+      <BackLink href="/flashcards">Flashcards</BackLink>
       <PageHeader title={deck?.name ?? 'Deck'} actions={<>
         {due > 0 && <Link href={`/review?deck=${deckId}`} className="btn-primary">Review {due}</Link>}
         {cards.length > 0 && <Link href={`/review?practice=1&deck=${deckId}`} className="btn" title="Go over every card, due or not. Your schedule won't change.">Practise</Link>}
@@ -88,14 +90,14 @@ export default function DeckPage() {
           ? <><Link href={`/flashcards/${deckId}/play?game=match`} className="btn">Match</Link><Link href={`/flashcards/${deckId}/play?game=speed`} className="btn">Speed round</Link></>
           : <span className="self-center text-xs text-muted">Add 4 cards to play games</span>}
         {deck && <button type="button" className="btn" title="Remind me to review this deck" onClick={() => requestReminder({ title: `Review ${deck.name}`, href: `/flashcards/${deckId}`, link_label: deck.name })}><BellPlus size={14} aria-hidden />Remind me</button>}
-        <button className="btn-ghost text-danger" onClick={removeDeck}>Delete deck</button>
+        <button className="btn-ghost hover:!text-danger" onClick={removeDeck}><Trash2 size={14} aria-hidden />Delete deck</button>
       </>} />
       <form onSubmit={add} className="card mb-4 grid gap-2 sm:grid-cols-2"
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) add() }}>
         <label className="field"><span>Front</span><textarea id="front" rows={2} value={front} onChange={e => setFront(e.target.value)} placeholder="What is the main function of mitochondria?" /></label>
         <label className="field"><span>Back</span><textarea rows={2} value={back} onChange={e => setBack(e.target.value)} placeholder="Produce ATP through cellular respiration" /></label>
         <div className="flex items-center justify-between sm:col-span-2">
-          <span className="text-xs text-muted">Math works: $x^2$ · Ctrl+Enter to add</span>
+          <span className="text-xs text-muted">Math works: $x^2$<span className="pointer-coarse:hidden"> · Ctrl+Enter to add</span></span>
           <button className="btn" disabled={!front.trim() || !back.trim()}>Add card</button>
         </div>
       </form>

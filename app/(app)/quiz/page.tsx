@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ListChecks, Plus, Search, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
@@ -55,12 +56,9 @@ export default function QuizHubPage() {
     return (
       <div>
         {header}
-        <div className="card mx-auto mt-6 max-w-md py-10 text-center">
-          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"><ListChecks size={22} aria-hidden /></span>
-          <h2 className="text-base font-medium">No quizzes yet</h2>
-          <p className="mx-auto mt-1 max-w-xs text-sm text-muted">Pick a note and Studyhub writes questions from it. Every quiz you make, and how each one went, is kept here.</p>
-          <button type="button" className={`${BTN_SOLID} mt-4`} onClick={requestQuiz}><Plus size={16} aria-hidden />Make your first quiz</button>
-        </div>
+        <EmptyState icon={ListChecks} tone="a" title="No quizzes yet" body="Pick a note and Studyhub writes questions from it. Every quiz you make, and how each one went, is kept here.">
+          <button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />Make your first quiz</button>
+        </EmptyState>
       </div>
     )
   }

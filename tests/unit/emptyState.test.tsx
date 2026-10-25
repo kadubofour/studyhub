@@ -21,8 +21,16 @@ describe('EmptyState', () => {
     render(<EmptyState icon={Layers} tone="c" title="Nothing yet" body="Come back later." />)
     expect(screen.queryByRole('button')).toBeNull()
   })
-  it('uses the tile colour for its tone', () => {
+  it('is plain, the same everywhere: a small icon in a quiet square, no sparkles and no tinted tiles', () => {
     const { container } = render(<EmptyState icon={Layers} tone="b" title="t" body="b" />)
-    expect(container.querySelector('.tile-b')).not.toBeNull()
+    const art = container.querySelector('[data-art]')!
+    expect(art.className).toContain('size-12')
+    expect(art.className).toContain('bg-surface')
+    expect(art.querySelectorAll('svg')).toHaveLength(1) // the icon alone
+    expect(container.querySelector('.tile-b')).toBeNull()
+  })
+  it('can be the page\'s own heading when the page has nothing else', () => {
+    render(<EmptyState icon={Layers} tone="a" title="Nothing due right now" body="b" level={1} />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Nothing due right now' })).toBeTruthy()
   })
 })

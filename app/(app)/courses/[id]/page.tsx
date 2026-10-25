@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { AlertTriangle, Circle, CircleCheck, CircleDot, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Upload, type LucideIcon } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { BackLink } from '@/components/ui/BackLink'
+import { PAGE_TITLE } from '@/components/ui/PageHeader'
 import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -92,9 +94,10 @@ export default function CoursePageRoute() {
 
   return (
     <div className="space-y-4">
+      <BackLink href="/courses">Courses</BackLink>
       <header className="card flex flex-wrap items-center justify-between gap-3 border-l-8" style={{ borderLeftColor: course.color }}>
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold">{course.name}</h1>
+          <h1 className={`${PAGE_TITLE} truncate`}>{course.name}</h1>
           <p className="text-sm text-muted">{items ? summaryLine(items) : ''}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -112,7 +112,7 @@ describe('Library filters on a phone', () => {
   const src = () => fs.readFileSync('app/(app)/library/page.tsx', 'utf8')
   it('sort and layout share one row under the search', () => {
     expect(src()).toContain('<div className="relative min-w-48 flex-1 max-sm:basis-full">')
-    expect(src()).toContain('<div data-filter-row className="flex items-center gap-2 max-sm:w-full max-sm:justify-between">')
+    expect(src()).toContain('<div data-filter-row className="no-scrollbar flex items-center gap-2 overflow-x-auto max-sm:w-full max-sm:justify-between [&>*]:shrink-0">')
   })
   it('the kinds are one row that scrolls sideways, not two', () => {
     expect(src()).toContain('<div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">')
