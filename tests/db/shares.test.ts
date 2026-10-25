@@ -157,7 +157,7 @@ describe('shares', () => {
     const shown = (await anon().rpc('shared_item', { p_token: tb })).data
     expect(shown.item.name).toBe('Chem')
     expect(shown.item.notes.map((n: { title: string }) => n.title).sort()).toEqual(['One', 'Two'])
-    expect(Object.keys(shown.item.notes[0]).sort()).toEqual(['content_md', 'id', 'title'])
+    expect(Object.keys(shown.item.notes[0]).sort()).toEqual(['content_md', 'id', 'ink', 'title'])
 
     const c = await b.sb.rpc('copy_shared', { p_token: tb })
     expect(c.error).toBeNull()
@@ -192,5 +192,25 @@ describe('shares', () => {
     expect((await anon().rpc('shared_note_files', { p_token: t })).error).not.toBeNull()
     await a.sb.rpc('unshare_item', { p_kind: 'note', p_item: n })
     expect((await admin.rpc('shared_note_files', { p_token: t })).data).toEqual([])
+  })
+
+  it('a copied note keeps its drawing, and shared_item shows it', async () => {
+    const [a, b] = await Promise.all([newUser(), newUser()])
+    const stroke = { id: 'm1', brush: 'pen', color: '#dc2626', width: 4, points: [[10, 10], [200, 80]] }
+    const n = (await a.sb.from('notes').insert({ title: 'Inked', content_md: 'x', ink: [stroke] }).select('id').single()).data!.id as string
+    const tn = await share(a, 'note', n)
+    expect((await anon().rpc('shared_item', { p_token: tn })).data.item).toEqual({ title: 'Inked', content_md: 'x', ink: [stroke] })
+    const cn = await b.sb.rpc('copy_shared', { p_token: tn })
+    expect(cn.error).toBeNull()
+    expect((await b.sb.from('notes').select('ink').eq('id', cn.data[0].id).single()).data!.ink).toEqual([stroke])
+
+    const nb = (await a.sb.from('notebooks').insert({ name: 'Inked book' }).select('id').single()).data!.id as string
+    await note(a, 'Page', 'y', nb)
+    await a.sb.from('notes').update({ ink: [stroke] }).eq('notebook_id', nb)
+    const tb = await share(a, 'notebook', nb)
+    expect((await anon().rpc('shared_item', { p_token: tb })).data.item.notes[0].ink).toEqual([stroke])
+    const cb = await b.sb.rpc('copy_shared', { p_token: tb })
+    expect(cb.error).toBeNull()
+    expect((await b.sb.from('notes').select('ink').eq('notebook_id', cb.data[0].id).single()).data!.ink).toEqual([stroke])
   })
 })
