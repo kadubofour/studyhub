@@ -449,3 +449,7 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .dark .mode-short { --accent: #b4ea5a; --accent-soft: #1c2e08; }
 .mode-long { --accent-solid: #0c7490; --accent-glow: #2bc4e6; --accent: #0a6179; --accent-soft: #def5fa; }
 .dark .mode-long { --accent: #5fdcf2; --accent-soft: #0a2f3a; }
+
+/* An action's message: Playful draws it with its bold outline, like its other floating things */
+.app-root[data-look="playful"] .toast,
+.app-root .app-root[data-look="playful"] .toast { border: 2px solid var(--outline); box-shadow: 3px 3px 0 var(--outline); }
