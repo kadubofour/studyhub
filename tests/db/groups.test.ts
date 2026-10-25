@@ -196,4 +196,17 @@ describe('study groups', () => {
     expect(error?.message).toContain('rate_limited')
     expect(await mine(u)).toHaveLength(10)
   })
+
+  it('the invite token cannot be read from the table, by members or the owner', async () => {
+    const [a, b] = await Promise.all([newUser(), newUser()])
+    const g = await mk(a)
+    await join(b, await tokenOf(a, g))
+    for (const u of [a, b]) {
+      expect((await u.sb.from('study_groups').select('invite_token').eq('id', g)).error).not.toBeNull()
+      expect((await u.sb.from('study_groups').select('*').eq('id', g)).error).not.toBeNull()
+      const ok = await u.sb.from('study_groups').select('id, name').eq('id', g)
+      expect(ok.error).toBeNull()
+      expect(ok.data).toHaveLength(1)
+    }
+  })
 })
