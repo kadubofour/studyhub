@@ -79,4 +79,18 @@ test.describe('invite links', () => {
     await expect(other.getByRole('button', { name: 'Bio crew', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await other.close()
   })
+
+  test('your own link costs no lookups, and a busy lookup says so instead of calling the link dead', async ({ page }) => {
+    test.setTimeout(180_000)
+    await signUp(page)
+    const code = await myCode(page)
+    for (let i = 0; i < 31; i++) await page.goto(`/add/${code}`)
+    await expect(page.getByText("That's your own code")).toBeVisible()
+    await page.goto('/add/ZZZZZZZZ')
+    await expect(page.getByRole('heading', { name: "This friend link doesn't work any more" })).toBeVisible()
+    await page.goto('/add/%25zz')
+    await expect(page.getByRole('heading', { name: "This friend link doesn't work any more" })).toBeVisible()
+    for (let i = 0; i < 30; i++) await page.goto('/add/ZZZZZZZZ')
+    await expect(page.getByText("Couldn't look this up right now. Try again in a while.")).toBeVisible()
+  })
 })

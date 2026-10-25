@@ -176,24 +176,25 @@ describe('friends', () => {
     expect(await send(b, data as string)).toBe('ok')
   })
 
-  it('friend_code_preview gives only a name and an avatar, and nothing for an unknown code', async () => {
+  it('friend_code_preview gives a status, a name and an avatar and nothing else; unknown is not_found', async () => {
     const a = await newUser(), b = await newUser()
     const code = await codeOf(a)
     const { data, error } = await b.sb.rpc('friend_code_preview', { p_code: code })
     expect(error).toBeNull()
     const rows = data as Record<string, unknown>[]
     expect(rows.length).toBe(1)
-    expect(Object.keys(rows[0]).sort()).toEqual(['avatar_color', 'display_name'])
+    expect(Object.keys(rows[0]).sort()).toEqual(['avatar_color', 'display_name', 'status'])
+    expect(rows[0].status).toBe('ok')
     expect(rows[0].avatar_color).toMatch(/^#/)
     expect(JSON.stringify(rows)).not.toContain(a.id)
     expect(JSON.stringify(rows)).not.toContain(code)
-    expect((await b.sb.rpc('friend_code_preview', { p_code: 'AAAAAAAA' })).data).toEqual([])
+    expect((await b.sb.rpc('friend_code_preview', { p_code: 'AAAAAAAA' })).data).toEqual([{ status: 'not_found', display_name: null, avatar_color: null }])
   })
 
-  it('friend_code_preview stops answering after 30 looks in an hour', async () => {
+  it('the 31st friend_code_preview look in an hour is rate_limited, with no name', async () => {
     const a = await newUser(), b = await newUser()
     const code = await codeOf(a)
     for (let i = 0; i < 30; i++) await b.sb.rpc('friend_code_preview', { p_code: 'AAAAAAAA' })
-    expect((await b.sb.rpc('friend_code_preview', { p_code: code })).data).toEqual([])
+    expect((await b.sb.rpc('friend_code_preview', { p_code: code })).data).toEqual([{ status: 'rate_limited', display_name: null, avatar_color: null }])
   })
 })
