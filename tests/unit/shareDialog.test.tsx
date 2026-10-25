@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 
@@ -16,6 +16,7 @@ const open = async () => {
     render(<ToastProvider><ConfirmProvider><ShareDialog onClose={() => {}} kind="deck" id="d1" title="Cells" /></ConfirmProvider></ToastProvider>)
   })
 }
+const inline = () => within(screen.getByRole('dialog', { name: 'Share Cells' })).getByRole('status')
 const writeText = vi.fn(async () => {})
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -37,7 +38,7 @@ describe('ShareDialog', () => {
     await open()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy link' })) })
     expect(writeText).toHaveBeenCalledWith(`${location.origin}/s/tok1`)
-    expect(screen.getByRole('status').textContent).toBe('Link copied')
+    expect(inline().textContent).toBe('Link copied')
   })
   it('offers Share only where the device can share', async () => {
     await open()
@@ -54,7 +55,10 @@ describe('ShareDialog', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'New link' })) })
     expect(reshareItem).toHaveBeenCalledWith({}, 'deck', 'd1')
     expect((screen.getByRole('textbox', { name: 'Link' }) as HTMLInputElement).value).toBe(`${location.origin}/s/tok2`)
-    expect(screen.getByRole('status').textContent).toBe('New link made. The old one no longer works.')
+    expect(inline().textContent).toBe('New link made. The old one no longer works.')
+    // the next action clears it
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy link' })) })
+    expect(inline().textContent).toBe('Link copied')
   })
   it('Turn off link asks first, then turns it off', async () => {
     await open()
@@ -68,6 +72,11 @@ describe('ShareDialog', () => {
     shareItem.mockClear()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Turn on again' })) })
     expect(shareItem).toHaveBeenCalledTimes(1)
+  })
+  it('lets its buttons wrap so a narrow phone does not scroll sideways', async () => {
+    await open()
+    const footer = screen.getByRole('button', { name: 'Copy link' }).parentElement!
+    expect(footer.className).toContain('flex-wrap')
   })
   it('says when too many links were made', async () => {
     shareItem.mockRejectedValue(new Error('rate_limited'))

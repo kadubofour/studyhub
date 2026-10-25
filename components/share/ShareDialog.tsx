@@ -27,6 +27,8 @@ export function ShareDialog({ kind, id, title, onClose }: { kind: ShareKind; id:
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  // what the last action did, said in the dialog too (a toast sits behind a modal); the next action clears it
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     let current = true
@@ -40,14 +42,15 @@ export function ShareDialog({ kind, id, title, onClose }: { kind: ShareKind; id:
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
   async function run(make: () => Promise<void>) {
-    setBusy(true); setError(null)
+    setBusy(true); setError(null); setNotice('')
     try { await make() } catch (e) { setError(problem(e)) } finally { setBusy(false) }
   }
   async function copy() {
+    setNotice('')
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true); setTimeout(() => setCopied(false), 2000)
-      toast('Link copied')
+      setNotice('Link copied'); toast('Link copied')
     } catch { setError("Couldn't copy. Select the link and copy it.") }
   }
   async function send() {
@@ -55,7 +58,7 @@ export function ShareDialog({ kind, id, title, onClose }: { kind: ShareKind; id:
   }
   const renew = () => run(async () => {
     setToken(await reshareItem(supabase(), kind, id))
-    toast('New link made. The old one no longer works.')
+    setNotice('New link made. The old one no longer works.'); toast('New link made. The old one no longer works.')
   })
   async function turnOff() {
     const ok = await confirm({
@@ -82,6 +85,7 @@ export function ShareDialog({ kind, id, title, onClose }: { kind: ShareKind; id:
           <input type="text" readOnly aria-label="Link" value={url} onFocus={e => e.currentTarget.select()} />
         </label>
       ) : !error && <p className="text-sm text-muted" aria-live="polite">Making your link…</p>}
+      <p role="status" className={notice ? 'mt-2 text-sm text-muted' : 'sr-only'}>{notice}</p>
       {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
       <DialogFooter>
         {off ? (
