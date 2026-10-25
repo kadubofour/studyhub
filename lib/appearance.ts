@@ -93,3 +93,15 @@ export function contrastRatio(a: string, b: string): number {
   const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
   return (hi + 0.05) / (lo + 0.05)
 }
+
+// The CSS variables that put a student's accent and font on an .app-root (the app's own, or a shared page wearing its owner's look)
+export function appearanceVars(accent: unknown, font?: unknown): Record<string, string> {
+  const a = isAccent(accent) ? ACCENTS[accent] : ACCENTS.blue
+  const f = isFont(font) ? font : 'sans'
+  return {
+    '--a-solid': a.solid, '--a-text': a.text, '--a-text-dark': a.textDark, '--a-soft': a.soft,
+    '--a-soft-dark': a.softDark, '--a-glow': a.glow, '--app-font': `var(${FONTS[f].cssVar})`,
+    // titles: the display face with the default Sans; the student's own font when they picked another
+    '--display-font': f !== 'sans' ? `var(${FONTS[f].cssVar})` : 'var(--title-font, var(--font-instrument))', // each look can have its own title face
+  }
+}

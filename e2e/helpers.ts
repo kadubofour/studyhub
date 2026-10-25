@@ -1,4 +1,8 @@
 import { expect, type Page } from '@playwright/test'
+import fs from 'node:fs'
+import path from 'node:path'
+
+const PASSWORD = 'local-e2e-pass-123'
 
 export async function signUp(page: Page) {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.test`
@@ -6,7 +10,7 @@ export async function signUp(page: Page) {
   await page.getByLabel('Name').fill('Ama')
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Confirm email').fill(email)
-  await page.getByLabel('Password', { exact: true }).fill('local-e2e-pass-123')
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page).toHaveURL(/\/onboarding/)
   await page.getByLabel('Your first course').fill('Biology')
@@ -79,4 +83,25 @@ export async function newNoteFromNote(page: Page) {
     await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
     await page.waitForLoadState('networkidle')
   }
+}
+
+// Calls one of the database's functions as a student signed up with signUp (their email, the e2e password), straight
+// against the local Supabase, for steps the app has no screen for yet (making a share link)
+export async function rpcAs<T = unknown>(email: string, fn: string, args: Record<string, unknown>): Promise<T> {
+  const env = fs.readFileSync(path.join(__dirname, '..', '.env.local'), 'utf8')
+  const url = /NEXT_PUBLIC_SUPABASE_URL=(.+)/.exec(env)![1].trim()
+  const anon = /NEXT_PUBLIC_SUPABASE_ANON_KEY=(.+)/.exec(env)![1].trim()
+  const auth = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: 'POST', headers: { apikey: anon, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: PASSWORD }),
+  })
+  expect(auth.ok).toBe(true)
+  const { access_token } = await auth.json() as { access_token: string }
+  const res = await fetch(`${url}/rest/v1/rpc/${fn}`, {
+    method: 'POST', headers: { apikey: anon, Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  })
+  expect(res.ok, await res.clone().text()).toBe(true)
+  const text = await res.text()
+  return (text ? JSON.parse(text) : null) as T
 }

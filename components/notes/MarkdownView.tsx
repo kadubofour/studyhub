@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -7,6 +7,7 @@ import rehypeKatex from 'rehype-katex'
 import { remarkMarkup } from '@/lib/notes/markup'
 import { supabase } from '@/lib/supabase/client'
 import { isImageToken, makeImageResolver } from '@/lib/notes/images'
+import { NoteImagesContext } from './NoteImagesContext'
 
 // react-markdown drops addresses it does not know, so a studyhub-image: token is let through here and drawn from its signed link
 const urlTransform = (url: string) => (isImageToken(url) || /^(https?:|mailto:|#|\/)/i.test(url) ? url : '')
@@ -23,17 +24,20 @@ async function resolverFor() {
   return shared.resolve
 }
 
+// A page can say how its pictures are reached (a shared page draws them through its link); otherwise from the student's own folder
 function NotePicture({ src, alt }: { src: string; alt: string }) {
+  const ctx = useContext(NoteImagesContext)
   const [got, setGot] = useState<{ src: string; url: string | null } | null>(null)
   useEffect(() => {
     if (!isImageToken(src)) return
     let live = true
-    resolverFor()
+    const find = ctx ? Promise.resolve(ctx.resolve) : resolverFor()
+    find
       .then(resolve => (resolve ? resolve(src) : null))
       .then(url => { if (live) setGot({ src, url }) })
       .catch(() => { if (live) setGot({ src, url: null }) })
     return () => { live = false }
-  }, [src])
+  }, [src, ctx])
   if (!isImageToken(src)) return /^https?:\/\//i.test(src) ? <img src={src} alt={alt} className="max-w-full rounded-lg" /> : <span>{alt}</span>
   const url = got?.src === src ? got.url : null
   return url ? <img src={url} alt={alt} className="max-w-full rounded-lg" /> : <span className="text-muted" data-pending-image={got?.src === src ? undefined : 'true'}>{alt || 'Picture'}</span>

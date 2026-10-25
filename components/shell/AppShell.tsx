@@ -27,7 +27,7 @@ import { updateProfile } from '@/lib/data/profile'
 import { createNote, listNotes } from '@/lib/data/notes'
 import { listDecks } from '@/lib/data/decks'
 import { listLectures } from '@/lib/data/lectures'
-import { ACCENTS, FONTS, contentWidthOf } from '@/lib/appearance'
+import { appearanceVars, contentWidthOf } from '@/lib/appearance'
 import { useCoursesChanged } from '@/lib/course/events'
 import { listCourses } from '@/lib/data/courses'
 import { DOCK, MORE_PLACES, PLACES, isActive } from '@/lib/shell/nav'
@@ -158,13 +158,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     else act(item.run.action)
   }
 
-  const a = ACCENTS[profile.accent] ?? ACCENTS.blue
-  const appearance = {
-    '--a-solid': a.solid, '--a-text': a.text, '--a-text-dark': a.textDark, '--a-soft': a.soft,
-    '--a-soft-dark': a.softDark, '--a-glow': a.glow, '--app-font': `var(${(FONTS[profile.font] ?? FONTS.sans).cssVar})`,
-    // titles: the display face with the default Sans; the student's own font when they picked another
-    '--display-font': profile.font && profile.font !== 'sans' && FONTS[profile.font] ? `var(${FONTS[profile.font].cssVar})` : 'var(--title-font, var(--font-instrument))', // each look can have its own title face
-  } as React.CSSProperties
+  const appearance = appearanceVars(profile.accent, profile.font) as React.CSSProperties
   const lit = 'bg-accent-soft text-accent'
   const railItem = (on: boolean) => wide
     ? `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
