@@ -175,4 +175,25 @@ describe('friends', () => {
     expect(await send(b, old)).toBe('not_found')
     expect(await send(b, data as string)).toBe('ok')
   })
+
+  it('friend_code_preview gives only a name and an avatar, and nothing for an unknown code', async () => {
+    const a = await newUser(), b = await newUser()
+    const code = await codeOf(a)
+    const { data, error } = await b.sb.rpc('friend_code_preview', { p_code: code })
+    expect(error).toBeNull()
+    const rows = data as Record<string, unknown>[]
+    expect(rows.length).toBe(1)
+    expect(Object.keys(rows[0]).sort()).toEqual(['avatar_color', 'display_name'])
+    expect(rows[0].avatar_color).toMatch(/^#/)
+    expect(JSON.stringify(rows)).not.toContain(a.id)
+    expect(JSON.stringify(rows)).not.toContain(code)
+    expect((await b.sb.rpc('friend_code_preview', { p_code: 'AAAAAAAA' })).data).toEqual([])
+  })
+
+  it('friend_code_preview stops answering after 30 looks in an hour', async () => {
+    const a = await newUser(), b = await newUser()
+    const code = await codeOf(a)
+    for (let i = 0; i < 30; i++) await b.sb.rpc('friend_code_preview', { p_code: 'AAAAAAAA' })
+    expect((await b.sb.rpc('friend_code_preview', { p_code: code })).data).toEqual([])
+  })
 })
