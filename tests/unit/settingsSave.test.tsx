@@ -24,7 +24,7 @@ import SettingsPage from '@/app/(app)/settings/page'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
 
-const base: Profile = { id: 'u', display_name: 'Ama', school: null, programme: null, avatar_color: '#3B5BDB', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', content_width: 'wide', auto_math: true, onboarded: true }
+const base: Profile = { id: 'u', display_name: 'Ama', school: null, programme: null, avatar_color: '#3B5BDB', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', content_width: 'wide', auto_math: true, onboarded: true, friend_code: 'ABCD2345', show_on_boards: true }
 function AccentProbe() { return <output data-testid="accent">{useProfile().profile.accent}</output> }
 
 beforeAll(() => {

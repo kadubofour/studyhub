@@ -31,6 +31,10 @@ export interface Profile {
   /** Turn maths typed without dollars (x^2) into equations as you type */
   auto_math: boolean
   onboarded: boolean
+  /** The student's friend code (8 characters); only new_friend_code() changes it */
+  friend_code: string
+  /** Whether the student's numbers are shown on friends' and groups' boards */
+  show_on_boards: boolean
 }
 export interface Course { id: string; name: string; color: string }
 export interface Task {

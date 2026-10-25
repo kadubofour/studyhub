@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { BTN_OUTLINE } from '@/components/ui/buttonStyles'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
 import { RemindersCard } from '@/components/settings/RemindersCard'
+import { PrivacyCard } from '@/components/settings/PrivacyCard'
 import { PlanCard } from '@/components/settings/PlanCard'
 import { StorageCard } from '@/components/settings/StorageCard'
 import { DataCard } from '@/components/settings/DataCard'
@@ -47,6 +48,7 @@ export default function SettingsPage() {
           <p className="mb-4 text-sm text-muted">{current.blurb}</p>
           {section === 'appearance' && <AppearanceCard />}
           {section === 'reminders' && <RemindersCard />}
+          {section === 'privacy' && <PrivacyCard />}
           {section === 'plan' && <PlanCard />}
           {section === 'storage' && <StorageCard />}
           {section === 'data' && <DataCard />}

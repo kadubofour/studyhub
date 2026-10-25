@@ -18,7 +18,7 @@ import { announceProgressChanged } from '@/lib/xp/events'
 const profile: Profile = {
   id: 'u', display_name: 'Ama', school: null, programme: null, avatar_color: '#3B5BDB', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25,
   short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich',
-  theme: 'system', accent: 'blue', font: 'sans', look: 'classic', content_width: 'wide', auto_math: true, onboarded: true,
+  theme: 'system', accent: 'blue', font: 'sans', look: 'classic', content_width: 'wide', auto_math: true, onboarded: true, friend_code: 'ABCD2345', show_on_boards: true,
 }
 const quiz = (id: string, note_id: string, title: string) => ({ id, note_id, title, created_at: '2026-10-01T00:00:00Z', questions: [{ id: 'x' }] })
 const hub = (over: Partial<Hub> = {}): Hub => ({

@@ -1,10 +1,11 @@
 'use client'
-import { Bell, CreditCard, Database, HardDrive, Palette, UserRound, type LucideIcon } from 'lucide-react'
+import { Bell, CreditCard, Database, HardDrive, Palette, ShieldCheck, UserRound, type LucideIcon } from 'lucide-react'
 
-export type SectionId = 'appearance' | 'reminders' | 'plan' | 'storage' | 'data' | 'account'
+export type SectionId = 'appearance' | 'reminders' | 'privacy' | 'plan' | 'storage' | 'data' | 'account'
 export const SETTINGS_SECTIONS: { id: SectionId; label: string; blurb: string; icon: LucideIcon }[] = [
   { id: 'appearance', label: 'Appearance', blurb: 'How Studyhub looks: its style, colour, font and how much of the screen it uses.', icon: Palette },
   { id: 'reminders', label: 'Reminders', blurb: 'What Studyhub tells you about, and when the focus timer says time is up.', icon: Bell },
+  { id: 'privacy', label: 'Privacy', blurb: 'Who sees how you are doing.', icon: ShieldCheck },
   { id: 'plan', label: 'Plan', blurb: 'Your plan, what it includes and your payments.', icon: CreditCard },
   { id: 'storage', label: 'Storage', blurb: 'How much lecture audio you have stored.', icon: HardDrive },
   { id: 'data', label: 'Your data', blurb: 'Take your things out, or delete your account.', icon: Database },

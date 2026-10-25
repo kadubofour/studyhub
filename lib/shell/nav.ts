@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, FolderOpen, Home, Layers, ListChecks, MessagesSquare, Mic, NotebookPen, Timer, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarDays, FolderOpen, Home, Layers, ListChecks, MessagesSquare, Mic, NotebookPen, Timer, Trophy, type LucideIcon } from 'lucide-react'
 
 // The places in the app, in the order the rail shows them. The palette lists them too, with words they can also be found by.
 // short: the label under its icon in the phone dock, where the full one does not fit
@@ -14,6 +14,7 @@ export const PLACES: Place[] = [
   { href: '/quiz', label: 'Quiz', icon: ListChecks, keywords: 'test questions quizzes' },
   { href: '/library', label: 'Library', icon: FolderOpen, keywords: 'everything files material' },
   { href: '/progress', label: 'Progress', icon: BarChart3, keywords: 'stats streak xp level topics' },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, keywords: 'friends groups rank xp' },
 ]
 // Places the rail does not show but the palette knows
 export const MORE_PLACES: Place[] = [
