@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BellPlus, Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { BellPlus, Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInput, FolderPlus, FileText, FileType2, ExternalLink, SquareArrowOutUpRight, Trash2, Share2 } from 'lucide-react'
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
@@ -21,6 +21,7 @@ import { ExportMenu } from '@/components/notes/ExportMenu'
 import { requestUpload } from '@/lib/scan/events'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
+import { ShareDialog } from '@/components/share/ShareDialog'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 import { supabase } from '@/lib/supabase/client'
@@ -38,6 +39,7 @@ export function NotesSidebar() {
   const [notes, setNotes] = useState<NoteSummary[] | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [q, setQ] = useState('')
+  const [sharing, setSharing] = useState<NoteSummary | null>(null)
   const [course, setCourse] = useState('')
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
   const [naming, setNaming] = useState(false) // the New notebook dialog
@@ -135,6 +137,7 @@ export function NotesSidebar() {
     { label: 'Export as PDF', icon: FileType2, onSelect: () => openPdfExport([n.id]) },
     { label: 'Move to notebook…', icon: FolderInput, onSelect: () => setMoving([n.id]) },
     { label: 'Remind me to review…', icon: BellPlus, onSelect: () => requestReminder({ title: `Review ${n.title || 'Untitled'}`, href: `/notes/${n.id}`, link_label: n.title || 'Untitled' }) },
+    { label: 'Share…', icon: Share2, onSelect: () => setSharing(n) },
     'sep',
     { label: 'Select', icon: CheckSquare, onSelect: () => { setSelecting(true); setSelected(s => (s.includes(n.id) ? s : [...s, n.id])) } },
     { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { void remove(n) } },
@@ -227,6 +230,7 @@ export function NotesSidebar() {
       <NotebookNameDialog open={naming} onClose={() => setNaming(false)} title="New notebook" submitLabel="Create"
         courses={courses} initialCourse={course || null} onSubmit={(name, cid) => { void addNotebook(name, cid) }} />
       <MoveToNotebookDialog open={moving !== null} onClose={() => setMoving(null)} notebooks={notebooks} onMove={id => { void moveTo(moving ?? [], id) }} onCreateAndMove={name => { void createAndMove(name) }} />
+      {sharing && <ShareDialog kind="note" id={sharing.id} title={sharing.title} onClose={() => setSharing(null)} />}
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.note.title || 'Untitled'} items={menuItems(menu.note)} onClose={closeMenu} />}
     </div>
   )

@@ -2,10 +2,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { BellPlus, Trash2 } from 'lucide-react'
+import { BellPlus, Share2, Trash2 } from 'lucide-react'
 import { requestReminder } from '@/lib/reminders/events'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { BackLink } from '@/components/ui/BackLink'
+import { ShareDialog } from '@/components/share/ShareDialog'
 import { CardFace } from '@/components/flashcards/CardFace'
 import { useSaver, useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
@@ -24,6 +25,7 @@ export default function DeckPage() {
   const [cards, setCards] = useState<Card[]>([])
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
+  const [sharing, setSharing] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   // "Due" is judged as of the last load/add (render must stay pure, so the clock is read in handlers)
   const [asOf, setAsOf] = useState(() => Date.now())
@@ -90,8 +92,10 @@ export default function DeckPage() {
           ? <><Link href={`/flashcards/${deckId}/play?game=match`} className="btn">Match</Link><Link href={`/flashcards/${deckId}/play?game=speed`} className="btn">Speed round</Link></>
           : <span className="self-center text-xs text-muted">Add 4 cards to play games</span>}
         {deck && <button type="button" className="btn" title="Remind me to review this deck" onClick={() => requestReminder({ title: `Review ${deck.name}`, href: `/flashcards/${deckId}`, link_label: deck.name })}><BellPlus size={14} aria-hidden />Remind me</button>}
+        {deck && <button type="button" className="btn" onClick={() => setSharing(true)}><Share2 size={14} aria-hidden />Share</button>}
         <button className="btn-ghost hover:!text-danger" onClick={removeDeck}><Trash2 size={14} aria-hidden />Delete deck</button>
       </>} />
+      {sharing && deck && <ShareDialog kind="deck" id={deckId} title={deck.name} onClose={() => setSharing(false)} />}
       <form onSubmit={add} className="card mb-4 grid gap-2 sm:grid-cols-2"
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) add() }}>
         <label className="field"><span>Front</span><textarea id="front" rows={2} value={front} onChange={e => setFront(e.target.value)} placeholder="What is the main function of mitochondria?" /></label>

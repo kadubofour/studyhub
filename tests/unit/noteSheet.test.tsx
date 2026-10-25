@@ -8,7 +8,7 @@ afterEach(cleanup)
 const actions = (): NoteMenuActions => ({
   newNote: vi.fn(), importNote: vi.fn(), exportWord: vi.fn(), exportPdf: vi.fn(), deleteNote: vi.fn(),
   undo: vi.fn(), redo: vi.fn(), selectAll: vi.fn(), find: vi.fn(), insertTable: vi.fn(), insertEquation: vi.fn(),
-  setMode: vi.fn(), toggleReading: vi.fn(), toggleFullWidth: vi.fn(), toggleAutoMath: vi.fn(),
+  setMode: vi.fn(), toggleReading: vi.fn(), toggleFullWidth: vi.fn(), toggleAutoMath: vi.fn(), share: vi.fn(),
 })
 function open(p: Partial<React.ComponentProps<typeof NoteSheet>> = {}) {
   const a = actions(); const onRemind = vi.fn()
@@ -64,7 +64,7 @@ describe('the note options sheet on a phone', () => {
   it('lists the note\'s actions as large rows, with Delete last and in red', () => {
     const { sheet } = open()
     const rows = sheet.getAllByRole('button').filter(b => b.hasAttribute('data-sheet-row'))
-    expect(rows.map(r => r.textContent)).toEqual(['Find in note', 'Insert equation', 'Remind me', 'Upload', 'Export as Word', 'Export as PDF', 'New note', 'Delete note'])
+    expect(rows.map(r => r.textContent)).toEqual(['Find in note', 'Insert equation', 'Remind me', 'Share', 'Upload', 'Export as Word', 'Export as PDF', 'New note', 'Delete note'])
     for (const r of rows) expect(r.className).toContain('min-h-14')
     expect(rows.at(-1)!.className).toContain('text-danger')
   })
@@ -76,6 +76,12 @@ describe('the note options sheet on a phone', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Note options' }))
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remind me' }))
     expect(onRemind).toHaveBeenCalledTimes(1)
+  })
+  it('the phone note menu has Share after Remind me, and it opens the share dialog', () => {
+    const { a, sheet } = open()
+    fireEvent.click(sheet.getByRole('button', { name: 'Share' }))
+    expect(a.share).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
   it('cannot insert an equation while reading', () => {
     const { sheet } = open({ reading: true })

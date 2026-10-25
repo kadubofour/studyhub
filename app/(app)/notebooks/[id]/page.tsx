@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, FileText, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ArrowLeft, FileText, Pencil, Plus, Search, Share2, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { NotebookCover } from '@/components/notes/NotebookCover'
+import { ShareDialog } from '@/components/share/ShareDialog'
 import { NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
@@ -36,6 +37,7 @@ export default function NotebookPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [q, setQ] = useState('')
   const [renaming, setRenaming] = useState(false)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     let live = true
@@ -87,6 +89,7 @@ export default function NotebookPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" className="btn-primary" onClick={() => { void newNote() }}><Plus size={15} aria-hidden />New note</button>
             <button type="button" className="btn" onClick={() => setRenaming(true)}><Pencil size={14} aria-hidden />Rename</button>
+            <button type="button" className="btn" onClick={() => setSharing(true)}><Share2 size={14} aria-hidden />Share</button>
             <button type="button" className="btn-ghost hover:!text-danger" onClick={() => { void remove() }}><Trash2 size={14} aria-hidden />Delete notebook</button>
           </div>
         </div>
@@ -123,6 +126,7 @@ export default function NotebookPage() {
         </>
       )}
 
+      {sharing && <ShareDialog kind="notebook" id={book.id} title={book.name} onClose={() => setSharing(false)} />}
       <NotebookNameDialog open={renaming} onClose={() => setRenaming(false)} title="Rename notebook" submitLabel="Save" initial={book.name}
         courses={courses} initialCourse={book.course_id ?? null} onSubmit={(name, cid) => { void rename(name, cid) }} />
     </div>

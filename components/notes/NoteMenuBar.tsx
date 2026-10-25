@@ -2,13 +2,13 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   BookOpen, Check, ChevronRight, FilePlus2, FileText, FileType2, FileUp, MoveHorizontal, PenLine, Redo2,
-  Search, Sigma, SquareCode, Superscript, Table, TextSelect, Trash2, Undo2, type LucideIcon,
+  Search, Share2, Sigma, SquareCode, Superscript, Table, TextSelect, Trash2, Undo2, type LucideIcon,
 } from 'lucide-react'
 import type { EditorMode } from '@/lib/types'
 import { TableGridPicker } from './TableGridPicker'
 
 export interface NoteMenuActions {
-  newNote: () => void; importNote: () => void; exportWord: () => void; exportPdf: () => void; deleteNote: () => void
+  newNote: () => void; importNote: () => void; exportWord: () => void; exportPdf: () => void; deleteNote: () => void; share: () => void
   undo: () => void; redo: () => void; selectAll: () => void; find: () => void
   insertTable: (rows: number, cols: number) => void; insertEquation: () => void
   setMode: (m: EditorMode) => void; toggleReading: () => void; toggleFullWidth: () => void; toggleAutoMath: () => void
@@ -38,6 +38,7 @@ export function NoteMenuBar({ actions: a, mode, reading, fullWidth, autoMath }: 
     { name: 'File', items: [
       { kind: 'item', label: 'New note', icon: FilePlus2, run: a.newNote },
       { kind: 'item', label: 'Upload…', icon: FileUp, run: a.importNote },
+      { kind: 'item', label: 'Share…', icon: Share2, run: a.share },
       { kind: 'sep' },
       { kind: 'item', label: 'Export as Word', icon: FileText, run: a.exportWord },
       { kind: 'item', label: 'Export as PDF', icon: FileType2, run: a.exportPdf },

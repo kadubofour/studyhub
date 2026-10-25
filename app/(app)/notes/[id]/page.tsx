@@ -11,6 +11,7 @@ import { InkLayer } from '@/components/notes/InkLayer'
 import { sanitizeInk } from '@/lib/markup/ink'
 import { NoteMenuBar, type NoteMenuActions } from '@/components/notes/NoteMenuBar'
 import { NoteSheet } from '@/components/notes/NoteSheet'
+import { ShareDialog } from '@/components/share/ShareDialog'
 import { requestReminder } from '@/lib/reminders/events'
 import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
@@ -80,6 +81,7 @@ function NoteEditor({ id }: { id: string }) {
   const [editor, setEditor] = useState<Editor | null>(null)
   const [inking, setInking] = useState(false) // drawing straight onto the note
   const [draft, setDraft] = useState<Note | null>(null)
+  const [sharing, setSharing] = useState(false)
   // Ref holds the latest draft: the Tiptap onUpdate callback is created once, so reading
   // `draft` state from it would merge onto a stale copy and drop title/course edits.
   const draftRef = useRef<Note | null>(null)
@@ -225,6 +227,7 @@ function NoteEditor({ id }: { id: string }) {
     },
     exportPdf: () => openPdfExport([id]),
     deleteNote: remove,
+    share: () => setSharing(true),
     undo: () => {
       if (mode === 'rich') editor?.chain().focus().undo().run()
       else { markdownRef.current?.focus(); document.execCommand('undo') }
@@ -284,6 +287,7 @@ function NoteEditor({ id }: { id: string }) {
           onRemind={() => requestReminder({ title: `Review ${draft.title || 'Untitled'}`, href: `/notes/${draft.id}`, link_label: draft.title || 'Untitled' })} />
         {findOpen && <div className="basis-full"><FindBar search={search} onClose={closeFind} /></div>}
       </header>
+      {sharing && <ShareDialog kind="note" id={draft.id} title={draft.title} onClose={() => setSharing(false)} />}
       <div className={`relative mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
         {mode === 'rich' && <InkLayer key={note.id} marks={inkAtOpen} active={inking && !reading} onChange={marks => change({ ink: marks })} onDone={() => setInking(false)} />}
         {reading ? (

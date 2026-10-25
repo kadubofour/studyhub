@@ -9,7 +9,7 @@ function setup(over: Partial<React.ComponentProps<typeof NoteMenuBar>> = {}) {
   const actions: NoteMenuActions = {
     newNote: vi.fn(), importNote: vi.fn(), exportWord: vi.fn(), exportPdf: vi.fn(), deleteNote: vi.fn(),
     undo: vi.fn(), redo: vi.fn(), selectAll: vi.fn(), find: vi.fn(), insertTable: vi.fn(), insertEquation: vi.fn(),
-    setMode: vi.fn(), toggleReading: vi.fn(), toggleFullWidth: vi.fn(), toggleAutoMath: vi.fn(),
+    setMode: vi.fn(), toggleReading: vi.fn(), toggleFullWidth: vi.fn(), toggleAutoMath: vi.fn(), share: vi.fn(),
   }
   render(<NoteMenuBar actions={actions} mode="rich" reading={false} fullWidth={false} autoMath {...over} />)
   return actions
@@ -26,12 +26,19 @@ describe('NoteMenuBar', () => {
     const a = setup()
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'File' })) })
     const menu = screen.getByRole('menu', { name: 'File' })
-    for (const name of ['New note', 'Upload…', 'Export as Word', 'Export as PDF', 'Delete note']) {
+    for (const name of ['New note', 'Upload…', 'Share…', 'Export as Word', 'Export as PDF', 'Delete note']) {
       expect(menu.querySelector(`[role="menuitem"]`) && screen.getByRole('menuitem', { name })).toBeTruthy()
     }
     await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Export as Word' })) })
     expect(a.exportWord).toHaveBeenCalled()
     expect(screen.queryByRole('menu')).toBeNull() // closes after choosing
+  })
+
+  it('File > Share… opens the share dialog', async () => {
+    const a = setup()
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'File' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Share…' })) })
+    expect(a.share).toHaveBeenCalledTimes(1)
   })
 
   it('Edit menu runs undo, redo, find and inserts', async () => {
