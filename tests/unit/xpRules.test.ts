@@ -85,6 +85,12 @@ describe('summarize', () => {
     expect(s.best).toBe(3)
     expect(summarize([day('2026-03-05', { reviews: 1 })], today).streak).toBe(0)
   })
+  it('takes total, streak and level from server XP when given', () => {
+    const s = summarize([day(today)], today, [{ day: today, xp: 60 }])
+    expect(s).toMatchObject({ total: 60, today: 60, streak: 1, best: 1 })
+    expect(s.level.level).toBe(2)
+    expect(s.last14.at(-1)).toEqual({ day: today, xp: 60 })
+  })
   it('counts a day with only a game as active for the streak', () => {
     expect(summarize([day('2026-03-09', { games: 1 })], today).streak).toBe(1)
   })

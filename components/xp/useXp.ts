@@ -2,9 +2,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
-import { loadActivity } from '@/lib/data/activity'
+import { loadActivity, loadXpDays } from '@/lib/data/activity'
 import { localDayKey } from '@/lib/dates'
-import { summarize, type XpSummary } from '@/lib/xp/rules'
+import { summarize, type XpDay, type XpSummary } from '@/lib/xp/rules'
 import { useProgressChanged } from '@/lib/xp/events'
 
 // The student's XP, level, goals and streak. null while loading and if loading fails, so callers just show nothing.
@@ -17,8 +17,10 @@ export function useXp(key: number | string = 0) {
 
   useEffect(() => {
     let live = true
-    loadActivity(supabase(), tz)
-      .then(days => { if (live) setXp(summarize(days, localDayKey(new Date(), tz))) })
+    const sb = supabase()
+    // XP comes from the server; if only that fails, fall back to working it out here
+    Promise.all([loadActivity(sb, tz), loadXpDays(sb).catch((): XpDay[] | undefined => undefined)])
+      .then(([days, xpDays]) => { if (live) setXp(summarize(days, localDayKey(new Date(), tz), xpDays)) })
       .catch(() => { if (live) setXp(null) })
     return () => { live = false }
   }, [tz, version, key])

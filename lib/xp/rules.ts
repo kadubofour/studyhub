@@ -44,8 +44,12 @@ export function levelInfo(total: number) {
   return { level, into, span, toNext: span - into }
 }
 
-export function summarize(days: ActivityDay[], today: DayKey) {
-  const xpByDay = new Map(days.map(d => [d.day, dayXp(d)]))
+// One day's XP as worked out on the server from on-time records
+export type XpDay = { day: DayKey; xp: number }
+
+// With `xpDays` (from the server) the XP numbers come from it; goals always come from `days`
+export function summarize(days: ActivityDay[], today: DayKey, xpDays?: XpDay[]) {
+  const xpByDay = xpDays ? new Map(xpDays.map(d => [d.day, d.xp])) : new Map(days.map(d => [d.day, dayXp(d)]))
   const total = [...xpByDay.values()].reduce((a, b) => a + b, 0)
   const active = new Set([...xpByDay].filter(([, xp]) => xp > 0).map(([k]) => k))
 
