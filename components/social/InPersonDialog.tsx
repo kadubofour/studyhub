@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { UsersRound } from 'lucide-react'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/providers/ToastProvider'
-import { myFriends, redeemInPerson, startInPerson, type FriendStatus } from '@/lib/data/social'
+import { myFriendRequests, myFriends, redeemInPerson, startInPerson, type FriendStatus } from '@/lib/data/social'
 import { supabase } from '@/lib/supabase/client'
 
 const MESSAGES: Record<Exclude<FriendStatus, 'ok'>, string> = {
@@ -21,16 +21,17 @@ const clock = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); ret
 export function InPersonDialog({ onClose, onFriends }: { onClose: () => void; onFriends: () => void }) {
   const toast = useToast()
   const [mode, setMode] = useState<'show' | 'enter'>('show')
-  const [shown, setShown] = useState<{ code: string; expires: number; friends: number } | null>(null)
+  const [shown, setShown] = useState<{ code: string; expires: number; known: Set<string> } | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [entered, setEntered] = useState('')
   const [busy, setBusy] = useState(false)
 
-  // A new code, with how many friends there are now (a new one arriving means the code was used)
+  // A new code, with who is already a friend or has asked to be one. Someone else turning up in the friends list means
+  // the code was used; a request accepted meanwhile (on another device) is not taken for it.
   const fetchCode = async () => {
     const sb = supabase()
-    const [c, f] = await Promise.all([startInPerson(sb), myFriends(sb)])
-    return { code: c.code, expires: new Date(c.expires_at).getTime(), friends: f.length }
+    const [c, f, r] = await Promise.all([startInPerson(sb), myFriends(sb), myFriendRequests(sb)])
+    return { code: c.code, expires: new Date(c.expires_at).getTime(), known: new Set([...f.map(x => x.user_id), ...r.map(x => x.from_id)]) }
   }
   const failed = (e: unknown) => toast(e instanceof Error && e.message === 'rate_limited' ? 'Too many codes. Try again in an hour.' : 'Couldn\'t make a code.')
   function makeCode() { fetchCode().then(setShown, failed) }
@@ -42,7 +43,7 @@ export function InPersonDialog({ onClose, onFriends }: { onClose: () => void; on
     const tick = setInterval(() => setNow(Date.now()), 1000)
     const poll = setInterval(() => {
       myFriends(supabase()).then(f => {
-        if (f.length > shown.friends) {
+        if (f.some(x => !shown.known.has(x.user_id))) {
           toast('You are friends now.')
           setShown(null)
           onFriends()
@@ -97,15 +98,16 @@ export function InPersonDialog({ onClose, onFriends }: { onClose: () => void; on
       </div>
       {mode === 'show' ? (
         <div className="flex flex-col items-center gap-2 py-2 text-center">
+          {/* Announced once, when the code runs out; the ticking countdown is not a live region */}
+          <p data-testid="code-status" role="status" className={shown && left <= 0 ? 'text-sm text-muted' : 'sr-only'}>{shown && left <= 0 ? 'That code has run out.' : ''}</p>
           {shown && left > 0 ? (
             <>
               <p className="text-sm text-muted">Ask them to choose Enter a code and type:</p>
               <output aria-label="Your in-person code" className="font-display text-5xl font-semibold tracking-[0.18em] tabular-nums sm:text-6xl">{shown.code}</output>
-              <p className="text-sm text-muted" aria-live="polite">Works for <span className="font-medium tabular-nums text-fg">{clock(left)}</span></p>
+              <p className="text-sm text-muted">Works for <span className="font-medium tabular-nums text-fg">{clock(left)}</span></p>
             </>
           ) : shown ? (
             <>
-              <p className="text-sm text-muted">That code has run out.</p>
               <button type="button" className="btn-primary" onClick={makeCode}>New code</button>
             </>
           ) : <p className="py-6 text-sm text-muted">Making a code…</p>}

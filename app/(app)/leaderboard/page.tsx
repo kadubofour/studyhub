@@ -29,7 +29,10 @@ export default function LeaderboardPage() {
   const [friends, setFriends] = useState<Friend[] | null>(null)
   const [requests, setRequests] = useState<FriendRequest[]>([])
   const [groups, setGroups] = useState<Group[] | null>(null)
+  // what could not be loaded: the friends and groups lists, and each board by its key
   const [failed, setFailed] = useState(false)
+  const [boardFailed, setBoardFailed] = useState<Record<string, boolean>>({})
+  const [attempt, setAttempt] = useState(0)
   const { ref: rowRef, more: rowMore } = useEdgeFade<HTMLDivElement>()
 
   // A group that is gone (left, deleted, removed from) falls back to the friends board
@@ -39,7 +42,9 @@ export default function LeaderboardPage() {
   const loadBoard = async (key: string) => {
     const rows = await leaderboard(supabase(), key === FRIENDS ? null : key)
     setBoards(b => ({ ...b, [key]: rows }))
+    setBoardFailed(f => ({ ...f, [key]: false }))
   }
+  function retry() { setFailed(false); setAttempt(a => a + 1) }
   async function reloadFriends() {
     const sb = supabase()
     const [f, r] = await Promise.all([myFriends(sb), myFriendRequests(sb), loadBoard(FRIENDS)])
@@ -61,14 +66,14 @@ export default function LeaderboardPage() {
       .then(([f, r, g]) => { if (live) { setFriends(f); setRequests(r); setGroups(g) } })
       .catch(() => { if (live) setFailed(true) })
     return () => { live = false }
-  }, [])
+  }, [attempt])
   useEffect(() => {
     let live = true
     leaderboard(supabase(), current === FRIENDS ? null : current)
-      .then(rows => { if (live) setBoards(b => ({ ...b, [current]: rows })) })
-      .catch(() => { if (live) setBoards(b => ({ ...b, [current]: [] })) })
+      .then(rows => { if (live) { setBoards(b => ({ ...b, [current]: rows })); setBoardFailed(f => ({ ...f, [current]: false })) } })
+      .catch(() => { if (live) setBoardFailed(f => ({ ...f, [current]: true })) })
     return () => { live = false }
-  }, [current])
+  }, [current, attempt])
 
   const rows = boards[current]
   const ranked = rows ? rankRows(rows, view) : null
@@ -98,7 +103,9 @@ export default function LeaderboardPage() {
             <>
               <ViewSwitch value={view} onChange={setView} />
               {ranked ? <Board rows={ranked} view={view} label={group ? `${group.name} board` : 'Friends board'} />
-                : <div className="card py-10 text-center text-sm text-muted">{failed ? 'Couldn\'t load the board. Check your connection.' : 'Loading the board…'}</div>}
+                : boardFailed[current]
+                  ? <div className="card flex flex-col items-center gap-3 py-10 text-center text-sm text-muted"><p>Couldn&apos;t load the board. Check your connection.</p><button type="button" className="btn" onClick={retry}>Try again</button></div>
+                  : <div className="card py-10 text-center text-sm text-muted">Loading the board…</div>}
             </>
           )}
           {profile.show_on_boards === false && (
@@ -107,6 +114,12 @@ export default function LeaderboardPage() {
         </section>
 
         <aside aria-label="Friends and groups" className="min-w-0 space-y-5">
+          {failed && friends === null && (
+            <div className="card flex flex-col items-center gap-3 py-8 text-center text-sm text-muted">
+              <p>Couldn&apos;t load your friends and groups. Check your connection.</p>
+              <button type="button" className="btn" onClick={retry}>Try again</button>
+            </div>
+          )}
           {current === FRIENDS && friends !== null && <FriendsPanel friends={friends} requests={requests} onChange={reloadFriends} />}
           {groups !== null && <GroupsPanel groups={groups} selected={group} onSelect={id => setTab(id ?? FRIENDS)} onChange={reloadGroups} />}
         </aside>

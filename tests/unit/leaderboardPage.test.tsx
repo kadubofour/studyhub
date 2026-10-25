@@ -11,13 +11,15 @@ vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 let board: BoardRow[] = []
 let requests: { from_id: string; display_name: string | null; avatar_color: string; created_at: string }[] = []
 let friends: { user_id: string; display_name: string | null; avatar_color: string }[] = []
-const leaderboard = vi.fn(async () => board)
+let boardFails = false
+let listsFail = false
+const leaderboard = vi.fn(async () => { if (boardFails) throw new Error('offline'); return board })
 const respondFriendRequest = vi.fn<(sb: unknown, from: string, accept: boolean) => Promise<void>>(async () => {})
 vi.mock('@/lib/data/social', () => ({
   leaderboard: () => leaderboard(),
-  myFriends: async () => friends,
-  myFriendRequests: async () => requests,
-  myGroups: async () => [],
+  myFriends: async () => { if (listsFail) throw new Error('offline'); return friends },
+  myFriendRequests: async () => { if (listsFail) throw new Error('offline'); return requests },
+  myGroups: async () => { if (listsFail) throw new Error('offline'); return [] },
   groupMembersOf: async () => [],
   respondFriendRequest: (_sb: unknown, from: string, accept: boolean) => respondFriendRequest(_sb, from, accept),
   sendFriendRequest: vi.fn(), redeemInPerson: vi.fn(), removeFriend: vi.fn(), newFriendCode: vi.fn(), startInPerson: vi.fn(),
@@ -45,6 +47,7 @@ beforeEach(() => {
   board = [row('me', 'Kwadwo', 50, 500, 2), row('ama', 'Ama', 120, 100, 1), row('kofi', 'Kofi', 80, 900, 4)]
   friends = [{ user_id: 'ama', display_name: 'Ama', avatar_color: '#BA7517' }, { user_id: 'kofi', display_name: 'Kofi', avatar_color: '#BA7517' }]
   requests = []
+  boardFails = false; listsFail = false
   leaderboard.mockClear(); respondFriendRequest.mockClear(); updateProfile.mockClear()
 })
 afterEach(cleanup)
@@ -85,6 +88,24 @@ describe('the Leaderboard page', () => {
     await open()
     expect(screen.getByRole('heading', { name: 'Add your first friend' })).toBeTruthy()
     expect(screen.getAllByText('ABCD2345').length).toBeGreaterThan(0)
+  })
+})
+
+describe('the Leaderboard page when loading fails', () => {
+  it('a failed board says so instead of showing an empty card', async () => {
+    boardFails = true
+    await open()
+    expect(screen.getByText("Couldn't load the board. Check your connection.")).toBeTruthy()
+    expect(screen.queryByRole('list', { name: 'Friends board' })).toBeNull()
+  })
+  it('a failed load of friends and groups shows a message and can try again', async () => {
+    listsFail = true
+    await open()
+    expect(screen.getByText("Couldn't load your friends and groups. Check your connection.")).toBeTruthy()
+    listsFail = false
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Try again' })) })
+    expect(screen.queryByText("Couldn't load your friends and groups. Check your connection.")).toBeNull()
+    expect(screen.getByRole('region', { name: 'Add friends' })).toBeTruthy()
   })
 })
 
