@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Check, Flame, Layers, Mic, NotebookPen, Pencil, ListChecks, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
+import { ShareProgressButton } from '@/components/share/ShareProgress'
 import { usePlan } from '@/components/billing/usePlan'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useXp } from '@/components/xp/useXp'
@@ -86,7 +87,10 @@ export default function ProfilePage() {
               {plan.billing && !plan.loading && <span className="font-medium text-accent">{plan.isPremium && plan.premiumUntil ? `Premium until ${longDate(plan.premiumUntil)}` : 'Free plan'}</span>}
             </p>
           </div>
-          {!editing && <button type="button" className="btn" onClick={startEditing}><Pencil size={14} aria-hidden />Edit profile</button>}
+          <div className="flex flex-wrap gap-2">
+            {!editing && <button type="button" className="btn" onClick={startEditing}><Pencil size={14} aria-hidden />Edit profile</button>}
+            <ShareProgressButton className="btn" />
+          </div>
         </div>
       </section>
 

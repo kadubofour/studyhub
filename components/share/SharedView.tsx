@@ -8,6 +8,7 @@ import { Avatar } from '@/components/profile/Avatar'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { InkLayer } from '@/components/notes/InkLayer'
+import { ProgressCard } from '@/components/share/ProgressCard'
 import { NoteImagesContext } from '@/components/notes/NoteImagesContext'
 import { useToast } from '@/components/providers/ToastProvider'
 import { sanitizeInk } from '@/lib/markup/ink'
@@ -27,8 +28,6 @@ export type Shared =
 const DEFAULT_AVATAR = '#3B5BDB'
 const noopSubscribe = () => () => {}
 const OPEN: Record<string, string> = { deck: '/flashcards/', note: '/notes/', notebook: '/notebooks/' }
-
-const focusTime = (m: number) => (m < 60 ? `${m}m` : m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`)
 
 // The studyhub mark, back to the front door
 function Mark() {
@@ -108,28 +107,11 @@ function Notebook({ name, notes }: { name: string; notes: (SharedNote & { id: st
   )
 }
 
-// A plain panel of the card's numbers (the progress card itself comes later)
+// The same card the student shared, drawn in their look
 function Progress({ p }: { p: SharedProgress }) {
-  const stats = [
-    { label: 'Level', value: `Level ${p.level}` },
-    { label: 'Streak', value: `${p.streak} ${p.streak === 1 ? 'day' : 'days'}` },
-    { label: 'This week', value: `${p.week_xp} XP` },
-    { label: 'Focus this week', value: focusTime(p.week_focus_minutes) },
-  ]
   return (
-    <section aria-label="Progress" className="card flex flex-col gap-4 p-4 sm:p-6">
-      <div className="flex items-center gap-3">
-        <Avatar name={p.display_name} color={p.avatar_color || DEFAULT_AVATAR} size={44} />
-        <p className="font-display text-lg font-semibold">{p.display_name}</p>
-      </div>
-      <dl className="grid grid-cols-2 gap-3">
-        {stats.map(s => (
-          <div key={s.label} className="rounded-xl bg-surface p-3">
-            <dt className="text-xs text-muted">{s.label}</dt>
-            <dd className="font-display text-xl font-semibold">{s.value}</dd>
-          </div>
-        ))}
-      </dl>
+    <section aria-label="Progress" className="flex justify-center">
+      <ProgressCard snapshot={p} className="block h-auto w-full max-w-md rounded-2xl border border-line" />
     </section>
   )
 }

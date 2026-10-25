@@ -87,3 +87,35 @@ test('the Share dialog opens from a deck, shows the link and does not scroll sid
   const box = await dialog.boundingBox()
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
+
+test('Share my progress draws the card as a 1080×1350 picture in the look\'s colours, and its link shows the card', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/progress')
+  await page.getByRole('button', { name: 'Share my progress' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Share my progress' })
+  await expect(dialog.getByRole('img', { name: /^Ama's progress on Studyhub: level 1/ })).toBeVisible()
+  const download = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Download picture' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toBe('studyhub-progress.png')
+  const bytes = await (await import('node:fs/promises')).readFile(await file.path())
+  // the PNG header: 1080 wide, 1350 tall
+  expect(bytes.subarray(1, 4).toString()).toBe('PNG')
+  expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1080, 1350])
+  // its background is the look's raised colour, written in (a CSS variable would have drawn nothing)
+  const [drawn, raised] = await page.evaluate(async b64 => {
+    const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob())
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height
+    const ctx = c.getContext('2d')!; ctx.drawImage(img, 0, 0)
+    const [r, g, b, a] = ctx.getImageData(10, 10, 1, 1).data
+    const probe = document.createElement('span'); probe.style.color = 'var(--raised)'
+    document.querySelector('.app-root[data-look]')!.append(probe)
+    const want = getComputedStyle(probe).color; probe.remove()
+    return [`rgb(${r}, ${g}, ${b})${a === 255 ? '' : ' alpha'}`, want]
+  }, bytes.toString('base64'))
+  expect(drawn).toBe(raised)
+
+  const link = await dialog.getByRole('textbox', { name: 'Link' }).inputValue()
+  await page.goto(link)
+  await expect(page.getByRole('img', { name: /^Ama's progress on Studyhub: level 1/ })).toBeVisible()
+})

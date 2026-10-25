@@ -6,6 +6,7 @@ import { TopicsSection } from '@/components/progress/TopicsSection'
 import { ProgressSummary } from '@/components/progress/ProgressSummary'
 import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { QuickActions } from '@/components/quick/QuickActions'
+import { ShareProgressButton } from '@/components/share/ShareProgress'
 import { Layers, MessagesSquare, Timer } from 'lucide-react'
 import { useXp } from '@/components/xp/useXp'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -64,6 +65,7 @@ export default function ProgressPage() {
         { label: 'Review cards', icon: Layers, href: '/review' },
         { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
         { node: <NewNoteButton /> },
+        { node: <ShareProgressButton /> },
       ]} />} />
       <ProgressSummary xp={xp} stats={[
         { label: 'Current streak', value: `${streak.current} ${streak.current === 1 ? 'day' : 'days'}` },

@@ -80,12 +80,13 @@ describe('SharedView', () => {
     expect(screen.getByRole('button', { name: /Acids/ })).toBeTruthy()
   })
 
-  it('progress shows the numbers and cannot be copied', () => {
+  it('progress shows the progress card and cannot be copied', () => {
     view({ kind: 'progress', owner, item: { level: 4, total_xp: 500, week_xp: 120, streak: 6, week_focus_minutes: 95, display_name: 'Ama', avatar_color: '#0B7A5E' } })
-    expect(screen.getByText('Level 4')).toBeTruthy()
-    expect(screen.getByText('6 days')).toBeTruthy()
-    expect(screen.getByText('120 XP')).toBeTruthy()
-    expect(screen.getByText('1h 35m')).toBeTruthy()
+    const card = screen.getByRole('img', { name: "Ama's progress on Studyhub: level 4, a 6-day streak, 120 XP this week and 1h 35m of focus this week" })
+    expect(card.getAttribute('viewBox')).toBe('0 0 1080 1350')
+    for (const t of ['Level', '6 days', '120 XP', '1h 35m']) expect(card.textContent).toContain(t)
+    // it is drawn in the owner's look
+    expect(card.closest('.app-root')?.getAttribute('data-look')).toBe('studio')
     expect(screen.queryByText('Copy to my Studyhub')).toBeNull()
   })
 })
