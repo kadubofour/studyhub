@@ -13,6 +13,16 @@ async function friendIds(u: U) {
   expect(error).toBeNull()
   return (data as { user_id: string }[]).map(r => r.user_id)
 }
+async function send(u: U, code: string) {
+  const { data, error } = await u.sb.rpc('send_friend_request', { p_code: code })
+  expect(error).toBeNull()
+  return data as string
+}
+async function redeem(u: U, code: string) {
+  const { data, error } = await u.sb.rpc('redeem_in_person', { p_code: code })
+  expect(error).toBeNull()
+  return data as string
+}
 async function startCode(u: U) {
   const { data, error } = await u.sb.rpc('start_in_person')
   expect(error).toBeNull()
@@ -29,9 +39,9 @@ describe('friends', () => {
 
   it('a code sends a request; accepting makes both friends; declining does not', async () => {
     const a = await newUser(), b = await newUser(), c = await newUser()
-    expect((await a.sb.rpc('send_friend_request', { p_code: await codeOf(b) })).error).toBeNull()
+    expect(await send(a, await codeOf(b))).toBe('ok')
     // sending again does nothing, no error
-    expect((await a.sb.rpc('send_friend_request', { p_code: await codeOf(b) })).error).toBeNull()
+    expect(await send(a, await codeOf(b))).toBe('ok')
     const reqs = (await b.sb.rpc('my_friend_requests')).data as { from_id: string; avatar_color: string }[]
     expect(reqs.map(r => r.from_id)).toEqual([a.id])
     expect(reqs[0].avatar_color).toMatch(/^#/)
@@ -39,9 +49,9 @@ describe('friends', () => {
     expect(await friendIds(a)).toEqual([b.id])
     expect(await friendIds(b)).toEqual([a.id])
     expect(((await b.sb.rpc('my_friend_requests')).data as unknown[]).length).toBe(0)
-    expect((await a.sb.rpc('send_friend_request', { p_code: await codeOf(b) })).error?.message).toBe('already_friends')
-    expect((await a.sb.rpc('send_friend_request', { p_code: await codeOf(a) })).error?.message).toBe('self')
-    expect((await a.sb.rpc('send_friend_request', { p_code: 'AAAAAAAA' })).error?.message).toBe('not_found')
+    expect(await send(a, await codeOf(b))).toBe('already_friends')
+    expect(await send(a, await codeOf(a))).toBe('self')
+    expect(await send(a, 'AAAAAAAA')).toBe('not_found')
     // declining
     await a.sb.rpc('send_friend_request', { p_code: await codeOf(c) })
     expect((await c.sb.rpc('respond_friend_request', { p_from: a.id, p_accept: false })).error).toBeNull()
@@ -75,18 +85,18 @@ describe('friends', () => {
     expect(first).toMatch(/^\d{6}$/)
     const second = await startCode(a)
     if (second !== first) {
-      expect((await b.sb.rpc('redeem_in_person', { p_code: first })).error?.message).toBe('expired')
+      expect(await redeem(b, first)).toBe('expired')
     }
-    expect((await c.sb.rpc('redeem_in_person', { p_code: second })).error).toBeNull()
+    expect(await redeem(c, second)).toBe('ok')
     // the code is used up
-    expect((await b.sb.rpc('redeem_in_person', { p_code: second })).error?.message).toBe('expired')
+    expect(await redeem(b, second)).toBe('expired')
   })
 
   it('Add in person makes friends at once and clears a pending request between them', async () => {
     const a = await newUser(), b = await newUser()
     await a.sb.rpc('send_friend_request', { p_code: await codeOf(b) })
     const code = await startCode(b)
-    expect((await a.sb.rpc('redeem_in_person', { p_code: code })).error).toBeNull()
+    expect(await redeem(a, code)).toBe('ok')
     expect(await friendIds(a)).toEqual([b.id])
     expect(await friendIds(b)).toEqual([a.id])
     const left = await adminClient().from('friend_requests').select('*').in('from_id', [a.id, b.id])
@@ -97,14 +107,14 @@ describe('friends', () => {
 
   it('you cannot redeem your own in-person code', async () => {
     const a = await newUser()
-    expect((await a.sb.rpc('redeem_in_person', { p_code: await startCode(a) })).error?.message).toBe('self')
+    expect(await redeem(a, await startCode(a))).toBe('self')
   })
 
   it('an in-person code stops working after 5 minutes', async () => {
     const a = await newUser(), b = await newUser()
     const code = await startCode(a)
     await adminClient().from('in_person_codes').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('user_id', a.id)
-    expect((await b.sb.rpc('redeem_in_person', { p_code: code })).error?.message).toBe('expired')
+    expect(await redeem(b, code)).toBe('expired')
   })
 
   it("a student cannot read other students' friendships or requests", async () => {
@@ -137,7 +147,32 @@ describe('friends', () => {
     const a = await newUser()
     const codes: string[] = []
     for (let i = 0; i < 21; i++) codes.push(await codeOf(await newUser()))
-    for (let i = 0; i < 20; i++) expect((await a.sb.rpc('send_friend_request', { p_code: codes[i] })).error).toBeNull()
-    expect((await a.sb.rpc('send_friend_request', { p_code: codes[20] })).error?.message).toBe('rate_limited')
+    for (let i = 0; i < 20; i++) expect(await send(a, codes[i])).toBe('ok')
+    expect(await send(a, codes[20])).toBe('rate_limited')
+  })
+
+  it('the 11th failed in-person redeem in an hour returns rate_limited, even with the right code', async () => {
+    const a = await newUser(), b = await newUser()
+    const code = await startCode(b)
+    for (let i = 0; i < 10; i++) expect(await redeem(a, '000000')).toBe('expired')
+    expect(await redeem(a, code)).toBe('rate_limited')
+    expect(await friendIds(a)).toEqual([])
+  })
+
+  it('failed friend-request attempts count toward the limit too', async () => {
+    const a = await newUser(), b = await newUser()
+    for (let i = 0; i < 20; i++) expect(await send(a, 'AAAAAAAA')).toBe('not_found')
+    expect(await send(a, await codeOf(b))).toBe('rate_limited')
+  })
+
+  it('new_friend_code gives a new code and the old one stops working', async () => {
+    const a = await newUser(), b = await newUser()
+    const old = await codeOf(a)
+    const { data, error } = await a.sb.rpc('new_friend_code')
+    expect(error).toBeNull()
+    expect(data).toMatch(ALPHABET)
+    expect(await codeOf(a)).toBe(data)
+    expect(await send(b, old)).toBe('not_found')
+    expect(await send(b, data as string)).toBe('ok')
   })
 })
