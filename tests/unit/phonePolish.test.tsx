@@ -72,17 +72,27 @@ describe('the dock on a phone', () => {
 })
 
 describe('Home\'s greeting on a phone', () => {
-  it('the focus timer stands alone in the middle of the card, the clock large with its buttons under it', async () => {
+  it('the focus timer is one row on the card: the session and clock on the left, its buttons on the right', async () => {
     const { HeroFocus } = await import('@/components/home/HeroFocus')
     render(<HeroFocus mode="Focus" clock="25:00" running={false} resumable={false} onToggle={vi.fn()} />)
     const box = screen.getByText('25:00').closest('[data-hero-focus]')!
-    expect(box.className).toContain('text-center')
-    expect(box.className).toContain('max-sm:bg-transparent')
-    expect(screen.getByText('25:00').className).toContain('max-sm:text-[3.25rem]')
+    for (const c of ['max-sm:flex', 'max-sm:justify-between', 'max-sm:bg-transparent', 'max-sm:text-left']) expect(box.className).toContain(c)
+    expect(screen.getByText('25:00').className).toContain('max-sm:text-[2.75rem]')
   })
-  it('on a phone the timer comes first and the goal under it, closer under the greeting', () => {
+  it('while it runs, Pause and Restart are round icons on a phone so they fit beside the clock, still named for screen readers', async () => {
+    const { HeroFocus } = await import('@/components/home/HeroFocus')
+    render(<HeroFocus mode="Focus" clock="24:58" running resumable={false} onToggle={vi.fn()} onRestart={vi.fn()} />)
+    const pause = screen.getByRole('button', { name: 'Pause' })
+    expect(pause.className).toContain('max-sm:w-11')
+    expect(pause.querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe('Pause')
+    expect(screen.getByRole('button', { name: 'Restart' })).toBeTruthy()
+  })
+  it('on a phone the timer row comes first, then the goal as a full-width bar', async () => {
     const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
-    expect(src).toContain('mt-5 flex flex-wrap items-center justify-between gap-4 max-md:mt-7 max-md:flex-col-reverse max-md:gap-3 sm:mt-7 sm:gap-6')
+    expect(src).toContain('max-sm:flex-col-reverse max-sm:items-stretch')
+    const { GoalRing } = await import('@/components/home/GoalRing')
+    render(<GoalRing percent={30} label="36m of 2h focus" />)
+    expect(document.querySelector('[data-goal-bar]')!.className).toContain('max-sm:w-full')
   })
 })
 
@@ -93,12 +103,12 @@ describe('the focus timer on Home, on a phone', () => {
     expect(screen.getByRole('button', { name: 'Start focus' }).querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe(' focus')
     expect(screen.getByRole('link', { name: 'Open' }).className).toContain('max-sm:hidden')
   })
-  it('on a phone Home keeps the notebook page, with the timer large in the middle and the shortcuts as round buttons', () => {
+  it('on a phone Home keeps the notebook page, with the timer in one row and the shortcuts as round buttons', () => {
     const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
     expect(src).toContain('className="hero hero-page home-hero"')
     expect(src).toContain('<div className="mt-6 grid grid-cols-4 gap-1 md:hidden">')
     expect(src).toContain('grid size-12 place-items-center rounded-full bg-white/20')
-    expect(fs.readFileSync('components/home/HeroFocus.tsx', 'utf8')).toContain('max-sm:text-[3.25rem]')
+    expect(fs.readFileSync('components/home/HeroFocus.tsx', 'utf8')).toContain('max-sm:text-[2.75rem]')
     expect(fs.readFileSync('app/globals.css', 'utf8')).not.toContain('.home-hero { background: none')
   })
 })

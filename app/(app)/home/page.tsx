@@ -143,7 +143,7 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       {/* The notebook page in the student's colour, on every screen. On a phone it is laid out like a banking app's home: the avatar beside
-          the greeting, the timer large in the middle, and the places the sidebar holds as a row of round buttons along the bottom */}
+          the greeting, then the timer in one row, the day's goal as a bar, and the places the sidebar holds as round buttons */}
       <section aria-label="Welcome" className="hero hero-page home-hero">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -154,7 +154,7 @@ export default function HomePage() {
           <Link href="/profile" aria-label="Profile" className="shrink-0 rounded-full ring-2 ring-white/40 md:hidden"><Avatar name={profile.display_name} color={profile.avatar_color} size={40} /></Link>
         </div>
         {bold ? (
-          <div className="home-hero-panel mt-5 flex flex-wrap items-center justify-between gap-4 max-md:mt-7 max-md:flex-col-reverse max-md:gap-3 sm:mt-7 sm:gap-6">
+          <div className="home-hero-panel mt-5 flex flex-wrap items-center justify-between gap-4 max-sm:mt-6 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4 sm:mt-7 sm:gap-6">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
           </div>
