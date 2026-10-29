@@ -72,17 +72,17 @@ describe('the dock on a phone', () => {
 })
 
 describe('Home\'s greeting on a phone', () => {
-  it('the focus timer is one row: the clock on the left, its buttons on the right', async () => {
+  it('the focus timer stands alone in the middle of the card, the clock large with its buttons under it', async () => {
     const { HeroFocus } = await import('@/components/home/HeroFocus')
     render(<HeroFocus mode="Focus" clock="25:00" running={false} resumable={false} onToggle={vi.fn()} />)
     const box = screen.getByText('25:00').closest('[data-hero-focus]')!
-    expect(box.className).toContain('max-sm:flex')
-    expect(box.className).toContain('max-sm:justify-between')
-    expect(screen.getByText('25:00').className).toContain('max-sm:text-3xl')
+    expect(box.className).toContain('text-center')
+    expect(box.className).toContain('max-sm:bg-transparent')
+    expect(screen.getByText('25:00').className).toContain('max-sm:text-[3.25rem]')
   })
-  it('sits closer under the greeting on a phone', () => {
+  it('on a phone the timer comes first and the goal under it, closer under the greeting', () => {
     const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
-    expect(src).toContain('mt-5 flex flex-wrap items-center justify-between gap-4 sm:mt-7 sm:gap-6')
+    expect(src).toContain('mt-5 flex flex-wrap items-center justify-between gap-4 max-md:mt-7 max-md:flex-col-reverse max-md:gap-3 sm:mt-7 sm:gap-6')
   })
 })
 
@@ -93,11 +93,13 @@ describe('the focus timer on Home, on a phone', () => {
     expect(screen.getByRole('button', { name: 'Start focus' }).querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe(' focus')
     expect(screen.getByRole('link', { name: 'Open' }).className).toContain('max-sm:hidden')
   })
-  it('on a phone the greeting sits on the page and the goal and timer are one coloured card', () => {
-    expect(fs.readFileSync('app/(app)/home/page.tsx', 'utf8')).toContain('className="hero hero-page home-hero"')
-    const css = fs.readFileSync('app/globals.css', 'utf8')
-    expect(css).toContain('.app-root .hero.hero-page.home-hero { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; color: var(--fg); }')
-    expect(css).toMatch(/\.app-root \.home-hero \.home-hero-panel \{[^}]*background-color: var\(--accent-solid\)/)
+  it('on a phone Home keeps the notebook page, with the timer large in the middle and the shortcuts as round buttons', () => {
+    const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
+    expect(src).toContain('className="hero hero-page home-hero"')
+    expect(src).toContain('<div className="mt-6 grid grid-cols-4 gap-1 md:hidden">')
+    expect(src).toContain('grid size-12 place-items-center rounded-full bg-white/20')
+    expect(fs.readFileSync('components/home/HeroFocus.tsx', 'utf8')).toContain('max-sm:text-[3.25rem]')
+    expect(fs.readFileSync('app/globals.css', 'utf8')).not.toContain('.home-hero { background: none')
   })
 })
 

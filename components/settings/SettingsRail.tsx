@@ -19,7 +19,7 @@ export function SettingsRail({ section, onSection, billing }: { section: Section
         const on = section === s.id
         return (
           <button key={s.id} type="button" aria-current={on ? 'true' : undefined} onClick={() => onSection(s.id)}
-            className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition ${on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+            className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition max-md:rounded-full max-md:px-4 ${on ? 'bg-accent-soft font-medium text-accent max-md:bg-fg max-md:text-bg' : 'text-fg hover:bg-surface'}`}>
             <s.icon size={16} aria-hidden />{s.label}
           </button>
         )

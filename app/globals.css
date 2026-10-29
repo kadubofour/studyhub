@@ -364,20 +364,15 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 @media (prefers-reduced-motion: reduce) { .app-root[data-look="playful"] :is(.btn, .btn-primary, .btn-danger):active, .app-root[data-look="playful"] :is(a.tile, button.tile):hover { transform: none; } }
 
 /* Phones: softer and rounder, like a travel app. Big 24 px corners on cards; in light mode a card floats on a soft shadow instead of
-   a hairline (Playful keeps its outlines). Home's greeting sits on the page, and its goal and timer are one coloured card. */
+   a hairline (Playful keeps its outlines). Home's notebook page is laid out like a banking app's home. */
 @media (max-width: 767px) {
   .app-root[data-look]:not([data-look="playful"]) :is(.card, .tile),
   .app-root .app-root[data-look]:not([data-look="playful"]) :is(.card, .tile) { border-radius: 1.5rem; }
   :root:not(.dark) .app-root[data-look]:not([data-look="playful"]) :is(.card, .tile) {
     border-color: transparent; box-shadow: 0 1px 2px rgb(20 20 19 / 0.04), 0 10px 28px -14px rgb(20 20 19 / 0.22);
   }
-  .app-root .hero.hero-page.home-hero { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; color: var(--fg); }
-  .app-root .home-hero .home-hero-panel {
-    margin-top: 1.25rem; padding: 1.25rem; border-radius: 1.75rem; color: #fff;
-    background-color: var(--accent-solid); box-shadow: var(--shadow);
-  }
-  .app-root[data-look="playful"] .home-hero .home-hero-panel,
-  .app-root .app-root[data-look="playful"] .home-hero .home-hero-panel { border: 2px solid var(--outline); box-shadow: 4px 4px 0 var(--outline); }
+  /* Home's notebook page: a narrower margin and less padding, so the timer and the round buttons have the width */
+  .app-root .hero.hero-page.home-hero { --hero-margin: 1rem; padding: 1.25rem 1.25rem 1.5rem calc(var(--hero-margin) + 1rem); }
   /* titles in the app's own sans, bold and tight; Playful keeps its rounded face. Important only to beat the greeting's inline face. */
   .app-root[data-look]:not([data-look="playful"]) :is(.font-display, .section-label) { font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif !important; }
   .app-root[data-look]:not([data-look="playful"]) :is(h1.font-display, h2.font-display, .section-label) { font-weight: 700; letter-spacing: -0.025em; }

@@ -142,26 +142,19 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      {/* On a phone the greeting sits on the page with the student's avatar, the shortcuts are a row of pills and the goal and timer are one coloured card (globals.css, .home-hero) */}
+      {/* The notebook page in the student's colour, on every screen. On a phone it is laid out like a banking app's home: the avatar beside
+          the greeting, the timer large in the middle, and the places the sidebar holds as a row of round buttons along the bottom */}
       <section aria-label="Welcome" className="hero hero-page home-hero">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-[1.875rem] font-semibold leading-[1.05] tracking-tight max-md:text-[1.625rem] sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+            <h1 className="font-display text-[1.875rem] font-semibold leading-[1.05] tracking-tight max-md:text-[1.5rem] sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
             {/* the date after the greeting, and today's one fact from the data */}
-            <p className="mt-2 text-[15px] opacity-90 max-md:mt-1 max-md:text-sm max-md:text-muted max-md:opacity-100">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length, done: doneToday })}`}</p>
+            <p className="mt-2 text-[15px] opacity-90 max-md:mt-1 max-md:text-sm">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length, done: doneToday })}`}</p>
           </div>
-          <Link href="/profile" aria-label="Profile" className="shrink-0 rounded-full ring-2 ring-raised md:hidden"><Avatar name={profile.display_name} color={profile.avatar_color} size={44} /></Link>
-        </div>
-        {/* phones have no sidebar: the places it holds are a tap away here */}
-        <div className="no-scrollbar -mx-5 mt-4 flex gap-2 overflow-x-auto px-5 md:hidden">
-          {SHORTCUTS.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-raised px-4 py-2 text-sm font-medium text-fg transition active:scale-[.97]">
-              <Icon size={15} className="text-muted" aria-hidden />{label}
-            </Link>
-          ))}
+          <Link href="/profile" aria-label="Profile" className="shrink-0 rounded-full ring-2 ring-white/40 md:hidden"><Avatar name={profile.display_name} color={profile.avatar_color} size={40} /></Link>
         </div>
         {bold ? (
-          <div className="home-hero-panel mt-5 flex flex-wrap items-center justify-between gap-4 sm:mt-7 sm:gap-6">
+          <div className="home-hero-panel mt-5 flex flex-wrap items-center justify-between gap-4 max-md:mt-7 max-md:flex-col-reverse max-md:gap-3 sm:mt-7 sm:gap-6">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
           </div>
@@ -173,6 +166,14 @@ export default function HomePage() {
             <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
           </div>
         </>)}
+        {/* phones have no sidebar: the places it holds are a tap away here */}
+        <div className="mt-6 grid grid-cols-4 gap-1 md:hidden">
+          {SHORTCUTS.map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} className="group flex flex-col items-center gap-1.5 text-xs font-medium">
+              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-white/20 transition group-active:scale-95"><Icon size={20} /></span>{label}
+            </Link>
+          ))}
+        </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
