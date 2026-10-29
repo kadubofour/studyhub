@@ -63,13 +63,11 @@ describe('the Look picker on a phone', () => {
 })
 
 describe('the dock on a phone', () => {
-  it('names Flashcards "Cards", so every label fits under its icon; the full name stays for screen readers', async () => {
-    const { PLACES, DOCK } = await import('@/lib/shell/nav')
-    expect(PLACES.find(p => p.href === '/flashcards')!.short).toBe('Cards')
-    for (const href of DOCK) expect((PLACES.find(p => p.href === href)!.short ?? PLACES.find(p => p.href === href)!.label).length).toBeLessThanOrEqual(7)
+  it('is a small pill of icons, with each place named for screen readers', () => {
     const src = fs.readFileSync('components/shell/AppShell.tsx', 'utf8')
-    expect(src).toContain('<span aria-hidden>{short ?? label}</span>')
+    expect(src).toContain('mx-auto flex w-fit items-center gap-1 rounded-full')
     expect(src).toContain('aria-label={label}')
+    expect(src).not.toContain('{short ?? label}')
   })
 })
 
