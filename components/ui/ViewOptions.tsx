@@ -12,10 +12,10 @@ export function ViewOptions({ page, className = '', sort = true }: { page: ViewP
   const set = (patch: Partial<typeof view>) => viewStore(page).set({ ...view, ...patch })
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div role="radiogroup" aria-label="Layout" className="flex rounded-lg border border-line bg-raised p-0.5">
+      <div role="radiogroup" aria-label="Layout" className="choice-track flex rounded-lg border border-line bg-raised p-0.5">
         {LAYOUTS.map(({ value, label, Icon }) => (
           <button key={value} type="button" role="radio" aria-checked={view.layout === value} title={label} aria-label={label}
-            className={`grid size-8 place-items-center rounded-md transition pointer-coarse:size-10 ${view.layout === value ? 'bg-accent-soft text-accent' : 'text-muted hover:text-fg'}`}
+            className={`choice grid size-8 place-items-center rounded-md transition pointer-coarse:size-10 ${view.layout === value ? 'bg-accent-soft text-accent' : 'text-muted hover:text-fg'}`}
             onClick={() => set({ layout: value })}><Icon size={15} aria-hidden /></button>
         ))}
       </div>

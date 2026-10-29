@@ -92,7 +92,7 @@ export function CalendarView({ classes, courses, tasks, tz, empty, courseId = nu
         <section aria-label="Nothing planned yet" className="mb-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface px-4 py-3">
           <div className="mr-auto">
             <h3 className="text-sm font-semibold">Nothing planned yet</h3>
-            <p className="text-sm text-muted">Add an exam and we will plan study time for it, or add your classes.</p>
+            <p className="text-sm text-muted">Make a study plan on the Tasks tab and its sessions show here. Add your exams and classes too.</p>
           </div>
           <button type="button" className={CAL_BTN_PRIMARY} onClick={() => add('exam')}>Add an exam</button>
           <button type="button" className={CAL_BTN} onClick={() => add('class')}>Add a class</button>

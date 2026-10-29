@@ -3,12 +3,12 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FilePlus } from 'lucide-react'
 import { useToast } from '@/components/providers/ToastProvider'
-import { BTN_SOFT } from '@/components/ui/buttonStyles'
+import { BTN_OUTLINE } from '@/components/ui/buttonStyles'
 import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
 
 // Makes a note (in a course when it has one) and opens it, from anywhere
-export function NewNoteButton({ courseId = null, className = BTN_SOFT }: { courseId?: string | null; className?: string }) {
+export function NewNoteButton({ courseId = null, className = BTN_OUTLINE }: { courseId?: string | null; className?: string }) {
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)

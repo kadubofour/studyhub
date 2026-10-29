@@ -24,14 +24,14 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts, remin
           const on = list === l.id
           return (
             <button key={l.id} type="button" aria-current={on ? 'true' : undefined} onClick={() => onList(l.id)}
-              className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition ${on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+              className={`choice flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition max-md:px-4 ${on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
               <Icon size={16} aria-hidden /><span className="flex-1 text-left">{l.label}</span>{' '}<span className={`text-xs ${on ? 'text-accent' : 'text-muted'}`}>{counts[l.id]}</span>
             </button>
           )
         })}
         {reminders && (
           <button type="button" aria-current={reminders.on ? 'true' : undefined} onClick={reminders.onOpen}
-            className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition lg:mt-2 lg:border-t lg:border-line lg:pt-3 ${reminders.on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
+            className={`choice flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition max-md:px-4 lg:mt-2 lg:border-t lg:border-line lg:pt-3 ${reminders.on ? 'bg-accent-soft font-medium text-accent' : 'text-fg hover:bg-surface'}`}>
             <BellRing size={16} aria-hidden /><span className="flex-1 text-left">Reminders</span>{' '}<span className={`text-xs ${reminders.on ? 'text-accent' : 'text-muted'}`}>{reminders.count}</span>
           </button>
         )}
@@ -44,7 +44,7 @@ export function TaskRail({ list, onList, counts, type, onType, typeCounts, remin
             const on = type === t.id
             return (
               <button key={t.id} type="button" aria-pressed={on} onClick={() => onType(t.id)}
-                className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm pointer-coarse:py-2.5 transition ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
+                className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap choice rounded-xl px-3 py-2 text-sm pointer-coarse:py-2.5 transition max-md:px-4 ${on ? 'bg-surface font-medium' : 'text-muted hover:bg-surface hover:text-fg'}`}>
                 <span>{t.label}</span>{' '}<span className="text-xs">{typeCounts[t.id]}</span>
               </button>
             )

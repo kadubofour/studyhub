@@ -38,8 +38,10 @@ function firstPass(t: PlanTopic): PlanSession[] {
   return out
 }
 
+// examDay is the day the plan works up to: the exam, or for a plan with no exam the end of the days it looks ahead.
+// The last days before an exam are kept for a final revision of every topic; a plan with no exam has none (finalRevision false).
 export function buildPlan(o: {
-  today: DayKey; examDay: DayKey; mode: PlanMode; minutesPerDay: number; daysOff: number[]; topics: PlanTopic[]
+  today: DayKey; examDay: DayKey; mode: PlanMode; minutesPerDay: number; daysOff: number[]; topics: PlanTopic[]; finalRevision?: boolean
 }): { status: 'ok' | 'no_topics' | 'exam_passed' | 'no_days'; days: DayPlan[]; unscheduled: PlanSession[] } {
   const none = (status: 'no_topics' | 'exam_passed' | 'no_days') => ({ status, days: [] as DayPlan[], unscheduled: [] as PlanSession[] })
   if (o.examDay <= o.today) return none('exam_passed')
@@ -52,7 +54,7 @@ export function buildPlan(o: {
   const want = o.mode === 'deep' ? n : Math.min(n, Math.max(Math.min(MIN_SPRINT_TOPICS, n), Math.ceil(n * MODE_SHARE[o.mode])))
   const chosen = o.topics.filter(t => o.mode === 'deep' || t.status !== 'mastered').sort(needOrder).slice(0, want)
 
-  const reserve = days.length > RESERVED_DAYS ? RESERVED_DAYS : 0
+  const reserve = o.finalRevision !== false && days.length > RESERVED_DAYS ? RESERVED_DAYS : 0
   const early = days.slice(0, days.length - reserve)
   const late = days.slice(days.length - reserve)
   const plan = new Map<DayKey, PlanSession[]>(days.map(d => [d, []]))

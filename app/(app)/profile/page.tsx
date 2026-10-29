@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, Flame, Layers, Mic, NotebookPen, Pencil, ListChecks, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
+import { Check, ChevronRight, Flame, FolderOpen, Layers, Mic, NotebookPen, Pencil, ListChecks, Settings, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { usePlan } from '@/components/billing/usePlan'
@@ -73,20 +73,21 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <section className="card overflow-hidden p-0" aria-labelledby="profile-name">
-        <div aria-hidden="true" className="h-16" style={{ background: `linear-gradient(135deg, ${profile.avatar_color}, color-mix(in srgb, ${profile.avatar_color} 55%, #ffffff))` }} />
-        <div className="flex flex-col items-start gap-3 px-5 pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
-          <span className="-mt-10 rounded-full p-1" style={{ background: 'var(--raised)' }}><Avatar name={profile.display_name} email={email} color={profile.avatar_color} size={80} /></span>
+      {/* On a phone the whole card is the student's colour, with the avatar and name in the middle, like a banking app's profile */}
+      <section className="card overflow-hidden p-0 max-md:!border-transparent max-md:text-white max-md:[background:linear-gradient(160deg,var(--avatar),color-mix(in_srgb,var(--avatar)_62%,#0b0b16))]" aria-labelledby="profile-name" style={{ '--avatar': profile.avatar_color } as React.CSSProperties}>
+        <div aria-hidden="true" className="h-16 max-md:hidden" style={{ background: `linear-gradient(135deg, ${profile.avatar_color}, color-mix(in srgb, ${profile.avatar_color} 55%, #ffffff))` }} />
+        <div className="flex flex-col items-start gap-3 px-5 pb-5 max-md:items-center max-md:pb-6 max-md:pt-8 max-md:text-center sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+          <span className="-mt-10 rounded-full bg-raised p-1 max-md:mt-0 max-md:bg-white/25"><Avatar name={profile.display_name} email={email} color={profile.avatar_color} size={80} /></span>
           <div className="min-w-0 w-full pt-1 sm:w-auto sm:flex-1 sm:pt-2">
-            <h1 id="profile-name" className="truncate text-2xl font-semibold">{profile.display_name || 'Your profile'}</h1>
+            <h1 id="profile-name" className="truncate text-2xl font-semibold max-md:text-[1.75rem] max-md:font-bold max-md:tracking-tight">{profile.display_name || 'Your profile'}</h1>
             {sub && <p className="text-sm">{sub}</p>}
-            {email && <p className="text-sm text-muted">{email}</p>}
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
+            {email && <p className="text-sm text-muted max-md:text-white/80">{email}</p>}
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted max-md:justify-center max-md:text-white/80">
               {joined && <span>Member since {joined.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}</span>}
-              {plan.billing && !plan.loading && <span className="font-medium text-accent">{plan.isPremium && plan.premiumUntil ? `Premium until ${longDate(plan.premiumUntil)}` : 'Free plan'}</span>}
+              {plan.billing && !plan.loading && <span className="font-medium text-accent max-md:text-white">{plan.isPremium && plan.premiumUntil ? `Premium until ${longDate(plan.premiumUntil)}` : 'Free plan'}</span>}
             </p>
           </div>
-          {!editing && <button type="button" className="btn" onClick={startEditing}><Pencil size={14} aria-hidden />Edit profile</button>}
+          {!editing && <button type="button" className="btn max-md:!border-transparent max-md:!bg-white/20 max-md:!text-white" onClick={startEditing}><Pencil size={14} aria-hidden />Edit profile</button>}
         </div>
       </section>
 
@@ -123,7 +124,7 @@ export default function ProfilePage() {
       )}
 
       <section aria-labelledby="totals-title" className="space-y-3">
-        <h2 id="totals-title" className="text-base font-semibold">Your study so far</h2>
+        <h2 id="totals-title" className="section-label !mb-0">Your study so far</h2>
         {statsFailed && <p role="alert" className="text-sm text-danger">Could not load your study totals. Check your connection.</p>}
         {(tiles.length > 0 || xp) && (
         <div className="card space-y-5">
@@ -166,7 +167,7 @@ export default function ProfilePage() {
       <PreferencesCard />
 
       <section aria-labelledby="courses-title" className="space-y-2">
-        <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>
+        <h2 id="courses-title" className="section-label !mb-0">Your courses</h2>
         {courses.length === 0 ? <p className="text-sm text-muted">No courses yet. Add one in the Planner.</p> : (
           <ul aria-label="Your courses" className="flex flex-wrap gap-2">
             {courses.map(c => (
@@ -180,10 +181,19 @@ export default function ProfilePage() {
         )}
       </section>
 
-      <p className="flex gap-4 text-sm text-muted">
+      <p className="flex gap-4 text-sm text-muted max-md:hidden">
         <Link href="/settings" className="hover:text-fg">Settings</Link>
         <Link href="/library" className="hover:text-fg">Library</Link>
       </p>
+      {/* on a phone, the same two places as a list of rows */}
+      <nav aria-label="More" className="card !p-2 md:hidden">
+        {([['/settings', 'Settings', Settings], ['/library', 'Library', FolderOpen]] as const).map(([href, label, Icon]) => (
+          <Link key={href} href={href} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-[15px] font-medium transition active:bg-surface">
+            <span aria-hidden className="grid size-9 place-items-center rounded-full bg-surface text-muted"><Icon size={18} /></span>{label}
+            <ChevronRight size={18} className="ml-auto text-muted" aria-hidden />
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }
