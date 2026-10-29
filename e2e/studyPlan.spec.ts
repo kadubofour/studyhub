@@ -7,8 +7,8 @@ async function inBiology(page: Page) {
     page.getByLabel('Course').selectOption({ label: 'Biology' }),
   ])
 }
-// Two Biology notes, topics drafted and saved, then an exam next week: ready for a plan
-async function readyForPlan(page: Page) {
+// Two Biology notes, topics drafted and saved, then (unless asked not to) an exam next week: ready for a plan
+async function readyForPlan(page: Page, { exam = true } = {}) {
   await signUp(page)
   await noteWithText(page)
   await inBiology(page)
@@ -25,6 +25,7 @@ async function readyForPlan(page: Page) {
   await topics.getByRole('button', { name: 'Save topics' }).click()
   await expect(page.getByText('Topics saved.')).toBeVisible()
   await page.goto('/planner')
+  if (!exam) return
   await page.getByLabel('Add a task').fill('Midterm next fri')
   await page.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('radiogroup', { name: 'Type' }).getByRole('radio', { name: 'Exam' }).click()
@@ -36,7 +37,7 @@ test('make a study plan from an exam, see today\'s sessions on Planner and Home,
   test.setTimeout(120_000)
   await readyForPlan(page)
   const panel = page.getByRole('region', { name: 'Study plan' })
-  await panel.getByRole('button', { name: 'Make a study plan for Midterm' }).click()
+  await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('radio', { name: /Deep dive/ }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
   await expect(panel.getByText(/Deep dive · 45 min a day · Midterm in/)).toBeVisible()
@@ -52,11 +53,32 @@ test('make a study plan from an exam, see today\'s sessions on Planner and Home,
   await expect(page.getByRole('checkbox', { name: /^Mark (Learn|Warm-up|Revise): .* done$/ }).first()).toBeChecked()
 })
 
+test('a course with no exam gets a plan that keeps going, and can later work towards an exam', async ({ page }) => {
+  test.setTimeout(120_000)
+  await readyForPlan(page, { exam: false })
+  const panel = page.getByRole('region', { name: 'Study plan' })
+  await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
+  await expect(panel.getByLabel('Working towards')).toHaveValue('')
+  await panel.getByRole('button', { name: 'Save plan' }).click()
+  await expect(panel.getByText(/Balanced · 45 min a day · Ongoing, no exam/)).toBeVisible()
+  await expect(panel.getByRole('checkbox', { name: /^Mark (Learn|Warm-up|Revise): .* done$/ }).first()).toBeVisible()
+  // An exam added later can become its target
+  await page.getByLabel('Add a task').fill('Midterm next fri')
+  await page.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click()
+  await page.getByRole('radiogroup', { name: 'Type' }).getByRole('radio', { name: 'Exam' }).click()
+  await page.getByLabel('Add a task').press('Enter')
+  await expect(page.getByRole('checkbox', { name: 'Mark Midterm done' })).toBeVisible()
+  await panel.getByRole('button', { name: 'Edit plan' }).click()
+  await panel.getByLabel('Working towards').selectOption({ label: 'Midterm' })
+  await panel.getByRole('button', { name: 'Save plan' }).click()
+  await expect(panel.getByText(/Balanced · 45 min a day · Midterm in/)).toBeVisible()
+})
+
 test('a Warm-up makes a quiz and opens it', async ({ page }) => {
   test.setTimeout(120_000)
   await readyForPlan(page)
   const panel = page.getByRole('region', { name: 'Study plan' })
-  await panel.getByRole('button', { name: 'Make a study plan for Midterm' }).click()
+  await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
   await panel.getByRole('button', { name: 'Start warm-up' }).first().click()
   await expect(page).toHaveURL(/\/quiz\/[0-9a-f-]{36}$/)
@@ -66,7 +88,7 @@ test('edit the plan, then delete it', async ({ page }) => {
   test.setTimeout(120_000)
   await readyForPlan(page)
   const panel = page.getByRole('region', { name: 'Study plan' })
-  await panel.getByRole('button', { name: 'Make a study plan for Midterm' }).click()
+  await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
   await expect(panel.getByText(/Balanced · 45 min a day/)).toBeVisible()
   await panel.getByRole('button', { name: 'Edit plan' }).click()
@@ -76,7 +98,7 @@ test('edit the plan, then delete it', async ({ page }) => {
   await expect(panel.getByText(/Sprint · 30 min a day/)).toBeVisible()
   await panel.getByRole('button', { name: 'Delete plan' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
-  await expect(panel.getByRole('button', { name: 'Make a study plan for Midterm' })).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Make a study plan for Biology' })).toBeVisible()
 })
 
 test('a course with no topics is sent to Progress first', async ({ page }) => {
@@ -87,7 +109,7 @@ test('a course with no topics is sent to Progress first', async ({ page }) => {
   await page.getByRole('radiogroup', { name: 'Type' }).getByRole('radio', { name: 'Exam' }).click()
   await page.getByLabel('Add a task').press('Enter')
   const panel = page.getByRole('region', { name: 'Study plan' })
-  await panel.getByRole('button', { name: 'Make a study plan for Midterm' }).click()
+  await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
   await expect(panel.getByText(/Draft topics for Biology on Progress first/)).toBeVisible()
 })

@@ -5,7 +5,7 @@ type U = Awaited<ReturnType<typeof newUser>>
 const course = async (u: U, name = 'Biology') => (await u.sb.from('courses').insert({ name, color: '#1D9E75' }).select('id').single()).data!.id as string
 const exam = async (u: U, courseId: string | null, type = 'exam') =>
   (await u.sb.from('tasks').insert({ title: 'Midterm', type, course_id: courseId, due_at: new Date(Date.now() + 14 * 86_400_000).toISOString() }).select('id').single()).data!.id as string
-const plan = (u: U, courseId: string, examId: string, over: object = {}) =>
+const plan = (u: U, courseId: string, examId: string | null, over: object = {}) =>
   u.sb.from('study_plans').insert({ course_id: courseId, exam_task_id: examId, ...over }).select('id').single()
 const sessions = [{ id: 's1', topic_id: '11111111-1111-4111-8111-111111111111', kind: 'learn', minutes: 25, done_at: null }]
 
@@ -38,14 +38,25 @@ describe('study plans', () => {
     expect((await plan(u, c2, await exam(u, c2, 'assignment'))).error).not.toBeNull() // not an exam
     expect((await plan(u, c2, await exam(u, null))).error).not.toBeNull() // no course
   })
-  it('deleting the exam, or the course, deletes the plan and its days', async () => {
+  it('needs no exam: a course can have a plan that keeps going, and be pointed at an exam and back', async () => {
+    const u = await newUser(), other = await newUser()
+    const c = await course(u)
+    const { data: p, error } = await plan(u, c, null)
+    expect(error).toBeNull()
+    const e = await exam(u, c)
+    expect((await u.sb.from('study_plans').update({ exam_task_id: e }).eq('id', p!.id)).error).toBeNull()
+    expect((await u.sb.from('study_plans').update({ exam_task_id: null }).eq('id', p!.id)).error).toBeNull()
+    expect((await u.sb.from('study_plans').update({ exam_task_id: await exam(u, c, 'assignment') }).eq('id', p!.id)).error).not.toBeNull()
+    expect((await plan(other, c, null)).error).not.toBeNull() // still only for the student's own course
+  })
+  it('deleting the exam keeps the plan and its days, without an exam; deleting the course deletes the plan', async () => {
     const u = await newUser()
     const c = await course(u), e = await exam(u, c)
     const { data: p } = await plan(u, c, e)
     await u.sb.from('study_plan_days').insert({ plan_id: p!.id, day: '2026-10-12', sessions })
     await u.sb.from('tasks').delete().eq('id', e)
-    expect((await u.sb.from('study_plans').select('id').eq('id', p!.id)).data).toEqual([])
-    expect((await u.sb.from('study_plan_days').select('id').eq('plan_id', p!.id)).data).toEqual([])
+    expect((await u.sb.from('study_plans').select('id,exam_task_id').eq('id', p!.id)).data).toEqual([{ id: p!.id, exam_task_id: null }])
+    expect((await u.sb.from('study_plan_days').select('id').eq('plan_id', p!.id)).data).toHaveLength(1)
     const c2 = await course(u, 'Chem'), p2 = (await plan(u, c2, await exam(u, c2))).data!
     await u.sb.from('courses').delete().eq('id', c2)
     expect((await u.sb.from('study_plans').select('id').eq('id', p2.id)).data).toEqual([])
@@ -97,7 +108,7 @@ describe('plans whose exam changes', () => {
 })
 
 describe('create_study_plan', () => {
-  const create = (u: U, courseId: string, examId: string) =>
+  const create = (u: U, courseId: string, examId: string | null) =>
     u.sb.rpc('create_study_plan', { p_course: courseId, p_exam: examId, p_mode: 'balanced', p_minutes: 45, p_days_off: [] })
   it('replaces a plan whose exam is done or has passed', async () => {
     const u = await newUser()
@@ -123,6 +134,13 @@ describe('create_study_plan', () => {
     expect(error).not.toBeNull()
     expect((await u.sb.from('study_plans').select('id').eq('course_id', c)).data).toEqual([{ id: live }])
     expect((await u.sb.from('study_plan_days').select('id').eq('plan_id', live)).data).toHaveLength(1)
+  })
+  it('makes a plan with no exam', async () => {
+    const u = await newUser()
+    const c = await course(u)
+    const { data, error } = await create(u, c, null)
+    expect(error).toBeNull()
+    expect((await u.sb.from('study_plans').select('id,exam_task_id').eq('course_id', c)).data).toEqual([{ id: data, exam_task_id: null }])
   })
   it('is for the student\'s own course and exam', async () => {
     const u = await newUser(), other = await newUser()

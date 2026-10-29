@@ -6,17 +6,26 @@ import { PlanForm } from '@/components/plan/PlanForm'
 afterEach(cleanup)
 const open = (over: Partial<React.ComponentProps<typeof PlanForm>> = {}) => {
   const onSave = vi.fn(), onCancel = vi.fn()
-  render(<PlanForm title="Biology" examLabel="Midterm" saving={false} error={null} onSave={onSave} onCancel={onCancel} {...over} />)
+  render(<PlanForm title="Biology" exams={[]} saving={false} error={null} onSave={onSave} onCancel={onCancel} {...over} />)
   return { onSave, onCancel }
 }
 
 describe('PlanForm', () => {
+  it('works towards an exam only if one is chosen: with none it keeps going', () => {
+    const { onSave } = open({ exams: [{ id: 'e1', title: 'Midterm' }, { id: 'e2', title: 'Final' }], initial: { examId: 'e1' } })
+    const aim = screen.getByLabelText('Working towards') as HTMLSelectElement
+    expect([...aim.options].map(o => o.text)).toEqual(['No exam: keep going', 'Midterm', 'Final'])
+    expect(aim.value).toBe('e1')
+    fireEvent.change(aim, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
+    expect(onSave).toHaveBeenCalledWith({ mode: 'balanced', minutesPerDay: 45, daysOff: [], examId: null })
+  })
   it('starts on Balanced, 45 minutes, no days off, and saves those', () => {
     const { onSave } = open()
     expect((screen.getByRole('radio', { name: /Balanced/ }) as HTMLInputElement).checked).toBe(true)
     expect((screen.getByLabelText('Minutes a day') as HTMLInputElement).value).toBe('45')
     fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
-    expect(onSave).toHaveBeenCalledWith({ mode: 'balanced', minutesPerDay: 45, daysOff: [] })
+    expect(onSave).toHaveBeenCalledWith({ mode: 'balanced', minutesPerDay: 45, daysOff: [], examId: null })
   })
   it('describes each mode, and saves the choices', () => {
     const { onSave } = open()
@@ -26,7 +35,7 @@ describe('PlanForm', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sun' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sat' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
-    expect(onSave).toHaveBeenCalledWith({ mode: 'deep', minutesPerDay: 90, daysOff: [0, 6] })
+    expect(onSave).toHaveBeenCalledWith({ mode: 'deep', minutesPerDay: 90, daysOff: [0, 6], examId: null })
   })
   it('shows the current settings when editing', () => {
     open({ initial: { mode: 'sprint', minutesPerDay: 30, daysOff: [0] } })

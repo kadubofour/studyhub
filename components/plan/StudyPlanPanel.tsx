@@ -31,12 +31,12 @@ function Days({ days }: { days: { day: string; sessions: ScheduledView[] }[] }) 
   )
 }
 
-// Planner: make a study plan from an exam, see today's sessions and the days ahead
+// Planner: make a study plan for any course, working towards an exam or keeping going without one; see today's sessions and the days ahead
 export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: Task[] }) {
   const confirm = useConfirm()
   const plans = usePlans()
   const warmup = useWarmup()
-  const [form, setForm] = useState<{ kind: 'new'; exam: Task } | { kind: 'edit'; view: PlanView } | null>(null)
+  const [form, setForm] = useState<{ kind: 'new'; course: Course } | { kind: 'edit'; view: PlanView } | null>(null)
   const [full, setFull] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [now] = useState(() => Date.now()) // when the page opened: an exam is upcoming if it is after this
@@ -54,20 +54,20 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
   )
   const views = plans.views
   const planned = new Set(views.map(v => v.courseId))
-  // The earliest upcoming dated exam of each course that has no plan
-  const offers = courses.flatMap(c => {
-    if (planned.has(c.id)) return []
-    const next = tasks.filter(t => t.type === 'exam' && !t.id.startsWith('temp-') && t.course_id === c.id && t.due_at && new Date(t.due_at).getTime() > now && !t.done_at)
-      .sort((a, b) => a.due_at!.localeCompare(b.due_at!))[0]
-    return next ? [next] : []
-  })
+  // Every course without a plan can have one, exams or not
+  const offers = courses.filter(c => !planned.has(c.id) && !c.id.startsWith('temp-'))
+  // A course's saved, dated, upcoming exams, soonest first: what a plan can work towards
+  const examsOf = (courseId: string) => tasks
+    .filter(t => t.type === 'exam' && !t.id.startsWith('temp-') && t.course_id === courseId && t.due_at && new Date(t.due_at).getTime() > now && !t.done_at)
+    .sort((a, b) => a.due_at!.localeCompare(b.due_at!))
 
   async function save(s: PlanSettings) {
     if (!form) return
     setSaving(true); setError(null)
     try {
-      if (form.kind === 'new') await savePlan(supabase(), { course_id: form.exam.course_id!, exam_task_id: form.exam.id, mode: s.mode, minutes_per_day: s.minutesPerDay, days_off: s.daysOff })
-      else await savePlan(supabase(), { course_id: form.view.courseId, exam_task_id: form.view.plan.exam_task_id, mode: s.mode, minutes_per_day: s.minutesPerDay, days_off: s.daysOff }, form.view.plan.id)
+      const settings = { exam_task_id: s.examId, mode: s.mode, minutes_per_day: s.minutesPerDay, days_off: s.daysOff }
+      if (form.kind === 'new') await savePlan(supabase(), { course_id: form.course.id, ...settings })
+      else await savePlan(supabase(), { course_id: form.view.courseId, ...settings }, form.view.plan.id)
       setForm(null); plans.reload()
     } catch { setError('Couldn\'t save the plan. Try again.') } finally { setSaving(false) }
   }
@@ -80,20 +80,20 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
   return (
     <section aria-label="Study plan" className="card mt-4 space-y-4">
       <h2 className="font-semibold">Study plan</h2>
-      {views.length === 0 && offers.length === 0 && <p className="text-sm text-muted">Add an exam task to a course to make a study plan.</p>}
+      {views.length === 0 && offers.length === 0 && <p className="text-sm text-muted">Add a course to make a study plan.</p>}
 
       {views.map(v => {
         const course = courseOf(v.courseId)
         return (
           <div key={v.plan.id} className="space-y-2">
             {editing?.plan.id === v.plan.id ? (
-              <PlanForm title={course?.name ?? 'Course'} examLabel={v.plan.exam.title} saving={saving} error={error}
-                initial={{ mode: v.plan.mode, minutesPerDay: v.plan.minutes_per_day, daysOff: v.plan.days_off }} onSave={s => { void save(s) }} onCancel={() => { setForm(null); setError(null) }} />
+              <PlanForm title={course?.name ?? 'Course'} exams={examsOf(v.courseId)} saving={saving} error={error}
+                initial={{ mode: v.plan.mode, minutesPerDay: v.plan.minutes_per_day, daysOff: v.plan.days_off, examId: v.examDay ? v.plan.exam_task_id : null }} onSave={s => { void save(s) }} onCancel={() => { setForm(null); setError(null) }} />
             ) : (
               <>
-                <p className="text-sm"><span className="font-medium">{course?.name}</span> <span className="text-muted">· {MODE_LABEL[v.plan.mode]} · {v.plan.minutes_per_day} min a day · {v.plan.exam.title} in {plural(v.daysToExam, 'day')}</span></p>
+                <p className="text-sm"><span className="font-medium">{course?.name}</span> <span className="text-muted">· {MODE_LABEL[v.plan.mode]} · {v.plan.minutes_per_day} min a day · {v.plan.exam && v.daysToExam !== null ? `${v.plan.exam.title} in ${plural(v.daysToExam, 'day')}` : 'Ongoing, no exam'}</span></p>
                 {v.status === 'no_topics' && <p className="text-sm text-muted">Draft topics for {course?.name} on Progress first. <Link className="text-accent" href="/progress">Open Progress</Link></p>}
-                {v.status === 'no_days' && <p className="text-sm text-muted">Your exam is too close for a plan.</p>}
+                {v.status === 'no_days' && <p className="text-sm text-muted">{v.examDay ? 'Your exam is too close for a plan.' : 'There are no study days in the next two weeks.'}</p>}
                 {v.status === 'ok' && (
                   <>
                     <div>
@@ -121,10 +121,11 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
         )
       })}
 
-      {offers.map(exam => (
-        form?.kind === 'new' && form.exam.id === exam.id
-          ? <PlanForm key={exam.id} title={courseOf(exam.course_id!)?.name ?? 'Course'} examLabel={exam.title} saving={saving} error={error} onSave={s => { void save(s) }} onCancel={() => { setForm(null); setError(null) }} />
-          : <button key={exam.id} type="button" className="btn" onClick={() => { setError(null); setForm({ kind: 'new', exam }) }}>Make a study plan for {exam.title}</button>
+      {offers.map(c => (
+        form?.kind === 'new' && form.course.id === c.id
+          // works towards the course's next exam when it has one; the student can choose another or none
+          ? <PlanForm key={c.id} title={c.name} exams={examsOf(c.id)} initial={{ examId: examsOf(c.id)[0]?.id ?? null }} saving={saving} error={error} onSave={s => { void save(s) }} onCancel={() => { setForm(null); setError(null) }} />
+          : <button key={c.id} type="button" className="btn" onClick={() => { setError(null); setForm({ kind: 'new', course: c }) }}>Make a study plan for {c.name}</button>
       ))}
       {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
       {!form && error && <p role="alert" className="text-sm text-danger">{error}</p>}

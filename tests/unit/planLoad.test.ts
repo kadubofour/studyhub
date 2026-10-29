@@ -66,13 +66,26 @@ describe('loadPlans', () => {
     ]
     expect((await load())[0].missed).toBe(1)
   })
-  it('hides plans whose exam is done, has no date, or has come', async () => {
-    plans = [plan({ exam: { id: 'e1', title: 'M', due_at: '2026-10-26T09:00:00Z', done_at: '2026-10-11T00:00:00Z' } })]
-    expect(await load()).toEqual([])
-    plans = [plan({ exam: { id: 'e1', title: 'M', due_at: null, done_at: null } })]
-    expect(await load()).toEqual([])
-    plans = [plan({ exam: { id: 'e1', title: 'M', due_at: '2026-10-12T15:00:00Z', done_at: null } })]
-    expect(await load()).toEqual([])
+  it('a plan with no exam keeps going: it plans the next two weeks, with no final revision', async () => {
+    plans = [plan({ exam_task_id: null, exam: null })]
+    const [v] = await load()
+    expect(v.examDay).toBeNull()
+    expect(v.daysToExam).toBeNull()
+    expect(v.status).toBe('ok')
+    expect(v.today.length).toBeGreaterThan(0)
+    expect(v.schedule.at(-1)!.day).toBe('2026-10-26') // tomorrow to the 14th day from today
+  })
+  it('keeps going without an exam when its exam is done, has no date, or has come', async () => {
+    for (const exam of [
+      { id: 'e1', title: 'M', due_at: '2026-10-26T09:00:00Z', done_at: '2026-10-11T00:00:00Z' },
+      { id: 'e1', title: 'M', due_at: null, done_at: null },
+      { id: 'e1', title: 'M', due_at: '2026-10-12T15:00:00Z', done_at: null },
+    ]) {
+      plans = [plan({ exam })]
+      const [v] = await load()
+      expect(v.examDay).toBeNull()
+      expect(v.status).toBe('ok')
+    }
   })
   it('says there are no topics, without saving a day', async () => {
     stats = []
@@ -104,10 +117,16 @@ describe('loadPlans', () => {
       }
     }
   })
-  it('hides a plan whose exam task is no longer an exam of that course', async () => {
+  it('keeps going without an exam when its exam task is no longer an exam of that course', async () => {
     plans = [plan({ exam: { id: 'e1', title: 'M', due_at: '2026-10-26T09:00:00Z', done_at: null, type: 'assignment', course_id: 'c1' } })]
-    expect(await load()).toEqual([])
+    expect((await load())[0].examDay).toBeNull()
     plans = [plan({ exam: { id: 'e1', title: 'M', due_at: '2026-10-26T09:00:00Z', done_at: null, type: 'exam', course_id: 'other' } })]
-    expect(await load()).toEqual([])
+    expect((await load())[0].examDay).toBeNull()
+  })
+  it('with an exam ahead, works up to the day before it', async () => {
+    const [v] = await load()
+    expect(v.examDay).toBe('2026-10-26')
+    expect(v.daysToExam).toBe(14)
+    expect(v.schedule.at(-1)!.day).toBe('2026-10-25')
   })
 })

@@ -37,34 +37,47 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Study plan panel', () => {
-  it('waits until a new exam is saved before offering a plan for it', async () => {
-    await open([exam({ id: 'temp-123' })])
-    expect(screen.queryByRole('button', { name: /Make a study plan/ })).toBeNull()
-  })
-  it('offers to make a plan for an upcoming exam, and saves it', async () => {
-    await open()
-    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Midterm' }))
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
-    expect(savePlan).toHaveBeenCalledWith(expect.anything(), { course_id: 'c1', exam_task_id: 'e1', mode: 'balanced', minutes_per_day: 45, days_off: [] })
-    expect(reload).toHaveBeenCalled()
-  })
-  it('only the earliest upcoming exam of a course, and not past, done, undated, or already planned ones', async () => {
-    const soon = exam({ id: 'e1', title: 'Soon', due_at: new Date(Date.now() + 5 * 86_400_000).toISOString() })
-    const later = exam({ id: 'e2', title: 'Later', due_at: new Date(Date.now() + 20 * 86_400_000).toISOString() })
-    const past = exam({ id: 'e3', course_id: 'c2', title: 'Past', due_at: new Date(Date.now() - 86_400_000).toISOString() })
-    const undated = exam({ id: 'e4', course_id: 'c2', title: 'Undated', due_at: null })
-    const assignment = exam({ id: 'e5', course_id: 'c2', title: 'Essay', type: 'assignment' })
-    await open([later, soon, past, undated, assignment])
-    expect(screen.getByRole('button', { name: 'Make a study plan for Soon' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Later|Past|Undated|Essay/ })).toBeNull()
+  it('offers a plan for every course without one, exams or not', async () => {
+    await open([])
+    expect(screen.getByRole('button', { name: 'Make a study plan for Biology' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Make a study plan for Chemistry' })).toBeTruthy()
     cleanup()
     views = [view()]
-    await open([exam()])
-    expect(screen.queryByRole('button', { name: /Make a study plan/ })).toBeNull()
-  })
-  it('says what to do when there is nothing to plan', async () => {
     await open([])
-    expect(screen.getByText('Add an exam task to a course to make a study plan.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Make a study plan for Biology' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Make a study plan for Chemistry' })).toBeTruthy()
+  })
+  it('a course with no exam gets a plan that keeps going', async () => {
+    await open([])
+    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Chemistry' }))
+    expect((screen.getByLabelText('Working towards') as HTMLSelectElement).value).toBe('')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
+    expect(savePlan).toHaveBeenCalledWith(expect.anything(), { course_id: 'c2', exam_task_id: null, mode: 'balanced', minutes_per_day: 45, days_off: [] })
+    expect(reload).toHaveBeenCalled()
+  })
+  it('works towards the course\'s next saved, upcoming exam by default, and can choose another or none', async () => {
+    const soon = exam({ id: 'e1', title: 'Soon', due_at: new Date(Date.now() + 5 * 86_400_000).toISOString() })
+    const later = exam({ id: 'e2', title: 'Later', due_at: new Date(Date.now() + 20 * 86_400_000).toISOString() })
+    const past = exam({ id: 'e3', title: 'Past', due_at: new Date(Date.now() - 86_400_000).toISOString() })
+    const undated = exam({ id: 'e4', title: 'Undated', due_at: null })
+    const unsaved = exam({ id: 'temp-1', title: 'Unsaved' })
+    const assignment = exam({ id: 'e5', title: 'Essay', type: 'assignment' })
+    await open([later, soon, past, undated, unsaved, assignment])
+    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' }))
+    const aim = screen.getByLabelText('Working towards') as HTMLSelectElement
+    expect([...aim.options].map(o => o.text)).toEqual(['No exam: keep going', 'Soon', 'Later'])
+    expect(aim.value).toBe('e1')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
+    expect(savePlan).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ course_id: 'c1', exam_task_id: 'e1' }))
+  })
+  it('says what to do when there is no course to plan', async () => {
+    await act(async () => { render(<ConfirmProvider><StudyPlanPanel courses={[]} tasks={[]} /></ConfirmProvider>) })
+    expect(screen.getByText('Add a course to make a study plan.')).toBeTruthy()
+  })
+  it('a plan with no exam says it keeps going', async () => {
+    views = [view({ examDay: null, daysToExam: null, plan: { ...view().plan, exam_task_id: null, exam: null } })]
+    await open([])
+    expect(screen.getByRole('region', { name: 'Study plan' }).textContent).toMatch(/Balanced.*45 min a day.*Ongoing, no exam/)
   })
   it('shows a plan: its summary, today\'s sessions, the next days, and ticks a session', async () => {
     views = [view()]
@@ -120,7 +133,7 @@ describe('Study plan panel', () => {
   it('keeps the form open and says so when saving fails', async () => {
     savePlan.mockRejectedValueOnce(new Error('rls'))
     await open()
-    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Midterm' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/Couldn't save the plan/)
   })

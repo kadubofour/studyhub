@@ -19,10 +19,15 @@ describe('savePlan', () => {
     expect(rpc).toHaveBeenCalledWith('create_study_plan', { p_course: 'c1', p_exam: 'e1', p_mode: 'sprint', p_minutes: 30, p_days_off: [0] })
     expect(from).not.toHaveBeenCalled()
   })
-  it('editing changes only the settings of that plan', async () => {
+  it('makes a plan with no exam', async () => {
+    const { sb, rpc } = sbWith()
+    await savePlan(sb, { ...input, exam_task_id: null })
+    expect(rpc).toHaveBeenCalledWith('create_study_plan', { p_course: 'c1', p_exam: null, p_mode: 'sprint', p_minutes: 30, p_days_off: [0] })
+  })
+  it('editing changes the settings and the exam it works towards, not the course', async () => {
     const { sb, calls } = sbWith()
-    await savePlan(sb, input, 'p1')
-    expect(calls).toContainEqual(['update', [{ mode: 'sprint', minutes_per_day: 30, days_off: [0] }]])
+    await savePlan(sb, { ...input, exam_task_id: null }, 'p1')
+    expect(calls).toContainEqual(['update', [{ exam_task_id: null, mode: 'sprint', minutes_per_day: 30, days_off: [0] }]])
     expect(calls).toContainEqual(['eq', ['id', 'p1']])
   })
   it('a refused create throws', async () => {

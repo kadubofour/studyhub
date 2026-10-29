@@ -112,6 +112,14 @@ describe('placing sessions', () => {
     expect(new Set(last2.map(s => s.topicId))).toEqual(new Set(list.map(t => t.id)))
     expect(r.days.slice(0, -2).flatMap(d => d.sessions).some(s => s.kind === 'revise')).toBe(true) // spaced revision earlier
   })
+  it('a plan with no exam keeps no final-revision days: the last days are planned like the rest', () => {
+    // more to learn than fits: with an exam the last two days hold only final revision, without one they keep teaching
+    const list = Array.from({ length: 12 }, () => topic())
+    const withExam = run(list, { examDay: at(10), minutesPerDay: 30 })
+    expect(withExam.days.slice(-2).flatMap(d => d.sessions).every(s => s.kind === 'revise')).toBe(true)
+    const ongoing = run(list, { examDay: at(10), minutesPerDay: 30, finalRevision: false })
+    expect(ongoing.days.slice(-2).flatMap(d => d.sessions).some(s => s.kind !== 'revise')).toBe(true)
+  })
   it('revises a topic at least 2 days after its Learn', () => {
     const t = topic({ status: 'weak', percent: 10 })
     const r = run([t], { examDay: at(14) })
