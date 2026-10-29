@@ -49,7 +49,7 @@ export function CourseBar({ courses, selected, onSelect, onChange, unsorted }: {
   }
 
   // Course filters: a coloured square + name; the active one gets a tinted background in its colour (the text stays the normal colour, which is always readable)
-  const chip = (active: boolean) => `inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition max-md:rounded-full max-md:px-4 max-md:py-2 ${active ? 'border-transparent font-medium' : 'border-line bg-raised hover:bg-surface'}`
+  const chip = (active: boolean) => `choice inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition max-md:px-4 max-md:py-2 ${active ? 'border-transparent font-medium' : 'border-line bg-raised hover:bg-surface'}`
   const tint = (color: string, active: boolean) => (active ? { background: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined)
 
   return (

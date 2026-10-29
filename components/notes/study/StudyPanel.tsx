@@ -23,10 +23,10 @@ export function StudyPanel({ note, onClose, prepare, applyContent, initialTab = 
         <h2 className="font-semibold">✦ Study</h2>
         <button type="button" className="btn-ghost" aria-label="Close study panel" onClick={onClose}><X size={16} aria-hidden /></button>
       </div>
-      <div role="tablist" aria-label="Study tools" className="mb-4 flex gap-1 rounded-xl bg-surface p-0.5">
+      <div role="tablist" aria-label="Study tools" className="choice-track mb-4 flex gap-1 rounded-xl bg-surface p-0.5">
         {TABS.map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-            className={`flex-1 rounded-lg px-2 py-1 text-sm ${tab === id ? 'bg-raised font-medium shadow-sm' : 'text-muted'}`}>{label}</button>
+            className={`choice flex-1 rounded-lg px-2 py-1 text-sm ${tab === id ? 'bg-raised font-medium shadow-sm' : 'text-muted'}`}>{label}</button>
         ))}
       </div>
       {tab === 'summary' && <SummaryTab note={note} prepare={prepare} applyContent={applyContent} />}

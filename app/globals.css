@@ -376,6 +376,14 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
   /* titles in the app's own sans, bold and tight; Playful keeps its rounded face. Important only to beat the greeting's inline face. */
   .app-root[data-look]:not([data-look="playful"]) :is(.font-display, .section-label) { font-family: var(--app-font), ui-sans-serif, system-ui, sans-serif !important; }
   .app-root[data-look]:not([data-look="playful"]) :is(h1.font-display, h2.font-display, .section-label) { font-weight: 700; letter-spacing: -0.025em; }
+  /* Every choice on every page (tabs, filters, view switches, sections) is the same pill: outlined, and the chosen one in ink.
+     A choice says it is chosen the accessible way (aria-selected, -pressed, -checked or -current), so the look follows the state.
+     Important, so it wins over each control's own wider-screen utilities and a course chip's inline tint. */
+  .app-root .choice { border: 1px solid var(--line) !important; border-radius: 9999px !important; background: var(--raised) !important; color: var(--fg) !important; box-shadow: none !important; }
+  .app-root .choice:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="true"], [aria-current="page"]) { border-color: var(--fg) !important; background: var(--fg) !important; color: var(--bg) !important; font-weight: 500; }
+  .app-root .choice:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="true"], [aria-current="page"]) * { color: inherit !important; }
+  /* a row of choices drawn as one bar on wider screens is a row of separate pills */
+  .app-root .choice-track { border: 0 !important; padding: 0 !important; background: none !important; gap: 0.375rem; }
 }
 }
 

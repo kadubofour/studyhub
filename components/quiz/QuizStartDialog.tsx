@@ -135,7 +135,7 @@ function Body({ onClose }: { onClose: () => void }) {
               const on = types.includes(t)
               return (
                 <button key={t} type="button" aria-pressed={on} onClick={() => setTypes(ts => (on ? ts.filter(x => x !== t) : [...ts, t]))}
-                  className={`rounded-lg px-3 py-1.5 text-sm transition pointer-coarse:py-2.5 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-muted hover:text-fg'}`}>{label}</button>
+                  className={`choice rounded-lg px-3 py-1.5 text-sm transition pointer-coarse:py-2.5 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-muted hover:text-fg'}`}>{label}</button>
               )
             })}
           </div>

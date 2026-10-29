@@ -121,3 +121,17 @@ describe('Library filters on a phone', () => {
     expect(src()).toContain('<div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">')
   })
 })
+
+describe('one look for every choice on a phone', () => {
+  it('tabs, filters, view switches and sections on every page share the choice pill, chosen in ink', () => {
+    const files = ['app/(app)/planner/page.tsx', 'app/(app)/focus/page.tsx', 'app/(app)/library/page.tsx', 'components/notes/study/StudyPanel.tsx', 'components/calendar/CalendarToolbar.tsx',
+      'components/quiz/QuizStartDialog.tsx', 'components/ui/ViewOptions.tsx', 'components/ui/ChoiceChips.tsx', 'components/settings/SettingsRail.tsx', 'components/planner/CourseBar.tsx', 'components/planner/TaskRail.tsx']
+    for (const f of files) expect(fs.readFileSync(f, 'utf8'), f).toMatch(/[`"']choice /)
+    const css = fs.readFileSync('app/globals.css', 'utf8')
+    expect(css).toContain('.app-root .choice:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="true"], [aria-current="page"]) { border-color: var(--fg) !important; background: var(--fg) !important; color: var(--bg) !important;')
+  })
+  it('page header actions are the look\'s buttons, not tinted ones', () => {
+    expect(fs.readFileSync('components/quick/QuickActions.tsx', 'utf8')).not.toContain('BTN_SOFT')
+    expect(fs.readFileSync('components/quick/NewNoteButton.tsx', 'utf8')).toContain('className = BTN_OUTLINE')
+  })
+})

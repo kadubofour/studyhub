@@ -124,7 +124,7 @@ export default function ProfilePage() {
       )}
 
       <section aria-labelledby="totals-title" className="space-y-3">
-        <h2 id="totals-title" className="text-base font-semibold">Your study so far</h2>
+        <h2 id="totals-title" className="section-label !mb-0">Your study so far</h2>
         {statsFailed && <p role="alert" className="text-sm text-danger">Could not load your study totals. Check your connection.</p>}
         {(tiles.length > 0 || xp) && (
         <div className="card space-y-5">
@@ -167,7 +167,7 @@ export default function ProfilePage() {
       <PreferencesCard />
 
       <section aria-labelledby="courses-title" className="space-y-2">
-        <h2 id="courses-title" className="text-base font-semibold">Your courses</h2>
+        <h2 id="courses-title" className="section-label !mb-0">Your courses</h2>
         {courses.length === 0 ? <p className="text-sm text-muted">No courses yet. Add one in the Planner.</p> : (
           <ul aria-label="Your courses" className="flex flex-wrap gap-2">
             {courses.map(c => (

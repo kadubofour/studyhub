@@ -56,7 +56,8 @@ export default function FlashcardsPage() {
       <PageHeader title="Flashcards" actions={<>
         {totalDue > 0 && <Link href="/review" className="btn-primary">Review all ({totalDue})</Link>}
         <button className="btn" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
-        <button className="btn" onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
+        {/* one ink button per header, as on every page: Review all when cards are due, otherwise making a deck */}
+        <button className={totalDue > 0 ? 'btn' : 'btn-primary'} onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
       </>} />
       {decks?.length === 0 && (
         <EmptyState icon={Layers} tone="a" title="Make your first deck" body="Group cards into decks, one per topic. Reviews are scheduled so you remember for longer.">

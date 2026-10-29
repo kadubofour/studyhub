@@ -4,7 +4,7 @@ import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 export type Choice = { value: string; label: string; color?: string }
 
 // Pick one of a few options by tapping it, instead of opening a dropdown: a labelled group of chips that works like a radio group.
-// On a phone they are pills, the chosen one in ink.
+// On a phone they share every choice's look (.choice in globals.css).
 export function ChoiceChips({ label, value, options, onChange, disabled = false, size = 'md', className = '' }: {
   label: string; value: string; options: Choice[]; onChange: (v: string) => void; disabled?: boolean; size?: 'sm' | 'md'; className?: string
 }) {
@@ -22,7 +22,7 @@ export function ChoiceChips({ label, value, options, onChange, disabled = false,
               if (to === null) return
               e.preventDefault(); onChange(options[to].value); focusRadio(e.currentTarget, to)
             }}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl ${pad} transition disabled:opacity-50 max-md:rounded-full ${on ? 'bg-accent-soft font-medium text-accent max-md:bg-fg max-md:text-bg' : 'bg-surface text-fg hover:brightness-95 max-md:border max-md:border-line max-md:bg-raised'}`}>
+            className={`choice inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl ${pad} transition disabled:opacity-50 ${on ? 'bg-accent-soft font-medium text-accent' : 'bg-surface text-fg hover:brightness-95'}`}>
             {o.color && <span data-dot aria-hidden className="size-2 shrink-0 rounded-[3px]" style={{ background: o.color }} />}{o.label}
           </button>
         )
