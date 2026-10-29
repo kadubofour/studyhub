@@ -93,8 +93,11 @@ describe('the focus timer on Home, on a phone', () => {
     expect(screen.getByRole('button', { name: 'Start focus' }).querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe(' focus')
     expect(screen.getByRole('link', { name: 'Open' }).className).toContain('max-sm:hidden')
   })
-  it('the greeting card is less padded on a phone', () => {
-    expect(fs.readFileSync('app/(app)/home/page.tsx', 'utf8')).toContain('className="hero hero-page max-sm:!pb-6 max-sm:!pt-6"')
+  it('on a phone the greeting sits on the page and the goal and timer are one coloured card', () => {
+    expect(fs.readFileSync('app/(app)/home/page.tsx', 'utf8')).toContain('className="hero hero-page home-hero"')
+    const css = fs.readFileSync('app/globals.css', 'utf8')
+    expect(css).toContain('.app-root .hero.hero-page.home-hero { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; color: var(--fg); }')
+    expect(css).toMatch(/\.app-root \.home-hero \.home-hero-panel \{[^}]*background-color: var\(--accent-solid\)/)
   })
 })
 

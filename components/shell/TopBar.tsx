@@ -73,7 +73,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   return (
     <header aria-label="Today at a glance" className="app-topbar no-print sticky top-0 z-30 flex items-center gap-3 bg-bg px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10">
       <button type="button" onClick={onSearch} aria-label="Search or jump"
-        className="glass flex min-h-10 min-w-0 items-center gap-2.5 rounded-xl px-3.5 text-[15px] text-muted transition hover:text-fg md:w-80">
+        className="glass flex min-h-10 min-w-0 items-center gap-2.5 rounded-xl px-3.5 max-md:rounded-full text-[15px] text-muted transition hover:text-fg md:w-80">
         <Search size={16} aria-hidden /><span aria-hidden className="hidden truncate md:inline">Search or jump…</span>
         <span aria-hidden className="ml-auto hidden items-center gap-1 md:flex"><span className="kbd">Ctrl</span><span className="kbd">K</span></span>
       </button>
