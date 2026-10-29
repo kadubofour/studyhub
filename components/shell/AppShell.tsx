@@ -173,13 +173,15 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const tip = (label: string) => wide ? <span aria-hidden className="truncate">{label}</span> : (
     <span aria-hidden className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line px-2.5 py-1 text-[13px] font-medium text-fg opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100" style={{ background: 'var(--glass-strong)' }}>{label}</span>
   )
+  // The phone dock: icons only, the current place in the student's colour and drawn bolder; names are for screen readers
+  const dockItem = 'grid size-12 place-items-center rounded-full transition active:scale-95'
   const dockLink = (href: string) => {
-    const { label, short, icon: Icon } = PLACES.find(p => p.href === href)!
+    const { label, icon: Icon } = PLACES.find(p => p.href === href)!
     const on = isActive(path, href)
     return (
       <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined}
-        className={`flex min-w-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium ${on ? 'text-accent' : 'text-muted'}`}>
-        <Icon size={21} aria-hidden /><span aria-hidden>{short ?? label}</span>
+        className={`${dockItem} ${on ? 'text-accent-solid' : 'text-fg'}`}>
+        <Icon size={24} strokeWidth={on ? 2.6 : 2} aria-hidden />
       </Link>
     )
   }
@@ -247,11 +249,11 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         <main className={immersive ? 'w-full' : `mx-auto w-full px-5 ${path.startsWith('/planner') ? 'max-w-none py-6 md:px-10 md:py-8' : `${{ focused: 'max-w-5xl md:px-12', wide: 'max-w-[1320px] md:px-10 xl:px-14', full: 'max-w-none md:px-10' }[contentWidthOf(profile.content_width)]} py-6 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
-        <nav aria-label="Main" className="no-print glass fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 mx-auto grid max-w-md grid-cols-5 items-center rounded-[22px] px-2 py-1.5 md:hidden" style={{ background: 'var(--glass-strong)' }}>
+        <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit items-center gap-1 rounded-full border border-line bg-raised px-2 py-1 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.3)] md:hidden">
           {DOCK.slice(0, 2).map(dockLink)}
           <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => setCreating(c => (c ? null : 'dock'))}
-            className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-solid text-white">
-            <Plus size={22} aria-hidden />
+            className={`${dockItem} ${creating === 'dock' ? 'text-accent-solid' : 'text-fg'}`}>
+            <Plus size={26} strokeWidth={creating === 'dock' ? 2.6 : 2} aria-hidden />
           </button>
           {DOCK.slice(2).map(dockLink)}
         </nav>

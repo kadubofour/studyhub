@@ -96,7 +96,7 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the page names itself, and the floating dock has four places and Create, with room around them', async ({ page }) => {
+test('the page names itself, and the floating dock is a pill of four places and Create, centred, with room around it', async ({ page }) => {
   await signUp(page)
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await expect(page.getByRole('banner')).not.toContainText('Home')
@@ -104,8 +104,9 @@ test('the page names itself, and the floating dock has four places and Create, w
   expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Create new', 'Notes', 'Flashcards'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
-  expect(box.width).toBeGreaterThanOrEqual(340) // it floats, a little in from the edges
-  // Each place is at least 44 px across (a comfortable tap) and its name fits
+  expect(box.width).toBeLessThanOrEqual(300) // a pill that hugs its icons
+  expect(Math.abs(box.x + box.width / 2 - 375 / 2)).toBeLessThanOrEqual(1) // centred
+  // Each place is at least 44 px across (a comfortable tap)
   const items = await bar.locator('a, button').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, w: r.width, scroll: (e as HTMLElement).scrollWidth, label: e.textContent } }))
   for (const i of items) { expect(i.w, i.label ?? '').toBeGreaterThanOrEqual(44); expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label ?? '').toBeLessThanOrEqual(Math.ceil(i.w)) }
   await bar.getByRole('link', { name: 'Flashcards' }).dispatchEvent('click')
