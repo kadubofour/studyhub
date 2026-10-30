@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { GraduationCap, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Sun } from 'lucide-react'
@@ -37,6 +37,7 @@ import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
 import { useLook } from '@/components/providers/useLook'
 
 const noopSubscribe = () => () => {}
+const hasMoreBelow = (el: HTMLElement) => el.scrollTop + el.clientHeight < el.scrollHeight - 2
 // Scan starts on what the current page holds; the student can change it in the dialog
 const scanTargetFor = (path: string): ScanTarget =>
   path.startsWith('/planner') ? 'planner' : path.startsWith('/flashcards') || path.startsWith('/review') ? 'cards' : 'note'
@@ -88,6 +89,20 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [creating, setCreating] = useState<null | 'rail' | 'wide' | 'dock'>(null)
   // The sidebar: wide with names and courses, or shrunk to a rail of icons; remembered on this device
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
+  const [railTip, setRailTip] = useState<{ label: string; y: number } | null>(null) // the name beside the rail icon pointed at
+  // Whether the sidebar's list of places runs on below what shows, so its bottom edge can fade to say there is more
+  const placesRef = useRef<HTMLDivElement>(null)
+  const [moreBelow, setMoreBelow] = useState(false)
+  useEffect(() => {
+    const el = placesRef.current
+    if (!el) return
+    const check = () => setMoreBelow(hasMoreBelow(el))
+    check()
+    if (typeof ResizeObserver === 'undefined') return
+    const watch = new ResizeObserver(check)
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [collapsed, courses.length, path])
   const wide = !collapsed
   const look = useLook()
   const [palette, setPalette] = useState(false)
@@ -167,11 +182,22 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   } as React.CSSProperties
   const lit = 'bg-accent-soft text-accent'
   const railItem = (on: boolean) => wide
-    ? `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
-    : `group relative grid size-11 place-items-center rounded-xl transition ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
-  // the name beside the icon when wide; a tooltip on the rail
-  const tip = (label: string) => wide ? <span aria-hidden className="truncate">{label}</span> : (
-    <span aria-hidden className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line px-2.5 py-1 text-[13px] font-medium text-fg opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100" style={{ background: 'var(--glass-strong)' }}>{label}</span>
+    ? `group relative flex w-full shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
+    : `group relative grid size-11 shrink-0 place-items-center rounded-full transition [@media(max-height:800px)]:size-10 ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
+  // the name beside the icon when wide
+  const tip = (label: string) => wide ? <span aria-hidden className="truncate">{label}</span> : null
+  // On the rail the name shows beside the icon being pointed at or focused. It is one label fixed to the window, so the scrolling
+  // list of places cannot cut it off.
+  const showTip = (el: HTMLElement, label: string) => { const r = el.getBoundingClientRect(); setRailTip({ label, y: r.top + r.height / 2 }) }
+  const hint = (label: string) => wide ? {} : {
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => showTip(e.currentTarget, label), onMouseLeave: () => setRailTip(null),
+    onFocus: (e: React.FocusEvent<HTMLElement>) => showTip(e.currentTarget, label), onBlur: () => setRailTip(null),
+  }
+  const sidebarToggle = (
+    <button type="button" onClick={() => { setCollapsed(wide); setRailTip(null) }} aria-label={wide ? 'Shrink sidebar' : 'Expand sidebar'} title={wide ? 'Shrink sidebar' : undefined}
+      {...hint('Expand sidebar')} className={wide ? 'grid size-9 place-items-center rounded-lg text-muted transition hover:bg-surface hover:text-fg' : railItem(false)}>
+      {wide ? <PanelLeftClose size={17} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
+    </button>
   )
   // The phone dock: icons only, the current place in the student's colour and drawn bolder; names are for screen readers
   const dockItem = 'grid size-12 place-items-center rounded-full transition active:scale-95'
@@ -191,25 +217,25 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       {!immersive && (
         <nav aria-label="Studyhub" className={`app-sidebar no-print sticky top-0 hidden h-dvh flex-col gap-1.5 border-r border-line py-4 md:flex ${wide ? 'px-3' : 'items-center'}`}>
           <div className={`mb-3 flex items-center ${wide ? 'justify-between px-1' : 'flex-col gap-2'}`}>
-            {/* the mark; Home is the first item below it */}
+            {/* the mark; Home is the first item below it. On the rail the button that widens the sidebar is at the bottom. */}
             <span className="flex items-center gap-2.5">
               <span title="Studyhub" className="grid size-10 place-items-center rounded-xl bg-accent-solid text-white"><GraduationCap size={19} aria-hidden /></span>
               {wide && <span className="font-display text-lg font-semibold tracking-tight">Studyhub</span>}
             </span>
-            <button type="button" onClick={() => setCollapsed(wide)} aria-label={wide ? 'Shrink sidebar' : 'Expand sidebar'} title={wide ? 'Shrink sidebar' : 'Expand sidebar'}
-              className="grid size-9 place-items-center rounded-lg text-muted transition hover:bg-surface hover:text-fg">
-              {wide ? <PanelLeftClose size={17} aria-hidden /> : <PanelLeftOpen size={17} aria-hidden />}
-            </button>
+            {wide && sidebarToggle}
           </div>
           <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating !== null && creating !== 'dock'} onClick={() => setCreating(c => (c ? null : wide ? 'wide' : 'rail'))}
-            className={`group relative mb-3 border border-dashed border-line text-muted transition hover:border-accent hover:text-accent ${wide ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium' : 'grid size-11 place-items-center rounded-xl'}`}>
+            {...hint('Create')}
+            className={`group relative mb-3 border border-dashed border-line text-muted transition hover:border-accent hover:text-accent ${wide ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium' : 'grid size-11 place-items-center rounded-full'}`}>
             <Plus size={19} aria-hidden />{tip('Create')}
           </button>
-          <div className={`no-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto ${wide ? '' : 'items-center'}`}>
+          {/* the places scroll when the window is short (they never squash), and the bottom edge fades while there are more below */}
+          <div ref={placesRef} onScroll={e => setMoreBelow(hasMoreBelow(e.currentTarget))}
+            className={`no-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto [@media(max-height:800px)]:gap-0.5 ${moreBelow ? '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)]' : ''} ${wide ? '' : 'items-center'}`}>
             {PLACES.map(({ href, label, icon: Icon }) => {
               const on = isActive(path, href)
               return (
-                <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined} className={railItem(on)}>
+                <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined} className={railItem(on)} {...hint(label)}>
                   <Icon size={19} aria-hidden />{tip(label)}
                 </Link>
               )
@@ -230,17 +256,21 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             )}
           </div>
           <div className={`mt-2 flex flex-col gap-1 ${wide ? '' : 'items-center'}`}>
-            <button type="button" onClick={toggleTheme} aria-label={dark ? 'Light mode' : 'Dark mode'} className={railItem(false)}>
+            {!wide && sidebarToggle}
+            <button type="button" onClick={toggleTheme} aria-label={dark ? 'Light mode' : 'Dark mode'} className={railItem(false)} {...hint(dark ? 'Light mode' : 'Dark mode')}>
               {dark ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}{tip(dark ? 'Light mode' : 'Dark mode')}
             </button>
-            <Link href="/settings" onClick={e => guard(e, '/settings')} aria-label="Settings" aria-current={isActive(path, '/settings') ? 'page' : undefined} className={railItem(isActive(path, '/settings'))}>
+            <Link href="/settings" onClick={e => guard(e, '/settings')} aria-label="Settings" aria-current={isActive(path, '/settings') ? 'page' : undefined} className={railItem(isActive(path, '/settings'))} {...hint('Settings')}>
               <Settings size={18} aria-hidden />{tip('Settings')}
             </Link>
-            <Link href="/profile" onClick={e => guard(e, '/profile')} aria-label={profile.display_name || 'Your profile'} aria-current={isActive(path, '/profile') ? 'page' : undefined}
+            <Link href="/profile" onClick={e => guard(e, '/profile')} aria-label={profile.display_name || 'Your profile'} aria-current={isActive(path, '/profile') ? 'page' : undefined} {...hint(profile.display_name || 'Your profile')}
               className={wide ? `mt-1 flex items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] transition ${isActive(path, '/profile') ? lit : 'hover:bg-surface'}` : `group relative mt-1 rounded-full ring-2 transition ${isActive(path, '/profile') ? 'ring-accent' : 'ring-transparent hover:ring-line'}`}>
               <Avatar name={profile.display_name} color={profile.avatar_color} size={wide ? 30 : 34} />{tip(profile.display_name || 'Your profile')}
             </Link>
           </div>
+          {!wide && railTip && (
+            <span aria-hidden className="pointer-events-none fixed left-[84px] z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line px-2.5 py-1 text-[13px] font-medium text-fg shadow-lg" style={{ top: railTip.y, background: 'var(--glass-strong)' }}>{railTip.label}</span>
+          )}
         </nav>
       )}
       <div className={`flex min-w-0 flex-col ${immersive ? '' : 'pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-0'}`}>

@@ -9,7 +9,7 @@ export function HeroFocus({ mode, clock, running, resumable, onToggle, onRestart
   const word = compact ? 'max-sm:sr-only' : ''
   return (
     // On a phone it is one row on the card itself: the session and the clock on the left, its buttons on the right
-    <div data-hero-focus className="w-full rounded-2xl bg-black/20 px-5 py-3.5 text-center max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-3 max-sm:bg-transparent max-sm:p-0 max-sm:text-left sm:w-auto">
+    <div data-hero-focus className="w-full rounded-2xl bg-black/20 px-5 py-3.5 text-center max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-2 max-sm:bg-transparent max-sm:p-0 max-sm:text-left sm:w-auto">
       <div>
         <div className="font-display text-sm font-semibold opacity-90">{mode}</div>
         <div className="font-mono text-4xl font-semibold tracking-tight max-sm:text-[2.75rem] max-sm:leading-none">{clock}</div>

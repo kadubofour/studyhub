@@ -103,11 +103,12 @@ describe('the focus timer on Home, on a phone', () => {
     expect(screen.getByRole('button', { name: 'Start focus' }).querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe(' focus')
     expect(screen.getByRole('link', { name: 'Open' }).className).toContain('max-sm:hidden')
   })
-  it('on a phone Home keeps the notebook page, with the timer in one row and the shortcuts as round buttons', () => {
+  it('on a phone Home keeps the notebook page, with the timer in one row and the shortcuts as plain icons', () => {
     const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
     expect(src).toContain('className="hero hero-page home-hero"')
-    expect(src).toContain('<div className="mt-6 grid grid-cols-4 gap-1 md:hidden">')
-    expect(src).toContain('grid size-12 place-items-center rounded-full bg-white/20')
+    expect(src).toContain('<div className="mt-5 grid grid-cols-4 gap-1 border-t border-white/20 pt-3 md:hidden">')
+    expect(src).not.toContain('rounded-full bg-white/20') // plain icons, no circles behind them
+    expect(fs.readFileSync('components/shell/TopBar.tsx', 'utf8')).toContain('<Link href="/profile" aria-label="Profile"') // the profile is in the top bar
     expect(fs.readFileSync('components/home/HeroFocus.tsx', 'utf8')).toContain('max-sm:text-[2.75rem]')
     expect(fs.readFileSync('app/globals.css', 'utf8')).not.toContain('.home-hero { background: none')
   })

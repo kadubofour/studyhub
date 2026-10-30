@@ -82,7 +82,13 @@ describe('the sidebar', () => {
     fireEvent.click(rail().getByRole('button', { name: 'Shrink sidebar' }))
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=1')
     expect(rail().queryByRole('group', { name: 'Courses' })).toBeNull()
-    expect(rail().getByRole('link', { name: 'Notes' }).textContent).toBe('Notes') // the tooltip only
+    const notes = rail().getByRole('link', { name: 'Notes' })
+    expect(notes.textContent).toBe('') // an icon; its name shows beside it when pointed at, in one label the scrolling list cannot clip
+    fireEvent.mouseEnter(notes)
+    expect(rail().getByText('Notes').className).toContain('fixed')
+    fireEvent.mouseLeave(notes)
+    expect(rail().queryByText('Notes')).toBeNull()
+    expect(rail().getAllByRole('button').at(-2)!.getAttribute('aria-label')).toBe('Expand sidebar') // at the bottom, above the theme
     fireEvent.click(rail().getByRole('button', { name: 'Expand sidebar' }))
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=0')
     expect(rail().getByRole('group', { name: 'Courses' })).toBeTruthy()
