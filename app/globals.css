@@ -437,7 +437,11 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 /* A panel sliding in from the right edge of a phone */
 @keyframes side-in { from { transform: translateX(100%); } to { transform: none; } }
 .side-in { animation: side-in .22s cubic-bezier(.2, .8, .2, 1); }
-@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } .side-in { animation: none; } }
+/* The sidebar opening or shutting: its width slides, and the names fade in once there is room for them */
+@media (min-width: 768px) { .rail-slide { transition: grid-template-columns .25s cubic-bezier(.2, .8, .2, 1); } }
+@keyframes rail-fade { from { opacity: 0; transform: translateX(-4px); } 40% { opacity: 0; } to { opacity: 1; transform: none; } }
+.rail-slide .rail-fade { animation: rail-fade .3s ease-out; }
+@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } .xp-pop { animation: none; } .side-in { animation: none; } .rail-slide { transition: none; } .rail-slide .rail-fade { animation: none; } }
 @media (pointer: coarse) { .menu-kbd { display: none; } }
 
 /* Highlights in the words of a note: soft colours with dark text, so they read the same in light and dark and print as they look */

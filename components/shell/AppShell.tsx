@@ -89,6 +89,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [creating, setCreating] = useState<null | 'rail' | 'wide' | 'dock'>(null)
   // The sidebar: wide with names and courses, or shrunk to a rail of icons; remembered on this device
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
+  // the sidebar slides only when the student opens or shuts it, never when a page loads
+  const [toggled, setToggled] = useState(false)
   const [railTip, setRailTip] = useState<{ label: string; y: number } | null>(null) // the name beside the rail icon pointed at
   // Whether the sidebar's list of places runs on below what shows, so its bottom edge can fade to say there is more
   const placesRef = useRef<HTMLDivElement>(null)
@@ -179,7 +181,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     ? `group relative flex w-full shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
     : `group relative grid size-11 shrink-0 place-items-center rounded-xl transition [@media(max-height:800px)]:size-10 ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
   // the name beside the icon when wide
-  const tip = (label: string) => wide ? <span aria-hidden className="truncate">{label}</span> : null
+  const tip = (label: string) => wide ? <span aria-hidden className="rail-fade truncate">{label}</span> : null
   // On the rail the name shows beside the icon being pointed at or focused. It is one label fixed to the window, so the scrolling
   // list of places cannot cut it off.
   const showTip = (el: HTMLElement, label: string) => { const r = el.getBoundingClientRect(); setRailTip({ label, y: r.top + r.height / 2 }) }
@@ -188,7 +190,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     onFocus: (e: React.FocusEvent<HTMLElement>) => showTip(e.currentTarget, label), onBlur: () => setRailTip(null),
   }
   const sidebarToggle = (
-    <button type="button" onClick={() => { setCollapsed(wide); setRailTip(null) }} aria-label={wide ? 'Shrink sidebar' : 'Expand sidebar'} title={wide ? 'Shrink sidebar' : undefined}
+    <button type="button" onClick={() => { setToggled(true); setCollapsed(wide); setRailTip(null) }} aria-label={wide ? 'Shrink sidebar' : 'Expand sidebar'} title={wide ? 'Shrink sidebar' : undefined}
       {...hint('Expand sidebar')} className={wide ? 'grid size-9 place-items-center rounded-lg text-muted transition hover:bg-surface hover:text-fg' : railItem(false)}>
       {wide ? <PanelLeftClose size={17} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
     </button>
@@ -207,14 +209,14 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   }
 
   return (
-    <div className={`app-root min-h-dvh ${immersive ? '' : wide ? 'md:grid md:grid-cols-[260px_1fr]' : 'md:grid md:grid-cols-[72px_1fr]'}`} style={appearance} data-look={look}>
+    <div className={`app-root min-h-dvh ${immersive ? '' : wide ? 'md:grid md:grid-cols-[260px_1fr]' : 'md:grid md:grid-cols-[72px_1fr]'} ${toggled ? 'rail-slide' : ''}`} style={appearance} data-look={look}>
       {!immersive && (
-        <nav aria-label="Studyhub" className={`app-sidebar no-print sticky top-0 hidden h-dvh flex-col gap-1.5 border-r border-line py-4 md:flex ${wide ? 'px-3' : 'items-center'}`}>
+        <nav aria-label="Studyhub" className={`app-sidebar no-print sticky top-0 hidden h-dvh flex-col gap-1.5 overflow-x-clip border-r border-line py-4 md:flex ${wide ? 'px-3' : 'items-center'}`}>
           <div className={`mb-3 flex items-center ${wide ? 'justify-between px-1' : 'flex-col gap-2'}`}>
             {/* the mark; Home is the first item below it. On the rail the button that widens the sidebar is at the bottom. */}
             <span className="flex items-center gap-2.5">
               <span title="Studyhub" className="grid size-10 place-items-center rounded-xl bg-accent-solid text-white"><GraduationCap size={19} aria-hidden /></span>
-              {wide && <span className="font-display text-lg font-semibold tracking-tight">Studyhub</span>}
+              {wide && <span className="rail-fade whitespace-nowrap font-display text-lg font-semibold tracking-tight">Studyhub</span>}
             </span>
             {wide && sidebarToggle}
           </div>
@@ -235,7 +237,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
               )
             })}
             {wide && courses.length > 0 && (
-              <div role="group" aria-labelledby="nav-courses" className="mt-4 flex flex-col gap-0.5">
+              <div role="group" aria-labelledby="nav-courses" className="rail-fade mt-4 flex flex-col gap-0.5">
                 <Link id="nav-courses" href="/courses" onClick={e => guard(e, '/courses')} className="px-3 pb-1 text-[13px] font-semibold text-muted hover:text-fg">Courses</Link>
                 {courses.map(c => {
                   const on = isActive(path, `/courses/${c.id}`)
