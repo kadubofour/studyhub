@@ -43,8 +43,7 @@ export const LOOKS = {
   paper: {
     label: 'Paper', blurb: 'Cream pages and a bookish serif',
     light: { bg: '#F6F0E4', raised: '#FFFBF2', surface: '#EFE7D6', line: '#E2D8C3', fg: '#2A2520', muted: '#6E6455', tiles: ['#F8E4D4', '#F7EDC4', '#DDEEE3'] },
-    // Paper is for light mode only: in dark mode it is Classic (see effectiveLook), so these are Classic's dark colours
-    dark: { bg: '#151514', raised: '#1E1E1C', surface: '#262624', line: '#33322F', fg: '#F2F1EC', muted: '#A3A29B', tiles: ['#332B47', '#38331A', '#193A3C'] },
+    dark: { bg: '#1C1915', raised: '#25211C', surface: '#2E2923', line: '#3A342C', fg: '#EFE8DA', muted: '#A39A8A', tiles: ['#3A2A1F', '#38331B', '#1F3027'] },
   },
   vivid: {
     label: 'Vivid', blurb: 'Your colour on the buttons and choices',
@@ -63,14 +62,11 @@ export const isLook = (v: unknown): v is LookName => typeof v === 'string' && v 
 // An old cached profile, or a look this version doesn't know, shows Classic
 export const lookOf = (v: unknown): LookName => (isLook(v) ? v : 'classic')
 
-// Paper only looks right on light: in dark mode it shows as Classic (the student's choice is kept for when they go back to light)
-export const effectiveLook = (look: unknown, resolvedTheme: string | undefined): LookName => {
-  const l = lookOf(look)
-  return l === 'paper' && resolvedTheme === 'dark' ? 'classic' : l
-}
-// The looks offered in Settings for the current theme
-export const lookChoices = (resolvedTheme: string | undefined): LookName[] =>
-  (Object.keys(LOOKS) as LookName[]).filter(l => !(l === 'paper' && resolvedTheme === 'dark'))
+// The look the app is drawn in. Every look has a light and a dark mode, so it is the student's choice whatever the theme
+// (Paper was once light only; the theme is still passed in case a look is again kept to one mode)
+export const effectiveLook = (look: unknown, _resolvedTheme?: string): LookName => lookOf(look)
+// The looks offered in Settings: all of them, in light and dark
+export const lookChoices = (_resolvedTheme?: string): LookName[] => Object.keys(LOOKS) as LookName[]
 
 // How wide the app's content is: a centred column, a wide layout (the default), or the whole window
 export const CONTENT_WIDTHS = [

@@ -31,6 +31,7 @@ import { ToastProvider } from '@/components/providers/ToastProvider'
 import type { Profile } from '@/lib/types'
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 import { StorageCard } from '@/components/settings/StorageCard'
+import { choose as pick } from './dropdown'
 
 const MB = 1024 * 1024
 beforeEach(() => {
@@ -87,7 +88,7 @@ describe('Lectures page: quick actions', () => {
   })
   it('moves a lecture to another course, or none', async () => {
     await open(); await menu(); await choose('Change course')
-    fireEvent.change(screen.getByLabelText('Course'), { target: { value: '' } })
+    pick('Course', 'No course')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })) })
     expect(updateLecture).toHaveBeenCalledWith(expect.anything(), 'L1', { course_id: null })
   })
@@ -160,9 +161,9 @@ describe('how the lectures are shown', () => {
     const list = () => screen.getByRole('list', { name: 'Lectures' })
     expect(order()).toEqual(['/lectures/L2', '/lectures/L1', '/lectures/L3'])
     expect(list().getAttribute('data-layout')).toBe('grid')
-    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'oldest' } })
+    pick('Sort by', 'Oldest')
     expect(order()).toEqual(['/lectures/L3', '/lectures/L1', '/lectures/L2'])
-    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'title' } })
+    pick('Sort by', 'Title (A to Z)')
     expect(order()).toEqual(['/lectures/L3', '/lectures/L1', '/lectures/L2'])
     fireEvent.click(screen.getByRole('radio', { name: 'List' }))
     expect(list().getAttribute('data-layout')).toBe('list')

@@ -25,9 +25,9 @@ describe('the looks', () => {
     expect(lookOf('ink')).toBe('classic')
     expect(lookOf('vivid')).toBe('vivid')
   })
-  it('Paper is still light only: Classic in dark mode, and not offered there', () => {
-    expect(effectiveLook('paper', 'dark')).toBe('classic')
-    expect(lookChoices('dark')).toEqual(['classic', 'studio', 'vivid', 'playful'])
+  it('Paper has its own dark mode again: it stays Paper in dark mode, and is offered there', () => {
+    expect(effectiveLook('paper', 'dark')).toBe('paper')
+    expect(lookChoices('dark')).toEqual([...NAMES])
     expect(lookChoices('light')).toEqual([...NAMES])
   })
   it('Classic is the paper and ink of the redesign', () => {

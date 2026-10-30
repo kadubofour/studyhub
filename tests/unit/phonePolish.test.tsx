@@ -55,10 +55,11 @@ describe('the calendar\'s add button on a phone', () => {
 })
 
 describe('the Look picker on a phone', () => {
-  it('shows two looks to a row', () => {
+  it('is a dropdown no wider than a phone, with the chosen look drawn under it', () => {
     const src = fs.readFileSync('components/settings/AppearanceCard.tsx', 'utf8')
-    expect(src).toMatch(/role="radiogroup" aria-label="Look"/)
-    expect(src).toContain('grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3')
+    expect(src).toContain('<div className="max-w-sm space-y-3">')
+    expect(src).toContain('<Dropdown label="Look"')
+    expect(src).toContain('<LookPreview look={look}')
   })
 })
 
@@ -143,7 +144,7 @@ describe('the Flashcards view controls', () => {
 describe('a note\'s top bar on a phone', () => {
   const src = () => fs.readFileSync('app/(app)/notes/[id]/page.tsx', 'utf8')
   it('fits on one line: the course picker gives up room first, so Study stays up beside the tutor', () => {
-    expect(src()).toContain('<select className="input min-w-0 flex-1 basis-0 max-w-32 sm:flex-none sm:basis-auto sm:max-w-44"')
+    expect(src()).toContain('<Dropdown label="Course" size="sm" className="w-44 min-w-0"')
     expect(src()).toMatch(/className=\{`btn max-sm:!px-3 \$\{studyOpen/)
   })
   it('on a computer, puts Study beside the tutor', () => {

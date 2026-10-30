@@ -17,6 +17,7 @@ import { setRecording } from '@/lib/lectures/recordingGuard'
 import { LIVE_LANGUAGES, saveLiveLanguage, savedLiveLanguage } from '@/lib/lectures/languages'
 import { MAX_LECTURE_SECONDS, WARN_LECTURE_SECONDS, formatClock, storageState, type TranscriptLine } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 
 export type RecorderDeps = {
   getUserMedia: (c: MediaStreamConstraints) => Promise<MediaStream>
@@ -260,21 +261,17 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     <div className="max-w-lg space-y-4">
       <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm">Ask your lecturer before recording.</p>
       <label className="field"><span>Title</span><input value={title} maxLength={200} onChange={e => setTitle(e.target.value)} /></label>
-      <label className="field"><span>Course</span>
-        <select value={courseId} onChange={e => setCourseId(e.target.value)}>
-          <option value="">No course</option>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </label>
+      <div className="field"><span>Course</span>
+        <Dropdown label="Course" value={courseId} onChange={setCourseId} options={courseOptions(courses)} />
+      </div>
       <fieldset className="space-y-1.5 text-sm">
         <legend className="mb-1 text-muted">Transcript</legend>
         <label className="flex items-center gap-2"><input type="radio" name="choice" checked={choice === 'live'} disabled={!deps.Recognition} onChange={() => setChoice('live')} />Live, free</label>
         {choice === 'live' && (
-          <label className="field pl-6"><span>Language</span>
-            <select value={language} onChange={e => { setLanguage(e.target.value); saveLiveLanguage(e.target.value) }}>
-              {LIVE_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
-            </select>
-          </label>
+          <div className="field pl-6"><span>Language</span>
+            <Dropdown label="Language" value={language} onChange={v => { setLanguage(v); saveLiveLanguage(v) }}
+              options={LIVE_LANGUAGES.map(([code, label]) => ({ value: code, label }))} />
+          </div>
         )}
         {choice === 'live' && <p className="pl-6 text-xs text-muted">Made by your browser&apos;s speech service (Google in Chrome, Apple in Safari), so the audio goes there while you record.</p>}
         {!deps.Recognition && <p className="pl-6 text-xs text-muted">This browser can&apos;t do live transcripts. Try Chrome, Edge or Safari, or choose Accurate.</p>}

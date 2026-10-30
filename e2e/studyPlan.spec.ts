@@ -1,10 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, choose } from './helpers'
 
 async function inBiology(page: Page) {
   await Promise.all([
     page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    page.getByLabel('Course').selectOption({ label: 'Biology' }),
+    choose(page, 'Course', 'Biology'),
   ])
 }
 // Two Biology notes, topics drafted and saved, then (unless asked not to) an exam next week: ready for a plan
@@ -69,7 +69,7 @@ test('a course with no exam gets a plan that keeps going, and can later work tow
   await page.getByLabel('Add a task').press('Enter')
   await expect(page.getByRole('checkbox', { name: 'Mark Midterm done' })).toBeVisible()
   await panel.getByRole('button', { name: 'Edit plan' }).click()
-  await panel.getByLabel('Working towards').selectOption({ label: 'Midterm' })
+  await choose(panel, 'Working towards', 'Midterm')
   await panel.getByRole('button', { name: 'Save plan' }).click()
   await expect(panel.getByText(/Balanced · 45 min a day · Midterm in/)).toBeVisible()
 })

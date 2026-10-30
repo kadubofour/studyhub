@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Trash2, X } from 'lucide-react'
 import { addLink, addTopic, mergeTopics, moveTopic, removeLink, removeTopic, renameTopic, tidy } from '@/lib/topics/edit'
 import { validateTopics } from '@/lib/topics/validate'
 import type { CourseMaterial, TopicDraft, TopicLink } from '@/lib/topics/types'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 type Row = TopicDraft & { key: string }
 let seq = 0
@@ -65,24 +66,20 @@ export function TopicEditor({ initial, material, fresh, saving, error, onSave, o
                 ))}
               </ul>
               <div className="flex flex-wrap gap-2">
-                <select className="input max-w-52" aria-label={`Add to ${name}`} value="" onChange={e => {
-                  const [kind, id] = e.target.value.split(':') as [TopicLink['kind'], string]
-                  if (kind && id) apply(l => addLink(l, i, { kind, id }))
-                }}>
-                  <option value="">Add material…</option>
-                  {(['note', 'lecture', 'deck'] as const).map(k => {
-                    const group = free.filter(m => m.kind === k)
-                    return group.length ? <optgroup key={k} label={`${kindWord[k]}s`}>{group.map(m => <option key={m.id} value={`${k}:${m.id}`}>{m.label}</option>)}</optgroup> : null
-                  })}
-                </select>
+                {/* actions, not settings: choosing adds or merges, and the dropdown goes back to its prompt */}
+                <Dropdown label={`Add to ${name}`} size="sm" className="w-52" value="" placeholder="Add material…"
+                  onChange={v => {
+                    const [kind, id] = v.split(':') as [TopicLink['kind'], string]
+                    if (kind && id) apply(l => addLink(l, i, { kind, id }))
+                  }}
+                  options={(['note', 'lecture', 'deck'] as const).flatMap(k => free.filter(m => m.kind === k).map(m => ({ value: `${k}:${m.id}`, label: m.label, hint: kindWord[k] })))} />
                 {rows.length > 1 && (
-                  <select className="input max-w-44" aria-label={`Merge ${name} into`} value="" onChange={e => {
-                    const into = rows.findIndex(r => r.id === e.target.value || r.key === e.target.value)
-                    if (into >= 0) apply(l => mergeTopics(l, i, into))
-                  }}>
-                    <option value="">Merge into…</option>
-                    {rows.map((r, j) => j !== i && <option key={r.key} value={r.id ?? r.key}>{r.name.trim() || 'Untitled'}</option>)}
-                  </select>
+                  <Dropdown label={`Merge ${name} into`} size="sm" className="w-44" value="" placeholder="Merge into…"
+                    onChange={v => {
+                      const into = rows.findIndex(r => r.id === v || r.key === v)
+                      if (into >= 0) apply(l => mergeTopics(l, i, into))
+                    }}
+                    options={rows.flatMap((r, j) => (j !== i ? [{ value: r.id ?? r.key, label: r.name.trim() || 'Untitled' }] : []))} />
                 )}
               </div>
             </li>

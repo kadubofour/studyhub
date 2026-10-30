@@ -21,6 +21,7 @@ import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { NoteReview } from '@/components/scan/NoteReview'
 import { CardsReview } from '@/components/scan/CardsReview'
 import { PlannerReview } from '@/components/scan/PlannerReview'
+import { choose, optionsOf, shown } from './dropdown'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 const courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }]
@@ -85,8 +86,8 @@ describe('PlannerReview', () => {
   it('flags unsure items and matches courses or offers to create them', () => {
     renderPlanner()
     expect(screen.getAllByText('check this')).toHaveLength(2)
-    expect((screen.getByLabelText('Class 1 course') as HTMLSelectElement).value).toBe('c1')
-    expect((screen.getByLabelText('Class 2 course') as HTMLSelectElement).selectedOptions[0].textContent).toBe('Create course Chemistry')
+    expect(shown('Class 1 course')).toBe('Biology')
+    expect(shown('Class 2 course')).toBe('Create course Chemistry')
     expect((screen.getByLabelText('Task 1 due date') as HTMLInputElement).value).toBe('2026-10-16')
   })
   it('saves the ticked items, creating each new course once', async () => {
@@ -121,9 +122,9 @@ describe('PlannerReview', () => {
   })
   it('"Create course" stays available after switching a class to an existing course', () => {
     renderPlanner()
-    fireEvent.change(screen.getByLabelText('Class 2 course'), { target: { value: 'c1' } })
-    fireEvent.change(screen.getByLabelText('Class 3 course'), { target: { value: 'c1' } })
-    const options = [...(screen.getByLabelText('Class 2 course') as HTMLSelectElement).options].map(o => o.textContent)
+    choose('Class 2 course', 'Biology')
+    choose('Class 3 course', 'Biology')
+    const options = optionsOf('Class 2 course')
     expect(options).toContain('Create course Chemistry')
   })
   it('a class that ends before it starts can\'t be saved', () => {

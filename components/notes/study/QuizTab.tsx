@@ -7,6 +7,7 @@ import { listQuizSummaries } from '@/lib/data/quizzes'
 import { postAi } from '@/components/ai/aiFetch'
 import { AiError } from '@/components/ai/AiError'
 import type { Quiz, QuestionType } from '@/lib/quiz/types'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 const TYPES: [QuestionType, string][] = [['mcq', 'Multiple choice'], ['true_false', 'True/false'], ['short', 'Short answer']]
 
@@ -31,9 +32,9 @@ export function QuizTab({ note, prepare }: { note: { id: string }; prepare: () =
 
   return (
     <div className="space-y-3">
-      <label className="field"><span>Questions</span>
-        <select value={count} onChange={e => setCount(Number(e.target.value))}>{[5, 10, 15].map(n => <option key={n} value={n}>{n}</option>)}</select>
-      </label>
+      <div className="field"><span>Questions</span>
+        <Dropdown label="Questions" value={String(count)} onChange={v => setCount(Number(v))} options={[5, 10, 15].map(n => ({ value: String(n), label: String(n) }))} />
+      </div>
       <fieldset className="space-y-1 text-sm"><legend className="mb-1 text-muted">Question types</legend>
         {TYPES.map(([t, label]) => (
           <label key={t} className="flex items-center gap-2">

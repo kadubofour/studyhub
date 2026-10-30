@@ -17,6 +17,7 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createDeck, listDecksWithDue } from '@/lib/data/decks'
 import { listCourses } from '@/lib/data/courses'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import type { Course, DeckWithDue } from '@/lib/types'
 
 export default function FlashcardsPage() {
@@ -84,12 +85,9 @@ export default function FlashcardsPage() {
       <Dialog open={open} onClose={() => setOpen(false)} title="New deck">
         <form onSubmit={create} className="space-y-3">
           <label className="field"><span>Name</span><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Cell biology" /></label>
-          <label className="field"><span>Course</span>
-            <select value={courseId} onChange={e => setCourseId(e.target.value)}>
-              <option value="">No course</option>
-              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
+          <div className="field"><span>Course</span>
+            <Dropdown label="Course" value={courseId} onChange={setCourseId} options={courseOptions(courses)} />
+          </div>
           <div className="flex justify-end gap-2"><button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn-primary">Create</button></div>
         </form>
       </Dialog>

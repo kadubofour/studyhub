@@ -13,6 +13,7 @@ import { deleteQuiz, listQuizHub } from '@/lib/data/quizzes'
 import { buildQuizHub, filterRows, type HubRow, type HubSort } from '@/lib/quiz/hub'
 import { requestQuiz } from '@/lib/quiz/events'
 import { useProgressChanged } from '@/lib/xp/events'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 const SORTS: [HubSort, string][] = [['newest', 'Newest'], ['oldest', 'Oldest'], ['lowest', 'Lowest score'], ['most', 'Most taken']]
 
@@ -138,15 +139,10 @@ export default function QuizHubPage() {
             <input type="search" aria-label="Search quizzes" placeholder="Search" value={query} onChange={e => setQuery(e.target.value)} className="!pl-8" />
           </label>
           {(courses.length > 0 || activeCourse !== 'all') && (
-            <select aria-label="Course" value={activeCourse} onChange={e => setCourse(e.target.value)}>
-              <option value="all">All courses</option>
-              {courses.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              {hasLoose && <option value="none">No course</option>}
-            </select>
+            <Dropdown label="Course" size="sm" className="w-44" value={activeCourse} onChange={setCourse}
+              options={[{ value: 'all', label: 'All courses' }, ...courses.map(([id, name]) => ({ value: id, label: name })), ...(hasLoose ? [{ value: 'none', label: 'No course' }] : [])]} />
           )}
-          <select aria-label="Sort" value={sort} onChange={e => setSort(e.target.value as HubSort)}>
-            {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
+          <Dropdown label="Sort" size="sm" className="w-44" value={sort} onChange={v => setSort(v as HubSort)} options={SORTS.map(([v, l]) => ({ value: v, label: l }))} />
         </div>
         {rows.length === 0
           ? <p className="card text-sm text-muted">No quizzes match.</p>

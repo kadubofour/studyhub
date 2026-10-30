@@ -13,6 +13,7 @@ vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: resolved, setT
 import { ProfileProvider, useProfile } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { AppearanceCard } from '@/components/settings/AppearanceCard'
+import { choose, optionsOf, shown } from './dropdown'
 
 const base = { id: 'u', display_name: 'Ama', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', look: 'classic', auto_math: true, onboarded: true } as Profile
 function Look() { return <output data-testid="look">{useProfile().profile.look}</output> }
@@ -42,62 +43,74 @@ describe('Content width', () => {
 
 
 describe('Look picker', () => {
-  it('offers Classic first, then Studio, Paper, Vivid and Playful, and marks the current one', () => {
+  it('is a dropdown: Classic first, then Studio, Paper, Vivid and Playful, each with its line, and the current one shown', () => {
     open()
-    const names = screen.getAllByRole('radio').filter(r => r.getAttribute('aria-label')?.endsWith(' look')).map(r => r.getAttribute('aria-label'))
-    expect(names).toEqual(['Classic look', 'Studio look', 'Paper look', 'Vivid look', 'Playful look'])
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-    expect(screen.getByText('Cream pages and a bookish serif')).toBeTruthy()
+    expect(shown('Look')).toContain('Classic')
+    expect(optionsOf('Look')).toEqual(['ClassicWarm paper, black ink buttons, serif titles', 'StudioCool midnight blue, clean sans titles',
+      'PaperCream pages and a bookish serif', 'VividYour colour on the buttons and choices', 'PlayfulSunny, bold outlines, buttons you press in'])
   })
   it('applies the new look at once and saves it', async () => {
     open()
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Studio look' })) })
+    choose('Look', /^Studio/); await act(async () => {})
     expect(screen.getByTestId('look').textContent).toBe('studio')
     expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u', { look: 'studio' })
   })
   it('goes back to the previous look when saving fails', async () => {
     failing = true
     open()
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Paper look' })) })
+    choose('Look', /^Paper/); await act(async () => {})
     expect(screen.getByTestId('look').textContent).toBe('classic')
   })
-  it('works from the keyboard like Accent and Font', async () => {
+  it('works from the keyboard: open with Enter, move with the arrows, choose with Enter', async () => {
     open()
-    await act(async () => { fireEvent.keyDown(screen.getByRole('radio', { name: 'Classic look' }), { key: 'ArrowRight' }) })
+    const button = screen.getByRole('button', { name: 'Look' })
+    fireEvent.keyDown(button, { key: 'Enter' })
+    fireEvent.keyDown(button, { key: 'ArrowDown' })
+    await act(async () => { fireEvent.keyDown(button, { key: 'Enter' }) })
     expect(screen.getByTestId('look').textContent).toBe('studio')
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
-  it('an old profile without a look shows Classic selected', () => {
+  it('an old profile without a look shows Classic', () => {
     const old = { ...base } as Record<string, unknown>
     delete old.look
     open(old as unknown as Profile)
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
+    expect(shown('Look')).toContain('Classic')
   })
-  it('Paper is for light mode: in dark mode it is not offered and a saved Paper shows as Classic, kept', async () => {
+  it('Paper has its own dark mode: in dark mode it is offered, and a saved Paper stays Paper', async () => {
     resolved = 'dark'
     open({ ...base, look: 'paper' })
-    expect(screen.queryByRole('radio', { name: 'Paper look' })).toBeNull()
-    expect(screen.getByRole('radio', { name: 'Classic look' }).getAttribute('aria-checked')).toBe('true')
-    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Classic look' })) })
-    expect(updateProfile).not.toHaveBeenCalled()
-    expect(screen.getByTestId('look').textContent).toBe('paper')
+    expect(shown('Look')).toContain('Paper')
+    expect(optionsOf('Look').some(o => o.startsWith('Paper'))).toBe(true)
+    choose('Look', /^Studio/); await act(async () => {})
+    expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u', { look: 'studio' })
   })
 })
 
-describe('the look previews', () => {
-  it('draw a small app in each look itself: its sidebar, a title, a card, a chosen chip and both buttons', () => {
+describe('the look preview', () => {
+  it('draws a small app in the chosen look itself: its sidebar, a title, a card, a chosen chip and both buttons', async () => {
     open()
     for (const look of ['classic', 'studio', 'paper', 'vivid', 'playful']) {
-      const radio = screen.getByRole('radio', { name: new RegExp('^' + look + ' look', 'i') })
-      const preview = radio.querySelector('[data-look-preview]') as HTMLElement
+      if (look !== 'classic') choose('Look', new RegExp('^' + look, 'i')); await act(async () => {})
+      const preview = document.querySelector('[data-look-preview]') as HTMLElement
       expect(preview.getAttribute('data-look')).toBe(look)
       expect(preview.classList.contains('app-root')).toBe(true) // so the look's own colours and shapes apply
       expect(preview.getAttribute('aria-hidden')).toBe('true')
       for (const sel of ['.app-sidebar', '.card', '.btn-primary', '.btn', '.font-display']) expect(preview.querySelector(sel), `${look} ${sel}`).toBeTruthy()
     }
   })
-  it('use the look\'s own title face unless the student chose a font', () => {
+  it('uses the look\'s own title face unless the student chose a font', () => {
     open()
-    const preview = screen.getByRole('radio', { name: /^Classic look/ }).querySelector('[data-look-preview]') as HTMLElement
+    const preview = document.querySelector('[data-look-preview]') as HTMLElement
     expect(preview.style.getPropertyValue('--display-font')).toBe('var(--title-font, var(--font-instrument))')
+  })
+})
+
+describe('Theme', () => {
+  it('starts Appearance with System, Light and Dark as pictures, and applies and saves a choice', async () => {
+    open()
+    expect(screen.getByRole('radio', { name: 'System' }).getAttribute('aria-checked')).toBe('true')
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Dark' })) })
+    expect(updateProfile).toHaveBeenCalledWith(expect.anything(), 'u', { theme: 'dark' })
+    expect(screen.getByRole('radio', { name: 'Dark' }).getAttribute('aria-checked')).toBe('true')
   })
 })

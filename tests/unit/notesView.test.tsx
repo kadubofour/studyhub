@@ -31,6 +31,7 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { NotesSidebar } from '@/components/notes/NotesSidebar'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import type { Profile } from '@/lib/types'
+import { choose, shown } from './dropdown'
 
 const profile = { id: 'u', display_name: null, timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 beforeAll(() => {
@@ -59,12 +60,12 @@ describe('how the notes are shown', () => {
     expect(titles()).toEqual(['Krebs cycle', 'atoms', 'Mitosis'])
     fireEvent.click(screen.getByRole('radio', { name: 'List' }))
     expect(layoutOf()).toBe('list')
-    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'title' } })
+    choose('Sort by', 'Title (A to Z)')
     expect(titles()).toEqual(['atoms', 'Krebs cycle', 'Mitosis'])
     cleanup()
     await open()
     expect(layoutOf()).toBe('list')
-    expect((screen.getByLabelText('Sort by') as HTMLSelectElement).value).toBe('title')
+    expect(shown('Sort by')).toBe('Title (A to Z)')
   })
 })
 

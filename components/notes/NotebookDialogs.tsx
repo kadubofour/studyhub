@@ -4,6 +4,7 @@ import { FolderInput, FolderPlus } from 'lucide-react'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import type { Course, Notebook } from '@/lib/types'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 
 // Make or rename a notebook, and choose the course it belongs to (it takes that course's colour)
 export function NotebookNameDialog({ open, onClose, title, submitLabel, initial = '', courses = [], initialCourse = null, onSubmit }: {
@@ -26,12 +27,9 @@ function NameForm({ onClose, submitLabel, initial, courses, initialCourse, onSub
     <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (name.trim()) onSubmit(name.trim(), course || null) }}>
       <label className="field"><span>Name</span><input autoFocus value={name} maxLength={80} placeholder="Biology year 1" onChange={e => setName(e.target.value)} /></label>
       {courses.length > 0 && (
-        <label className="field"><span>Course</span>
-          <select value={course} onChange={e => setCourse(e.target.value)}>
-            <option value="">No course</option>
-            {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </label>
+        <div className="field"><span>Course</span>
+          <Dropdown label="Course" value={course} onChange={setCourse} options={courseOptions(courses)} />
+        </div>
       )}
       <DialogFooter>
         <button type="button" className={BTN_OUTLINE} onClick={onClose}>Cancel</button>

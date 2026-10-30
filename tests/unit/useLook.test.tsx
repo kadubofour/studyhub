@@ -17,8 +17,8 @@ describe('useLook', () => {
   it('draws Paper on the server and on the first client render even when the theme is already dark, so hydration agrees', () => {
     expect(renderToString(tree)).toContain('paper')
   })
-  it('then shows Classic once the page has mounted in dark mode', () => {
+  it('stays Paper once the page has mounted in dark mode: Paper has its own dark mode', () => {
     render(tree)
-    expect(screen.getByTestId('look').textContent).toBe('classic')
+    expect(screen.getByTestId('look').textContent).toBe('paper')
   })
 })

@@ -14,6 +14,7 @@ const savePlan = vi.fn(async (..._a: unknown[]) => {}), deletePlan = vi.fn(async
 vi.mock('@/lib/plan/service', () => ({ savePlan: (...a: unknown[]) => savePlan(...a), deletePlan: (...a: unknown[]) => deletePlan(...a) }))
 import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
+import { optionsOf, shown } from './dropdown'
 
 const courses: Course[] = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name: 'Chemistry', color: '#BA7517' }]
 const exam = (over: Partial<Task> = {}): Task => ({ id: 'e1', course_id: 'c1', title: 'Midterm', type: 'exam', due_at: new Date(Date.now() + 14 * 86_400_000).toISOString(), priority: 'normal', done_at: null, created_at: '', ...over })
@@ -64,9 +65,8 @@ describe('Study plan panel', () => {
     const assignment = exam({ id: 'e5', title: 'Essay', type: 'assignment' })
     await open([later, soon, past, undated, unsaved, assignment])
     fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' }))
-    const aim = screen.getByLabelText('Working towards') as HTMLSelectElement
-    expect([...aim.options].map(o => o.text)).toEqual(['No exam: keep going', 'Soon', 'Later'])
-    expect(aim.value).toBe('e1')
+    expect(optionsOf('Working towards')).toEqual(['No exam: keep going', 'Soon', 'Later'])
+    expect(shown('Working towards')).toBe('Soon')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
     expect(savePlan).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ course_id: 'c1', exam_task_id: 'e1' }))
   })

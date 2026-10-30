@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import type { PlanMode } from '@/lib/plan/types'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 // examId: the exam the plan works towards, or null for a plan that keeps going without one
 export type PlanSettings = { mode: PlanMode; minutesPerDay: number; daysOff: number[]; examId: string | null }
@@ -35,12 +36,10 @@ export function PlanForm({ title, exams, initial, saving, error, onSave, onCance
   return (
     <form onSubmit={submit} noValidate className="space-y-3 rounded-xl border border-line p-3">
       <p className="text-sm font-medium">{title}</p>
-      <label className="field"><span>Working towards</span>
-        <select value={examId} onChange={e => setExamId(e.target.value)}>
-          <option value="">No exam: keep going</option>
-          {exams.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
-        </select>
-      </label>
+      <div className="field"><span>Working towards</span>
+        <Dropdown label="Working towards" value={examId} onChange={setExamId}
+          options={[{ value: '', label: 'No exam: keep going' }, ...exams.map(x => ({ value: x.id, label: x.title }))]} />
+      </div>
       <fieldset className="space-y-1.5">
         <legend className="mb-1 text-xs text-muted">Mode</legend>
         {MODES.map(m => (

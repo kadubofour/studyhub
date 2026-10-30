@@ -22,6 +22,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => router }))
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ScanDialog } from '@/components/scan/ScanDialog'
+import { shown } from './dropdown'
 
 const profile = { id: 'u1', display_name: null, timezone: 'Africa/Accra', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 const photo = (name: string) => new File(['x'], name, { type: 'image/jpeg' })
@@ -136,7 +137,7 @@ describe('ScanDialog', () => {
     coursesFail = false
     runScan.mockResolvedValue({ ok: true, value: { tasks: [], classes: [{ course: 'biology', day: 1, start: '09:00', end: '10:00', room: null, kind: 'lecture', unsure: false }] } })
     await act(async () => { fireEvent.click(scanButton(1)) })
-    expect((screen.getByLabelText('Class 1 course') as HTMLSelectElement).value).toBe('c1') // matched now
+    expect(shown('Class 1 course')).toBe('Biology') // matched now
   })
 
   it('camera inputs ask for JPEG, PNG or WebP, so phones convert HEIC photos', async () => {

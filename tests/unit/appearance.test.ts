@@ -65,16 +65,14 @@ describe('looks', () => {
       for (const bg of [look.dark.bg, look.dark.raised]) expect(contrastRatio(a.textDark, bg), `${name} ${accent} dark on ${bg}`).toBeGreaterThanOrEqual(4.5)
     }
   })
-  it('Paper is for light mode only: in dark mode it shows as Classic, and is not offered', () => {
-    expect(effectiveLook('paper', 'dark')).toBe('classic')
-    expect(effectiveLook('paper', 'light')).toBe('paper')
-    expect(effectiveLook('paper', undefined)).toBe('paper')
-    for (const l of ['classic', 'studio', 'vivid', 'playful']) expect(effectiveLook(l, 'dark')).toBe(l)
-    expect(lookChoices('dark')).toEqual(['classic', 'studio', 'vivid', 'playful'])
+  it('every look, Paper included, is the student\'s choice in light and dark, and all are offered in both', () => {
+    for (const l of ['classic', 'studio', 'paper', 'vivid', 'playful']) for (const t of ['light', 'dark', undefined]) expect(effectiveLook(l, t)).toBe(l)
+    expect(lookChoices('dark')).toEqual(['classic', 'studio', 'paper', 'vivid', 'playful'])
     expect(lookChoices('light')).toEqual(['classic', 'studio', 'paper', 'vivid', 'playful'])
   })
-  it('Paper dark colours are Classic dark, so nothing cream shows in dark mode', () => {
-    expect(LOOKS.paper.dark).toEqual(LOOKS.classic.dark)
+  it('Paper\'s dark mode is its own: warm brown pages with cream ink, not Classic\'s', () => {
+    expect(LOOKS.paper.dark).toMatchObject({ bg: '#1C1915', raised: '#25211C', fg: '#EFE8DA' })
+    expect(LOOKS.paper.dark).not.toEqual(LOOKS.classic.dark)
   })
   it('the serif greeting is only for Paper while the font is the default Sans', () => {
     expect(greetingFont('paper', 'sans')).toBe('var(--font-lora)')

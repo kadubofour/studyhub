@@ -14,6 +14,7 @@ import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import QuizHubPage from '@/app/(app)/quiz/page'
 import { announceProgressChanged } from '@/lib/xp/events'
+import { choose, optionsOf } from './dropdown'
 
 const profile: Profile = {
   id: 'u', display_name: 'Ama', school: null, programme: null, avatar_color: '#3B5BDB', timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25,
@@ -45,7 +46,7 @@ describe('the Quiz page', () => {
 
   it('does not keep a course filter that no longer has any quizzes, and says what the filter is', async () => {
     await act(async () => { mount() })
-    fireEvent.change(screen.getByLabelText('Course'), { target: { value: 'c1' } })
+    choose('Course', 'Biology')
     expect(screen.queryByText('Loose quiz')).toBeNull()
     // The Biology quiz is deleted: the filter must not leave the page empty with nothing to undo it
     listQuizHub.mockResolvedValue(hub({ quizzes: [quiz('b', 'n2', 'Loose quiz')], attempts: [] }))
@@ -55,11 +56,11 @@ describe('the Quiz page', () => {
 
   it('offers "No course" only when some quiz has none', async () => {
     await act(async () => { mount() })
-    expect(within(screen.getByLabelText('Course')).getByRole('option', { name: 'No course' })).toBeTruthy()
+    expect(optionsOf('Course')).toContain('No course')
     cleanup()
     listQuizHub.mockResolvedValue(hub({ quizzes: [quiz('a', 'n1', 'Cells quiz')] }))
     await act(async () => { mount() })
-    expect(within(screen.getByLabelText('Course')).queryByRole('option', { name: 'No course' })).toBeNull()
+    expect(optionsOf('Course')).not.toContain('No course')
   })
 
   it('an older answer that arrives late does not bring back what was just deleted', async () => {

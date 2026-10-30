@@ -24,6 +24,7 @@ import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { AUDIO_QUOTA_BYTES, formatClock, formatMb, storageState } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 
 const STATUS: Record<TranscriptStatus, string> = {
   none: 'No transcript', live: 'Live transcript', processing: 'Transcribing…', done: 'Accurate transcript', failed: 'Transcript failed',
@@ -183,12 +184,9 @@ export default function LecturesPage() {
             {editing.kind === 'rename'
               ? <label className="field"><span>Lecture title</span><input autoFocus maxLength={200} value={editing.value} onChange={e => setEditing({ ...editing, value: e.target.value })} /></label>
               : (
-                <label className="field"><span>Course</span>
-                  <select value={editing.value} onChange={e => setEditing({ ...editing, value: e.target.value })}>
-                    <option value="">No course</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </label>
+                <div className="field"><span>Course</span>
+                  <Dropdown label="Course" value={editing.value} onChange={v => setEditing({ ...editing, value: v })} options={courseOptions(courses)} />
+                </div>
               )}
             <div className="flex justify-end gap-2">
               <button type="button" className="btn" onClick={() => setEditing(null)}>Cancel</button>

@@ -32,6 +32,7 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { NotesSidebar } from '@/components/notes/NotesSidebar'
 import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import type { Profile } from '@/lib/types'
+import { choose, shown } from './dropdown'
 
 const profile = { id: 'u', display_name: null, timezone: 'UTC', daily_goal_minutes: 120, focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_every: 4, default_editor_mode: 'rich', theme: 'system', accent: 'blue', font: 'sans', auto_math: true, onboarded: true } as Profile
 beforeAll(() => {
@@ -83,10 +84,10 @@ describe('the notebooks on the Notes page', () => {
   it('makes a notebook, in the course the list is filtered to, and shows it', async () => {
     courses = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }]
     await open()
-    fireEvent.change(screen.getByLabelText('Filter by course'), { target: { value: 'bio' } })
+    choose('Filter by course', 'Biology')
     fireEvent.click(screen.getByRole('button', { name: 'New notebook' }))
     const d = within(screen.getByRole('dialog', { name: 'New notebook' }))
-    expect((d.getByLabelText('Course') as HTMLSelectElement).value).toBe('bio')
+    expect(shown('Course')).toBe('Biology')
     fireEvent.change(d.getByLabelText('Name'), { target: { value: 'Chemistry' } })
     await act(async () => { fireEvent.click(d.getByRole('button', { name: 'Create' })) })
     expect(createNotebook).toHaveBeenCalledWith(expect.anything(), 'Chemistry', 'bio')

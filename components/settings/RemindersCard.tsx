@@ -6,6 +6,7 @@ import { BTN_OUTLINE } from '@/components/ui/buttonStyles'
 import { FocusAlerts } from '@/components/focus/FocusAlerts'
 import { useReminders } from '@/components/providers/ReminderProvider'
 import { askNotificationPermission, notificationPermission } from '@/lib/focus/alert'
+import { Dropdown } from '@/components/ui/Dropdown'
 import {
   CLASS_LEADS, DEFAULT_REMINDERS, EXAM_LEADS, TASK_LEADS, isHHMM, setReminderPrefs, useReminderPrefs, type ReminderPrefs,
 } from '@/lib/reminders/prefs'
@@ -34,9 +35,8 @@ function LeadRow({ k, title, hint, options, prefs }: { k: LeadKey; title: string
   const v = prefs[k]
   return (
     <Row title={title} hint={hint} on={v !== null} onToggle={on => setReminderPrefs({ [k]: on ? DEFAULT_REMINDERS[k] : null })}>
-      <select aria-label={`${title}: when`} value={v ?? ''} onChange={e => setReminderPrefs({ [k]: Number(e.target.value) })}>
-        {options.map(m => <option key={m} value={m}>{words(m)}</option>)}
-      </select>
+      <Dropdown label={`${title}: when`} size="sm" className="w-44" value={v === null ? '' : String(v)} onChange={x => setReminderPrefs({ [k]: Number(x) })}
+        options={options.map(m => ({ value: String(m), label: words(m) }))} />
     </Row>
   )
 }

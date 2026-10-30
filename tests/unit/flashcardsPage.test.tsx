@@ -10,6 +10,7 @@ vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'bio', na
 vi.mock('@/lib/scan/events', () => ({ useScanSaved: () => {} }))
 import FlashcardsPage from '@/app/(app)/flashcards/page'
 import { ToastProvider } from '@/components/providers/ToastProvider'
+import { shown } from './dropdown'
 
 const open = async () => { await act(async () => { render(<ToastProvider><FlashcardsPage /></ToastProvider>) }) }
 beforeEach(() => {
@@ -28,7 +29,7 @@ describe('Flashcards: arriving from a quick action', () => {
   it('has the course already chosen when the address names one', async () => {
     search = 'new=1&course=bio'
     await open()
-    expect((screen.getByLabelText('Course') as HTMLSelectElement).value).toBe('bio')
+    expect(shown('Course')).toBe('Biology')
   })
   it('stays closed otherwise', async () => {
     await open()

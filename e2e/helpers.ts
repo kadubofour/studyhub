@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -83,6 +83,13 @@ export async function newNoteFromNote(page: Page) {
     await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
     await page.waitForLoadState('networkidle')
   }
+}
+
+// Chooses an option from one of the app's dropdowns, as a person does: open it by its label, then click the option
+export async function choose(scope: Page | Locator, label: string, option: string) {
+  await scope.getByRole('button', { name: label, exact: true }).click()
+  const page = 'page' in scope ? scope.page() : scope
+  await page.getByRole('listbox', { name: label }).getByRole('option', { name: option, exact: true }).click()
 }
 
 // Calls one of the database's functions as a student signed up with signUp (their email, the e2e password), straight

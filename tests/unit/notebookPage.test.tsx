@@ -22,6 +22,7 @@ vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'bio', na
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import NotebookPage from '@/app/(app)/notebooks/[id]/page'
+import { choose } from './dropdown'
 
 const open = async () => { await act(async () => { render(<ToastProvider><ConfirmProvider><NotebookPage /></ConfirmProvider></ToastProvider>) }) }
 const click = async (el: HTMLElement) => { await act(async () => { fireEvent.click(el) }) }
@@ -53,7 +54,7 @@ describe('a notebook\'s page', () => {
     await click(screen.getByRole('button', { name: 'Rename' }))
     const d = within(screen.getByRole('dialog', { name: 'Rename notebook' }))
     fireEvent.change(d.getByLabelText('Name'), { target: { value: 'Organic' } })
-    fireEvent.change(d.getByLabelText('Course'), { target: { value: 'chem' } })
+    choose('Course', 'Chemistry')
     await click(d.getByRole('button', { name: 'Save' }))
     expect(updateNotebook).toHaveBeenCalledWith({}, 'nb1', { name: 'Organic', course_id: 'chem' })
     expect(screen.getByRole('heading', { level: 1, name: 'Organic' })).toBeTruthy()

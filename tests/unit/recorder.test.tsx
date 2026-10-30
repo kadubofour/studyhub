@@ -20,6 +20,7 @@ import { ProfileProvider } from '@/components/providers/ProfileProvider'
 import { Recorder } from '@/components/lectures/Recorder'
 import type { LocalSession } from '@/lib/lectures/localStore'
 import { isRecording } from '@/lib/lectures/recordingGuard'
+import { choose, shown } from './dropdown'
 
 class FakeRecorder {
   static isTypeSupported = (t: string) => t === 'audio/webm;codecs=opus'
@@ -169,14 +170,13 @@ describe('Recorder', () => {
   it('live transcript listens in the chosen language, English (Ghana) by default, and remembers it', async () => {
     localStorage.removeItem('studyhub:live-language')
     await renderRecorder({ Recognition: FakeRecognition })
-    const language = screen.getByLabelText('Language') as HTMLSelectElement
-    expect(language.value).toBe('en-GH')
-    fireEvent.change(language, { target: { value: 'fr-FR' } })
+    expect(shown('Language')).toBe('English (Ghana)')
+    choose('Language', 'French')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recording' })) })
     expect(heard[0].lang).toBe('fr-FR')
     cleanup()
     await renderRecorder({ Recognition: FakeRecognition })
-    expect((screen.getByLabelText('Language') as HTMLSelectElement).value).toBe('fr-FR')
+    expect(shown('Language')).toBe('French')
     localStorage.removeItem('studyhub:live-language')
   })
 

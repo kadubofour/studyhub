@@ -13,6 +13,7 @@ vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [] }))
 vi.mock('@/lib/scan/events', () => ({ useScanSaved: () => {} }))
 import FlashcardsPage from '@/app/(app)/flashcards/page'
 import { ToastProvider } from '@/components/providers/ToastProvider'
+import { choose } from './dropdown'
 
 const open = async () => { await act(async () => { render(<ToastProvider><FlashcardsPage /></ToastProvider>) }) }
 const names = () => screen.getAllByRole('link').filter(l => l.getAttribute('href')?.startsWith('/flashcards/')).map(l => l.querySelector('[data-title]')?.textContent)
@@ -28,9 +29,9 @@ describe('how the decks are shown', () => {
     await open()
     expect(names()).toEqual(['atoms', 'Cells', 'Bonds'])
     expect(screen.getByRole('list', { name: 'Decks' }).getAttribute('data-layout')).toBe('grid')
-    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'name' } })
+    choose('Sort by', 'Name (A to Z)')
     expect(names()).toEqual(['atoms', 'Bonds', 'Cells'])
-    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'newest' } })
+    choose('Sort by', 'Newest')
     expect(names()).toEqual(['Bonds', 'Cells', 'atoms'])
     fireEvent.click(screen.getByRole('radio', { name: 'List' }))
     expect(screen.getByRole('list', { name: 'Decks' }).getAttribute('data-layout')).toBe('list')

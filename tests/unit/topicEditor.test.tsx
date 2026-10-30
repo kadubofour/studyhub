@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { TopicEditor } from '@/components/progress/TopicEditor'
 import type { CourseMaterial, TopicDraft } from '@/lib/topics/types'
+import { choose, optionsOf } from './dropdown'
 
 afterEach(cleanup)
 const material: CourseMaterial = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [{ id: 'l1', title: 'Week 3 lecture' }], decks: [{ id: 'd1', name: 'Cells deck' }] }
@@ -45,7 +46,7 @@ describe('TopicEditor', () => {
   })
   it('merges one topic into another, keeping both topics\' material', () => {
     const { onSave } = open()
-    fireEvent.change(screen.getByLabelText('Merge Glycolysis into'), { target: { value: 't1' } })
+    choose('Merge Glycolysis into', 'Krebs cycle')
     fireEvent.click(screen.getByRole('button', { name: 'Save topics' }))
     const [only] = saved(onSave)
     expect(saved(onSave)).toHaveLength(1)
@@ -54,9 +55,8 @@ describe('TopicEditor', () => {
   })
   it('links and unlinks material, offering only what is not linked yet', () => {
     const { onSave } = open()
-    const add = screen.getByLabelText('Add to Krebs cycle') as HTMLSelectElement
-    expect([...add.options].map(o => o.textContent)).not.toContain('Krebs notes')
-    fireEvent.change(add, { target: { value: 'deck:d1' } })
+    expect(optionsOf('Add to Krebs cycle').some(o => o.startsWith('Krebs notes'))).toBe(false)
+    choose('Add to Krebs cycle', /^Cells deck/)
     fireEvent.click(screen.getByRole('button', { name: 'Remove Week 3 lecture from Glycolysis' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save topics' }))
     expect(saved(onSave)[0].links).toEqual([{ kind: 'note', id: 'n1' }, { kind: 'deck', id: 'd1' }])

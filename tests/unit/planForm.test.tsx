@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { PlanForm } from '@/components/plan/PlanForm'
+import { choose, optionsOf, shown } from './dropdown'
 
 afterEach(cleanup)
 const open = (over: Partial<React.ComponentProps<typeof PlanForm>> = {}) => {
@@ -13,10 +14,9 @@ const open = (over: Partial<React.ComponentProps<typeof PlanForm>> = {}) => {
 describe('PlanForm', () => {
   it('works towards an exam only if one is chosen: with none it keeps going', () => {
     const { onSave } = open({ exams: [{ id: 'e1', title: 'Midterm' }, { id: 'e2', title: 'Final' }], initial: { examId: 'e1' } })
-    const aim = screen.getByLabelText('Working towards') as HTMLSelectElement
-    expect([...aim.options].map(o => o.text)).toEqual(['No exam: keep going', 'Midterm', 'Final'])
-    expect(aim.value).toBe('e1')
-    fireEvent.change(aim, { target: { value: '' } })
+    expect(optionsOf('Working towards')).toEqual(['No exam: keep going', 'Midterm', 'Final'])
+    expect(shown('Working towards')).toBe('Midterm')
+    choose('Working towards', 'No exam: keep going')
     fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
     expect(onSave).toHaveBeenCalledWith({ mode: 'balanced', minutesPerDay: 45, daysOff: [], examId: null })
   })

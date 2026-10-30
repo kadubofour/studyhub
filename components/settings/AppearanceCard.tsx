@@ -10,6 +10,7 @@ import { ACCENTS, CONTENT_WIDTHS, FONTS, LOOKS, contentWidthOf, effectiveLook, l
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { SettingRow } from './SettingRow'
 import { ThemeTiles } from './ThemeTiles'
+import { Dropdown } from '@/components/ui/Dropdown'
 import type { ThemePref } from '@/lib/types'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
@@ -57,28 +58,13 @@ export function AppearanceCard() {
       <SettingRow title="Theme" hint="Light, dark, or the same as your device.">
         <ThemeTiles value={profile.theme} onChange={chooseTheme} />
       </SettingRow>
-      <SettingRow title="Look" hint="The style of the whole app.">
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3" role="radiogroup" aria-label="Look">
-          {LOOK_NAMES.map((name, i) => {
-            const on = look === name
-            return (
-              <button key={name} type="button" role="radio" aria-checked={on} aria-label={`${LOOKS[name].label} look`}
-                tabIndex={on ? 0 : -1}
-                onKeyDown={e => {
-                  const to = radioKeyTarget(e.key, i, LOOK_NAMES.length)
-                  if (to === null) return
-                  e.preventDefault(); choose({ look: LOOK_NAMES[to] }); focusRadio(e.currentTarget, to)
-                }}
-                onClick={() => choose({ look: name })}
-                className={`rounded-2xl border p-2 text-left transition ${on ? 'border-transparent ring-2 ring-[var(--accent-solid)]' : 'border-line hover:border-[color-mix(in_srgb,var(--fg)_25%,var(--line))]'}`}>
-                <LookPreview look={name} ownFont={profile.font !== undefined && profile.font !== 'sans'} />
-                <div className="mt-2 flex items-center justify-between gap-2 px-1 text-sm font-medium">{LOOKS[name].label}{on && <Check size={15} className="shrink-0 text-[var(--accent-solid)]" aria-hidden />}</div>
-                <div className="px-1 pb-0.5 text-xs text-muted">{LOOKS[name].blurb}</div>
-              </button>
-            )
-          })}
+      <SettingRow title="Look" hint="The style of the whole app, in light and dark.">
+        <div className="max-w-sm space-y-3">
+          <Dropdown label="Look" value={look} onChange={name => choose({ look: name })}
+            options={LOOK_NAMES.map(name => ({ value: name, label: LOOKS[name].label, hint: LOOKS[name].blurb }))} />
+          {/* the chosen look, drawn small in its own colours, so the choice can be seen before looking around the app */}
+          <LookPreview look={look} ownFont={profile.font !== undefined && profile.font !== 'sans'} />
         </div>
-        {mode === 'dark' && <p className="mt-2 text-xs text-muted">Paper is for light mode. Switch to light mode to use it{profile.look === 'paper' ? ' (your choice is kept)' : ''}.</p>}
       </SettingRow>
       <SettingRow title="Content width" hint="Focused is a centred column, Wide uses more of the screen, Full uses all of it.">
         <ChoiceChips label="Content width" value={contentWidthOf(profile.content_width)} options={CONTENT_WIDTHS.map(w => ({ value: w.id, label: w.label }))} onChange={v => choose({ content_width: v as ContentWidth })} />

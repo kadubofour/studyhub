@@ -1,6 +1,7 @@
 'use client'
 import { Grid3x3, LayoutGrid, List } from 'lucide-react'
 import { VIEW_CHOICES, useView, viewStore, type Layout, type ViewPage } from '@/lib/ui/listView'
+import { Dropdown } from './Dropdown'
 
 const LAYOUTS: { value: Layout; label: string; Icon: typeof List }[] = [
   { value: 'grid', label: 'Grid', Icon: LayoutGrid }, { value: 'list', label: 'List', Icon: List }, { value: 'icons', label: 'Icons', Icon: Grid3x3 },
@@ -19,9 +20,7 @@ export function ViewOptions({ page, className = '', sort = true }: { page: ViewP
             onClick={() => set({ layout: value })}><Icon size={15} aria-hidden /></button>
         ))}
       </div>
-      {sort && <select className="input !w-auto !py-1.5 text-sm" aria-label="Sort by" value={view.sort} onChange={e => set({ sort: e.target.value })}>
-        {VIEW_CHOICES[page].sorts.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-      </select>}
+      {sort && <Dropdown label="Sort by" size="sm" className="w-44" value={view.sort} onChange={v => set({ sort: v })} options={VIEW_CHOICES[page].sorts} />}
     </div>
   )
 }

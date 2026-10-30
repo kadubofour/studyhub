@@ -7,6 +7,7 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { PartialSaveError, plannerProblem, savePlanner, toDrafts, withoutSaved, type ClassDraft, type CourseChoice, type PlannerDrafts, type TaskDraft } from '@/lib/scan/planner'
 import type { ClassKind, Course, TaskType } from '@/lib/types'
 import type { ScanPlannerResult } from '@/lib/ai/scan'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const TASK_TYPES: [TaskType, string][] = [['assignment', 'Assignment'], ['exam', 'Exam'], ['reading', 'Reading'], ['other', 'Other']]
@@ -73,9 +74,8 @@ export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanA
               <input type="checkbox" className="mt-2" aria-label={`Keep task ${i + 1}`} checked={t.keep} onChange={e => setTask(i, { keep: e.target.checked })} />
               <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                 <input aria-label={`Task ${i + 1} title`} value={t.title} onChange={e => setTask(i, { title: e.target.value })} />
-                <select aria-label={`Task ${i + 1} type`} value={t.type} onChange={e => setTask(i, { type: e.target.value as TaskType })}>
-                  {TASK_TYPES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-                </select>
+                <Dropdown label={`Task ${i + 1} type`} size="sm" className="sm:w-36" value={t.type} onChange={v => setTask(i, { type: v as TaskType })}
+                  options={TASK_TYPES.map(([v, label]) => ({ value: v, label }))} />
                 <input type="date" aria-label={`Task ${i + 1} due date`} value={t.due} onChange={e => setTask(i, { due: e.target.value })} />
                 {t.unsure && <div><Unsure /></div>}
               </div>
@@ -90,22 +90,18 @@ export function PlannerReview({ result, courses, onSaved, onPartialSave, onScanA
             <div key={i} className="grid grid-cols-[auto_1fr] items-start gap-2 rounded-xl border border-line p-2">
               <input type="checkbox" className="mt-2" aria-label={`Keep class ${i + 1}`} checked={c.keep} onChange={e => setClass(i, { keep: e.target.checked })} />
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <select aria-label={`Class ${i + 1} course`} value={courseValue(c.course)} onChange={e => setClass(i, { course: courseFrom(e.target.value) })}>
-                  {allCourses.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-                  {newNames.map(n => <option key={`new:${n}`} value={`new:${n}`}>Create course {n}</option>)}
-                </select>
+                <Dropdown label={`Class ${i + 1} course`} size="sm" value={courseValue(c.course)} onChange={v => setClass(i, { course: courseFrom(v) })}
+                  options={[...allCourses.map(co => ({ value: co.id, label: co.name })), ...newNames.map(n => ({ value: `new:${n}`, label: `Create course ${n}` }))]} />
                 {c.course.kind === 'new' && (
                   <label className="field col-span-2 sm:col-span-3"><span>New course name</span>
                     <input aria-label={`Class ${i + 1} new course name`} maxLength={80} value={c.course.name}
                       onChange={e => renameCourse((c.course as { name: string }).name, e.target.value)} />
                   </label>
                 )}
-                <select aria-label={`Class ${i + 1} day`} value={c.day} onChange={e => setClass(i, { day: Number(e.target.value) })}>
-                  {DAYS.map((day, n) => <option key={day} value={n}>{day}</option>)}
-                </select>
-                <select aria-label={`Class ${i + 1} kind`} value={c.kind} onChange={e => setClass(i, { kind: e.target.value as ClassKind })}>
-                  {KINDS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-                </select>
+                <Dropdown label={`Class ${i + 1} day`} size="sm" value={String(c.day)} onChange={v => setClass(i, { day: Number(v) })}
+                  options={DAYS.map((day, n) => ({ value: String(n), label: day }))} />
+                <Dropdown label={`Class ${i + 1} kind`} size="sm" value={c.kind} onChange={v => setClass(i, { kind: v as ClassKind })}
+                  options={KINDS.map(([v, label]) => ({ value: v, label }))} />
                 <input type="time" aria-label={`Class ${i + 1} start`} value={c.start} onChange={e => setClass(i, { start: e.target.value })} />
                 <input type="time" aria-label={`Class ${i + 1} end`} value={c.end} onChange={e => setClass(i, { end: e.target.value })} />
                 <input aria-label={`Class ${i + 1} room`} placeholder="Room" value={c.room} onChange={e => setClass(i, { room: e.target.value })} />

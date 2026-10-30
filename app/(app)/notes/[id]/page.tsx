@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Check, ChevronLeft, PenLine, Redo2, Share, Type, Undo2 } from 'lucide-react'
 import { editedLine } from '@/lib/notes/noteRows'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import type { Editor } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
@@ -309,13 +310,10 @@ function NoteEditor({ id }: { id: string }) {
           <NoteSheet actions={actions} mode={mode} reading={reading} autoMath={profile.auto_math}
             onRemind={() => requestReminder({ title: `Review ${draft.title || 'Untitled'}`, href: `/notes/${draft.id}`, link_label: draft.title || 'Untitled' })}>
             {close => <>
-              <label className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-surface px-4">
+              <div className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-surface px-4">
                 <span className="text-[15px] font-medium">Course</span>
-                <select className="input min-w-0 max-w-48" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })}>
-                  <option value="">No course</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
+                <Dropdown label="Course" size="sm" className="min-w-0 max-w-48 flex-1" value={draft.course_id ?? ''} onChange={v => change({ course_id: v || null })} options={courseOptions(courses)} />
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} className="btn min-h-12 justify-center" />
                 <button type="button" className="btn min-h-12 justify-center" onClick={() => { close(); setStudyOpen(true) }}>✦ Study</button>
@@ -331,10 +329,7 @@ function NoteEditor({ id }: { id: string }) {
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}
         <div className="hidden md:block"><NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} /></div>
         {/* on a phone the course picker gives up room first, so the buttons stay on one line */}
-        <select className="input min-w-0 flex-1 basis-0 max-w-32 sm:flex-none sm:basis-auto sm:max-w-44" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })} aria-label="Course">
-          <option value="">No course</option>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <Dropdown label="Course" size="sm" className="w-44 min-w-0" value={draft.course_id ?? ''} onChange={v => change({ course_id: v || null })} options={courseOptions(courses)} />
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} compact /></span>

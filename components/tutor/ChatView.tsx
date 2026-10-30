@@ -26,6 +26,7 @@ import { addPending, readFile, uploadAttachments, type Pending } from '@/lib/tut
 import type { Attachment } from '@/lib/tutor/attachments'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Course } from '@/lib/types'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 
 const nowMs = () => Date.now() // a plain function, so reading the clock in a click handler is not mistaken for reading it while drawing
 const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for good: a new one each render would make the picker load everything again
@@ -297,10 +298,8 @@ export function ChatView({ chatId }: { chatId: string }) {
           <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => setPicking(true)}>{where ? 'Change' : 'Choose one'}</button>
           {where && <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => { void aboutPicked(null) }}>Remove</button>}
         </p>
-        <select className="input !w-auto max-w-40 !py-1 text-xs" aria-label="Course" value={chat.course_id ?? ''} onChange={e => { const v = e.target.value || null; setChat({ ...chat, course_id: v }); void setChatCourse(supabase(), chatId, v) }}>
-          <option value="">No course</option>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <Dropdown label="Course" size="sm" className="w-40" value={chat.course_id ?? ''} options={courseOptions(courses)}
+          onChange={x => { const v = x || null; setChat({ ...chat, course_id: v }); void setChatCourse(supabase(), chatId, v) }} />
       </div>
 
       <div className="flex-1 space-y-3" aria-live="polite" aria-label="Conversation">

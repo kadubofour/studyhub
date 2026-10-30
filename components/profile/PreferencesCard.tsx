@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { changedFields } from '@/lib/ui/changedFields'
 import type { EditorMode, Profile } from '@/lib/types'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 const noopSubscribe = () => () => {}
 
@@ -75,11 +76,9 @@ export function PreferencesCard() {
     <form onSubmit={save} className="card space-y-5" aria-labelledby="preferences-title">
       <h2 id="preferences-title" className="text-base font-semibold">Preferences</h2>
       <section className="space-y-3">
-        <label className="field"><span>Time zone</span>
-          <select value={form.timezone} onChange={e => set('timezone', e.target.value)}>
-            {zones.map(z => <option key={z} value={z}>{z}</option>)}
-          </select>
-        </label>
+        <div className="field"><span>Time zone</span>
+          <Dropdown label="Time zone" value={form.timezone} onChange={v => set('timezone', v)} options={zones.map(z => ({ value: z, label: z }))} />
+        </div>
       </section>
       <section className="grid grid-cols-2 gap-3">
         {num('daily_goal_minutes', 'Daily focus goal (min)')}

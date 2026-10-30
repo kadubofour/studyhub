@@ -1,10 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, choose } from './helpers'
 
 async function inBiology(page: Page) {
   await Promise.all([
     page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    page.getByLabel('Course').selectOption({ label: 'Biology' }),
+    choose(page, 'Course', 'Biology'),
   ])
 }
 const openStudy = async (page: Page) => {

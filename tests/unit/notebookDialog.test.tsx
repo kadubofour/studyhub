@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
 import { NotebookNameDialog } from '@/components/notes/NotebookDialogs'
+import { choose, optionsOf, shown } from './dropdown'
 
 const courses = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }, { id: 'chem', name: 'Chemistry', color: '#BA7517' }]
 beforeAll(() => {
@@ -15,12 +16,12 @@ describe('naming a notebook', () => {
     const onSubmit = vi.fn()
     render(<NotebookNameDialog open onClose={() => {}} title="New notebook" submitLabel="Create" courses={courses} initialCourse="chem" onSubmit={onSubmit} />)
     const d = within(screen.getByRole('dialog', { name: 'New notebook' }))
-    expect((d.getByLabelText('Course') as HTMLSelectElement).value).toBe('chem')
-    expect([...(d.getByLabelText('Course') as HTMLSelectElement).options].map(o => o.text)).toEqual(['No course', 'Biology', 'Chemistry'])
+    expect(shown('Course')).toBe('Chemistry')
+    expect(optionsOf('Course')).toEqual(['No course', 'Biology', 'Chemistry'])
     fireEvent.change(d.getByLabelText('Name'), { target: { value: 'Organic' } })
     fireEvent.click(d.getByRole('button', { name: 'Create' }))
     expect(onSubmit).toHaveBeenCalledWith('Organic', 'chem')
-    fireEvent.change(d.getByLabelText('Course'), { target: { value: '' } })
+    choose('Course', 'No course')
     fireEvent.click(d.getByRole('button', { name: 'Create' }))
     expect(onSubmit).toHaveBeenLastCalledWith('Organic', null)
   })

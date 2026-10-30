@@ -7,6 +7,7 @@ import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
 import { sortNotes, useView, viewStore } from '@/lib/ui/listView'
 import { PhoneNotesList } from '@/components/notes/PhoneNotesList'
+import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { NotebookCover } from '@/components/notes/NotebookCover'
@@ -206,10 +207,7 @@ export function NotesSidebar() {
         </div>
         {/* on a phone, one row that scrolls sideways rather than two stacked rows */}
         <div data-filter-row className="no-scrollbar -mx-5 flex min-w-0 gap-2 overflow-x-auto px-5 sm:mx-0 sm:overflow-visible sm:px-0 [&>*]:shrink-0">
-        <select className="input" value={course} onChange={e => setCourse(e.target.value)} aria-label="Filter by course">
-          <option value="">All courses</option>
-          {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <Dropdown label="Filter by course" className="w-48" value={course} onChange={setCourse} options={courseOptions(courses, { value: '', label: 'All courses' })} />
         <ViewOptions page="notes" />
         </div>
       </div>
