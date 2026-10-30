@@ -31,9 +31,13 @@ const rpcCalls: [string, unknown][] = []
 const inserted: [string, Record<string, unknown>][] = []
 const updated: [string, Record<string, unknown>][] = []
 let insertError: object | null = null
+const filters: [string, unknown[]][] = [] // date filters asked for (lt, gte)
+const deleted: unknown[][] = []
+let deleteError: object | null = null
 const result = (data: unknown) => {
   const q: Record<string, unknown> = {}
   for (const k of ['select', 'eq', 'order', 'limit']) q[k] = () => q
+  for (const k of ['lt', 'gte']) q[k] = (...a: unknown[]) => { filters.push([k, a]); return q }
   q.maybeSingle = async () => ({ data: Array.isArray(data) ? (data[0] ?? null) : data, error: null })
   q.then = (res: (v: unknown) => unknown) => res({ data, error: null })
   return q
@@ -59,6 +63,7 @@ const sb = {
     if (table === 'decks') return result([])
     if (table === 'tutor_messages') return {
       ...result(history),
+      delete: () => { const args: unknown[] = []; const r: Record<string, unknown> = { eq: (...a: unknown[]) => { args.push(['eq', ...a]); return r }, gte: (...a: unknown[]) => { args.push(['gte', ...a]); return r }, then: (res: (v: unknown) => unknown) => { deleted.push(args); return res({ error: deleteError }) } }; return r },
       insert: (row: Record<string, unknown>) => {
         inserted.push([table, row])
         return { select: () => ({ single: async () => ({ data: insertError ? null : { id: `m${inserted.length}` }, error: insertError }) }) }
@@ -74,6 +79,7 @@ const call = (body: object = {}) => POST(new Request('http://x', { method: 'POST
 const lines = async (res: Response) => (await res.text()).trim().split('\n').map(l => JSON.parse(l) as Record<string, unknown>)
 beforeEach(() => {
   user = { id: 'u1' }; reserve = 'ok'; release.mockClear(); modelInput.mockClear(); inserted.length = 0; updated.length = 0; insertError = null
+  filters.length = 0; deleted.length = 0; deleteError = null
   chat = { id: CHAT, title: 'New chat', course_id: null, note_id: NOTE, lecture_id: null }
   note = { id: NOTE, title: 'Krebs', content_md: 'The Krebs cycle runs in the matrix.' }
   stats = []; statsFail = false; rpcCalls.length = 0
@@ -365,5 +371,43 @@ describe('POST /api/ai/tutor with files: after the review', () => {
     history = [{ role: 'assistant', content: 'A cell.', attachments: [] }, { role: 'user', content: '', attachments: [photo(1)] }]
     await (await call({ message: 'And part b?' })).text()
     expect(parts(0)[0].text).toMatch(/q1\.jpg/)
+  })
+})
+
+describe('asking again in place of an earlier question (edit, Regenerate, Try again)', () => {
+  const Q = '44444444-4444-4444-8444-444444444444'
+  it('hears only what came before that question, then removes it and what followed, and answers the new one', async () => {
+    history = [{ role: 'user', content: 'Old question', created_at: '2026-10-30T10:00:00Z' }]
+    script = [{ type: 'delta', text: 'New answer' }]
+    const res = await call({ message: 'Better question', replace: Q })
+    expect(res.status).toBe(200)
+    await lines(res)
+    expect(filters).toContainEqual(['lt', ['created_at', '2026-10-30T10:00:00Z']]) // the history stops before it
+    expect(deleted).toEqual([[['eq', 'chat_id', CHAT], ['gte', 'created_at', '2026-10-30T10:00:00Z']]])
+    expect(inserted.map(([, r]) => r.role)).toEqual(['user', 'assistant'])
+    expect(inserted[0][1].content).toBe('Better question')
+  })
+  it('a question that is not one of this chat\'s is refused, and nothing is removed', async () => {
+    history = []
+    const res = await call({ replace: Q })
+    expect(res.status).toBe(404)
+    expect(deleted).toEqual([])
+  })
+  it('refuses something that is not an id', async () => {
+    expect((await call({ replace: 'nope' })).status).toBe(400)
+  })
+  it('a refused message (the daily limit) removes nothing', async () => {
+    history = [{ role: 'user', content: 'Old question', created_at: '2026-10-30T10:00:00Z' }]
+    reserve = 'tutor_limit'
+    await call({ replace: Q })
+    expect(deleted).toEqual([])
+  })
+  it('if removing fails, the message is given back and nothing is answered', async () => {
+    history = [{ role: 'user', content: 'Old question', created_at: '2026-10-30T10:00:00Z' }]
+    deleteError = { message: 'rls' }
+    const res = await call({ replace: Q })
+    expect(res.status).not.toBe(200)
+    expect(release).toHaveBeenCalled()
+    expect(inserted).toEqual([])
   })
 })

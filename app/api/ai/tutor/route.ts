@@ -41,21 +41,31 @@ async function fetchFiles(sb: Awaited<ReturnType<typeof createServerSupabase>>, 
 const withPages = (list: Attachment[], pages: Map<string, number>): Attachment[] => list.map(a => (a.kind === 'pdf' ? { ...a, pages: pages.get(a.path) ?? a.pages } : a))
 const named = (content: string, list: Attachment[]) => (list.length ? `${content}${content ? '\n' : ''}(Attached: ${list.map(a => a.name).join(', ')})` : content)
 
-// POST { chatId, message, attachments? } → NDJSON: sources, then the reply as it is written, then done (with any
+// POST { chatId, message, attachments?, replace? } → NDJSON: sources, then the reply as it is written, then done (with any
 // proposals) or an error. Nothing the tutor proposes is saved here: the student approves in the browser.
+// `replace` is one of the chat's questions: that question and everything after it give way to this one (editing a question,
+// Regenerate, Try again). The tutor then hears only what came before it.
 export async function POST(request: Request) {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return bad(401, 'unauthorized')
-  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown } | null
+  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown; replace?: unknown } | null
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
   if (typeof body?.chatId !== 'string' || !UUID.test(body.chatId) || message.length > MAX_MESSAGE) return bad(400, 'bad_request')
+  if (body.replace !== undefined && (typeof body.replace !== 'string' || !UUID.test(body.replace))) return bad(400, 'bad_request')
   const attachments = checkAttachments(body.attachments, user.id, body.chatId)
   if (!attachments || (!message && !attachments.length)) return bad(400, 'bad_request')
   if (!isAiConfigured()) return aiErrorResponse('ai_unavailable')
   // Everything below is read with the student's own session: row-level security means only their data
   const { data: chat } = await sb.from('tutor_chats').select('id,title,course_id,note_id,lecture_id,guided').eq('id', body.chatId).maybeSingle()
   if (!chat) return bad(404, 'not_found')
+  // The question being replaced must be one of this chat's questions
+  let from: string | null = null
+  if (typeof body.replace === 'string') {
+    const { data: q } = await sb.from('tutor_messages').select('created_at').eq('id', body.replace).eq('chat_id', chat.id).eq('role', 'user').maybeSingle()
+    if (!q) return bad(404, 'not_found')
+    from = q.created_at as string
+  }
 
   let attached: Material | null = null
   // The course this chat is about: its own, else the attached note's or lecture's
@@ -71,7 +81,8 @@ export async function POST(request: Request) {
     sb.rpc('tutor_find_material', { p_query: message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' '), p_limit: 5 }),
     sb.from('courses').select('id,name'),
     sb.from('decks').select('id,name'),
-    sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
+    (from ? sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).lt('created_at', from) : sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id))
+      .order('created_at', { ascending: false }).limit(12),
   ])
   const matches = ((found ?? []) as { kind: Material['kind']; id: string; title: string; snippet: string }[])
     .map(m => ({ kind: m.kind, id: m.id, title: m.title, text: m.snippet }))
@@ -114,6 +125,11 @@ export async function POST(request: Request) {
     resent.set(i, attachmentParts(recounted, got.files))
   }
   const history = past12.map((h, i) => ({ role: h.role, content: named(h.content, h.attachments), parts: resent.get(i) }))
+  // Only now, with the message counted and its files checked, does the replaced part of the chat go
+  if (from) {
+    const { error } = await sb.from('tutor_messages').delete().eq('chat_id', chat.id).gte('created_at', from)
+    if (error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
+  }
   const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 

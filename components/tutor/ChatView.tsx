@@ -2,12 +2,13 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowDown, ArrowUp, ClipboardCopy, Copy, FileText, Loader2, Mic, Paperclip, Pencil, RefreshCw, Square, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Loader2, Mic, Paperclip, Pencil, RefreshCw, Square, Trash2, Volume2, X } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useDictation } from '@/components/tutor/useDictation'
+import { useSpeech } from '@/components/tutor/useSpeech'
 import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickDialog'
 import { usePlan } from '@/components/billing/usePlan'
 import { AI_USED } from '@/components/ai/aiFetch'
@@ -33,6 +34,7 @@ const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for 
 const asPending = (a: Attachment): Pending => (a.kind === 'document' ? { id: crypto.randomUUID(), ...a } : a.kind === 'photo' ? { id: crypto.randomUUID(), kind: 'photo', name: a.name, pages: 1, sent: a } : { id: crypto.randomUUID(), kind: 'pdf', name: a.name, pages: a.pages, sent: a })
 const forget = (p: Pending) => { if (p.kind === 'photo' && p.preview && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(p.preview) }
 const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string) => `/lectures/${id}`, card: () => '/flashcards' }
+const VOICE_PAUSE_MS = 1600 // in voice mode, this long a pause after speaking sends the question
 
 export function ChatView({ chatId }: { chatId: string }) {
   const router = useRouter()
@@ -71,16 +73,40 @@ export function ChatView({ chatId }: { chatId: string }) {
   const box = useRef<HTMLTextAreaElement>(null)
   const dictBase = useRef('') // what was in the box when dictation began; what is said goes after it
   const dictOn = useRef(false) // false once the message is sent, so words that arrive late do not fill the empty box again
+  // Voice mode: speak, and a pause sends; the reply is read aloud, then it listens again, until the student ends it
+  const [voice, setVoiceState] = useState(false)
+  const voiceOn = useRef(false)
+  const setVoice = (on: boolean) => { voiceOn.current = on; setVoiceState(on) }
+  const pause = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const speech = useSpeech()
+  const sendLatest = useRef<((message: string) => Promise<void>) | null>(null) // the pause timer sends with the newest send()
   const dictation = useDictation(spoken => {
     if (!dictOn.current) return
     const said = spoken.trim()
-    setText((said ? `${dictBase.current}${dictBase.current ? ' ' : ''}${said}` : dictBase.current).slice(0, 4000))
+    const full = (said ? `${dictBase.current}${dictBase.current ? ' ' : ''}${said}` : dictBase.current).slice(0, 4000)
+    setText(full)
+    if (voiceOn.current && said) {
+      if (pause.current) clearTimeout(pause.current)
+      pause.current = setTimeout(() => { pause.current = null; if (voiceOn.current && full.trim()) { setText(''); void sendLatest.current?.(full) } }, VOICE_PAUSE_MS)
+    }
   })
+  // The question being changed: its id and the new words
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const toastLatest = useRef(toast)
   useEffect(() => { toastLatest.current = toast })
   useEffect(() => {
-    if (dictation.error) toastLatest.current(dictation.error === 'not-allowed' || dictation.error === 'service-not-allowed' ? 'The microphone is blocked. Allow it in your browser settings.' : "Couldn't use the microphone.")
+    if (!dictation.error) return
+    toastLatest.current(dictation.error === 'not-allowed' || dictation.error === 'service-not-allowed' ? 'The microphone is blocked. Allow it in your browser settings.' : "Couldn't use the microphone.")
+    voiceOn.current = false // voice mode cannot go on without the microphone (voiceLive below is off too)
   }, [dictation.error])
+  // Voice mode listens whenever nothing else is going on: no reply being written or read aloud, no question being edited
+  const startDictation = dictation.start
+  const voiceLive = voice && !dictation.error
+  useEffect(() => {
+    if (!voiceLive || live !== null || speech.speaking !== null || editing || dictation.listening || uploading) return
+    dictBase.current = text.trimEnd(); dictOn.current = true; startDictation()
+  }, [voiceLive, live, speech.speaking, editing, dictation.listening, uploading, text, startDictation])
+  useEffect(() => () => { if (pause.current) clearTimeout(pause.current) }, [])
   const lastY = useRef(0)
   const pinned = useRef(true) // the student is reading the newest text, so a reply is followed; scrolled up, the page stays where they put it
   const [away, setAway] = useState(false) // scrolled up from the newest text: offer a way back
@@ -140,6 +166,18 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
 
+  function toggleVoice() {
+    if (voiceLive) {
+      setVoice(false); dictOn.current = false; dictation.stop(); speech.stop()
+      if (pause.current) { clearTimeout(pause.current); pause.current = null }
+      return
+    }
+    speech.unlock() // during this tap, so a phone lets the page speak later
+    setVoice(true)
+    // start listening in this tap too (it also asks again for a microphone that was refused)
+    if (!dictation.listening && live === null) { dictBase.current = text.trimEnd(); dictOn.current = true; dictation.start() }
+  }
+
   async function addFiles(files: File[]) {
     if (uploading) return // what is in the bar is being sent: nothing joins it now
     setAttachError(null)
@@ -161,7 +199,8 @@ export function ChatView({ chatId }: { chatId: string }) {
   }
 
   // From the bar (no override): its text and files. Try again, Regenerate, follow-ups and hints pass their own text, and files already uploaded.
-  async function send(override?: string, again?: Attachment[]) {
+  // `replace`: a question this one takes the place of, with everything after it (an edited question, Regenerate, Try again)
+  async function send(override?: string, again?: Attachment[], replace?: TutorMessage) {
     const fromBar = override === undefined
     const message = (override ?? text).trim()
     const files = fromBar ? pendingRef.current : again ?? []
@@ -175,14 +214,18 @@ export function ChatView({ chatId }: { chatId: string }) {
     }
     setLastAtts(atts)
     dictOn.current = false; dictation.stop()
+    if (pause.current) { clearTimeout(pause.current); pause.current = null }
+    speech.stop()
     pinned.current = true; setAway(false) // sending a message goes to the newest text
     setProblem(null); setPartial(null); if (override === undefined) setText(''); setLive('')
     const control = new AbortController()
     abort.current = control; stopped.current = false; liveText.current = ''; startedAt.current = nowMs(); setLastSent(message)
-    const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '', attachments: atts }]
+    const at = replace ? latest.current.findIndex(m => m.id === replace.id) : -1
+    const before = at >= 0 ? latest.current.slice(0, at) : latest.current
+    const shown = [...before, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '', attachments: atts }]
     latest.current = shown; setMessages(shown)
     let r: Awaited<ReturnType<typeof sendTutorMessage>>
-    try { r = await sendTutorMessage(chatId, message, control.signal, atts.length ? atts : undefined) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
+    try { r = await sendTutorMessage(chatId, message, control.signal, atts.length ? atts : undefined, at >= 0 ? replace!.id : undefined) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
     if (!r.ok) {
       // Refused (limit, speed, offline): keep what was typed so it isn't lost
       setProblem({ code: r.error, message: r.message })
@@ -202,11 +245,18 @@ export function ChatView({ chatId }: { chatId: string }) {
       // Stopped: keep what was written on the page, because the server saves the partial reply a moment after it hears the stop
       if (stopped.current) { setPartial(liveText.current.trim() ? liveText.current : null); window.dispatchEvent(new Event(AI_USED)) } // that message was used
       // The saved reply replaces the streamed one in a single update: the page must not shrink in between, or a reader scrolled up is carried to the bottom
-      try { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) } catch { /* the next load shows it */ }
+      try {
+        const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m)
+        // In voice mode the finished reply is read aloud (in the same update that ends the wait, so listening does not start first)
+        const reply = m[m.length - 1]
+        if (voiceOn.current && !stopped.current && reply?.role === 'assistant') speech.speak(reply.id, reply.content)
+      } catch { /* the next load shows it */ }
       setLive(null)
       try { const fresh = await getChat(supabase(), chatId); setChat(c => (c ? { ...fresh, guided: c.guided } : fresh)) } catch { /* the next load shows it */ }
     }
   }
+
+  useEffect(() => { sendLatest.current = (message: string) => send(message) })
 
   // Changes one proposal. Saves run one after another, each from the newest list, so two taps at
   // once can't write over each other. The card updates at once; a failed save rejects.
@@ -277,6 +327,10 @@ export function ChatView({ chatId }: { chatId: string }) {
   const retryText = problem ? lastSent || lastAsked : lastAsked // after a failure: the question that failed, which may not have been saved
   const retryAtts = problem ? lastAtts : lastAskedAtts
   const canRetry = idle && (!!retryText || retryAtts.length > 0) && (problem?.code === 'cut_off' || problem?.code === 'ai_failed' || last?.status === 'cut_off' || last?.role === 'user')
+  // Try again takes the place of the question that failed when it was saved: unanswered, or with a cut-off reply right after it.
+  // A question that was refused before it was saved replaces nothing (an older question with the same words must stay).
+  const failedQuestion = lastQuestion && lastQuestion.content === retryText
+    && (last === lastQuestion || (last?.role === 'assistant' && last.status === 'cut_off' && messages[messages.length - 2] === lastQuestion)) ? lastQuestion : undefined
   const canFollowUp = idle && !chat.guided && !problem && last?.role === 'assistant' && last.status === 'ok'
   const left = plan.billing && !plan.isPremium && !plan.loading ? Math.max(0, FREE_DAILY_TUTOR_MESSAGES - plan.tutorToday) : null
   return (
@@ -341,11 +395,31 @@ export function ChatView({ chatId }: { chatId: string }) {
                   ))}
                 </ul>
               )}
-              {m.content && <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm">{m.content}</p>}
-              {m.id !== 'pending' && (
+              {editing?.id === m.id ? (
+                <form className="w-[min(36rem,85vw)] space-y-2" onSubmit={e => {
+                  e.preventDefault()
+                  const words = editing.text.trim()
+                  if (!words && !(m.attachments ?? []).length) return
+                  setEditing(null); void send(words, m.attachments ?? [], m)
+                }}>
+                  <textarea aria-label="Edit your question" className="input w-full text-sm" rows={3} maxLength={4000} autoFocus value={editing.text}
+                    onChange={e => setEditing({ id: m.id, text: e.target.value })}
+                    onKeyDown={e => { if (e.key === 'Escape') setEditing(null) }} />
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {m !== lastQuestion && <span className="mr-auto text-xs text-muted">The answers after this one are replaced.</span>}
+                    <button type="button" className="btn" onClick={() => setEditing(null)}>Cancel</button>
+                    <button className="btn-primary" disabled={!editing.text.trim() && !(m.attachments ?? []).length}>Ask again</button>
+                  </div>
+                </form>
+              ) : m.content && <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm">{m.content}</p>}
+              {m.id !== 'pending' && editing?.id !== m.id && (
                 <div className="flex items-center gap-1 text-xs text-muted">
                   {time && <span>{time}</span>}
                   <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy question" title="Copy" onClick={() => { void copy(questionText(m)) }}><Copy size={13} aria-hidden /></button>
+                  {idle && !uploading && (
+                    <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Edit question" title="Edit and ask again"
+                      onClick={() => { setEditing({ id: m.id, text: m.content }) }}><Pencil size={13} aria-hidden /></button>
+                  )}
                 </div>
               )}
             </div>
@@ -361,8 +435,15 @@ export function ChatView({ chatId }: { chatId: string }) {
               )}
               <div className="flex gap-1 text-muted">
                 <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Copy reply" title="Copy" onClick={() => { void copy(m.content) }}><Copy size={14} aria-hidden /></button>
+                {speech.supported && (
+                  <button type="button" className={`btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5 ${speech.speaking === m.id ? 'text-accent' : ''}`}
+                    aria-label={speech.speaking === m.id ? 'Stop reading aloud' : 'Read aloud'} aria-pressed={speech.speaking === m.id} title={speech.speaking === m.id ? 'Stop' : 'Listen'}
+                    onClick={() => { if (speech.speaking === m.id) speech.stop(); else speech.speak(m.id, m.content) }}>
+                    {speech.speaking === m.id ? <Square size={14} aria-hidden /> : <Volume2 size={14} aria-hidden />}
+                  </button>
+                )}
                 {m === last && idle && (!!lastAsked || lastAskedAtts.length > 0) && m.status === 'ok' && (
-                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Regenerate reply" title="Regenerate" onClick={() => { void send(lastAsked ?? '', lastAskedAtts) }}><RefreshCw size={14} aria-hidden /></button>
+                  <button type="button" className="btn-ghost !px-2 !py-1 text-xs pointer-coarse:!px-3 pointer-coarse:!py-2.5" aria-label="Regenerate reply" title="Regenerate" onClick={() => { void send(lastAsked ?? '', lastAskedAtts, lastQuestion) }}><RefreshCw size={14} aria-hidden /></button>
                 )}
                 {time && <span className="ml-auto self-center text-xs">{time}</span>}
               </div>
@@ -382,7 +463,7 @@ export function ChatView({ chatId }: { chatId: string }) {
       </div>
 
       {problem && <AiError code={problem.code} message={problem.message} />}
-      {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
+      {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts, failedQuestion) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
       {canFollowUp && (
         <div role="group" aria-label="Follow-up questions" className="flex flex-wrap gap-2">
           {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5" onClick={() => { void send(f.message) }}>{f.label}</button>)}
@@ -425,6 +506,15 @@ export function ChatView({ chatId }: { chatId: string }) {
               const f = Array.from(e.clipboardData?.files ?? [])
               if (f.length && !e.clipboardData.getData?.('text/plain')) { e.preventDefault(); void addFiles(f) }
             }} />
+          {voiceLive && (
+            <div className="flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent">
+              <AudioLines size={16} aria-hidden className={dictation.listening || speech.speaking ? 'motion-safe:animate-pulse' : ''} />
+              <span role="status" className="min-w-0 flex-1">
+                {speech.speaking ? 'Reading the answer… (tap the stop button under it to skip)' : live !== null ? 'Thinking…' : dictation.listening ? 'Listening… pause when you have finished' : 'Voice mode'}
+              </span>
+              <button type="button" className="btn !py-1 text-xs" onClick={toggleVoice}>End voice mode</button>
+            </div>
+          )}
           <div className="flex items-center gap-2 pt-1">
             <button type="button" aria-label="Add files or photos" title="Add files or photos" disabled={uploading} className="btn-ghost -ml-2 grid size-10 shrink-0 place-items-center !rounded-full !p-0 text-muted" onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden /></button>
             <input ref={fileInput} type="file" multiple aria-label="Files to add" className="sr-only" tabIndex={-1}
@@ -436,7 +526,12 @@ export function ChatView({ chatId }: { chatId: string }) {
               <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
             </span>
             <span className="ml-auto flex items-center gap-1">
-              {dictation.supported && (
+              {dictation.supported && speech.supported && (
+                <button type="button" aria-label={voiceLive ? 'End voice mode' : 'Voice mode'} aria-pressed={voiceLive} title={voiceLive ? 'End voice mode' : 'Voice mode: speak, and hear the answer'}
+                  className={`btn-ghost grid size-10 place-items-center !rounded-full !p-0 ${voiceLive ? '!bg-accent-soft text-accent' : 'text-muted'}`}
+                  onClick={toggleVoice}><AudioLines size={18} aria-hidden /></button>
+              )}
+              {dictation.supported && !voiceLive && (
                 <button type="button" aria-label={dictation.listening ? 'Stop dictating' : 'Dictate'} aria-pressed={dictation.listening} title={dictation.listening ? 'Stop dictating' : 'Dictate'}
                   className={`btn-ghost grid size-10 place-items-center !rounded-full !p-0 ${dictation.listening ? '!bg-accent-soft text-accent motion-safe:animate-pulse' : 'text-muted'}`}
                   onClick={() => { if (dictation.listening) dictation.stop(); else { dictBase.current = text.trimEnd(); dictOn.current = true; dictation.start() } }}><Mic size={18} aria-hidden /></button>

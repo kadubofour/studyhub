@@ -110,7 +110,7 @@ test('on a phone the message box is above the bottom bar', async ({ page, isMobi
   await page.getByRole('button', { name: 'New chat' }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   const form = await page.getByLabel('Message').locator('xpath=ancestor::form').boundingBox()
-  const bar = await page.locator('nav[aria-label], nav').filter({ hasText: 'Home' }).last().boundingBox()
+  const bar = await page.getByRole('navigation', { name: 'Main' }).boundingBox()
   expect(bar).not.toBeNull()
   expect(form!.y + form!.height).toBeLessThanOrEqual(bar!.y + 1)
 })
