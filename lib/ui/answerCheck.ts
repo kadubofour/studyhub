@@ -10,6 +10,8 @@ export type ReviewMode = 'flip' | 'type'
 export const parseReviewMode = (v: unknown): ReviewMode => (v === 'type' ? 'type' : 'flip')
 
 const SUGGESTED: Record<Verdict, Rating> = { correct: 3, close: 2, different: 1 }
+/** A verdict reached another way (the AI judging the meaning), with the rating it suggests */
+export const verdictCheck = (verdict: Verdict): AnswerCheck => ({ verdict, suggested: SUGGESTED[verdict] })
 
 // Stand-ins that keep a decimal point, a minus sign and a caret through the clean-up below
 const DOT = '\u0001', MINUS = '\u0002', CARET = '\u0003'

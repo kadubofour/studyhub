@@ -15,8 +15,11 @@ import ReviewPage from '@/app/(app)/review/page'
 const open = async () => { await act(async () => { render(<ToastProvider><ReviewPage /></ToastProvider>) }) }
 const typeMode = () => fireEvent.click(screen.getByRole('radio', { name: 'Type answer' }))
 const key = (k: string) => window.dispatchEvent(new KeyboardEvent('keydown', { key: k }))
-beforeEach(() => { localStorage.clear(); cards = [card('a', 'Mitochondria'), card('b')]; rateCard.mockClear() })
-afterEach(cleanup)
+// The meaning check (AI): offline unless a test says otherwise, so the word check stands
+const fetchMock = vi.fn(async (..._a: unknown[]): Promise<Response> => { throw new Error('offline') })
+beforeEach(() => { localStorage.clear(); cards = [card('a', 'Mitochondria'), card('b')]; rateCard.mockClear(); fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock) })
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+const check = async () => { await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check' })) }) }
 
 describe('answering by typing', () => {
   it('defaults to flip, and the choice is remembered', async () => {
@@ -34,7 +37,7 @@ describe('answering by typing', () => {
     await open()
     typeMode()
     fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'mitochondrion' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Check' }))
+    await check()
     expect(screen.getByText('Close')).toBeTruthy()
     expect(screen.getByText('mitochondrion')).toBeTruthy() // what was written
     expect(screen.getByText('Mitochondria')).toBeTruthy() // the card's answer
@@ -52,7 +55,7 @@ describe('answering by typing', () => {
     expect(screen.getByRole('status').textContent).toContain('Suggested: Good')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Good/ })) })
     fireEvent.change(await screen.findByLabelText('Your answer'), { target: { value: 'nothing' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Check' }))
+    await check()
     expect(screen.getByText('Not quite')).toBeTruthy()
     expect(screen.getByRole('status').textContent).toContain('Suggested: Again')
   })
@@ -114,6 +117,35 @@ describe('answering by typing', () => {
     expect(screen.queryByLabelText('Your answer')).toBeNull()
     await act(async () => { key(' ') })
     expect(screen.getByText('Mitochondria')).toBeTruthy()
+  })
+
+  it('an answer in the student\'s own words is judged by its meaning, with a line of feedback', async () => {
+    cards = [card('a', 'The powerhouse of the cell, where aerobic respiration makes ATP')]
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ verdict: 'correct', feedback: 'Yes: it is where the cell makes most of its energy.' })))
+    await open()
+    typeMode()
+    fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'it makes energy for the cell' } })
+    await check()
+    expect(fetchMock).toHaveBeenCalledWith('/api/ai/flashcards/mark', expect.objectContaining({ body: JSON.stringify({ cardId: 'a', answer: 'it makes energy for the cell' }) }))
+    expect(screen.getByRole('status').textContent).toContain('Correct')
+    expect(screen.getByText('Yes: it is where the cell makes most of its energy.')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain('Suggested: Good')
+  })
+  it('an answer that matches is marked at once, with no meaning check', async () => {
+    await open()
+    typeMode()
+    fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'mitochondria' } })
+    await check()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('keeps the word check when the meaning check is refused, for example for going too fast', async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }))
+    await open()
+    typeMode()
+    fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'nothing' } })
+    await check()
+    expect(screen.getByText('Not quite')).toBeTruthy()
+    expect(screen.queryByText(/Checking the meaning/)).toBeNull()
   })
 
   it('the next card starts with an empty box', async () => {

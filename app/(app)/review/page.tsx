@@ -6,12 +6,12 @@ import { CardFace } from '@/components/flashcards/CardFace'
 import { TypedAnswer } from '@/components/flashcards/TypedAnswer'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Layers } from 'lucide-react'
+import { Layers, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listDueCards, listPracticeCards, rateCard } from '@/lib/data/cards'
 import { cardToState, previewIntervals, type Rating } from '@/lib/srs'
-import { checkAnswer, type AnswerCheck } from '@/lib/ui/answerCheck'
+import { checkAnswer, verdictCheck, type AnswerCheck, type Verdict } from '@/lib/ui/answerCheck'
 import { reviewMode, useReviewMode } from '@/lib/ui/reviewMode'
 import { reviewKeyAction } from '@/lib/ui/reviewKeys'
 import { advanceQueue, RatingLedger } from '@/lib/ui/reviewQueue'
@@ -32,7 +32,8 @@ function Review() {
   const [revealed, setRevealed] = useState(false)
   const mode = useReviewMode()
   const ratings = useRef<HTMLDivElement>(null)
-  const [typed, setTyped] = useState<{ text: string; check: AnswerCheck } | null>(null) // what was written for this card, and how it was marked
+  // what was written for this card, and how it was marked: first by its words, then (unless they matched) by its meaning, which the AI judges
+  const [typed, setTyped] = useState<{ cardId: string; text: string; check: AnswerCheck; feedback?: string; marking?: boolean } | null>(null)
   const [stats, setStats] = useState({ reviewed: 0, again: 0 })
   // Synchronous guard (not state) so a second key press in the same tick sees it immediately
   const [busy] = useState(() => ({ current: false }))
@@ -87,6 +88,22 @@ function Review() {
     return () => window.removeEventListener('keydown', onKey)
   }, [revealed, rate, busy, mode])
 
+  // An answer in the student's own words rarely matches the card's words, so anything short of a match is judged by meaning.
+  // If that can't be done (no connection, going too fast), the word check stands.
+  async function checkTyped(c: Card, text: string) {
+    const local = checkAnswer(text, c.back)
+    const matched = local.verdict === 'correct'
+    setTyped({ cardId: c.id, text, check: local, marking: !matched }); setRevealed(true)
+    if (matched) return
+    const settle = (patch: { check?: AnswerCheck; feedback?: string }) => setTyped(t => (t?.cardId === c.id ? { ...t, ...patch, marking: false } : t))
+    try {
+      const res = await fetch('/api/ai/flashcards/mark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cardId: c.id, answer: text }) })
+      if (!res.ok) { settle({}); return }
+      const m = await res.json() as { verdict: Verdict; feedback: string }
+      settle({ check: verdictCheck(m.verdict), feedback: m.feedback || undefined })
+    } catch { settle({}) }
+  }
+
   if (!queue) return null
 
   if (!card) {
@@ -117,12 +134,17 @@ function Review() {
       <div className="card flex min-h-52 flex-col items-center justify-center gap-4 text-center">
         <CardFace text={card.front} />
         {mode === 'type' && !revealed && (
-          <TypedAnswer key={card.id} onCheck={t => { setTyped({ text: t, check: checkAnswer(t, card.back) }); setRevealed(true) }} onSkip={() => { setTyped(null); setRevealed(true) }} />
+          <TypedAnswer key={card.id} onCheck={t => { void checkTyped(card, t) }} onSkip={() => { setTyped(null); setRevealed(true) }} />
         )}
         {revealed && typed && (
           <div role="status" className="w-full space-y-1 border-t border-line pt-4 text-left">
-            <p className={`text-sm font-medium ${VERDICT[typed.check.verdict].color}`}>{VERDICT[typed.check.verdict].text}</p>
-            <p className="text-xs text-muted">Suggested: {LABELS[typed.check.suggested]}</p>
+            {typed.marking
+              ? <p className="flex items-center gap-1.5 text-sm text-muted"><Loader2 size={14} className="animate-spin" aria-hidden />Checking the meaning…</p>
+              : <>
+                  <p className={`text-sm font-medium ${VERDICT[typed.check.verdict].color}`}>{VERDICT[typed.check.verdict].text}</p>
+                  {typed.feedback && <p className="text-sm">{typed.feedback}</p>}
+                  <p className="text-xs text-muted">Suggested: {LABELS[typed.check.suggested]}</p>
+                </>}
             <p className="text-xs text-muted">You wrote</p>
             <p className="whitespace-pre-wrap text-sm">{typed.text}</p>
           </div>
