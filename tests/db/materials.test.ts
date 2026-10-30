@@ -59,8 +59,16 @@ describe('kept uploads', () => {
     // and B cannot write into A's folder
     expect((await B.sb.storage.from('materials').upload(`${A.id}/x.pdf`, pdf(), { contentType: 'application/pdf' })).error).not.toBeNull()
   })
-  it('only takes PDF, Word, PowerPoint and text files', async () => {
-    const { error } = await A.sb.storage.from('materials').upload(`${A.id}/x.png`, new Blob(['x'], { type: 'image/png' }), { contentType: 'image/png' })
-    expect(error).not.toBeNull()
+  it('keeps a photo as a file, without a note, even when the browser gave it no type', async () => {
+    const m = await keepMaterial(A.sb, A.id, new File(['x'], 'Board.JPG'), 'image', { course_id: null, note_id: null })
+    expect(m).toMatchObject({ mime: 'image/jpeg', note_id: null })
+    const lib = await loadLibrary(A.sb, new Date())
+    expect(lib.find(i => i.id === m.id)?.meta).toMatch(/^Photo · /)
+  })
+  it('only takes PDF, Word, PowerPoint, text files and photos', async () => {
+    for (const [name, type] of [['x.gif', 'image/gif'], ['x.zip', 'application/zip'], ['x.mp3', 'audio/mpeg']]) {
+      const { error } = await A.sb.storage.from('materials').upload(`${A.id}/${name}`, new Blob(['x'], { type }), { contentType: type })
+      expect(error, type).not.toBeNull()
+    }
   })
 })

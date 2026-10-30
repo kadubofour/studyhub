@@ -10,6 +10,9 @@ const createNote = vi.fn(async () => ({ id: 'new' }))
 
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/notes', () => ({ createNote: () => createNote() }))
+const keepMaterial = vi.fn(async (..._a: unknown[]) => ({ id: 'kept' }))
+const updateMaterial = vi.fn(async (..._a: unknown[]) => {})
+vi.mock('@/lib/data/materials', async importOriginal => ({ ...(await importOriginal<object>()), keepMaterial: (...a: unknown[]) => keepMaterial(...a), updateMaterial: (...a: unknown[]) => updateMaterial(...a) }))
 vi.mock('@/lib/import/docxToNote', () => ({ docxToNote: () => new Promise(r => { resolveDocx = r }) }))
 let pptxFails = false
 vi.mock('@/lib/import/pptxToNote', () => ({ pptxToNote: async (_b: ArrayBuffer, name: string) => { if (pptxFails) throw new Error('This file is damaged.'); return { title: 'Deck ' + name, content_md: '## Slide 1: Intro' } } }))
@@ -32,7 +35,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
-afterEach(() => { cleanup(); createNote.mockClear(); onScan.mockClear(); router.push.mockClear(); pptxFails = false; setRecording(false); pdfResult = null; delete process.env.NEXT_PUBLIC_BILLING_ENABLED })
+afterEach(() => { cleanup(); createNote.mockClear(); keepMaterial.mockClear(); updateMaterial.mockClear(); lastSignal = undefined; onScan.mockClear(); router.push.mockClear(); pptxFails = false; setRecording(false); pdfResult = null; delete process.env.NEXT_PUBLIC_BILLING_ENABLED })
 
 const onScan = vi.fn()
 function Harness() {
@@ -47,11 +50,13 @@ function Harness() {
 import * as React from 'react'
 
 const file = (name: string) => new File(['x'], name)
+// After a file is chosen the dialog asks what to do with it; these tests make a note
+const note = async () => { const b = screen.queryByRole('button', { name: /^Make a note/ }); if (b) await act(async () => { fireEvent.click(b) }) }
 
 describe('UploadDialog', () => {
   it('a file that finishes reading after the dialog was closed does not reappear', async () => {
     render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
-    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.docx')] } }) })
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.docx')] } }) }); await note()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel upload' })) })
     await act(async () => { resolveDocx!({ title: 'Late', content_md: 'x' }) })
     await act(async () => { fireEvent.click(screen.getByText('reopen')) })
@@ -63,14 +68,14 @@ describe('UploadDialog', () => {
     process.env.NEXT_PUBLIC_BILLING_ENABLED = '1'
     pdfResult = { title: 'Week 3', content_md: 'Plain', via: 'text', notice: 'This PDF needs more AI actions than you have left today.', limit: 'daily_limit' }
     render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
-    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.pdf')] } }) })
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.pdf')] } }) }); await note()
     expect(screen.getByText('This PDF needs more AI actions than you have left today.')).toBeTruthy()
     expect(screen.getByRole('link', { name: /Get Premium/ }).getAttribute('href')).toBe('/plans')
   })
 
   it('cancelling a PDF upload aborts the AI request', async () => {
     render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
-    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.pdf')] } }) })
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.pdf')] } }) }); await note()
     expect(lastSignal?.aborted).toBe(false)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel upload' })) })
     expect(lastSignal?.aborted).toBe(true)
@@ -78,14 +83,14 @@ describe('UploadDialog', () => {
 
   it('double-clicking Save creates the note once', async () => {
     render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
-    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('b.docx')] } }) })
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('b.docx')] } }) }); await note()
     await act(async () => { resolveDocx!({ title: 'B', content_md: 'body' }) })
     const save = screen.getByRole('button', { name: 'Save note' })
     await act(async () => { fireEvent.click(save); fireEvent.click(save) })
     expect(createNote).toHaveBeenCalledTimes(1)
   })
 
-  const upload = async (f: File) => { render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>); await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [f] } }) }) }
+  const upload = async (f: File) => { render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>); await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [f] } }) }); await note() }
 
   it('reads a PowerPoint in the browser and shows it for review', async () => {
     await upload(file('week3.pptx'))
@@ -108,7 +113,7 @@ describe('UploadDialog', () => {
     const heard = vi.fn((e: Event) => (e as CustomEvent<File[]>).detail)
     window.addEventListener('studyhub:open-scan', heard)
     render(<ProfileProvider initial={profile}><ToastProvider><UploadDialog open onClose={() => {}} courses={[]} /></ToastProvider></ProfileProvider>)
-    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('board.jpg')] } }) })
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('board.jpg')] } }) }); await note()
     expect(heard).toHaveBeenCalledTimes(1)
     expect(heard.mock.results[0].value).toHaveLength(1)
     window.removeEventListener('studyhub:open-scan', heard)
@@ -173,8 +178,54 @@ describe('UploadDialog', () => {
     const zone = screen.getByRole('group', { name: 'Drop a file here' })
     fireEvent.dragEnter(zone, { dataTransfer: { types: ['Files'] } })
     expect(zone.getAttribute('data-dragging')).toBe('true')
-    await act(async () => { fireEvent.drop(zone, { dataTransfer: { types: ['Files'], files: [file('board.jpg')] } }) })
+    await act(async () => { fireEvent.drop(zone, { dataTransfer: { types: ['Files'], files: [file('board.jpg')] } }) }); await note()
     expect(onScan).toHaveBeenCalledTimes(1) // a dropped photo goes to Scan
+  })
+
+  it('asks what to do with a chosen file, and can just keep it in the Library without reading it', async () => {
+    render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('week3.pdf')] } }) })
+    expect(screen.getByText('week3.pdf')).toBeTruthy()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Just keep the file/ })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Keep file' })) })
+    expect(keepMaterial).toHaveBeenCalledTimes(1)
+    expect(keepMaterial.mock.calls[0][3]).toBe('pdf')
+    expect(keepMaterial.mock.calls[0][4]).toEqual({ course_id: null, note_id: null })
+    expect(lastSignal).toBeUndefined() // nothing was read by AI
+    expect(createNote).not.toHaveBeenCalled()
+    expect(router.push).toHaveBeenCalledWith('/files/kept')
+  })
+  it('keeps a photo as a file instead of sending it to Scan, when asked to', async () => {
+    render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><Harness /></ConfirmProvider></ToastProvider></ProfileProvider>)
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('board.jpg')] } }) })
+    expect(onScan).not.toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Just keep the file/ })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Keep file' })) })
+    expect(keepMaterial.mock.calls[0][3]).toBe('image')
+  })
+  it('keeps the original beside a note made from it', async () => {
+    await upload(file('b.pptx'))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save note' })) })
+    expect(keepMaterial.mock.calls[0][4]).toEqual({ course_id: null, note_id: 'new' })
+  })
+  it('only keeps, with no question, when opened from the Library\'s Upload file', async () => {
+    const kept = vi.fn()
+    render(<ProfileProvider initial={profile}><ToastProvider><UploadDialog open keepOnly onClose={() => {}} onKept={kept} courses={[]} /></ToastProvider></ProfileProvider>)
+    expect(screen.queryByText(/Photos of notes or slides/)).toBeNull()
+    await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('a.docx')] } }) })
+    expect(screen.queryByRole('button', { name: /Make a note/ })).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Keep file' })) })
+    expect(keepMaterial).toHaveBeenCalledTimes(1)
+    expect(kept).toHaveBeenCalledTimes(1)
+    expect(router.push).not.toHaveBeenCalled() // the Library reloads instead
+  })
+  it('makes a note from a file the Library already keeps, pointing the file at it instead of keeping it again', async () => {
+    render(<ProfileProvider initial={profile}><ToastProvider><ConfirmProvider><UploadDialog open onClose={() => {}} courses={[]} fromMaterial={{ id: 'm1', file: new File(['x'], 'w.pptx', { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }) }} /></ConfirmProvider></ToastProvider></ProfileProvider>)
+    expect(screen.queryByRole('button', { name: /Just keep the file/ })).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Make a note from it/ })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save note' })) })
+    expect(keepMaterial).not.toHaveBeenCalled()
+    expect(updateMaterial).toHaveBeenCalledWith(expect.anything(), 'm1', { note_id: 'new' })
   })
 
   it('offers Scan for photos and Lectures for recordings from the first screen', async () => {

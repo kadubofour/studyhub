@@ -12,6 +12,7 @@ import { ViewOptions } from '@/components/ui/ViewOptions'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { NotebookCover } from '@/components/notes/NotebookCover'
+import { UploadDialog } from '@/components/notes/UploadDialog'
 import { notebookColor } from '@/lib/notes/notebooks'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -54,7 +55,7 @@ export default function LibraryPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [target, setTarget] = useState('')
   const [moving, setMoving] = useState(false)
-  const [dialog, setDialog] = useState<null | 'new' | 'file'>(null)
+  const [dialog, setDialog] = useState<null | 'new' | 'file' | 'upload'>(null)
 
   // The items and the notebooks are read together, so a note never shows (or hides) against an out-of-date list of folders
   const read = () => Promise.all([loadLibrary(supabase(), new Date()), listNotebooks(supabase())])
@@ -155,6 +156,7 @@ export default function LibraryPage() {
       <PageHeader title="Library" actions={!empty && (
         <>
           {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
+          <button type="button" className="btn" onClick={() => setDialog('upload')}><Upload size={14} aria-hidden />Upload file</button>
           <button type="button" className="btn" onClick={() => setDialog('new')}><FolderPlus size={14} aria-hidden />New notebook</button>
           {/* notes, decks and uploads are made from the Create button; a quiz is started here on a phone */}
           <button type="button" className="btn md:hidden" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
@@ -163,6 +165,7 @@ export default function LibraryPage() {
       {empty ? (
         <EmptyState icon={FolderOpen} tone="b" title="Your library starts here" body="Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Bring your first material in.">
           <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
+          <button type="button" className="btn" onClick={() => setDialog('upload')}>Just keep a file</button>
           <Link href="/notes" className="btn">Write a note</Link>
         </EmptyState>
       ) : (
@@ -275,6 +278,8 @@ export default function LibraryPage() {
 
       <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create"
         courses={courses} initialCourse={course !== 'all' && course !== 'none' ? course : null} onSubmit={(n, cid) => { void create(n, cid) }} />
+      {/* a fresh dialog each time it opens, so nothing from the last upload is left in it */}
+      {dialog === 'upload' && <UploadDialog open keepOnly courses={courses} onClose={() => setDialog(null)} onKept={() => { void load() }} />}
       <MoveToNotebookDialog open={dialog === 'file'} onClose={() => setDialog(null)} notebooks={notebooks}
         onMove={id => { void file(bookOf(id)) }} onCreateAndMove={n => { void fileInNew(n) }} />
     </div>
