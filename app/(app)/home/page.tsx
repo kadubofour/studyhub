@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
 import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, FolderOpen, BookOpen } from 'lucide-react'
-import { Avatar } from '@/components/profile/Avatar'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -142,19 +141,16 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      {/* The notebook page in the student's colour, on every screen. On a phone it is laid out like a banking app's home: the avatar beside
-          the greeting, the timer large in the middle, and the places the sidebar holds as a row of round buttons along the bottom */}
+      {/* The notebook page in the student's colour, on every screen. On a phone: the greeting and the date, then the timer in one row,
+          the day's goal as a bar, and the places the sidebar holds along the bottom (the profile is in the top bar) */}
       <section aria-label="Welcome" className="hero hero-page home-hero">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="font-display text-[1.875rem] font-semibold leading-[1.05] tracking-tight max-md:text-[1.5rem] sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
-            {/* the date after the greeting, and today's one fact from the data */}
-            <p className="mt-2 text-[15px] opacity-90 max-md:mt-1 max-md:text-sm">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length, done: doneToday })}`}</p>
-          </div>
-          <Link href="/profile" aria-label="Profile" className="shrink-0 rounded-full ring-2 ring-white/40 md:hidden"><Avatar name={profile.display_name} color={profile.avatar_color} size={40} /></Link>
+        <div className="min-w-0">
+          <h1 className="font-display text-[1.875rem] font-semibold leading-[1.05] tracking-tight max-md:text-[1.5rem] sm:text-[2.75rem]" style={{ fontFamily: greetingFont(look, profile.font) }}>{greeting(hour)}{name}</h1>
+          {/* the date after the greeting, and today's one fact from the data */}
+          <p className="mt-2 text-[15px] opacity-90 max-md:mt-1 max-md:text-sm">{`${formatInTimeZone(now, tz, 'EEEE, MMMM d')} · ${todayLine({ overdue: overdue.filter(t => !doneIds.has(t.id)).length, dueToday: today.filter(t => !doneIds.has(t.id)).length, reminders: remindersToday.length, done: doneToday })}`}</p>
         </div>
         {bold ? (
-          <div className="home-hero-panel mt-5 flex flex-wrap items-center justify-between gap-4 max-md:mt-7 max-md:flex-col-reverse max-md:gap-3 sm:mt-7 sm:gap-6">
+          <div className="home-hero-panel mt-5 flex flex-wrap items-center justify-between gap-4 max-sm:mt-6 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4 sm:mt-7 sm:gap-6">
             <GoalRing percent={focusPct} label={`${fmtMin(focus.todayMinutes)} of ${fmtMin(goal)} focus`} />
             <HeroFocus mode={MODE_LABEL[focus.timer.mode]} clock={fmtClock(remainingMs(focus.timer, focus.now))} running={running} resumable={focus.timer.accumulatedMs > 0} onToggle={focus.toggle} onRestart={focus.restart} />
           </div>
@@ -166,11 +162,11 @@ export default function HomePage() {
             <span className="text-sm">{fmtMin(focus.todayMinutes)} of {fmtMin(goal)} focus</span>
           </div>
         </>)}
-        {/* phones have no sidebar: the places it holds are a tap away here */}
-        <div className="mt-6 grid grid-cols-4 gap-1 md:hidden">
+        {/* phones have no sidebar: the places it holds are a tap away here, along the bottom of the page */}
+        <div className="mt-5 grid grid-cols-4 gap-1 border-t border-white/20 pt-3 md:hidden">
           {SHORTCUTS.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} className="group flex flex-col items-center gap-1.5 text-xs font-medium">
-              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-white/20 transition group-active:scale-95"><Icon size={20} /></span>{label}
+            <Link key={href} href={href} className="group flex flex-col items-center gap-1.5 rounded-lg py-1.5 text-xs font-medium">
+              <Icon size={22} aria-hidden className="transition group-active:scale-90" />{label}
             </Link>
           ))}
         </div>

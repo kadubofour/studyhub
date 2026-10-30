@@ -75,7 +75,7 @@ describe('TopBar keeping up', () => {
     const { rerender } = render(<TopBar onSearch={() => {}} />)
     xp = summary({ total: 130 })
     await act(async () => { rerender(<TopBar onSearch={() => {}} />) })
-    const strip = screen.getByRole('banner').querySelector('.overflow-x-auto')!
+    const strip = screen.getByRole('banner').querySelector('div.ml-auto')!
     expect(strip.firstElementChild!.textContent).toBe('+10 XP')
   })
 })
@@ -285,17 +285,20 @@ describe('TopBar class period', () => {
 })
 
 describe('the top bar on a phone', () => {
-  it('has the page behind it, so nothing scrolls under the chips, and the chips scroll without a scrollbar', async () => {
+  it('has the page behind it, and never scrolls: it sizes its chips to its own width instead', async () => {
     await open()
     const bar = screen.getByRole('banner', { name: 'Today at a glance' })
     expect(bar.className).toContain('bg-bg')
-    expect(bar.querySelector('.no-scrollbar')).toBeTruthy()
+    expect(bar.className).toContain('@container')
+    expect(bar.querySelector('.overflow-x-auto, .no-scrollbar')).toBeNull()
   })
   it('keeps the level whole on a phone, and leaves cards due to Home and Flashcards there', async () => {
     xp = summary(); due = 3
     await open()
     expect(screen.queryByText('2', { selector: 'span.sm\\:hidden' })).toBeNull()
     expect(screen.getByText('Level 2')).toBeTruthy()
-    expect(screen.getByRole('link', { name: '3 cards due' }).className).toContain('max-sm:hidden')
+    const cards = screen.getByRole('link', { name: '3 cards due' }).className
+    expect(cards).toContain('hidden') // stepped aside while the bar is narrow...
+    expect(cards).toContain('@min-[40rem]:inline-flex') // ...and back once it has room
   })
 })
