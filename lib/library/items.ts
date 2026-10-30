@@ -1,11 +1,11 @@
 import type { Notebook } from '@/lib/types'
 
-export type Kind = 'note' | 'deck' | 'lecture' | 'quiz' | 'chat'
+export type Kind = 'note' | 'deck' | 'lecture' | 'quiz' | 'chat' | 'file'
 export type LibraryItem = { kind: Kind; id: string; title: string; course_id: string | null; at: string; meta: string; href: string; due?: number; notebook_id?: string | null }
 // course: 'all', 'none' (not in any course) or a course id; folder: the notebook open, if one is
 export type View = { course: 'all' | 'none' | string; kind: Kind | null; q: string; sort: 'recent' | 'name'; folder?: string | null }
 
-const KINDS: Kind[] = ['note', 'deck', 'lecture', 'quiz', 'chat']
+const KINDS: Kind[] = ['note', 'deck', 'lecture', 'quiz', 'chat', 'file']
 
 const inCourse = (i: LibraryItem, course: View['course']) => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)
 const matches = (i: LibraryItem, q: string) => !q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase())

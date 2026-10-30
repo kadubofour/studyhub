@@ -11,6 +11,7 @@ import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
+import { keepMaterial, type MaterialKind } from '@/lib/data/materials'
 import { fileKind } from '@/lib/import/fileKind'
 import { requestScan } from '@/lib/scan/events'
 import { isRecording } from '@/lib/lectures/recordingGuard'
@@ -36,6 +37,8 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
   const [next, setNext] = useState<Next>('')
   const [working, setWorking] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
+  // the file the draft was read from, kept in the Library when the note is saved
+  const [source, setSource] = useState<{ file: File; kind: MaterialKind } | null>(null)
   const [courseId, setCourseId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -48,7 +51,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
     generation.current++
     abort.current?.abort() // stops an in-flight AI conversion so it isn't paid for
     abort.current = null
-    setStage('pick'); setDraft(null); setError(null); setCourseId(''); setNext('')
+    setStage('pick'); setDraft(null); setSource(null); setError(null); setCourseId(''); setNext('')
     if (input.current) input.current.value = ''
   }
   function close() { reset(); onClose() }
@@ -88,6 +91,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
       }
       if (gen !== generation.current) return // cancelled meanwhile
       setDraft(result)
+      setSource({ file, kind })
       setStage('review')
     } catch (e) {
       if (gen !== generation.current) return
@@ -111,6 +115,11 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
     try {
       if (!await mayLeave()) return
       const n = await createNote(supabase(), { title: draft.title.trim() || 'Imported note', content_md: draft.content_md, course_id: courseId || null })
+      // The original goes to the Library beside its note; the note is what matters, so a file that can't be kept only says so
+      if (source) {
+        await keepMaterial(supabase(), profile.id, source.file, source.kind, { course_id: courseId || null, note_id: n.id })
+          .catch(() => toast('The note is saved, but the original file couldn\'t be kept in your Library.'))
+      }
       onImported?.()
       close()
       router.push(`/notes/${n.id}${next ? `?study=${next}` : ''}`)
@@ -126,7 +135,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan }: {
 
   return (
     <Dialog open={open} onClose={close} title="Upload material" icon={FileUp} size="md"
-      subtitle={stage === 'review' ? 'Check it over, then save it as a note.' : 'Turn a PDF, slides or a document into a note you can study from.'}>
+      subtitle={stage === 'review' ? 'Check it over, then save it as a note. The original file is kept in your Library.' : 'Turn a PDF, slides or a document into a note you can study from.'}>
       {stage === 'pick' && (
         <div className="space-y-4">
           <DropZone label="Drop a file here" onFiles={f => void pick(f[0])} className="px-5 py-8 text-center">

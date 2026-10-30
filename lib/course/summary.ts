@@ -2,8 +2,8 @@ import { localDayKey } from '@/lib/dates'
 import type { Kind, LibraryItem } from '@/lib/library/items'
 
 export const SHOWN_PER_KIND = 5
-const ORDER: Kind[] = ['note', 'deck', 'lecture', 'quiz', 'chat']
-const WORD: Record<Kind, [string, string]> = { note: ['note', 'notes'], deck: ['deck', 'decks'], lecture: ['lecture', 'lectures'], quiz: ['quiz', 'quizzes'], chat: ['tutor chat', 'tutor chats'] }
+const ORDER: Kind[] = ['note', 'deck', 'lecture', 'quiz', 'chat', 'file']
+const WORD: Record<Kind, [string, string]> = { note: ['note', 'notes'], deck: ['deck', 'decks'], lecture: ['lecture', 'lectures'], quiz: ['quiz', 'quizzes'], chat: ['tutor chat', 'tutor chats'], file: ['file', 'files'] }
 
 const mine = (items: LibraryItem[], courseId: string) => items.filter(i => i.course_id === courseId)
 

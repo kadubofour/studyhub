@@ -87,8 +87,8 @@ describe('the shared system', () => {
     expect(c).toContain('box-shadow: none')
     expect(c).toContain('border: 1px solid var(--line)')
   })
-  it('every sidebar item is a pill', () => {
-    expect(rule('.app-root[data-look] .app-sidebar :is(a, button):not([role="menuitem"])')).toContain('border-radius: 9999px')
+  it('every sidebar item is a soft square, open or collapsed; only the avatar stays round', () => {
+    expect(rule('.app-root[data-look] .app-sidebar :is(a, button):not([role="menuitem"]):not([data-avatar])')).toContain('border-radius: 0.75rem')
   })
 })
 

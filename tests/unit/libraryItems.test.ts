@@ -47,9 +47,9 @@ describe('visible', () => {
 
 describe('counts', () => {
   it('count each kind for the chosen course and search, whatever kind is chosen, so a chip says what a click would show', () => {
-    expect(countsByKind(ALL, view({ course: 'bio' }))).toEqual({ note: 2, deck: 1, lecture: 1, quiz: 1, chat: 0 })
-    expect(countsByKind(ALL, view({ course: 'bio', kind: 'deck' }))).toEqual({ note: 2, deck: 1, lecture: 1, quiz: 1, chat: 0 })
-    expect(countsByKind(ALL, view({ q: 'krebs' }))).toEqual({ note: 1, deck: 0, lecture: 0, quiz: 1, chat: 0 })
+    expect(countsByKind(ALL, view({ course: 'bio' }))).toEqual({ note: 2, deck: 1, lecture: 1, quiz: 1, chat: 0, file: 0 })
+    expect(countsByKind(ALL, view({ course: 'bio', kind: 'deck' }))).toEqual({ note: 2, deck: 1, lecture: 1, quiz: 1, chat: 0, file: 0 })
+    expect(countsByKind(ALL, view({ q: 'krebs' }))).toEqual({ note: 1, deck: 0, lecture: 0, quiz: 1, chat: 0, file: 0 })
   })
   it('count each course, with what has none, ignoring the kind and search', () => {
     expect(countsByCourse(ALL)).toEqual({ all: 8, none: 2, byId: { bio: 5, lang: 1 } })

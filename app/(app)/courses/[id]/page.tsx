@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { AlertTriangle, Circle, CircleCheck, CircleDot, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Upload, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Circle, CircleCheck, CircleDot, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Upload, type LucideIcon } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BackLink } from '@/components/ui/BackLink'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
@@ -25,6 +25,7 @@ const KIND: Record<Kind, { plural: string; icon: LucideIcon; tone: 'a' | 'b' | '
   lecture: { plural: 'Lectures', icon: Mic, tone: 'c' },
   quiz: { plural: 'Quizzes', icon: ListChecks, tone: 'a' },
   chat: { plural: 'Tutor chats', icon: MessagesSquare, tone: 'b' },
+  file: { plural: 'Files', icon: Paperclip, tone: 'c' },
 }
 const STATUS_ICON = { not_started: Circle, covered: CircleDot, weak: AlertTriangle, mastered: CircleCheck } as const
 const STATUS_TONE: Record<TopicStatus, string> = { not_started: 'text-muted', covered: 'text-accent', weak: 'text-danger', mastered: 'text-success' }

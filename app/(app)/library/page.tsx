@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Search, Upload, type LucideIcon } from 'lucide-react'
+import { FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -31,6 +31,7 @@ const KIND: Record<Kind, { heading: string; icon: LucideIcon }> = {
   lecture: { heading: 'Lectures', icon: Mic },
   quiz: { heading: 'Quizzes', icon: ListChecks },
   chat: { heading: 'Tutor chats', icon: MessagesSquare },
+  file: { heading: 'Files', icon: Paperclip },
 }
 const KINDS = Object.keys(KIND) as Kind[]
 const key = (i: { kind: Kind; id: string }) => `${i.kind}:${i.id}`
@@ -160,7 +161,7 @@ export default function LibraryPage() {
         </>
       )} />
       {empty ? (
-        <EmptyState icon={FolderOpen} tone="b" title="Your library starts here" body="Every note, deck, lecture, quiz and tutor chat you make shows up here, sorted by course. Bring your first material in.">
+        <EmptyState icon={FolderOpen} tone="b" title="Your library starts here" body="Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Bring your first material in.">
           <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
           <Link href="/notes" className="btn">Write a note</Link>
         </EmptyState>

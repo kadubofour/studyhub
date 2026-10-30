@@ -7,11 +7,11 @@ export const PLACES: Place[] = [
   { href: '/planner', label: 'Planner', icon: CalendarDays, keywords: 'tasks calendar exams timetable classes week reminders' },
   { href: '/focus', label: 'Focus', icon: Timer, keywords: 'timer pomodoro study session sounds' },
   { href: '/notes', label: 'Notes', icon: NotebookPen, keywords: 'notebooks write' },
+  { href: '/library', label: 'Library', icon: FolderOpen, keywords: 'everything files material uploads' },
   { href: '/flashcards', label: 'Flashcards', icon: Layers, keywords: 'cards decks review' },
   { href: '/lectures', label: 'Lectures', icon: Mic, keywords: 'record recordings transcript audio' },
   { href: '/tutor', label: 'Tutor', icon: MessagesSquare, keywords: 'ai chat ask help' },
   { href: '/quiz', label: 'Quiz', icon: ListChecks, keywords: 'test questions quizzes' },
-  { href: '/library', label: 'Library', icon: FolderOpen, keywords: 'everything files material' },
   { href: '/progress', label: 'Progress', icon: BarChart3, keywords: 'stats streak xp level topics' },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, keywords: 'friends groups rank xp' },
 ]

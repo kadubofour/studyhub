@@ -177,7 +177,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const lit = 'bg-accent-soft text-accent'
   const railItem = (on: boolean) => wide
     ? `group relative flex w-full shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
-    : `group relative grid size-11 shrink-0 place-items-center rounded-full transition [@media(max-height:800px)]:size-10 ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
+    : `group relative grid size-11 shrink-0 place-items-center rounded-xl transition [@media(max-height:800px)]:size-10 ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
   // the name beside the icon when wide
   const tip = (label: string) => wide ? <span aria-hidden className="truncate">{label}</span> : null
   // On the rail the name shows beside the icon being pointed at or focused. It is one label fixed to the window, so the scrolling
@@ -220,7 +220,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           </div>
           <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating !== null && creating !== 'dock'} onClick={() => setCreating(c => (c ? null : wide ? 'wide' : 'rail'))}
             {...hint('Create')}
-            className={`group relative mb-3 border border-dashed border-line text-muted transition hover:border-accent hover:text-accent ${wide ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium' : 'grid size-11 place-items-center rounded-full'}`}>
+            className={`group relative mb-3 border border-dashed border-line text-muted transition hover:border-accent hover:text-accent ${wide ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium' : 'grid size-11 place-items-center rounded-xl'}`}>
             <Plus size={19} aria-hidden />{tip('Create')}
           </button>
           {/* the places scroll when the window is short (they never squash), and the bottom edge fades while there are more below */}
@@ -257,7 +257,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             <Link href="/settings" onClick={e => guard(e, '/settings')} aria-label="Settings" aria-current={isActive(path, '/settings') ? 'page' : undefined} className={railItem(isActive(path, '/settings'))} {...hint('Settings')}>
               <Settings size={18} aria-hidden />{tip('Settings')}
             </Link>
-            <Link href="/profile" onClick={e => guard(e, '/profile')} aria-label={profile.display_name || 'Your profile'} aria-current={isActive(path, '/profile') ? 'page' : undefined} {...hint(profile.display_name || 'Your profile')}
+            <Link href="/profile" onClick={e => guard(e, '/profile')} aria-label={profile.display_name || 'Your profile'} data-avatar={wide ? undefined : ''} aria-current={isActive(path, '/profile') ? 'page' : undefined} {...hint(profile.display_name || 'Your profile')}
               className={wide ? `mt-1 flex items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] transition ${isActive(path, '/profile') ? lit : 'hover:bg-surface'}` : `group relative mt-1 rounded-full ring-2 transition ${isActive(path, '/profile') ? 'ring-accent' : 'ring-transparent hover:ring-line'}`}>
               <Avatar name={profile.display_name} color={profile.avatar_color} size={wide ? 30 : 34} />{tip(profile.display_name || 'Your profile')}
             </Link>

@@ -5,7 +5,7 @@ import { fetchAll } from '@/lib/data/util'
 export const EXPORT_TABLES = [
   'profiles', 'courses', 'classes', 'tasks', 'notebooks', 'notes', 'decks', 'cards', 'reviews', 'focus_sessions',
   'quizzes', 'quiz_attempts', 'lectures', 'topics', 'topic_links', 'topic_resources', 'study_plans', 'study_plan_days',
-  'tutor_chats', 'tutor_messages', 'game_plays', 'reminders', 'payments', 'entitlements',
+  'tutor_chats', 'tutor_messages', 'game_plays', 'reminders', 'materials', 'payments', 'entitlements',
 ] as const
 
 // The plan row has no id and holds payment tokens: only its safe columns are read
