@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronRight, Flame, FolderOpen, Layers, Mic, NotebookPen, Pencil, ListChecks, Settings, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
+import { Check, ChevronRight, Flame, FolderOpen, Layers, Mic, NotebookPen, Pencil, ListChecks, Settings, Star, Timer, Trophy, Users, Zap, type LucideIcon } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { usePlan } from '@/components/billing/usePlan'
@@ -185,9 +185,9 @@ export default function ProfilePage() {
         <Link href="/settings" className="hover:text-fg">Settings</Link>
         <Link href="/library" className="hover:text-fg">Library</Link>
       </p>
-      {/* on a phone, the same two places as a list of rows */}
+      {/* on a phone, Friends and the same two places as a list of rows */}
       <nav aria-label="More" className="card !p-2 md:hidden">
-        {([['/settings', 'Settings', Settings], ['/library', 'Library', FolderOpen]] as const).map(([href, label, Icon]) => (
+        {([['/friends', 'Friends', Users], ['/settings', 'Settings', Settings], ['/library', 'Library', FolderOpen]] as const).map(([href, label, Icon]) => (
           <Link key={href} href={href} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-[15px] font-medium transition active:bg-surface">
             <span aria-hidden className="grid size-9 place-items-center rounded-full bg-surface text-muted"><Icon size={18} /></span>{label}
             <ChevronRight size={18} className="ml-auto text-muted" aria-hidden />

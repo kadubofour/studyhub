@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Share2 } from 'lucide-react'
+import { ShareDialog } from '@/components/friends/ShareDialog'
 import type { Editor } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
 import { RichEditor, insertTable } from '@/components/notes/RichEditor'
@@ -72,6 +73,7 @@ function NoteEditor({ id }: { id: string }) {
   const studyParam = useSearchParams().get('study')
   const wanted = (['summary', 'cards', 'quiz'] as const).find(t => t === studyParam)
   const [studyOpen, setStudyOpen] = useState(!!wanted)
+  const [sharing, setSharing] = useState(false)
   const [firstTab] = useState<StudyTab | undefined>(wanted)
   useEffect(() => { if (studyParam) router.replace(`/notes/${id}`) }, [studyParam, id, router])
   const [equation, setEquation] = useState<EquationEdit | null>(null)
@@ -264,9 +266,12 @@ function NoteEditor({ id }: { id: string }) {
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} compact /></span>
+        <button type="button" className="btn" onClick={() => setSharing(true)} aria-label="Share with friends" title="Share with friends"><Share2 size={15} aria-hidden /><span className="max-lg:sr-only">Share</span></button>
         <button type="button" className={`btn ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦<span className="max-sm:sr-only"> Study</span></button>
         {findOpen && <div><FindBar search={search} onClose={closeFind} /></div>}
       </header>
+      {/* on the page only while open: closed, its name would be found by anything looking for the note's Title */}
+      {sharing && <ShareDialog open onClose={() => setSharing(false)} kind="note" itemId={draft.id} title={draft.title} />}
       <div className={`relative mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
         {mode === 'rich' && <InkLayer key={note.id} marks={inkAtOpen} active={inking && !reading} onChange={marks => change({ ink: marks })} onDone={() => setInking(false)} />}
         {reading ? (
