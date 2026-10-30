@@ -2,13 +2,14 @@
 import { useState, useSyncExternalStore } from 'react'
 import { useTheme } from 'next-themes'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { ThemeTiles } from '@/components/settings/ThemeTiles'
 import { Switch } from '@/components/ui/Switch'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { changedFields } from '@/lib/ui/changedFields'
-import type { EditorMode, Profile, ThemePref } from '@/lib/types'
+import type { EditorMode, Profile } from '@/lib/types'
 
 const noopSubscribe = () => () => {}
 
@@ -92,7 +93,7 @@ export function PreferencesCard() {
           <ChoiceChips label="Default note editor" value={form.default_editor_mode} options={[{ value: 'rich', label: 'Rich' }, { value: 'markdown', label: 'Markdown' }]} onChange={v => set('default_editor_mode', v as EditorMode)} />
         </div>
         <div className="field"><span>Theme</span>
-          <ChoiceChips label="Theme" value={form.theme} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} onChange={v => set('theme', v as ThemePref)} />
+          <ThemeTiles value={form.theme} onChange={v => set('theme', v)} />
         </div>
       </section>
       <div className="flex items-start justify-between gap-4 rounded-xl bg-surface px-3.5 py-3">

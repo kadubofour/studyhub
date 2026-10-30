@@ -9,6 +9,8 @@ import { updateProfile } from '@/lib/data/profile'
 import { ACCENTS, CONTENT_WIDTHS, FONTS, LOOKS, contentWidthOf, effectiveLook, lookChoices, type AccentName, type ContentWidth, type FontName, type LookName } from '@/lib/appearance'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { SettingRow } from './SettingRow'
+import { ThemeTiles } from './ThemeTiles'
+import type { ThemePref } from '@/lib/types'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
 const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[]
@@ -19,7 +21,7 @@ const noopSubscribe = () => () => {}
 export function AppearanceCard() {
   const { profile, setProfile } = useProfile()
   const save = useSaver()
-  const { resolvedTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   // The server can't know the theme: draw the previews light until the page has hydrated, so both agree
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
   const mode = mounted && resolvedTheme === 'dark' ? 'dark' : 'light'
@@ -38,8 +40,23 @@ export function AppearanceCard() {
     )
   }
 
+  // Light, dark, or following the device: applies at once, like the sidebar's switch, and is kept with the profile
+  function chooseTheme(theme: ThemePref) {
+    if (theme === profile.theme) return
+    const before = profile.theme
+    setTheme(theme)
+    save(
+      () => setProfile(p => ({ ...p, theme })),
+      () => { setProfile(p => ({ ...p, theme: before })); setTheme(before) },
+      () => updateProfile(supabase(), profile.id, { theme }),
+    )
+  }
+
   return (
     <div className="card divide-y divide-line p-0">
+      <SettingRow title="Theme" hint="Light, dark, or the same as your device.">
+        <ThemeTiles value={profile.theme} onChange={chooseTheme} />
+      </SettingRow>
       <SettingRow title="Look" hint="The style of the whole app.">
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3" role="radiogroup" aria-label="Look">
           {LOOK_NAMES.map((name, i) => {
