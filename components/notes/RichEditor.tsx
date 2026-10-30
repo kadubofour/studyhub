@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { Placeholder } from '@tiptap/extensions'
-import { Bold, Italic, Heading2, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, Code, PencilLine, Sigma, Table, type LucideIcon } from 'lucide-react'
+import { ALargeSmall, Bold, Ellipsis, Italic, Heading1, Heading2, Heading3, Highlighter, Strikethrough, Underline as UnderlineIcon, ImagePlus, List, ListChecks, ListOrdered, Code, Paperclip, PencilLine, PenLine, Pilcrow, Sigma, SquarePen, Table, type LucideIcon } from 'lucide-react'
 import { noteExtensions, type EditMath } from './extensions'
 import { FindHighlight } from './findInNote'
 import { TableTools } from './TableTools'
@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase/client'
 import { makeImageResolver } from '@/lib/notes/images'
 import { ACCEPTED, IMAGE_ERROR_TEXT, ImageError, prepareImage, uploadNoteImage } from '@/lib/notes/prepareImage'
 import { useKeyboardInset } from '@/lib/ui/keyboardInset'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 
 export const insertTable = (editor: Editor, rows: number, cols: number) =>
   editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
@@ -71,6 +72,62 @@ const SWATCHES = Object.fromEntries(HIGHLIGHTS.map(h => [h.name, (({ size = 15 }
   <span aria-hidden className="inline-block rounded-[4px] border border-black/10" style={{ width: size, height: size, background: h.swatch }} />
 )) as unknown as LucideIcon])) as Record<HighlightName, LucideIcon>
 
+// The bar along the bottom of a phone, as notes apps have it. Not typing: a few quiet tools (a checklist, a picture, drawing,
+// a new note). Typing: it rides just above the keyboard with the formatting tools on it, Samsung Notes' way, the rest behind
+// More. Pressing a tool keeps the focus in the note, so the keyboard stays up.
+function PhoneBar({ editor, typing, keyboard, highlightColor, onPicture, onDraw, onEquation, onNewNote, openMenu }: {
+  editor: Editor; typing: boolean; keyboard: number; highlightColor: HighlightName
+  onPicture: () => void; onDraw: () => void; onEquation: () => void; onNewNote?: () => void
+  openMenu: (m: { x: number; y: number; items: MenuEntry[] }) => void
+}) {
+  const active = (name: string, attrs?: Record<string, unknown>) => editor.isActive(name, attrs)
+  const chain = () => editor.chain().focus()
+  const at = (e: React.MouseEvent) => { const r = e.currentTarget.getBoundingClientRect(); return { x: r.left, y: r.top - 8 } }
+  const tool = (label: string, Icon: LucideIcon, run: (e: React.MouseEvent) => void, on = false) => (
+    <button key={label} type="button" aria-label={label} title={label} aria-pressed={on} onClick={run}
+      className={`grid size-11 shrink-0 place-items-center rounded-xl transition active:scale-95 ${on ? 'bg-surface text-accent' : 'text-fg/80'}`}><Icon size={21} aria-hidden /></button>
+  )
+  const size: MenuEntry[] = [
+    { label: 'Title', icon: Heading1, onSelect: () => chain().toggleHeading({ level: 1 }).run() },
+    { label: 'Heading', icon: Heading2, onSelect: () => chain().toggleHeading({ level: 2 }).run() },
+    { label: 'Subheading', icon: Heading3, onSelect: () => chain().toggleHeading({ level: 3 }).run() },
+    { label: 'Body', icon: Pilcrow, onSelect: () => chain().setParagraph().run() },
+  ]
+  const more: MenuEntry[] = [
+    { label: 'Strikethrough', icon: Strikethrough, onSelect: () => chain().toggleStrike().run() },
+    { label: 'Code', icon: Code, onSelect: () => chain().toggleCodeBlock().run() },
+    { label: 'Table', icon: Table, onPickTable: (r, c) => insertTable(editor, r, c) },
+    { label: 'Equation', icon: Sigma, onSelect: onEquation },
+    { label: 'Picture', icon: ImagePlus, onSelect: onPicture },
+    { label: 'Draw', icon: PencilLine, onSelect: onDraw },
+  ]
+  return (
+    <div role="toolbar" aria-label={typing ? 'Formatting' : 'Note tools'}
+      onMouseDown={e => { if (e.target !== e.currentTarget) e.preventDefault() }} onPointerDown={e => { if (e.pointerType !== 'mouse' && e.target !== e.currentTarget) e.preventDefault() }}
+      style={{ bottom: keyboard }}
+      className={`fixed inset-x-0 z-40 flex items-center border-t border-line bg-bg/95 px-2 pt-1 backdrop-blur md:hidden ${keyboard ? 'pb-1' : 'pb-[calc(0.25rem+env(safe-area-inset-bottom))]'} ${typing ? 'no-scrollbar gap-0.5 overflow-x-auto' : 'justify-around'}`}>
+      {typing ? <>
+        {tool('Checklist', ListChecks, () => chain().toggleTaskList().run(), active('taskList'))}
+        {tool('Numbered list', ListOrdered, () => chain().toggleOrderedList().run(), active('orderedList'))}
+        {tool('Bulleted list', List, () => chain().toggleBulletList().run(), active('bulletList'))}
+        {tool('Text size', ALargeSmall, e => openMenu({ ...at(e), items: size }), active('heading'))}
+        {tool('Bold', Bold, () => chain().toggleBold().run(), active('bold'))}
+        {tool('Italic', Italic, () => chain().toggleItalic().run(), active('italic'))}
+        {tool('Underline', UnderlineIcon, () => chain().toggleUnderline().run(), active('underline'))}
+        {tool('Highlight', Highlighter, () => (active('highlight') ? chain().unsetMark('highlight').run() : chain().setMark('highlight', { color: highlightColor }).run()), active('highlight'))}
+        {tool('More', Ellipsis, e => openMenu({ ...at(e), items: more }))}
+        {active('table') && <><span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-line" /><TableTools editor={editor} /></>}
+      </> : <>
+        {/* not typing: a new checklist goes at the end of the note, and writing starts there */}
+        {tool('Checklist', ListChecks, () => editor.chain().focus('end').toggleTaskList().run())}
+        {tool('Picture', Paperclip, onPicture)}
+        {tool('Draw', PenLine, onDraw)}
+        {onNewNote && tool('New note', SquarePen, onNewNote)}
+      </>}
+    </div>
+  )
+}
+
 const isPicture = (f: File) => ACCEPTED.includes(f.type)
 function onlyPicture(data: DataTransfer | null): boolean {
   const html = (data?.getData('text/html') ?? '').replace(/<!--[\s\S]*?-->|<meta[^>]*>/gi, '').trim()
@@ -80,7 +137,7 @@ function onlyPicture(data: DataTransfer | null): boolean {
 // The description a picture gets from its file name: "Krebs cycle.png" -> "Krebs cycle"; a screenshot's "image.png" gets none
 const altFrom = (name: string) => { const n = name.replace(/\.[^.]+$/, '').trim(); return /^(image|screenshot|untitled)\d*$/i.test(n) ? '' : n.slice(0, 120) }
 
-export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, drawing = false, onDraw, autoMath = true }: {
+export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, drawing = false, onDraw, autoMath = true, onNewNote }: {
   markdown: string
   onChange: (md: string) => void
   /** Hands the editor to the page (menu bar commands, find); null when it goes away. */
@@ -94,6 +151,8 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   onDraw?: () => void
   /** Profile > Preferences > Turn typed maths into equations */
   autoMath?: boolean
+  /** A phone's bar, while not typing, starts a new note */
+  onNewNote?: () => void
 }) {
   const toast = useToast()
   const { profile } = useProfile()
@@ -105,6 +164,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   // Built once: a new array each render would make Tiptap reconfigure the editor every time
   const [extensions] = useState(() => [...noteExtensions({ onEditMath, imageView: true }), FindHighlight, Placeholder.configure({ placeholder: 'Start writing…' })])
   const keyboard = useKeyboardInset()
+  const screen = useScreen()
   const [highlightColor, setHighlightColor] = useState<HighlightName>('yellow') // what the Highlight button uses; right-click it to change
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -165,6 +225,15 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
     return () => onReady?.(null)
   }, [editor, onReady])
 
+  // Writing in the note (a phone shows the formatting tools then, and a few quiet ones otherwise)
+  const [typing, setTyping] = useState(false)
+  useEffect(() => {
+    if (!editor) return
+    const on = () => setTyping(true), off = () => setTyping(false)
+    editor.on('focus', on); editor.on('blur', off)
+    return () => { editor.off('focus', on); editor.off('blur', off) }
+  }, [editor])
+
   // While tools are off the toolbar's right edge (a phone), the edge fades, so it is clear the row scrolls
   const barRef = useRef<HTMLDivElement>(null)
   const [more, setMore] = useState(false)
@@ -219,9 +288,11 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
     // keeps room under it. Pressing a tool leaves the focus in the note, so the keyboard stays up. While drawing, the drawing
     // tools take its place.
     <div className="max-md:pb-20">
-      <div ref={barRef} data-more={more || undefined} role="toolbar" aria-label="Formatting" onMouseDown={e => { if (e.target !== e.currentTarget) e.preventDefault() }}
-        style={{ '--kb': `${keyboard}px` } as React.CSSProperties}
-        className={`sticky top-[var(--note-head,57px)] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none] max-md:fixed max-md:inset-x-0 max-md:bottom-[var(--kb)] max-md:top-auto max-md:z-40 max-md:mx-0 max-md:border-b-0 max-md:border-t max-md:px-3 max-md:pt-1.5 ${keyboard ? '' : 'max-md:pb-[calc(0.375rem+env(safe-area-inset-bottom))]'} ${drawing ? 'max-md:hidden' : ''}`}>
+      {!drawing && showsPhone(screen) && <PhoneBar editor={editor} typing={typing} keyboard={keyboard} highlightColor={highlightColor}
+        onPicture={() => pictureInput.current?.click()} onDraw={() => onDraw?.()} onEquation={() => onInsertEquation?.()} onNewNote={onNewNote} openMenu={setMenu} />}
+      {/* a computer's toolbar, under the note's top bar; a phone has the bar above */}
+      {showsComputer(screen) && <div ref={barRef} data-more={more || undefined} role="toolbar" aria-label="Formatting" onMouseDown={e => { if (e.target !== e.currentTarget) e.preventDefault() }}
+        className="sticky top-[var(--note-head,57px)] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none] max-md:hidden">
 
         {tool('Bold', Bold, () => editor.chain().focus().toggleBold().run(), active('bold'))}
         {tool('Italic', Italic, () => editor.chain().focus().toggleItalic().run(), active('italic'))}
@@ -258,7 +329,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
         <PictureButton input={pictureInput} />
         {tool('Draw', PencilLine, () => onDraw?.(), drawing)}
         {active('table') && <><span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-line" /><TableTools editor={editor} /></>}
-      </div>
+      </div>}
       <input ref={pictureInput} type="file" hidden aria-label="Choose pictures" accept={ACCEPTED.join(',')} multiple
         onChange={e => { const files = Array.from(e.target.files ?? []); e.target.value = ''; if (files.length) addRef.current(files) }} />
       <NoteImagesContext.Provider value={imagesCtx}>

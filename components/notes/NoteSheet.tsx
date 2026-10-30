@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { BellPlus, FilePlus2, FileText, FileType2, FileUp, MoreHorizontal, Search, Share2, Sigma, Trash2, X, type LucideIcon } from 'lucide-react'
+import { BellPlus, FilePlus2, FileText, FileType2, FileUp, MoreHorizontal, Search, Sigma, Trash2, X, type LucideIcon } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import type { NoteMenuActions } from '@/components/notes/NoteMenuBar'
 import type { EditorMode } from '@/lib/types'
@@ -21,10 +21,12 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
 }
 
 // The note's File, Edit and View menus, for a phone: a ⋯ button in the note's top bar slides a panel in from the right with
-// two switches (write or read, rich or Markdown), automatic maths, and the note's actions as large rows. What a phone does
-// itself (undo, redo, select all) and what it has no room for (full width) are left out.
-export function NoteSheet({ actions: a, mode, reading, autoMath, onRemind }: {
+// two switches (write or read, rich or Markdown), automatic maths, and the note's actions as large rows. Undo and redo are
+// in the top bar; select all (the phone does it) and full width (no room) are left out.
+export function NoteSheet({ actions: a, mode, reading, autoMath, onRemind, children }: {
   actions: NoteMenuActions; mode: EditorMode; reading: boolean; autoMath: boolean; onRemind: () => void
+  /** At the top of the sheet: what a phone's top bar has no room for (the course, the tutor, Study); given a way to close it */
+  children?: (close: () => void) => React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
   // where the sheet is drawn: the app's root, found when the button is tapped
@@ -39,7 +41,6 @@ export function NoteSheet({ actions: a, mode, reading, autoMath, onRemind }: {
     { label: 'Find in note', icon: Search, run: a.find },
     { label: 'Insert equation', icon: Sigma, run: a.insertEquation, disabled: reading },
     { label: 'Remind me', icon: BellPlus, run: onRemind },
-    { label: 'Share', icon: Share2, run: a.share },
     { label: 'Upload', icon: FileUp, run: a.importNote },
     { label: 'Export as Word', icon: FileText, run: a.exportWord },
     { label: 'Export as PDF', icon: FileType2, run: a.exportPdf },
@@ -62,6 +63,7 @@ export function NoteSheet({ actions: a, mode, reading, autoMath, onRemind }: {
               <button type="button" aria-label="Close" onClick={close} className="btn-ghost -mr-1"><X size={18} aria-hidden /></button>
             </div>
             <div className="space-y-2.5">
+              {children?.(() => setOpen(false))}
               <Segmented label="Write or read" value={reading ? 'read' : 'write'} options={[{ value: 'write', label: 'Write' }, { value: 'read', label: 'Read' }]} onChange={a.toggleReading} />
               <Segmented label="Editor" value={mode} options={[{ value: 'rich', label: 'Rich' }, { value: 'markdown', label: 'Markdown' }]} onChange={m => a.setMode(m)} />
               <div className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-surface px-4">

@@ -2,7 +2,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, PenLine, Redo2, Share, Type, Undo2 } from 'lucide-react'
+import { editedLine } from '@/lib/notes/noteRows'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import type { Editor } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
 import { RichEditor, insertTable } from '@/components/notes/RichEditor'
@@ -99,6 +101,18 @@ function NoteEditor({ id }: { id: string }) {
     return () => ro.disconnect()
   }, [loaded])
   const { update, status, flush } = useAutosave<Patch>(patch => updateNote(supabase(), id, patch).then(notifyList))
+
+  // Writing (in the note or its title): a phone's top bar shows Done, which puts the keyboard away
+  const [editorFocused, setEditorFocused] = useState(false)
+  const [titleFocused, setTitleFocused] = useState(false)
+  useEffect(() => {
+    if (!editor) return
+    const on = () => setEditorFocused(true), off = () => setEditorFocused(false)
+    editor.on('focus', on); editor.on('blur', off)
+    return () => { editor.off('focus', on); editor.off('blur', off) }
+  }, [editor])
+  const typing = editorFocused || titleFocused
+  const screen = useScreen()
 
   useEffect(() => {
     const sb = supabase()
@@ -269,7 +283,50 @@ function NoteEditor({ id }: { id: string }) {
 
   return (
     <div data-note-page ref={pageRef} className={`min-h-dvh ${studyOpen ? 'md:pr-[380px]' : ''}`}>
-      <header ref={headRef} className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur sm:gap-2 md:px-6">
+      {/* A phone's top bar, as notes apps have it: back to the notes, typing or drawing, then undo, redo, share and ⋯, and Done
+          while writing. The course, the tutor and Study are in the ⋯ sheet. */}
+      {showsPhone(screen) && <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-0.5 bg-bg/90 px-1.5 py-1 backdrop-blur md:hidden">
+        <Link href="/notes" aria-label="Back to notes" className="flex items-center rounded-lg py-2 pl-0.5 pr-2 text-[17px] text-accent active:opacity-60"><ChevronLeft size={26} aria-hidden />Notes</Link>
+        {mode === 'rich' && !reading && (
+          <div role="radiogroup" aria-label="Type or draw" className="ml-1 flex rounded-full bg-surface p-0.5">
+            {([[false, 'Type', Type], [true, 'Draw', PenLine]] as const).map(([pen, label, Icon]) => (
+              <button key={label} type="button" role="radio" aria-checked={inking === pen} aria-label={label} onClick={() => setInking(pen)}
+                className={`grid size-8 place-items-center rounded-full transition ${inking === pen ? 'bg-raised text-accent shadow-sm' : 'text-muted'}`}><Icon size={17} aria-hidden /></button>
+            ))}
+          </div>
+        )}
+        {/* pressing these leaves the focus in the note: the keyboard stays up for undo and redo, and Done does not vanish (moving
+            the buttons) before the press lands */}
+        <span className="ml-auto flex items-center" onMouseDown={e => { if (e.target !== e.currentTarget) e.preventDefault() }}>
+          {status === 'failed' || status === 'error'
+            ? <span role="status" className="px-1 text-xs text-danger">Not saved</span>
+            : !typing && <span role="status" aria-label={status === 'saved' ? 'Saved' : undefined} className="grid w-5 place-items-center text-muted">{status === 'saved' && <Check size={15} aria-hidden />}</span>}
+          {!reading && <>
+            <button type="button" aria-label="Undo" className="grid size-9 place-items-center rounded-full text-accent active:bg-surface" onClick={() => (mode === 'rich' ? editor?.commands.undo() : actions.undo())}><Undo2 size={21} aria-hidden /></button>
+            <button type="button" aria-label="Redo" className="grid size-9 place-items-center rounded-full text-accent active:bg-surface" onClick={() => (mode === 'rich' ? editor?.commands.redo() : actions.redo())}><Redo2 size={21} aria-hidden /></button>
+          </>}
+          <button type="button" aria-label="Share" className="grid size-9 place-items-center rounded-full text-accent active:bg-surface" onClick={actions.share}><Share size={20} aria-hidden /></button>
+          <NoteSheet actions={actions} mode={mode} reading={reading} autoMath={profile.auto_math}
+            onRemind={() => requestReminder({ title: `Review ${draft.title || 'Untitled'}`, href: `/notes/${draft.id}`, link_label: draft.title || 'Untitled' })}>
+            {close => <>
+              <label className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-surface px-4">
+                <span className="text-[15px] font-medium">Course</span>
+                <select className="input min-w-0 max-w-48" value={draft.course_id ?? ''} onChange={e => change({ course_id: e.target.value || null })}>
+                  <option value="">No course</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} className="btn min-h-12 justify-center" />
+                <button type="button" className="btn min-h-12 justify-center" onClick={() => { close(); setStudyOpen(true) }}>✦ Study</button>
+              </div>
+            </>}
+          </NoteSheet>
+          {typing && <button type="button" className="py-2 pl-1.5 pr-1 text-[17px] font-semibold text-accent" onClick={() => (document.activeElement as HTMLElement | null)?.blur()}>Done</button>}
+        </span>
+        {findOpen && <div className="basis-full px-1 pb-1"><FindBar search={search} onClose={closeFind} /></div>}
+      </header>}
+      {showsComputer(screen) && <header ref={headRef} className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur max-md:hidden sm:gap-2 md:px-6">
         <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}
         <div className="hidden md:block"><NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} /></div>
@@ -282,13 +339,12 @@ function NoteEditor({ id }: { id: string }) {
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>
         <span className="ml-auto"><AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} compact /></span>
         <button type="button" className={`btn max-sm:!px-3 ${studyOpen ? 'bg-accent-soft text-accent' : ''}`} aria-expanded={studyOpen} onClick={() => setStudyOpen(o => !o)}>✦<span className="max-sm:sr-only"> Study</span></button>
-        {/* a phone has no File, Edit and View menus: their actions are in this sheet */}
-        <NoteSheet actions={actions} mode={mode} reading={reading} autoMath={profile.auto_math}
-          onRemind={() => requestReminder({ title: `Review ${draft.title || 'Untitled'}`, href: `/notes/${draft.id}`, link_label: draft.title || 'Untitled' })} />
         {findOpen && <div className="basis-full"><FindBar search={search} onClose={closeFind} /></div>}
-      </header>
+      </header>}
       {sharing && <ShareDialog kind="note" id={draft.id} title={draft.title} onClose={() => setSharing(false)} />}
-      <div className={`relative mx-auto px-5 pb-24 pt-8 md:px-8 ${width}`}>
+      <div className={`relative mx-auto px-5 pb-24 pt-1 md:px-8 md:pt-8 ${width}`}>
+        {/* when it was last edited, small above the title, as notes apps show it on a phone */}
+        <p className="mb-2 text-center text-[13px] text-muted md:hidden">{editedLine(draft.updated_at)}</p>
         {mode === 'rich' && <InkLayer key={note.id} marks={inkAtOpen} active={inking && !reading} onChange={marks => change({ ink: marks })} onDone={() => setInking(false)} />}
         {reading ? (
           <article>
@@ -299,10 +355,11 @@ function NoteEditor({ id }: { id: string }) {
           <>
             <input className="mb-1 w-full bg-transparent text-3xl font-semibold outline-none placeholder:text-muted" value={draft.title} placeholder="Untitled"
               onChange={e => change({ title: e.target.value })} aria-label="Title"
-              onFocus={e => { if (e.target.value === 'Untitled') e.target.select() }} />
+              onFocus={e => { setTitleFocused(true); if (e.target.value === 'Untitled') e.target.select() }} onBlur={() => setTitleFocused(false)} />
             {mode === 'rich' ? (
               <RichEditor key={`rich-${note.id}`} markdown={draft.content_md} onChange={md => change({ content_md: md })}
-                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} drawing={inking} onDraw={() => setInking(i => !i)} autoMath={profile.auto_math} />
+                onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} drawing={inking} onDraw={() => setInking(i => !i)} autoMath={profile.auto_math}
+                onNewNote={() => { void actions.newNote() }} />
             ) : (
               <div className="mt-4 grid gap-6 md:grid-cols-2">
                 <textarea ref={markdownRef} className="input min-h-[70vh] font-mono text-[13px]" value={draft.content_md} aria-label="Markdown"

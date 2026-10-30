@@ -37,10 +37,16 @@ describe('the keyboard inset', () => {
 describe('the note\'s tools on a phone', () => {
   it('are a bar along the bottom lifted by the keyboard, and pressing one keeps the focus in the note', () => {
     const src = fs.readFileSync('components/notes/RichEditor.tsx', 'utf8')
-    expect(src).toContain('role="toolbar" aria-label="Formatting"')
-    expect(src).toContain('max-md:fixed max-md:inset-x-0 max-md:bottom-[var(--kb)] max-md:top-auto')
-    expect(src).toContain("style={{ '--kb': `${keyboard}px` } as React.CSSProperties}")
+    expect(src).toContain("role=\"toolbar\" aria-label={typing ? 'Formatting' : 'Note tools'}")
+    expect(src).toContain('style={{ bottom: keyboard }}')
     expect(src).toContain('onMouseDown={e => { if (e.target !== e.currentTarget) e.preventDefault() }}')
-    expect(src).toContain("${drawing ? 'max-md:hidden' : ''}") // the drawing tools take its place
+    expect(src).toContain('{!drawing && showsPhone(screen) && <PhoneBar') // the drawing tools take its place
+  })
+  it('show the formatting tools while writing, Samsung Notes\' way, and a few quiet ones otherwise', () => {
+    const src = fs.readFileSync('components/notes/RichEditor.tsx', 'utf8')
+    const typing = src.slice(src.indexOf('{typing ? <>'), src.indexOf('</> : <>'))
+    for (const t of ['Checklist', 'Numbered list', 'Bulleted list', 'Text size', 'Bold', 'Italic', 'Underline', 'Highlight', 'More']) expect(typing).toContain(`tool('${t}'`)
+    const quiet = src.slice(src.indexOf('</> : <>'), src.indexOf('</>}', src.indexOf('</> : <>')))
+    for (const t of ['Checklist', 'Picture', 'Draw', 'New note']) expect(quiet).toContain(`tool('${t}'`)
   })
 })

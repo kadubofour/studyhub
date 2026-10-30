@@ -5,7 +5,9 @@ import { BellPlus, Plus, Upload, CheckSquare, X, NotebookPen, Search, FolderInpu
 import { ViewOptions } from '@/components/ui/ViewOptions'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
-import { sortNotes, useView } from '@/lib/ui/listView'
+import { sortNotes, useView, viewStore } from '@/lib/ui/listView'
+import { PhoneNotesList } from '@/components/notes/PhoneNotesList'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import { MoveToNotebookDialog, NotebookNameDialog } from '@/components/notes/NotebookDialogs'
 import { NotebookCover } from '@/components/notes/NotebookCover'
 import Link from 'next/link'
@@ -144,6 +146,7 @@ export function NotesSidebar() {
   ]
 
   const view = useView('notes')
+  const screen = useScreen()
   const counts = countByNotebook(notes ?? [])
   const shown = sortNotes(filterNotes(notes ?? [], { notebook: '', course }), view.sort, Object.fromEntries(courses.map(c => [c.id, c.name])))
   const colorOf = (b: Notebook) => notebookColor(b, notes ?? [], courses)
@@ -152,16 +155,31 @@ export function NotesSidebar() {
   const empty = notes?.length === 0 && !q.trim()
   const toggle = (id: string) => setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]))
 
+  const selectionActions = (
+    <>
+      <button className="btn" disabled={!selected.length} aria-label="Move to notebook" onClick={() => setMoving(selected)}><FolderInput size={14} aria-hidden />Move</button>
+      <ExportMenu ids={selected} label="Export selected" disabled={!selected.length} />
+    </>
+  )
+
   return (
     <div>
+      {/* a phone gets the list notes apps have; a computer keeps the tiles below */}
+      {showsPhone(screen) && <div className="md:hidden">
+        <PhoneNotesList notes={shown} loaded={notes !== null} searching={!!q.trim()} q={q} onSearch={setQ}
+          books={notebooks.map(b => ({ id: b.id, name: b.name, count: counts.byId[b.id] ?? 0, color: colorOf(b) }))}
+          courses={courses} course={course} onCourse={setCourse} sort={view.sort} onSort={s => viewStore('notes').set({ ...view, sort: s })}
+          selecting={selecting} selected={selected} onToggle={toggle} onStopSelecting={() => { setSelecting(false); setSelected([]) }} selectionActions={selectionActions}
+          onSelect={() => setSelecting(true)} onNewNotebook={() => setNaming(true)} onUpload={requestUpload} onCreate={() => { void create() }} onMenu={openMenu} />
+      </div>}
+      {showsComputer(screen) && <div className="max-md:hidden">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className={PAGE_TITLE}>Notes</h1>
         <div className="flex flex-wrap items-center gap-2">
           {selecting ? (
             <>
               <span className="text-sm text-muted">{selected.length} selected</span>
-              <button className="btn" disabled={!selected.length} aria-label="Move to notebook" onClick={() => setMoving(selected)}><FolderInput size={14} aria-hidden />Move</button>
-              <ExportMenu ids={selected} label="Export selected" disabled={!selected.length} />
+              {selectionActions}
               <button className="btn-ghost" onClick={() => { setSelecting(false); setSelected([]) }} aria-label="Stop selecting"><X size={15} aria-hidden />Done</button>
             </>
           ) : (
@@ -226,6 +244,7 @@ export function NotesSidebar() {
           )
         })}
       </ItemList>
+      </div>}
 
       <NotebookNameDialog open={naming} onClose={() => setNaming(false)} title="New notebook" submitLabel="Create"
         courses={courses} initialCourse={course || null} onSubmit={(name, cid) => { void addNotebook(name, cid) }} />

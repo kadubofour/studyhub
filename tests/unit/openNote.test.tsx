@@ -22,6 +22,6 @@ describe('an open note', () => {
     expect(css()).toMatch(/\.ProseMirror p\.is-editor-empty:first-child::before \{[^}]*content: attr\(data-placeholder\)/)
   })
   it('a new note\'s title "Untitled" is selected on focus, so typing replaces it', () => {
-    expect(page()).toContain("onFocus={e => { if (e.target.value === 'Untitled') e.target.select() }}")
+    expect(page()).toContain("onFocus={e => { setTitleFocused(true); if (e.target.value === 'Untitled') e.target.select() }}")
   })
 })

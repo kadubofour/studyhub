@@ -146,11 +146,17 @@ describe('a note\'s top bar on a phone', () => {
     expect(src()).toContain('<select className="input min-w-0 flex-1 basis-0 max-w-32 sm:flex-none sm:basis-auto sm:max-w-44"')
     expect(src()).toMatch(/className=\{`btn max-sm:!px-3 \$\{studyOpen/)
   })
-  it('puts Study beside the tutor, and the ⋯ menu last, at the far right', () => {
-    const s = src()
-    const tutor = s.indexOf('<AskTutorButton'), study = s.indexOf('aria-expanded={studyOpen}'), menu = s.indexOf('<NoteSheet ')
-    expect(tutor).toBeLessThan(study)
-    expect(study).toBeLessThan(menu)
+  it('on a computer, puts Study beside the tutor', () => {
+    const s = src(), desk = s.slice(s.indexOf('<header ref={headRef}'))
+    expect(desk.indexOf('<AskTutorButton')).toBeLessThan(desk.indexOf('aria-expanded={studyOpen}'))
+  })
+  it('on a phone, is Apple Notes\' bar: back to the notes, type or draw, then undo, redo, share, ⋯ and Done; the course, tutor and Study are in the ⋯ sheet', () => {
+    const s = src(), phone = s.slice(s.indexOf('{showsPhone(screen) && <header'), s.indexOf('{showsComputer(screen) && <header'))
+    const order = ['aria-label="Back to notes"', 'aria-label="Type or draw"', 'aria-label="Undo"', 'aria-label="Redo"', 'aria-label="Share"', '<NoteSheet ', '>Done</button>'].map(x => phone.indexOf(x))
+    expect(order.every(i => i >= 0)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
+    const sheet = phone.slice(phone.indexOf('<NoteSheet '), phone.indexOf('</NoteSheet>'))
+    for (const x of ['<span className="text-[15px] font-medium">Course</span>', '<AskTutorButton', '✦ Study']) expect(sheet).toContain(x)
   })
   it('the find bar still takes a line of its own', () => {
     expect(src()).toContain('{findOpen && <div className="basis-full">')
