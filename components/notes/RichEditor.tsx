@@ -18,6 +18,7 @@ import { insertNoteImage } from './noteImage'
 import { supabase } from '@/lib/supabase/client'
 import { makeImageResolver } from '@/lib/notes/images'
 import { ACCEPTED, IMAGE_ERROR_TEXT, ImageError, prepareImage, uploadNoteImage } from '@/lib/notes/prepareImage'
+import { useKeyboardInset } from '@/lib/ui/keyboardInset'
 
 export const insertTable = (editor: Editor, rows: number, cols: number) =>
   editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
@@ -103,6 +104,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   const addRef = useRef<(files: File[]) => void>(() => {})
   // Built once: a new array each render would make Tiptap reconfigure the editor every time
   const [extensions] = useState(() => [...noteExtensions({ onEditMath, imageView: true }), FindHighlight, Placeholder.configure({ placeholder: 'Start writing…' })])
+  const keyboard = useKeyboardInset()
   const [highlightColor, setHighlightColor] = useState<HighlightName>('yellow') // what the Highlight button uses; right-click it to change
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -213,8 +215,14 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   )
 
   return (
-    <div>
-      <div ref={barRef} data-more={more || undefined} className="sticky top-[var(--note-head,57px)] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none]">
+    // On a phone the tools are a bar along the bottom that rides just above the keyboard, as in every notes app; the writing
+    // keeps room under it. Pressing a tool leaves the focus in the note, so the keyboard stays up. While drawing, the drawing
+    // tools take its place.
+    <div className="max-md:pb-20">
+      <div ref={barRef} data-more={more || undefined} role="toolbar" aria-label="Formatting" onMouseDown={e => { if (e.target !== e.currentTarget) e.preventDefault() }}
+        style={{ '--kb': `${keyboard}px` } as React.CSSProperties}
+        className={`sticky top-[var(--note-head,57px)] z-20 -mx-2 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-line bg-bg/95 px-2 pb-1.5 pt-1 backdrop-blur [scrollbar-width:none] max-md:fixed max-md:inset-x-0 max-md:bottom-[var(--kb)] max-md:top-auto max-md:z-40 max-md:mx-0 max-md:border-b-0 max-md:border-t max-md:px-3 max-md:pt-1.5 ${keyboard ? '' : 'max-md:pb-[calc(0.375rem+env(safe-area-inset-bottom))]'} ${drawing ? 'max-md:hidden' : ''}`}>
+
         {tool('Bold', Bold, () => editor.chain().focus().toggleBold().run(), active('bold'))}
         {tool('Italic', Italic, () => editor.chain().focus().toggleItalic().run(), active('italic'))}
         {tool('Underline', UnderlineIcon, () => editor.chain().focus().toggleUnderline().run(), active('underline'))}

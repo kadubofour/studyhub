@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import type { PlanMode } from '@/lib/plan/types'
 
-export type PlanSettings = { mode: PlanMode; minutesPerDay: number; daysOff: number[] }
+// examId: the exam the plan works towards, or null for a plan that keeps going without one
+export type PlanSettings = { mode: PlanMode; minutesPerDay: number; daysOff: number[]; examId: string | null }
 const MODES: { value: PlanMode; label: string; blurb: string }[] = [
   { value: 'sprint', label: 'Sprint', blurb: 'The neediest 40% of topics. For a last push.' },
   { value: 'balanced', label: 'Balanced', blurb: 'Most topics (80%), with revision.' },
@@ -11,13 +12,15 @@ const MODES: { value: PlanMode; label: string; blurb: string }[] = [
 // Monday first; the numbers are weekday numbers where 0 is Sunday
 const DAYS: [number, string][] = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']]
 
-export function PlanForm({ title, examLabel, initial, saving, error, onSave, onCancel }: {
-  title: string; examLabel: string; initial?: PlanSettings; saving: boolean; error: string | null
+// exams: the course's upcoming exams the plan can work towards; with none chosen it keeps going
+export function PlanForm({ title, exams, initial, saving, error, onSave, onCancel }: {
+  title: string; exams: { id: string; title: string }[]; initial?: Partial<PlanSettings>; saving: boolean; error: string | null
   onSave: (s: PlanSettings) => void; onCancel: () => void
 }) {
   const [mode, setMode] = useState<PlanMode>(initial?.mode ?? 'balanced')
   const [minutes, setMinutes] = useState(String(initial?.minutesPerDay ?? 45))
   const [off, setOff] = useState<number[]>(initial?.daysOff ?? [])
+  const [examId, setExamId] = useState(initial?.examId ?? '')
   const [problem, setProblem] = useState<string | null>(null)
 
   function submit(e: React.FormEvent) {
@@ -26,12 +29,18 @@ export function PlanForm({ title, examLabel, initial, saving, error, onSave, onC
     if (!Number.isInteger(m) || m < 10 || m > 240) { setProblem('Choose between 10 and 240 minutes.'); return }
     if (off.length >= 7) { setProblem('Leave at least one day to study.'); return }
     setProblem(null)
-    onSave({ mode, minutesPerDay: m, daysOff: [...off].sort((a, b) => a - b) })
+    onSave({ mode, minutesPerDay: m, daysOff: [...off].sort((a, b) => a - b), examId: examId || null })
   }
 
   return (
     <form onSubmit={submit} noValidate className="space-y-3 rounded-xl border border-line p-3">
-      <p className="text-sm font-medium">{title} · {examLabel}</p>
+      <p className="text-sm font-medium">{title}</p>
+      <label className="field"><span>Working towards</span>
+        <select value={examId} onChange={e => setExamId(e.target.value)}>
+          <option value="">No exam: keep going</option>
+          {exams.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
+        </select>
+      </label>
       <fieldset className="space-y-1.5">
         <legend className="mb-1 text-xs text-muted">Mode</legend>
         {MODES.map(m => (

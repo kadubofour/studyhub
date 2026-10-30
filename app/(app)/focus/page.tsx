@@ -51,7 +51,7 @@ export default function FocusPage() {
       <div role="tablist" className="flex justify-center gap-1">
         {(['focus', 'short', 'long'] as Mode[]).map(m => (
           <button key={m} role="tab" aria-selected={timer.mode === m} onClick={() => pickMode(m)}
-            className={`rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-accent-soft font-medium text-accent' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
+            className={`choice rounded-lg px-3 py-1 text-sm pointer-coarse:py-2 ${timer.mode === m ? 'bg-accent-soft font-medium text-accent' : 'text-muted'}`}>{MODE_LABEL[m]}</button>
         ))}
       </div>
       {timer.mode === 'focus' && (
@@ -101,7 +101,7 @@ export default function FocusPage() {
         <Headphones size={16} aria-hidden className="text-muted" />
         {AMBIENT_SOUNDS.map(s => (
           <button key={s.id} onClick={() => setAmbientPrefs({ sound: s.id })} aria-pressed={sound === s.id}
-            className={`rounded-lg px-2.5 py-1 pointer-coarse:py-2 ${sound === s.id ? 'bg-surface font-medium' : 'text-muted'}`}>{s.label}</button>
+            className={`choice rounded-lg px-2.5 py-1 pointer-coarse:py-2 ${sound === s.id ? 'bg-surface font-medium' : 'text-muted'}`}>{s.label}</button>
         ))}
         <input aria-label="Volume" type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setAmbientPrefs({ volume: Number(e.target.value) })} className="min-w-20 flex-1 accent-[var(--accent-solid)]" />
       </div>

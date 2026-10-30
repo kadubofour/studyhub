@@ -9,7 +9,8 @@ import type { PlanSession, StoredSession } from './types'
 export type SessionView = StoredSession & { topicName: string; noteId: string | null }
 export type ScheduledView = PlanSession & { topicName: string; noteId: string | null }
 export type PlanView = {
-  plan: PlanRow; courseId: string; examDay: DayKey; daysToExam: number
+  // examDay and daysToExam are null for a plan with no exam ahead: it keeps going, planning the next two weeks each day
+  plan: PlanRow; courseId: string; examDay: DayKey | null; daysToExam: number | null
   status: 'ok' | 'no_topics' | 'exam_passed' | 'no_days'
   todayDayId: string | null; today: SessionView[]
   upcoming: { day: DayKey; sessions: ScheduledView[] }[] // the next 7 study days after today
@@ -18,6 +19,18 @@ export type PlanView = {
 }
 
 const daysBetween = (a: DayKey, b: DayKey) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000)
+// How far a plan with no exam looks ahead: today and the next 14 days
+export const AHEAD_DAYS = 15
+
+// The day of the plan's exam, if it still has one ahead: an exam task of the plan's course, with a date after today and not done.
+// Otherwise (no exam, or it was deleted, ticked off, passed, undated or changed) the plan carries on without one.
+function examDayOf(plan: PlanRow, tz: string, today: DayKey): DayKey | null {
+  const e = plan.exam
+  if (!e || !e.due_at || e.done_at) return null
+  if (e.type && (e.type !== 'exam' || e.course_id !== plan.course_id)) return null
+  const day = localDayKey(e.due_at, tz)
+  return day > today ? day : null
+}
 
 // Everything the plan screens need, worked out from the saved plans, the topics' results and the saved days.
 // Today's list is saved the first time the day is opened; later days are always planned fresh.
@@ -26,11 +39,8 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
   const tomorrow = addDaysToKey(today, 1)
   const views: PlanView[] = []
   for (const plan of await listPlans(sb)) {
-    if (!plan.exam.due_at || plan.exam.done_at) continue
-    // An exam task that has since become something else, or moved course, no longer makes a plan
-    if (plan.exam.type && (plan.exam.type !== 'exam' || plan.exam.course_id !== plan.course_id)) continue
-    const examDay = localDayKey(plan.exam.due_at, tz)
-    if (examDay <= today) continue
+    const examDay = examDayOf(plan, tz, today)
+    const endDay = examDay ?? addDaysToKey(today, AHEAD_DAYS)
 
     const [stats, links, saved] = await Promise.all([listTopicStats(sb, plan.course_id), listTopicLinks(sb, plan.course_id), listPlanDays(sb, plan.id)])
     // The newest linked note of each topic, for Warm-ups and Open links
@@ -51,7 +61,7 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
 
     const done: DoneSession[] = saved.flatMap(d => d.sessions.filter(s => s.done_at).map(s => ({ topicId: s.topic_id, kind: s.kind, day: d.day })))
     const topics = toPlanTopics(stats, new Set(noteOf.keys()), summariseHistory(done))
-    const settings = { examDay, mode: plan.mode, minutesPerDay: plan.minutes_per_day, daysOff: plan.days_off }
+    const settings = { examDay: endDay, finalRevision: examDay !== null, mode: plan.mode, minutesPerDay: plan.minutes_per_day, daysOff: plan.days_off }
 
     // Today: the saved list, or plan it now and save it (nothing is saved when there is nothing to do yet)
     const full = buildPlan({ today, ...settings, topics })
@@ -67,14 +77,14 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
     // ...as if everything planned for today gets done (a missed one returns when tomorrow becomes today)
     const planned: DoneSession[] = (todayRow?.sessions ?? []).map(s => ({ topicId: s.topic_id, kind: s.kind, day: today }))
     const aheadTopics = toPlanTopics(stats, new Set(noteOf.keys()), summariseHistory([...done, ...planned]))
-    const future = tomorrow < examDay ? buildPlan({ today: tomorrow, ...settings, topics: aheadTopics }) : null
+    const future = tomorrow < endDay ? buildPlan({ today: tomorrow, ...settings, topics: aheadTopics }) : null
     const schedule = (future?.days ?? []).map(d => ({ day: d.day, sessions: d.sessions.flatMap(s => dress(s) ?? []) }))
 
     const weekAgo = addDaysToKey(today, -7)
     const missed = saved.filter(d => d.day >= weekAgo && d.day < today).reduce((n, d) => n + d.sessions.filter(s => !s.done_at && names.has(s.topic_id)).length, 0)
 
     views.push({
-      plan, courseId: plan.course_id, examDay, daysToExam: daysBetween(today, examDay), status: full.status,
+      plan, courseId: plan.course_id, examDay, daysToExam: examDay ? daysBetween(today, examDay) : null, status: full.status,
       todayDayId: todayRow?.id ?? null, today: todayViews, upcoming: schedule.slice(0, 7), schedule,
       unscheduled: (future ?? full).unscheduled.length, missed,
     })

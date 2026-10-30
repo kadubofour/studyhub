@@ -58,10 +58,10 @@ export function CalendarToolbar({ title, view, onView, onToday, onPrev, onNext, 
         </div>
         <h2 className="min-w-0 flex-1 truncate text-base font-semibold md:mr-auto md:flex-none" aria-live="polite">{title}</h2>
       </div>
-      <div role="group" aria-label="View" className="grid grid-cols-3 rounded-xl bg-surface p-0.5 md:flex md:rounded-lg">
+      <div role="group" aria-label="View" className="choice-track grid grid-cols-3 rounded-xl bg-surface p-0.5 md:flex md:rounded-lg">
         {VIEWS.map(v => (
           <button key={v.id} type="button" aria-pressed={view === v.id} onClick={() => onView(v.id)}
-            className={`rounded-[10px] px-3 py-1.5 text-center text-sm pointer-coarse:py-2 md:rounded-md md:py-1 transition ${view === v.id ? 'bg-raised font-medium shadow-sm' : 'text-muted hover:text-fg'}`}>{v.label}</button>
+            className={`choice rounded-[10px] px-3 py-1.5 text-center text-sm pointer-coarse:py-2 md:rounded-md md:py-1 transition ${view === v.id ? 'bg-raised font-medium shadow-sm' : 'text-muted hover:text-fg'}`}>{v.label}</button>
         ))}
       </div>
       <div className="hidden gap-1.5 md:flex">

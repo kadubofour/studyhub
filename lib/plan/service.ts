@@ -4,20 +4,22 @@ import type { PlanMode, StoredSession } from './types'
 import { announceProgressChanged } from '@/lib/xp/events'
 
 export type PlanRow = {
-  id: string; course_id: string; exam_task_id: string; mode: PlanMode; minutes_per_day: number; days_off: number[]
-  exam: { id: string; title: string; due_at: string | null; done_at: string | null; type?: string; course_id?: string | null }
+  id: string; course_id: string; exam_task_id: string | null; mode: PlanMode; minutes_per_day: number; days_off: number[]
+  // the exam the plan works towards; null for a plan that keeps going without one
+  exam: { id: string; title: string; due_at: string | null; done_at: string | null; type?: string; course_id?: string | null } | null
 }
 export type DayRow = { id: string; plan_id: string; day: string; sessions: StoredSession[] }
-export type PlanInput = { course_id: string; exam_task_id: string; mode: PlanMode; minutes_per_day: number; days_off: number[] }
+export type PlanInput = { course_id: string; exam_task_id: string | null; mode: PlanMode; minutes_per_day: number; days_off: number[] }
 
-const PLAN = 'id,course_id,exam_task_id,mode,minutes_per_day,days_off,exam:tasks!inner(id,title,due_at,done_at,type,course_id)'
+const PLAN = 'id,course_id,exam_task_id,mode,minutes_per_day,days_off,exam:tasks(id,title,due_at,done_at,type,course_id)'
 const DAY = 'id,plan_id,day,sessions'
 
 export async function listPlans(sb: SupabaseClient): Promise<PlanRow[]> {
   return must(await sb.from('study_plans').select(PLAN).order('created_at')) as unknown as PlanRow[]
 }
 export async function savePlan(sb: SupabaseClient, input: PlanInput, id?: string): Promise<void> {
-  if (id) check(await sb.from('study_plans').update({ mode: input.mode, minutes_per_day: input.minutes_per_day, days_off: input.days_off }).eq('id', id))
+  // Editing changes the settings and the exam it works towards (or none); the course stays
+  if (id) check(await sb.from('study_plans').update({ exam_task_id: input.exam_task_id, mode: input.mode, minutes_per_day: input.minutes_per_day, days_off: input.days_off }).eq('id', id))
   // One plan per course: an old one that has ended is replaced, a live one is never touched (the database refuses)
   else check(await sb.rpc('create_study_plan', { p_course: input.course_id, p_exam: input.exam_task_id, p_mode: input.mode, p_minutes: input.minutes_per_day, p_days_off: input.days_off }))
 }

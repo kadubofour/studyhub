@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Flame, Layers, Pause, Play, School, Search, Zap } from 'lucide-react'
 import { MODE_LABEL, fmtClock, useFocus } from '@/components/providers/FocusProvider'
 import { useProfile } from '@/components/providers/ProfileProvider'
+import { Avatar } from '@/components/profile/Avatar'
 import { useXp } from '@/components/xp/useXp'
 import { supabase } from '@/lib/supabase/client'
 import { countDueCards } from '@/lib/data/cards'
@@ -17,6 +18,8 @@ import { useProgressChanged } from '@/lib/xp/events'
 import { useCoursesChanged, useTimetableChanged } from '@/lib/course/events'
 
 const chip = 'glass inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:py-2.5'
+// a chip that only shows once the bar is wide enough: its display comes from the width rule beside it
+const extra = chip.replace('inline-flex ', 'hidden ')
 
 // The strip above every page: the way into the command palette, and on the right the focus timer, the next class, cards due, the streak and the level, so they are one glance away
 export function TopBar({ onSearch }: { onSearch: () => void }) {
@@ -71,15 +74,17 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const verb = running ? 'Pause' : timer.accumulatedMs > 0 ? 'Resume' : 'Start'
 
   return (
-    <header aria-label="Today at a glance" className="app-topbar no-print sticky top-0 z-30 flex items-center gap-3 bg-bg px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10">
+    <header aria-label="Today at a glance" className="app-topbar no-print sticky top-0 z-30 flex items-center gap-3 bg-bg px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-10 @container">
       <button type="button" onClick={onSearch} aria-label="Search or jump"
-        className="glass flex min-h-10 min-w-0 items-center gap-2.5 rounded-xl px-3.5 text-[15px] text-muted transition hover:text-fg md:w-80">
-        <Search size={16} aria-hidden /><span aria-hidden className="hidden truncate md:inline">Search or jump…</span>
-        <span aria-hidden className="ml-auto hidden items-center gap-1 md:flex"><span className="kbd">Ctrl</span><span className="kbd">K</span></span>
+        className="glass flex min-h-10 min-w-0 shrink-0 items-center gap-2.5 rounded-full px-3.5 text-[15px] text-muted transition hover:text-fg @min-[56rem]:w-80 @min-[56rem]:rounded-xl">
+        <Search size={16} aria-hidden /><span aria-hidden className="hidden truncate @min-[56rem]:inline">Search or jump…</span>
+        <span aria-hidden className="ml-auto hidden items-center gap-1 @min-[56rem]:flex"><span className="kbd">Ctrl</span><span className="kbd">K</span></span>
       </button>
-      <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto sm:gap-2">
+      {/* The bar never scrolls: as it narrows, the search shrinks to its icon, labels shorten and the extras step aside (Home and
+          Flashcards say what is due, Progress has the streak), keeping the timer and the level. Sizes are of the bar itself. */}
+      <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
         {burst && (
-          <span className={`${chip} xp-pop ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>
+          <span className={`${extra} xp-pop @min-[30rem]:inline-flex ${burst.levelUp ? 'bg-accent-solid text-white' : 'tile-b text-fg'}`} aria-hidden>
             {burst.levelUp ? `Level up! Level ${burst.levelUp}` : `+${burst.gained} XP`}
           </span>
         )}
@@ -90,30 +95,36 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
           </button>
         </div>
         {period && (
-          <Link href="/planner" aria-label={period.label} className={`${chip} bg-surface text-fg`}>
-            <School size={15} aria-hidden /><span aria-hidden className="sm:hidden">{period.short}</span><span aria-hidden className="hidden sm:inline">{period.label}</span>
+          <Link href="/planner" aria-label={period.label} className={`${extra} bg-surface text-fg @min-[26rem]:inline-flex`}>
+            <School size={15} aria-hidden /><span aria-hidden className="@min-[72rem]:hidden">{period.short}</span><span aria-hidden className="hidden @min-[72rem]:inline">{period.label}</span>
           </Link>
         )}
         {due !== null && (
           <Link href={due > 0 ? '/review' : '/flashcards'} aria-label={due === 0 ? 'No cards due' : `${due} card${due === 1 ? '' : 's'} due`}
-            className={`${chip} ${due > 0 ? 'tile-a text-fg' : 'text-muted'} max-sm:hidden`}>{/* on a phone, Home and Flashcards say what is due */}
-            <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? <><span className="sm:hidden">0</span><span className="hidden sm:inline">No cards due</span></> : <><span className="sm:hidden">{due}</span><span className="hidden sm:inline">{due} card{due === 1 ? '' : 's'} due</span></>}</span>
+            className={`${extra} ${due > 0 ? 'tile-a text-fg' : 'text-muted'} @min-[40rem]:inline-flex`}>
+            <Layers size={15} aria-hidden /><span aria-hidden>{due === 0 ? <><span className="@min-[60rem]:hidden">0</span><span className="hidden @min-[60rem]:inline">No cards due</span></> : <><span className="@min-[60rem]:hidden">{due}</span><span className="hidden @min-[60rem]:inline">{due} card{due === 1 ? '' : 's'} due</span></>}</span>
           </Link>
         )}
         <span role="status" aria-live="polite" className="sr-only">
           {burst ? (burst.levelUp ? `Level up! You reached level ${burst.levelUp} (+${burst.gained} XP)` : `+${burst.gained} XP`) : ''}
         </span>
-        {xp && xp.streak > 0 && <span role="img" aria-label={`${xp.streak}-day streak`} className={`${chip} tile-c text-fg`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
+        {xp && xp.streak > 0 && <span role="img" aria-label={`${xp.streak}-day streak`} className={`${extra} tile-c text-fg @min-[30rem]:inline-flex`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
         {xp && (
           <span className={`${chip} bg-surface text-fg`}>
             <Zap size={15} className="text-accent" aria-hidden /><span>Level {xp.level.level}</span>
-            <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}
-              className="block h-1.5 w-8 overflow-hidden rounded-full bg-line max-[419px]:sr-only sm:w-14">
+            {/* the progress for screen readers always; drawn as a small bar when the top bar has room */}
+            <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`} className="sr-only" />
+            <span aria-hidden className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-line @min-[40rem]:block">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
             </span>
           </span>
         )}
       </div>
+      {/* a phone has no sidebar: the student's profile is at the end of this bar */}
+      <Link href="/profile" aria-label="Profile" aria-current={path.startsWith('/profile') ? 'page' : undefined}
+        className={`shrink-0 rounded-full ring-2 transition md:hidden ${path.startsWith('/profile') ? 'ring-accent' : 'ring-transparent'}`}>
+        <Avatar name={profile.display_name} color={profile.avatar_color} size={36} />
+      </Link>
     </header>
   )
 }

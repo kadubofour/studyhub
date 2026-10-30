@@ -17,7 +17,7 @@ async function coursePath(page: Page) {
 }
 
 const PUBLIC = ['/', '/login', '/signup', '/terms', '/privacy']
-const APP = ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/tutor', '/lectures', '/library', '/profile', '/courses']
+const APP = ['/home', '/planner', '/flashcards', '/notes', '/progress', '/settings', '/tutor', '/lectures', '/library', '/profile', '/courses', '/leaderboard']
 
 for (const scheme of ['light', 'dark'] as const) {
   test(`public pages have no serious accessibility problems (${scheme})`, async ({ page }) => {

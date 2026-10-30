@@ -57,7 +57,7 @@ describe('the Planner on a phone', () => {
     expect(bar).toContain('data-more={')
     expect(src('lib/ui/useEdgeFade.ts')).toContain('export function useEdgeFade')
   })
-  it('draws a course chip that is not chosen like the other chips: plain, with its colour square', () => {
-    expect(src('components/planner/CourseBar.tsx')).toContain("'border-transparent text-fg hover:bg-surface'")
+  it('draws a course chip that is not chosen like the other chips: the outlined choice pill, with its colour square', () => {
+    expect(src('components/planner/CourseBar.tsx')).toContain("'border-line bg-raised hover:bg-surface'")
   })
 })

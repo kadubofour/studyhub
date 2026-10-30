@@ -63,28 +63,36 @@ describe('the Look picker on a phone', () => {
 })
 
 describe('the dock on a phone', () => {
-  it('names Flashcards "Cards", so every label fits under its icon; the full name stays for screen readers', async () => {
-    const { PLACES, DOCK } = await import('@/lib/shell/nav')
-    expect(PLACES.find(p => p.href === '/flashcards')!.short).toBe('Cards')
-    for (const href of DOCK) expect((PLACES.find(p => p.href === href)!.short ?? PLACES.find(p => p.href === href)!.label).length).toBeLessThanOrEqual(7)
+  it('is a small pill of icons, with each place named for screen readers', () => {
     const src = fs.readFileSync('components/shell/AppShell.tsx', 'utf8')
-    expect(src).toContain('<span aria-hidden>{short ?? label}</span>')
+    expect(src).toContain('mx-auto flex w-fit items-center gap-1 rounded-full')
     expect(src).toContain('aria-label={label}')
+    expect(src).not.toContain('{short ?? label}')
   })
 })
 
 describe('Home\'s greeting on a phone', () => {
-  it('the focus timer is one row: the clock on the left, its buttons on the right', async () => {
+  it('the focus timer is one row on the card: the session and clock on the left, its buttons on the right', async () => {
     const { HeroFocus } = await import('@/components/home/HeroFocus')
     render(<HeroFocus mode="Focus" clock="25:00" running={false} resumable={false} onToggle={vi.fn()} />)
     const box = screen.getByText('25:00').closest('[data-hero-focus]')!
-    expect(box.className).toContain('max-sm:flex')
-    expect(box.className).toContain('max-sm:justify-between')
-    expect(screen.getByText('25:00').className).toContain('max-sm:text-3xl')
+    for (const c of ['max-sm:flex', 'max-sm:justify-between', 'max-sm:bg-transparent', 'max-sm:text-left']) expect(box.className).toContain(c)
+    expect(screen.getByText('25:00').className).toContain('max-sm:text-[2.75rem]')
   })
-  it('sits closer under the greeting on a phone', () => {
+  it('while it runs, Pause and Restart are round icons on a phone so they fit beside the clock, still named for screen readers', async () => {
+    const { HeroFocus } = await import('@/components/home/HeroFocus')
+    render(<HeroFocus mode="Focus" clock="24:58" running resumable={false} onToggle={vi.fn()} onRestart={vi.fn()} />)
+    const pause = screen.getByRole('button', { name: 'Pause' })
+    expect(pause.className).toContain('max-sm:w-11')
+    expect(pause.querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe('Pause')
+    expect(screen.getByRole('button', { name: 'Restart' })).toBeTruthy()
+  })
+  it('on a phone the timer row comes first, then the goal as a full-width bar', async () => {
     const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
-    expect(src).toContain('mt-5 flex flex-wrap items-center justify-between gap-4 sm:mt-7 sm:gap-6')
+    expect(src).toContain('max-sm:flex-col-reverse max-sm:items-stretch')
+    const { GoalRing } = await import('@/components/home/GoalRing')
+    render(<GoalRing percent={30} label="36m of 2h focus" />)
+    expect(document.querySelector('[data-goal-bar]')!.className).toContain('max-sm:w-full')
   })
 })
 
@@ -95,8 +103,14 @@ describe('the focus timer on Home, on a phone', () => {
     expect(screen.getByRole('button', { name: 'Start focus' }).querySelector('[class~="max-sm:sr-only"]')!.textContent).toBe(' focus')
     expect(screen.getByRole('link', { name: 'Open' }).className).toContain('max-sm:hidden')
   })
-  it('the greeting card is less padded on a phone', () => {
-    expect(fs.readFileSync('app/(app)/home/page.tsx', 'utf8')).toContain('className="hero hero-page max-sm:!pb-6 max-sm:!pt-6"')
+  it('on a phone Home keeps the notebook page, with the timer in one row and the shortcuts as plain icons', () => {
+    const src = fs.readFileSync('app/(app)/home/page.tsx', 'utf8')
+    expect(src).toContain('className="hero hero-page home-hero"')
+    expect(src).toContain('<div className="mt-5 grid grid-cols-4 gap-1 border-t border-white/20 pt-3 md:hidden">')
+    expect(src).not.toContain('rounded-full bg-white/20') // plain icons, no circles behind them
+    expect(fs.readFileSync('components/shell/TopBar.tsx', 'utf8')).toContain('<Link href="/profile" aria-label="Profile"') // the profile is in the top bar
+    expect(fs.readFileSync('components/home/HeroFocus.tsx', 'utf8')).toContain('max-sm:text-[2.75rem]')
+    expect(fs.readFileSync('app/globals.css', 'utf8')).not.toContain('.home-hero { background: none')
   })
 })
 
@@ -146,5 +160,19 @@ describe('a note\'s top bar on a phone', () => {
 describe('the soft button', () => {
   it('is a pill and nothing else: no squarer corner fighting it', () => {
     expect(BTN_SOFT.split(' ').filter(c => c.startsWith('rounded-'))).toEqual(['rounded-full'])
+  })
+})
+
+describe('one look for every choice on a phone', () => {
+  it('tabs, filters, view switches and sections on every page share the choice pill, chosen in ink', () => {
+    const files = ['app/(app)/planner/page.tsx', 'app/(app)/focus/page.tsx', 'app/(app)/library/page.tsx', 'components/notes/study/StudyPanel.tsx', 'components/calendar/CalendarToolbar.tsx',
+      'components/quiz/QuizStartDialog.tsx', 'components/ui/ViewOptions.tsx', 'components/ui/ChoiceChips.tsx', 'components/settings/SettingsRail.tsx', 'components/planner/CourseBar.tsx', 'components/planner/TaskRail.tsx']
+    for (const f of files) expect(fs.readFileSync(f, 'utf8'), f).toMatch(/[`"']choice /)
+    const css = fs.readFileSync('app/globals.css', 'utf8')
+    expect(css).toContain('.app-root .choice:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="true"], [aria-current="page"]) { border-color: var(--fg) !important; background: var(--fg) !important; color: var(--bg) !important;')
+  })
+  it('page header actions are the look\'s buttons, not tinted ones', () => {
+    expect(fs.readFileSync('components/quick/QuickActions.tsx', 'utf8')).not.toContain('BTN_SOFT')
+    expect(fs.readFileSync('components/quick/NewNoteButton.tsx', 'utf8')).toContain('className = BTN_OUTLINE')
   })
 })
