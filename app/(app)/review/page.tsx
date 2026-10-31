@@ -139,12 +139,16 @@ function Review() {
         )}
         {revealed && typed && (
           <div role="status" className="w-full space-y-1 border-t border-line pt-4 text-left">
+            {/* the word check answers at once; the meaning check may change it a moment later */}
+            <p className={`text-sm font-medium ${VERDICT[typed.check.verdict].color}`}>{VERDICT[typed.check.verdict].text}</p>
             {typed.marking
-              ? <Working kind="check" size="sm" label="Checking the meaning" className="text-sm text-muted" />
+              ? <Working kind="check" size="sm" label="Checking the meaning" className="text-xs text-muted" />
               : <>
-                  <p className={`text-sm font-medium ${VERDICT[typed.check.verdict].color}`}>{VERDICT[typed.check.verdict].text}</p>
                   {typed.feedback && <p className="text-sm">{typed.feedback}</p>}
                   <p className="text-xs text-muted">Suggested: {LABELS[typed.check.suggested]}</p>
+                  {typed.check.verdict !== 'correct' && (
+                    <button type="button" className="text-xs text-accent underline underline-offset-2" onClick={() => setTyped(t => (t ? { ...t, check: verdictCheck('correct') } : t))}>I was right</button>
+                  )}
                 </>}
             <p className="text-xs text-muted">You wrote</p>
             <p className="whitespace-pre-wrap text-sm">{typed.text}</p>

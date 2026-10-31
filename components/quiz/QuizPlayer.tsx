@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { finishAttempt, saveAttempt } from '@/lib/data/quizzes'
 import { markInstant, scoreOf } from '@/lib/quiz/marking'
+import { checkAnswer } from '@/lib/ui/answerCheck'
 import { answerText, optionLetter } from '@/lib/quiz/summary'
 import { BTN_SOLID } from '@/components/ui/buttonStyles'
 import type { AnswerRecord, Question, Quiz, QuizAttempt } from '@/lib/quiz/types'
@@ -58,7 +59,8 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
   async function check() {
     const given = typed.trim()
     if (!given) return
-    if (markInstant(q, given) === true) { await record({ given, correct: true, feedback: null }); return }
+    // a match, or a slip in a word, is right at once; only a different wording waits for the AI
+    if (markInstant(q, given) === true || checkAnswer(given, q.answer).verdict !== 'different') { await record({ given, correct: true, feedback: null }); return }
     setChecking(true); setError(null)
     try {
       const res = await fetch('/api/ai/quiz/mark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attemptId: attempt.id, questionId: q.id, answer: given }) })
@@ -182,6 +184,9 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
           {done.feedback && <p className="mt-2">{done.feedback}</p>}
           {q.explanation && <p className="mt-2 text-muted">{q.explanation}</p>}
           <div className="mt-4 flex items-center justify-end gap-3">
+            {q.type === 'short' && !done.correct && (
+              <button type="button" className="btn mr-auto" onClick={() => record({ ...done, correct: true })}>I was right</button>
+            )}
             <span className="hidden text-xs text-muted md:inline">Press Enter</span>
             {last ? <button ref={goOn} type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={finish}>See results</button>
               : <button ref={goOn} type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={next}>Next</button>}
