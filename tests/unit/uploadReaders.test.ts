@@ -60,6 +60,50 @@ describe('fileKind', () => {
   })
 })
 
+describe('pptxToNote: visual aids', () => {
+  const shape = (id: string, text: string, x: number) => `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="s"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="1000000"/><a:ext cx="1500000" cy="700000"/></a:xfrm><a:prstGeom prst="roundRect"/><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></p:spPr><p:txBody><a:p><a:r><a:t>${text}</a:t></a:r></a:p></p:txBody></p:sp>`
+  const arrowShape = `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="9" name="c"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="2600000" y="1300000"/><a:ext cx="1000000" cy="0"/></a:xfrm><a:prstGeom prst="straightConnector1"/><a:ln><a:solidFill><a:srgbClr val="333333"/></a:solidFill><a:tailEnd type="triangle"/></a:ln></p:spPr></p:cxnSp>`
+  const diagram = (title: string) => `<?xml version="1.0"?><p:sld ${A} ${P} ${R}><p:cSld><p:spTree>${sp(para(title), '<p:ph type="title"/>')}${shape('1', 'Sun', 500000)}${arrowShape}${shape('2', 'Leaf', 3800000)}</p:spTree></p:cSld></p:sld>`
+  const fakePng = new Blob(['png'], { type: 'image/png' })
+  it('draws a slide with a diagram whole and puts it under the slide\'s heading, before its bullets', async () => {
+    const svgs: string[] = []
+    const draw = async (svg: string, w: number, h: number) => { svgs.push(`${w}x${h}:${svg}`); return fakePng }
+    const kept: string[] = []
+    const keep = async (_b: Blob, alt: string) => { kept.push(alt); return `![${alt}](studyhub-image:slide.webp)` }
+    const out = await pptxToNote(await pptx([{ xml: diagram('Energy flow').replace('</p:spTree>', `${sp(para('From the sun to the leaf'))}</p:spTree>`) }]), 'Energy.pptx', keep, draw)
+    expect(kept).toEqual(['Slide 1: Energy flow'])
+    // the words in the diagram's shapes stay as text under the picture, so the note can still be searched and studied from
+    expect(out.content_md).toBe('## Slide 1: Energy flow\n\n![Slide 1: Energy flow](studyhub-image:slide.webp)\n\n- Sun\n- Leaf\n- From the sun to the leaf')
+    expect(svgs[0]).toMatch(/^1600x900:<svg /)
+    expect(svgs[0]).toContain('Sun')
+    expect(svgs[0]).toContain('Leaf')
+    expect(svgs[0]).toContain('<polygon') // the arrow's head
+  })
+  it('does not draw a slide that is only text', async () => {
+    const draw = async () => { throw new Error('should not draw') }
+    const out = await pptxToNote(await pptx([{ xml: slide(['Krebs cycle'], ['Takes place in the matrix']) }]), 'k.pptx', async () => 'x', draw)
+    expect(out.content_md).toBe('## Slide 1: Krebs cycle\n\n- Takes place in the matrix')
+  })
+  it('keeps the slide\'s own pictures one by one when it cannot be drawn', async () => {
+    const rels = `<?xml version="1.0"?><Relationships><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>`
+    const pic = `<p:pic><p:nvPicPr><p:cNvPr id="4" name="Picture" descr="The cell"/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr></p:pic>`
+    const xml = `<?xml version="1.0"?><p:sld ${A} ${P} ${R}><p:cSld><p:spTree>${shapes(['Cells'])}${pic}</p:spTree></p:cSld></p:sld>`
+    const out = await pptxToNote(await pptx([{ xml }], { 'ppt/slides/_rels/slide1.xml.rels': rels, 'ppt/media/image1.png': 'png' }), 'c.pptx', async (_b, alt) => `![${alt}](studyhub-image:c.webp)`, async () => null)
+    expect(out.content_md).toContain('![The cell](studyhub-image:c.webp)')
+  })
+  it('leaves out a picture that is on most slides (a logo), and draws no slide for it alone', async () => {
+    const rels = `<?xml version="1.0"?><Relationships><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/logo.png"/></Relationships>`
+    const logo = `<p:pic><p:nvPicPr><p:cNvPr id="4" name="Logo"/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr></p:pic>`
+    const slides = Array.from({ length: 4 }, (_, i) => ({ xml: `<?xml version="1.0"?><p:sld ${A} ${P} ${R}><p:cSld><p:spTree>${shapes([`Slide title ${i + 1}`])}${logo}</p:spTree></p:cSld></p:sld>` }))
+    const extra: Record<string, string> = { 'ppt/media/logo.png': 'png' }
+    slides.forEach((_, i) => { extra[`ppt/slides/_rels/slide${i + 1}.xml.rels`] = rels })
+    const calls: string[] = []
+    const out = await pptxToNote(await pptx(slides, extra), 'd.pptx', async (_b, alt) => { calls.push(alt); return `![${alt}](x)` }, async () => { calls.push('drawn'); return fakePng })
+    expect(calls).toEqual([])
+    expect(out.content_md).not.toContain('![')
+  })
+})
+
 describe('pptxToNote: pictures', () => {
   const pic = (rid: string, descr: string) => `<p:pic><p:nvPicPr><p:cNvPr id="4" name="Picture" descr="${descr}"/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"/></p:blipFill></p:pic>`
   const withPics = (inner: string) => `<?xml version="1.0"?><p:sld ${A} ${P} ${R}><p:cSld><p:spTree>${inner}</p:spTree></p:cSld></p:sld>`

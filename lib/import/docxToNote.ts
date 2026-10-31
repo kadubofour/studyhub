@@ -6,7 +6,9 @@ import { gfm } from 'turndown-plugin-gfm'
 // @ts-expect-error - no type declarations published
 import omml2mathml from 'omml2mathml'
 import { MathMLToLaTeX } from 'mathml-to-latex'
-import type { KeepPicture } from './pictures'
+import { svgToPng, type DrawSvg, type KeepPicture } from './pictures'
+import { treeToSvg, type Env } from './drawingml'
+import { readTheme } from './ooxml'
 
 // Word (.docx) → note Markdown. Word equations (OMML) become LaTeX ($…$ / $$…$$):
 // they are swapped for placeholder tokens before mammoth (which drops equations), then restored.
@@ -26,10 +28,11 @@ function ommlToLatex(el: Element): string | null {
   }
 }
 
-async function swapEquations(buf: ArrayBuffer): Promise<{ buf: ArrayBuffer; math: { latex: string; display: boolean }[] }> {
+async function swapEquations(buf: ArrayBuffer, visuals?: { keep: KeepPicture; draw: DrawSvg }): Promise<{ buf: ArrayBuffer; math: { latex: string; display: boolean }[]; drawings: string[] }> {
   const zip = await JSZip.loadAsync(buf)
   const file = zip.file('word/document.xml')
-  if (!file) return { buf, math: [] }
+  const drawings: string[] = [] // the Markdown of each drawn visual aid, by the number in its place-holder
+  if (!file) return { buf, math: [], drawings }
   const doc = new DOMParser().parseFromString(await file.async('string'), 'application/xml')
   const math: { latex: string; display: boolean }[] = []
 
@@ -55,8 +58,33 @@ async function swapEquations(buf: ArrayBuffer): Promise<{ buf: ArrayBuffer; math
     if (latex) math.push({ latex, display: false })
   }
 
+  // Drawings that are not picture files (diagrams of shapes and arrows, charts, SmartArt): mammoth drops them, so each is drawn here, kept as
+  // a picture, and left in its place as a place-holder
+  if (visuals) {
+    const env: Env = { zip, theme: await readTheme(zip, 'word/theme/theme1.xml'), defaultPt: 11 }
+    for (const d of Array.from(doc.getElementsByTagNameNS(W_NS, 'drawing'))) {
+      const drawn = d.getElementsByTagNameNS('*', 'wsp').length || d.getElementsByTagNameNS('*', 'wgp').length || d.getElementsByTagNameNS('*', 'chart').length || d.getElementsByTagNameNS('*', 'relIds').length
+      const ext = d.getElementsByTagNameNS('*', 'extent')[0]
+      const cx = Number(ext?.getAttribute('cx')), cy = Number(ext?.getAttribute('cy'))
+      if (!drawn || !(cx > 0) || !(cy > 0)) continue
+      let md = ''
+      try {
+        const png = await visuals.draw(await treeToSvg(d, 'word/document.xml', { ...env, box: { w: cx, h: cy } }, cx, cy), 1200, Math.max(1, Math.round((1200 * cy) / cx)))
+        const alt = d.getElementsByTagNameNS('*', 'docPr')[0]
+        md = (png && await visuals.keep(png, alt?.getAttribute('descr') || alt?.getAttribute('title') || 'Figure').catch(() => null)) || ''
+      } catch { md = '' }
+      // the whole run goes, so Word's picture-less fallback for the drawing is not left behind
+      let run: Element | null = d
+      while (run && run.localName !== 'r') run = run.parentElement
+      const token = tokenRun(`ZZVISUAL${drawings.length}ZZ`)
+      drawings.push(md)
+      if (run?.parentNode) run.parentNode.replaceChild(token, run)
+      else d.parentNode?.replaceChild(token, d)
+    }
+  }
+
   zip.file('word/document.xml', new XMLSerializer().serializeToString(doc))
-  return { buf: await zip.generateAsync({ type: 'arraybuffer' }), math }
+  return { buf: await zip.generateAsync({ type: 'arraybuffer' }), math, drawings }
 }
 
 // Escape Word text so it reads the same in Markdown: "$5" mustn't become math, "2*3*4" italics,
@@ -109,8 +137,8 @@ function extractTables(root: HTMLElement, td: TurndownService): string[] {
 }
 
 // keep: stores each picture and gives back its Markdown; without it a picture is only marked where it was
-export async function docxToNote(buf: ArrayBuffer, fileName: string, keep?: KeepPicture): Promise<ImportedNote> {
-  const { buf: swapped, math } = await swapEquations(buf)
+export async function docxToNote(buf: ArrayBuffer, fileName: string, keep?: KeepPicture, draw: DrawSvg = svgToPng): Promise<ImportedNote> {
+  const { buf: swapped, math, drawings } = await swapEquations(buf, keep ? { keep, draw } : undefined)
   // mammoth's browser build reads an ArrayBuffer; its Node build (tests) needs a Buffer
   const input = typeof window !== 'undefined' && typeof (globalThis as { Buffer?: unknown }).Buffer === 'undefined'
     ? { arrayBuffer: swapped }
@@ -142,6 +170,7 @@ export async function docxToNote(buf: ArrayBuffer, fileName: string, keep?: Keep
 
   let md = td.turndown(container.innerHTML)
   md = md.replace(/ZZTABLE(\d+)ZZ/g, (_, i: string) => tables[Number(i)] ?? '')
+  md = md.replace(/ZZVISUAL(\d+)ZZ/g, (_, i: string) => (drawings[Number(i)] ? `\n\n${drawings[Number(i)]}\n\n` : ''))
   md = md.replace(/ZZ([DI])MATH(\d+)ZZ/g, (_, kind: string, i: string) => {
     const m = math[Number(i)]
     if (!m) return ''

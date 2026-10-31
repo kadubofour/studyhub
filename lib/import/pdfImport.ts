@@ -46,7 +46,7 @@ const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError'
 export async function importPdf(file: File, userId: string, signal?: AbortSignal, keep?: KeepPicture): Promise<PdfImportResult> {
   if (file.size > MAX_PDF_BYTES) throw new Error('This PDF is larger than 24 MB.')
   const doc = await loadPdf(file)
-  const none: PagePictures = { pictures: async () => [], snapshot: async () => null }
+  const none: PagePictures = { pictures: async () => [], crop: async () => null, snapshot: async () => null }
   const source = keep ? pdfPagePictures(doc, keep, (await import('pdfjs-dist')).OPS) : none
   if (doc.numPages > MAX_PDF_PAGES) throw new Error(`This PDF has more than ${MAX_PDF_PAGES} pages.`)
 
@@ -76,7 +76,7 @@ export async function importPdf(file: File, userId: string, signal?: AbortSignal
     }
   }
   if (signal?.aborted) throw Object.assign(new Error('Import cancelled'), { name: 'AbortError' })
-  const text = await textWithPictures(await pdfPages(doc), source.pictures)
+  const text = await textWithPictures(await pdfPages(doc), source)
   const limit = reason === 'daily_limit' || reason === 'fair_use' ? reason : undefined
   return { title: file.name.replace(/\.pdf$/i, ''), content_md: text, via: 'text', notice: MESSAGES[reason] ?? MESSAGES.ai_failed, limit }
 }

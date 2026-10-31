@@ -67,6 +67,26 @@ async function browserRedraw(b: Blob): Promise<Blob | null> {
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
 }
 
+/** Draws an SVG as a picture of width by height pixels (PNG); null when the browser cannot, or takes too long */
+export type DrawSvg = (svg: string, width: number, height: number) => Promise<Blob | null>
+export const svgToPng: DrawSvg = (svg, width, height) => new Promise(resolve => {
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }))
+  const img = new Image()
+  const done = (b: Blob | null) => { URL.revokeObjectURL(url); clearTimeout(timer); resolve(b) }
+  const timer = setTimeout(() => done(null), 10_000)
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = width; canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return done(null)
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, height)
+    ctx.drawImage(img, 0, 0, width, height)
+    canvas.toBlob(b => done(b), 'image/png')
+  }
+  img.onerror = () => done(null)
+  img.src = url
+})
+
 /** A media type from a file name in an Office file (ppt/media/image3.jpeg) */
 export function mediaType(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() ?? ''

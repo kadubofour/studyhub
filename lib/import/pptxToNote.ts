@@ -1,5 +1,7 @@
 import JSZip from 'jszip'
-import { mediaType, type KeepPicture } from './pictures'
+import { mediaType, svgToPng, type DrawSvg, type KeepPicture } from './pictures'
+import { hasVisualAid, treeToSvg, type Env } from './drawingml'
+import { readRels, readTheme, readXml } from './ooxml'
 
 export const MAX_SLIDES = 200
 export const MAX_PPTX_BYTES = 100 * 1024 * 1024
@@ -112,8 +114,10 @@ async function slideFiles(zip: JSZip): Promise<string[]> {
 }
 
 // A PowerPoint (.pptx) → note Markdown: a section per slide (its title is the heading, the rest bullets and tables), with speaker notes.
-// keep: stores each picture on a slide and gives back its Markdown; without it pictures are left out, as before
-export async function pptxToNote(buf: ArrayBuffer, fileName: string, keep?: KeepPicture): Promise<{ title: string; content_md: string; notice?: string }> {
+// keep: stores a picture and gives back its Markdown; without it pictures are left out, as before.
+// A slide with something to look at beyond its text (a diagram of shapes and arrows, a chart, SmartArt, a picture) is drawn as a picture of
+// the whole slide and put under its heading: most visual aids are drawn shapes, not picture files. draw makes the picture (tests give their own).
+export async function pptxToNote(buf: ArrayBuffer, fileName: string, keep?: KeepPicture, draw: DrawSvg = svgToPng): Promise<{ title: string; content_md: string; notice?: string }> {
   if (buf.byteLength > MAX_PPTX_BYTES) throw new Error('Slides can be up to 100 MB.')
   const zip = await JSZip.loadAsync(buf)
   const files = await slideFiles(zip)
@@ -122,6 +126,15 @@ export async function pptxToNote(buf: ArrayBuffer, fileName: string, keep?: Keep
   let title = ''
   let unreadable = 0
   const hasRels = Object.keys(zip.files).some(n => n.startsWith('ppt/slides/_rels/'))
+  // what the drawings need: the slide size, the theme's colours, and the pictures on many slides (a logo, a background), which are left out
+  const size = (await readXml(zip, 'ppt/presentation.xml'))?.getElementsByTagNameNS(P_NS, 'sldSz')[0]
+  const [slideW, slideH] = [Number(size?.getAttribute('cx')) || 9144000, Number(size?.getAttribute('cy')) || 5143500]
+  const env: Env = { zip, theme: keep ? await readTheme(zip, 'ppt/theme/theme1.xml') : {}, defaultPt: 18, skipMedia: new Set() }
+  if (keep && files.length >= 4) {
+    const used = new Map<string, number>()
+    for (const path of files) for (const t of new Set((await readRels(zip, path)).filter(r => /\/image$/.test(r.type)).map(r => r.target))) used.set(t, (used.get(t) ?? 0) + 1)
+    for (const [t, n] of used) if (n >= 3) env.skipMedia!.add(t)
+  }
   for (const path of files.slice(0, MAX_SLIDES)) {
     try {
       const c = content(await zip.file(path)!.async('string'))
@@ -133,18 +146,26 @@ export async function pptxToNote(buf: ArrayBuffer, fileName: string, keep?: Keep
       const notePath = noteRel ? resolve(dir, noteRel.target) : hasRels ? '' : `ppt/notesSlides/notesSlide${/slide(\d+)\.xml$/.exec(name)?.[1]}.xml`
       const noteFile = notePath ? zip.file(notePath) : null
       const notes = noteFile ? content(await noteFile.async('string'), true).items.map(i => (i.kind === 'text' ? i.text : '')).filter(Boolean).join(' ') : ''
-      // the slide's pictures, from its own relationships, in place among its text
+      // a slide with a visual aid is drawn whole and its picture goes under its heading; if that cannot be done, its pictures are kept one by one
+      let drawn: string | null = null
+      const tree = keep ? parse(await zip.file(path)!.async('string')).getElementsByTagNameNS(P_NS, 'spTree')[0] : null
+      if (keep && tree && hasVisualAid(tree, env.skipMedia, await readRels(zip, path))) {
+        try {
+          const png = await draw(await treeToSvg(tree, path, env, slideW, slideH), 1600, Math.round((1600 * slideH) / slideW))
+          drawn = png ? await keep(png, `Slide ${sections.length + 1}${c.title ? `: ${c.title}` : ''}`).catch(() => null) : null
+        } catch { drawn = null }
+      }
       for (let k = 0; k < c.items.length; k++) {
         const it = c.items[k]
         if (it.kind !== 'pic') continue
         const rel = rels.find(r => r.id === it.rid && /\/image$/.test(r.type))
-        const media = rel && keep ? zip.file(resolve(dir, rel.target)) : null
+        const media = rel && keep && !drawn && !env.skipMedia!.has(resolve(dir, rel.target)) ? zip.file(resolve(dir, rel.target)) : null
         const md = media ? await keep!(new Blob([await media.async('arraybuffer')], { type: mediaType(rel!.target) }), it.alt).catch(() => null) : null
         c.items[k] = md ? { kind: 'md', md } : { kind: 'text', text: '' }
       }
       c.items = c.items.filter(i => i.kind !== 'text' || i.text)
       if (!title && c.title) title = c.title
-      sections.push([`## Slide ${sections.length + 1}${c.title ? `: ${c.title}` : ''}`, ...itemsMd(c.items), ...(notes ? [`*Notes:* ${notes}`] : [])].join('\n\n'))
+      sections.push([`## Slide ${sections.length + 1}${c.title ? `: ${c.title}` : ''}`, ...(drawn ? [drawn] : []), ...itemsMd(c.items), ...(notes ? [`*Notes:* ${notes}`] : [])].join('\n\n'))
     } catch { unreadable++ }
   }
   if (!sections.length) throw new Error('This file could not be read.')
