@@ -19,6 +19,7 @@ import { isRecording } from '@/lib/lectures/recordingGuard'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import type { Course } from '@/lib/types'
 import { LimitPrompt } from '@/components/billing/LimitPrompt'
+import { pictureKeeper } from '@/lib/import/pictures'
 
 type Draft = { title: string; content_md: string; notice?: string; via?: 'ai' | 'text'; limit?: 'daily_limit' | 'fair_use' }
 
@@ -88,25 +89,27 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
     const gen = ++generation.current
     const controller = new AbortController()
     abort.current = controller
+    // the file's pictures go into the note as pictures, where they were (stored like pictures pasted into a note)
+    const keep = pictureKeeper(supabase(), profile.id)
     setStage('working')
     try {
       let result: Draft
       if (kind === 'docx') {
         setWorking({ label: 'Reading your Word document' })
         const { docxToNote } = await import('@/lib/import/docxToNote')
-        result = await docxToNote(await file.arrayBuffer(), file.name)
+        result = await docxToNote(await file.arrayBuffer(), file.name, keep)
       } else if (kind === 'pptx') {
         setWorking({ label: 'Reading your slides' })
         const { pptxToNote } = await import('@/lib/import/pptxToNote')
-        result = await pptxToNote(await file.arrayBuffer(), file.name)
+        result = await pptxToNote(await file.arrayBuffer(), file.name, keep)
       } else if (kind === 'text') {
         setWorking({ label: 'Reading your file' })
         const { textToNote } = await import('@/lib/import/textToNote')
         result = textToNote(await file.arrayBuffer(), file.name)
       } else {
-        setWorking({ label: 'Reading your PDF with AI', steps: ['Finding the headings', 'Laying out lists and tables', 'Writing out the equations', 'Putting your note together'] })
+        setWorking({ label: 'Reading your PDF with AI', steps: ['Finding the headings', 'Laying out lists and tables', 'Writing out the equations', 'Taking out the pictures', 'Putting your note together'] })
         const { importPdf } = await import('@/lib/import/pdfImport')
-        result = await importPdf(file, profile.id, controller.signal)
+        result = await importPdf(file, profile.id, controller.signal, keep)
       }
       if (gen !== generation.current) return // cancelled meanwhile
       setDraft(result)
@@ -197,8 +200,8 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
             <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span>
             <span><span className="block text-sm font-medium">{fromMaterial ? 'Make a note from it' : 'Make a note'}</span>
               <span className="block text-xs text-muted">{picked.kind === 'image' ? 'Scan reads the photo with AI, which uses an AI action.'
-                : picked.kind === 'pdf' ? 'AI reads the PDF into headings, lists and tables, which uses AI actions. You check it before saving.'
-                : 'It is read here for free. You check it before saving.'}{fromMaterial || picked.kind === 'image' ? '' : ' The file is kept too.'}</span></span>
+                : picked.kind === 'pdf' ? 'AI reads the PDF into headings, lists and tables, and its pictures go in where they were. It uses AI actions; you check it before saving.'
+                : 'It is read here for free, pictures and all. You check it before saving.'}{fromMaterial || picked.kind === 'image' ? '' : ' The file is kept too.'}</span></span>
           </button>
           {!fromMaterial && (
             <button type="button" className={option} onClick={() => setStage('keep')}>

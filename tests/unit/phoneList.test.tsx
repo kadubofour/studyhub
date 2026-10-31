@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
+import { Mic } from 'lucide-react'
 import { CardsMark, ChatMark, ChecklistMark, ComposeButton, FileMark, PhoneCount, PhoneGroup, PhoneRow, PhoneTitle, SheetMark, StripMark, tick } from '@/components/ui/PhoneList'
 
 afterEach(cleanup)
@@ -38,7 +39,7 @@ describe('the parts of a phone list page', () => {
     expect([...container.querySelectorAll('[data-motif]')].map(e => e.getAttribute('data-motif'))).toEqual(['sheets', 'cards', 'strip', 'checklist', 'chat', 'file'])
   })
   it('counts what is listed, and has a round button for a new one, as a link or a button', () => {
-    render(<><PhoneCount n={2} one="deck" many="decks" /><ComposeButton label="Record a lecture" icon={() => null} href="/lectures/record" /></>)
+    render(<><PhoneCount n={2} one="deck" many="decks" /><ComposeButton label="Record a lecture" icon={Mic} href="/lectures/record" /></>)
     expect(screen.getByText('2 decks')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Record a lecture' }).getAttribute('href')).toBe('/lectures/record')
   })

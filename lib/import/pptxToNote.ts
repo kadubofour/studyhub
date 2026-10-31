@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { mediaType, type KeepPicture } from './pictures'
 
 export const MAX_SLIDES = 200
 export const MAX_PPTX_BYTES = 100 * 1024 * 1024
@@ -8,7 +9,8 @@ const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationship
 // Placeholders that hold furniture, not content
 const FURNITURE = new Set(['sldNum', 'sldImg', 'hdr', 'ftr', 'dt'])
 
-type Item = { kind: 'text'; text: string } | { kind: 'table'; rows: string[][] }
+// a picture is found by its relationship id, then stored and written as Markdown (md) before the slide is written out
+type Item = { kind: 'text'; text: string } | { kind: 'table'; rows: string[][] } | { kind: 'pic'; rid: string; alt: string } | { kind: 'md'; md: string }
 type Content = { title: string; items: Item[] }
 
 const parse = (xml: string): Document => {
@@ -41,6 +43,10 @@ function readTree(tree: Element, out: Content) {
       const paras = paragraphsOf(node)
       if (type === 'title' || type === 'ctrTitle') out.title = [out.title, ...paras].filter(Boolean).join(' ')
       else for (const text of paras) out.items.push({ kind: 'text', text })
+    } else if (local(node) === 'pic') {
+      const rid = node.getElementsByTagNameNS(A_NS, 'blip')[0]?.getAttributeNS(R_NS, 'embed')
+      const alt = node.getElementsByTagNameNS(P_NS, 'cNvPr')[0]?.getAttribute('descr') ?? ''
+      if (rid) out.items.push({ kind: 'pic', rid, alt })
     } else if (local(node) === 'graphicFrame') {
       const tbl = node.getElementsByTagNameNS(A_NS, 'tbl')[0]
       if (!tbl) continue
@@ -72,7 +78,8 @@ function itemsMd(items: Item[]): string[] {
   const flush = () => { if (bullets.length) out.push(bullets.join('\n')); bullets = [] }
   for (const i of items) {
     if (i.kind === 'text') bullets.push(`- ${i.text}`)
-    else { flush(); out.push(tableMd(i.rows)) }
+    else if (i.kind === 'table') { flush(); out.push(tableMd(i.rows)) }
+    else if (i.kind === 'md') { flush(); out.push(i.md) }
   }
   flush()
   return out
@@ -105,7 +112,8 @@ async function slideFiles(zip: JSZip): Promise<string[]> {
 }
 
 // A PowerPoint (.pptx) → note Markdown: a section per slide (its title is the heading, the rest bullets and tables), with speaker notes.
-export async function pptxToNote(buf: ArrayBuffer, fileName: string): Promise<{ title: string; content_md: string; notice?: string }> {
+// keep: stores each picture on a slide and gives back its Markdown; without it pictures are left out, as before
+export async function pptxToNote(buf: ArrayBuffer, fileName: string, keep?: KeepPicture): Promise<{ title: string; content_md: string; notice?: string }> {
   if (buf.byteLength > MAX_PPTX_BYTES) throw new Error('Slides can be up to 100 MB.')
   const zip = await JSZip.loadAsync(buf)
   const files = await slideFiles(zip)
@@ -125,6 +133,16 @@ export async function pptxToNote(buf: ArrayBuffer, fileName: string): Promise<{ 
       const notePath = noteRel ? resolve(dir, noteRel.target) : hasRels ? '' : `ppt/notesSlides/notesSlide${/slide(\d+)\.xml$/.exec(name)?.[1]}.xml`
       const noteFile = notePath ? zip.file(notePath) : null
       const notes = noteFile ? content(await noteFile.async('string'), true).items.map(i => (i.kind === 'text' ? i.text : '')).filter(Boolean).join(' ') : ''
+      // the slide's pictures, from its own relationships, in place among its text
+      for (let k = 0; k < c.items.length; k++) {
+        const it = c.items[k]
+        if (it.kind !== 'pic') continue
+        const rel = rels.find(r => r.id === it.rid && /\/image$/.test(r.type))
+        const media = rel && keep ? zip.file(resolve(dir, rel.target)) : null
+        const md = media ? await keep!(new Blob([await media.async('arraybuffer')], { type: mediaType(rel!.target) }), it.alt).catch(() => null) : null
+        c.items[k] = md ? { kind: 'md', md } : { kind: 'text', text: '' }
+      }
+      c.items = c.items.filter(i => i.kind !== 'text' || i.text)
       if (!title && c.title) title = c.title
       sections.push([`## Slide ${sections.length + 1}${c.title ? `: ${c.title}` : ''}`, ...itemsMd(c.items), ...(notes ? [`*Notes:* ${notes}`] : [])].join('\n\n'))
     } catch { unreadable++ }

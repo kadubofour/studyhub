@@ -6,6 +6,7 @@ import { gfm } from 'turndown-plugin-gfm'
 // @ts-expect-error - no type declarations published
 import omml2mathml from 'omml2mathml'
 import { MathMLToLaTeX } from 'mathml-to-latex'
+import type { KeepPicture } from './pictures'
 
 // Word (.docx) → note Markdown. Word equations (OMML) become LaTeX ($…$ / $$…$$):
 // they are swapped for placeholder tokens before mammoth (which drops equations), then restored.
@@ -72,10 +73,14 @@ function turndown(): TurndownService {
   const td = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', emDelimiter: '*' })
   td.use(gfm)
   td.escape = escapeMarkdownText
-  // Images aren't imported (they would bloat the note); leave a readable marker
+  // A picture that was kept is written as the note's picture; one that was not (no keeper, or left out) leaves a readable marker
   td.addRule('image', {
     filter: 'img',
-    replacement: (_content, node) => `*[Image${(node as HTMLImageElement).alt ? `: ${(node as HTMLImageElement).alt}` : ''}]*`,
+    replacement: (_content, node) => {
+      const img = node as HTMLImageElement
+      const kept = img.getAttribute('data-kept')
+      return kept ? `\n\n${kept}\n\n` : `*[Image${img.alt ? `: ${img.alt}` : ''}]*`
+    },
   })
   return td
 }
@@ -103,7 +108,8 @@ function extractTables(root: HTMLElement, td: TurndownService): string[] {
   return tables
 }
 
-export async function docxToNote(buf: ArrayBuffer, fileName: string): Promise<ImportedNote> {
+// keep: stores each picture and gives back its Markdown; without it a picture is only marked where it was
+export async function docxToNote(buf: ArrayBuffer, fileName: string, keep?: KeepPicture): Promise<ImportedNote> {
   const { buf: swapped, math } = await swapEquations(buf)
   // mammoth's browser build reads an ArrayBuffer; its Node build (tests) needs a Buffer
   const input = typeof window !== 'undefined' && typeof (globalThis as { Buffer?: unknown }).Buffer === 'undefined'
@@ -113,8 +119,13 @@ export async function docxToNote(buf: ArrayBuffer, fileName: string): Promise<Im
     input as Parameters<typeof mammoth.convertToHtml>[0],
     {
       styleMap: ["p[style-name='Title'] => h1.doc-title:fresh"],
-      // Don't embed images as huge base64 data URIs in the note
-      convertImage: mammoth.images.imgElement(async () => ({ src: '' })),
+      // Never as base64 in the note: a kept picture is stored and its Markdown carried on the element, swapped in by turndown
+      convertImage: mammoth.images.imgElement(async image => {
+        if (!keep) return { src: '' }
+        const blob = new Blob([new Uint8Array(await image.read())], { type: image.contentType })
+        const md = await keep(blob, (image as { altText?: string }).altText ?? '').catch(() => null)
+        return md ? { src: '', 'data-kept': md } : { src: '' }
+      }),
     },
   )
 

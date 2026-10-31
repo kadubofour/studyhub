@@ -2,6 +2,9 @@
 import { supabase } from '@/lib/supabase/client'
 import type { ImportedNote } from './docxToNote'
 import { AI_USED } from '@/components/ai/aiFetch'
+import type { KeepPicture } from './pictures'
+import { placeFigures, textWithPictures, type PagePictures } from './placeFigures'
+import { pdfPagePictures } from './pdfPictures'
 
 // Base64 grows a PDF by a third and the AI request is capped at 32 MB, hence 24 MB
 export const MAX_PDF_BYTES = 24 * 1024 * 1024
@@ -39,9 +42,12 @@ const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError'
 
 // Upload to the student's private folder, convert on the server with OpenAI, then clean up.
 // AI problems fall back to extracting the PDF's text in the browser; cancelling stops everything.
-export async function importPdf(file: File, userId: string, signal?: AbortSignal): Promise<PdfImportResult> {
+// keep: stores the PDF's pictures, which go into the note where its figures were (see placeFigures); without it they are left out
+export async function importPdf(file: File, userId: string, signal?: AbortSignal, keep?: KeepPicture): Promise<PdfImportResult> {
   if (file.size > MAX_PDF_BYTES) throw new Error('This PDF is larger than 24 MB.')
   const doc = await loadPdf(file)
+  const none: PagePictures = { pictures: async () => [], snapshot: async () => null }
+  const source = keep ? pdfPagePictures(doc, keep, (await import('pdfjs-dist')).OPS) : none
   if (doc.numPages > MAX_PDF_PAGES) throw new Error(`This PDF has more than ${MAX_PDF_PAGES} pages.`)
 
   const base = (file.name.replace(/[^\w .()-]/g, '_').slice(0, 100) || 'document').replace(/\.pdf$/i, '')
@@ -58,7 +64,8 @@ export async function importPdf(file: File, userId: string, signal?: AbortSignal
       if (res.ok) {
         const note = await res.json() as ImportedNote & { truncated: boolean }
         window.dispatchEvent(new Event(AI_USED))
-        return { ...note, via: 'ai', notice: note.truncated ? 'This PDF is very long; the end may be missing.' : undefined }
+        if (signal?.aborted) throw Object.assign(new Error('Import cancelled'), { name: 'AbortError' })
+        return { ...note, content_md: await placeFigures(note.content_md, source), via: 'ai', notice: note.truncated ? 'This PDF is very long; the end may be missing.' : undefined }
       }
       reason = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'ai_failed'
     } catch (e) {
@@ -69,13 +76,13 @@ export async function importPdf(file: File, userId: string, signal?: AbortSignal
     }
   }
   if (signal?.aborted) throw Object.assign(new Error('Import cancelled'), { name: 'AbortError' })
-  const text = await pdfToText(doc)
+  const text = await textWithPictures(await pdfPages(doc), source.pictures)
   const limit = reason === 'daily_limit' || reason === 'fair_use' ? reason : undefined
   return { title: file.name.replace(/\.pdf$/i, ''), content_md: text, via: 'text', notice: MESSAGES[reason] ?? MESSAGES.ai_failed, limit }
 }
 
-// Plain-text fallback: one paragraph per text block, pages separated by a rule
-async function pdfToText(doc: Awaited<ReturnType<typeof loadPdf>>): Promise<string> {
+// Plain-text fallback: one paragraph per text block, a page at a time (textWithPictures puts each page's pictures after it)
+async function pdfPages(doc: Awaited<ReturnType<typeof loadPdf>>): Promise<string[]> {
   const pages: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
     const content = await (await doc.getPage(i)).getTextContent()
@@ -89,5 +96,5 @@ async function pdfToText(doc: Awaited<ReturnType<typeof loadPdf>>): Promise<stri
     if (line.trim()) lines.push(line.trim())
     pages.push(lines.join('\n').replace(/\n{2,}/g, '\n\n'))
   }
-  return pages.filter(Boolean).join('\n\n---\n\n')
+  return pages
 }

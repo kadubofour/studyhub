@@ -18,6 +18,25 @@ const md = [
   'Plain **bold** text with snake_case_words.',
 ].join('\n')
 
+describe('docxToNote: pictures', () => {
+  // a 1x1 PNG, embedded through the Word export, which is how a real document carries one
+  const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), c => c.charCodeAt(0))
+  const withPicture = () => notesToDocx([{ title: 'Cells', course: null, content_md: 'Before the picture.\n\n![A cell](studyhub-image:cell.png)\n\nAfter it.' }],
+    async () => ({ data: png, width: 1, height: 1, type: 'png' }))
+  it('keeps a picture where it was, with its description, when there is a keeper', async () => {
+    const kept: string[] = []
+    const keep = async (b: Blob, alt: string) => { kept.push(`${b.type}:${alt}`); return `![${alt}](studyhub-image:kept.webp)` }
+    const note = await docxToNote(await (await withPicture()).arrayBuffer(), 'cells.docx', keep)
+    expect(kept).toEqual(['image/png:A cell'])
+    expect(note.content_md).toBe('Before the picture.\n\n![A cell](studyhub-image:kept.webp)\n\nAfter it.')
+  })
+  it('only marks where a picture was without a keeper, or when it is left out', async () => {
+    const buf = await (await withPicture()).arrayBuffer()
+    expect((await docxToNote(buf, 'cells.docx')).content_md).toContain('*[Image: A cell]*')
+    expect((await docxToNote(buf, 'cells.docx', async () => null)).content_md).toContain('*[Image: A cell]*')
+  })
+})
+
 describe('docxToNote (Word import)', () => {
   it('round-trips headings, lists, bold and equations from a Word file', async () => {
     const blob = await notesToDocx([{ title: 'Quadratics', course: null, content_md: md }])

@@ -60,6 +60,25 @@ describe('fileKind', () => {
   })
 })
 
+describe('pptxToNote: pictures', () => {
+  const pic = (rid: string, descr: string) => `<p:pic><p:nvPicPr><p:cNvPr id="4" name="Picture" descr="${descr}"/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"/></p:blipFill></p:pic>`
+  const withPics = (inner: string) => `<?xml version="1.0"?><p:sld ${A} ${P} ${R}><p:cSld><p:spTree>${inner}</p:spTree></p:cSld></p:sld>`
+  const rels = `<?xml version="1.0"?><Relationships><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>`
+  it('keeps a slide\'s picture where it sits among the text, with its description', async () => {
+    const kept: { type: string; alt: string }[] = []
+    const keep = async (b: Blob, alt: string) => { kept.push({ type: b.type, alt }); return `![${alt}](studyhub-image:a.webp)` }
+    const out = await pptxToNote(await pptx([{ xml: withPics(shapes(['Krebs cycle'], ['Before the diagram']) + pic('rId2', 'The cycle') + shapes(['After it'])) }],
+      { 'ppt/slides/_rels/slide1.xml.rels': rels, 'ppt/media/image1.png': 'png-bytes' }), 'k.pptx', keep)
+    expect(kept).toEqual([{ type: 'image/png', alt: 'The cycle' }])
+    expect(out.content_md).toBe('## Slide 1: Krebs cycle\n\n- Before the diagram\n\n![The cycle](studyhub-image:a.webp)\n\n- After it')
+  })
+  it('leaves a picture out when it is not kept, or when there is no keeper', async () => {
+    const deck = await pptx([{ xml: withPics(shapes(['T']) + pic('rId2', 'x')) }], { 'ppt/slides/_rels/slide1.xml.rels': rels, 'ppt/media/image1.png': 'png' })
+    expect((await pptxToNote(deck, 'a.pptx', async () => null)).content_md).toBe('## Slide 1: T')
+    expect((await pptxToNote(deck, 'a.pptx')).content_md).toBe('## Slide 1: T')
+  })
+})
+
 describe('pptxToNote', () => {
   it('turns each slide into a titled section with its other text as bullets, in slide order', async () => {
     const out = await pptxToNote(await pptx([
