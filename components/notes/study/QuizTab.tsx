@@ -8,6 +8,7 @@ import { postAi } from '@/components/ai/aiFetch'
 import { AiError } from '@/components/ai/AiError'
 import type { Quiz, QuestionType } from '@/lib/quiz/types'
 import { Dropdown } from '@/components/ui/Dropdown'
+import { Working } from '@/components/ui/Working'
 
 const TYPES: [QuestionType, string][] = [['mcq', 'Multiple choice'], ['true_false', 'True/false'], ['short', 'Short answer']]
 
@@ -42,7 +43,9 @@ export function QuizTab({ note, prepare }: { note: { id: string }; prepare: () =
           </label>
         ))}
       </fieldset>
-      <button type="button" className="btn-primary" disabled={busy || !types.length} onClick={create}>{busy ? 'Writing quiz…' : '✦ New quiz'}</button>
+      {busy
+        ? <Working kind="quiz" label="Writing your quiz" steps={[`Choosing ${count} questions`, 'Writing the answers', 'Mixing up the choices']} className="rounded-2xl bg-surface py-5" />
+        : <button type="button" className="btn-primary" disabled={!types.length} onClick={create}>✦ New quiz</button>}
       {error && <AiError code={error.code} message={error.message} />}
       {past.length > 0 && (
         <div className="pt-2">

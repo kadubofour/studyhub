@@ -27,6 +27,7 @@ import type { Attachment } from '@/lib/tutor/attachments'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
+import { Working } from '@/components/ui/Working'
 
 const nowMs = () => Date.now() // a plain function, so reading the clock in a click handler is not mistaken for reading it while drawing
 const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for good: a new one each render would make the picker load everything again
@@ -267,7 +268,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     try { await deleteChat(supabase(), chatId); router.push('/tutor') } catch { toast('Couldn\'t delete the chat.') }
   }
 
-  if (!chat) return <p className="text-sm text-muted">Loading…</p>
+  if (!chat) return <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
   const where = chat.note_id ? `/notes/${chat.note_id}` : chat.lecture_id ? `/lectures/${chat.lecture_id}` : null
   const last = messages[messages.length - 1]
   const lastQuestion = [...messages].reverse().find(m => m.role === 'user')
@@ -376,7 +377,7 @@ export function ChatView({ chatId }: { chatId: string }) {
         {partial && last?.role === 'user' && idle && (
           <div className="space-y-1"><MarkdownView source={partial} /><p className="text-xs text-muted">Stopped.</p></div>
         )}
-        {live !== null && (live ? <MarkdownView source={live} /> : <p role="status" className="text-sm text-muted motion-safe:animate-pulse">Thinking…</p>)}
+        {live !== null && (live ? <MarkdownView source={live} /> : <Working kind="think" size="sm" label="Thinking" className="text-sm text-muted" />)}
         <div ref={end} />
       </div>
 
@@ -414,7 +415,7 @@ export function ChatView({ chatId }: { chatId: string }) {
                   <button type="button" aria-label={`Remove ${p.name}`} disabled={uploading} className="grid size-6 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg pointer-coarse:size-9" onClick={() => removePending(p.id)}><X size={13} aria-hidden /></button>
                 </li>
               ))}
-              {reading > 0 && <li role="status" className="flex items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5 text-xs text-muted"><Loader2 size={13} className="animate-spin" aria-hidden />Reading…</li>}
+              {reading > 0 && <li className="flex items-center rounded-xl border border-line px-2.5 py-1 text-xs text-muted"><Working kind="read" size="sm" label="Reading" /></li>}
             </ul>
           )}
           <textarea ref={box} className="block max-h-48 min-h-11 w-full resize-none border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}

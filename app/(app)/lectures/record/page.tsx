@@ -5,6 +5,7 @@ import { Recorder, type RecorderDeps } from '@/components/lectures/Recorder'
 import { speechRecognition } from '@/lib/lectures/liveTranscript'
 import { indexedDbStore } from '@/lib/lectures/localStore'
 import { partSeconds } from '@/lib/lectures/time'
+import { Working } from '@/components/ui/Working'
 
 const noopSubscribe = () => () => {}
 
@@ -26,7 +27,7 @@ export default function RecordLecturePage() {
   return (
     <div>
       <PageHeader title="Record a lecture" />
-      {mounted ? <ClientRecorder /> : <p className="text-sm text-muted">Loading…</p>}
+      {mounted ? <ClientRecorder /> : <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />}
     </div>
   )
 }

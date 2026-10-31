@@ -7,6 +7,7 @@ import { AiError } from '@/components/ai/AiError'
 import { CardReviewList, keptCards, type ReviewCard } from '@/components/ai/CardReviewList'
 import { DeckPicker, resolveDeck, type DeckChoice } from '@/components/ai/DeckPicker'
 import { useToast } from '@/components/providers/ToastProvider'
+import { Working } from '@/components/ui/Working'
 
 export function CardsTab({ note, prepare }: { note: { id: string; title: string }; prepare: () => Promise<void> }) {
   const toast = useToast()
@@ -39,7 +40,9 @@ export function CardsTab({ note, prepare }: { note: { id: string; title: string 
   if (!cards) return (
     <div className="space-y-3">
       <p className="text-sm text-muted">Turn this note into flashcards. You&apos;ll check them before they&apos;re saved.</p>
-      <button type="button" className="btn-primary" disabled={busy} onClick={generate}>{busy ? 'Making cards…' : '✦ Make flashcards'}</button>
+      {busy
+        ? <Working kind="cards" label="Making flashcards" steps={['Finding what is worth remembering', 'Writing a question for each', 'Checking the answers']} className="rounded-2xl bg-surface py-5" />
+        : <button type="button" className="btn-primary" onClick={generate}>✦ Make flashcards</button>}
       {error && <AiError code={error.code} message={error.message} />}
     </div>
   )

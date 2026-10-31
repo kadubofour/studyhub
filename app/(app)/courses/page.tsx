@@ -12,6 +12,7 @@ import { loadLibrary } from '@/lib/data/library'
 import { summaryLine } from '@/lib/course/summary'
 import type { LibraryItem } from '@/lib/library/items'
 import type { Course } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 // Every course in one place, each opening its own page
 export default function CoursesPage() {
@@ -28,7 +29,7 @@ export default function CoursesPage() {
   }, [])
 
   if (failed) return <div><PageHeader title="Courses" /><p role="alert" className="text-sm text-danger">Could not load your courses. Check your connection.</p></div>
-  if (!courses) return <div><PageHeader title="Courses" /><p className="text-sm text-muted">Loading…</p></div>
+  if (!courses) return <div><PageHeader title="Courses" /><Working kind="load" size="sm" label="Loading" className="text-sm text-muted" /></div>
   const add = (c: Course) => setCourses(cs => [...(cs ?? []), c])
   if (courses.length === 0) return (
     <div>

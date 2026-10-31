@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { deleteMaterial, fileSize, getMaterial, MATERIAL_LABEL, materialFile, materialUrl, type Material } from '@/lib/data/materials'
 import type { Course } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 
@@ -82,7 +83,7 @@ export default function FilePage() {
         <button type="button" className="btn" onClick={() => { void open(true) }}><Download size={14} aria-hidden />Download</button>
         <button type="button" className="btn-ghost hover:!text-danger" onClick={() => { void remove() }}><Trash2 size={14} aria-hidden />Delete file</button>
       </>} />
-      {!file ? <p className="text-sm text-muted">Loading…</p> : (
+      {!file ? <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" /> : (
         <div className="space-y-4">
           <div className="card flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
             <span className="flex items-center gap-2"><span className="text-muted">Course</span>{course ? <CourseTag course={course} /> : <span className="text-xs">None</span>}</span>

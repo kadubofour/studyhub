@@ -6,6 +6,7 @@ import { postAi } from '@/components/ai/aiFetch'
 import { supabase } from '@/lib/supabase/client'
 import { MAX_SAVED, listResources, removeResource, saveResources, type Resource } from '@/lib/data/resources'
 import { identityOf } from '@/lib/resources/clean'
+import { Working } from '@/components/ui/Working'
 
 type Found = { url: string; title: string; kind: 'video' | 'article'; channel?: string; seconds?: number }
 const isWeb = (url: string) => /^https?:\/\//i.test(url)
@@ -107,7 +108,9 @@ export function TopicResources({ topicId, topicName }: { topicId: string; topicN
             )}
             {full ? <p className="text-xs text-muted">This topic is full. Remove a link to find more.</p> : (
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className="btn" disabled={busy} onClick={() => { void find() }}>{busy ? 'Searching…' : items.length ? 'Find more' : 'Find resources'}</button>
+                {busy
+                  ? <Working kind="search" size="sm" label="Searching the web" className="text-sm text-muted" />
+                  : <button type="button" className="btn" onClick={() => { void find() }}>{items.length ? 'Find more' : 'Find resources'}</button>}
                 <span className="text-xs text-muted">Uses 1 AI action</span>
               </div>
             )}

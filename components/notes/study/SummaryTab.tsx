@@ -5,6 +5,7 @@ import { wordCount } from '@/lib/ai/input'
 import { MIN_WORDS } from '@/lib/ai/summary'
 import { postAi } from '@/components/ai/aiFetch'
 import { AiError } from '@/components/ai/AiError'
+import { Working } from '@/components/ui/Working'
 
 export function SummaryTab({ note, prepare, applyContent }: {
   note: { id: string; content_md: string }; prepare: () => Promise<void>; applyContent: (update: (current: string) => string) => void
@@ -29,10 +30,10 @@ export function SummaryTab({ note, prepare, applyContent }: {
     <div className="space-y-3">
       <p className="text-sm text-muted">{tooShort && !existing ? 'Too short to summarise yet. Add a bit more to this note first.' : existing ? 'This note has a summary at the top.' : 'Add a short summary to the top of this note.'}</p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-primary" disabled={busy || tooShort} onClick={summarise}>
-          {busy ? 'Summarising…' : existing ? '✦ Regenerate summary' : '✦ Summarise'}
-        </button>
-        {existing && <button type="button" className="btn" onClick={() => applyContent(removeSummary)}>Remove summary</button>}
+        {busy
+          ? <Working kind="write" label="Summarising your note" steps={['Picking out the main ideas', 'Writing them up short']} className="w-full rounded-2xl bg-surface py-5" />
+          : <button type="button" className="btn-primary" disabled={tooShort} onClick={summarise}>{existing ? '✦ Regenerate summary' : '✦ Summarise'}</button>}
+        {existing && !busy && <button type="button" className="btn" onClick={() => applyContent(removeSummary)}>Remove summary</button>}
       </div>
       {error && <AiError code={error.code} message={error.message} />}
     </div>

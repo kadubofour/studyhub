@@ -11,6 +11,7 @@ import { getDeck } from '@/lib/data/decks'
 import { recordGamePlay } from '@/lib/data/games'
 import { buildMatch, buildSpeed, MIN_CARDS, type GCard, type Question } from '@/lib/games/build'
 import type { Deck } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 type Round = { game: 'match'; cards: GCard[] } | { game: 'speed'; questions: Question[] } | { game: 'none'; why: string }
 
@@ -55,7 +56,7 @@ export default function PlayPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title={`${TITLE[game]}${deck ? `: ${deck.name}` : ''}`} />
-      {!round && <p className="text-sm text-muted">Loading…</p>}
+      {!round && <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />}
       {round?.game === 'none' && <p className="card text-sm">{round.why}</p>}
       {round && !result && round.game === 'match' && <MatchGame key={plays} cards={round.cards} onDone={finish} />}
       {round && !result && round.game === 'speed' && <SpeedGame key={plays} questions={round.questions} onDone={finish} />}

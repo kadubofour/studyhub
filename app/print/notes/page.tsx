@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase/client'
 import { getNotesForExport } from '@/lib/data/notes'
 import { listCourses } from '@/lib/data/courses'
 import type { Course, Note } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 // Print-ready copy of one, some, or all notes. The browser's print dialog saves it as a PDF,
 // keeping KaTeX math crisp and the text selectable.
@@ -41,7 +42,7 @@ function PrintNotes() {
   }, [notes])
 
   if (failed) return <p className="p-8 text-sm text-muted">Couldn&apos;t load these notes. Go back to Notes and try exporting again.</p>
-  if (!notes) return <p className="p-8 text-sm text-muted">Preparing…</p>
+  if (!notes) return <Working kind="load" size="sm" label="Preparing" className="p-8 text-sm text-muted" />
   if (!notes.length) return <p className="p-8 text-sm text-muted">There are no notes to export.</p>
 
   return (

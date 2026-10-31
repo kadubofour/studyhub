@@ -22,6 +22,7 @@ import { sortNotes, useView } from '@/lib/ui/listView'
 import type { Course, Notebook, NoteSummary } from '@/lib/types'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
 import { BackLink } from '@/components/ui/BackLink'
+import { Working } from '@/components/ui/Working'
 
 const plural = (n: number) => `${n} note${n === 1 ? '' : 's'}`
 
@@ -48,7 +49,7 @@ export default function NotebookPage() {
     return () => { live = false }
   }, [id])
 
-  if (book === undefined) return <p className="text-sm text-muted">Loading…</p>
+  if (book === undefined) return <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
   if (book === null) return (
     <div className="py-10 text-center">
       <h1 className="font-display text-2xl font-semibold">Notebook not found</h1>

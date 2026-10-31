@@ -8,6 +8,7 @@ import { answerText, optionLetter } from '@/lib/quiz/summary'
 import { BTN_SOLID } from '@/components/ui/buttonStyles'
 import type { AnswerRecord, Question, Quiz, QuizAttempt } from '@/lib/quiz/types'
 import { MarkdownView } from '@/components/notes/MarkdownView'
+import { Working } from '@/components/ui/Working'
 
 const choicesOf = (q: Question) => (q.type === 'true_false' ? ['True', 'False'] : q.options ?? [])
 const TYPE_LABEL = { mcq: 'Multiple choice', true_false: 'True or false', short: 'Short answer' } as const
@@ -156,7 +157,9 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
           <label className="field"><span>Your answer</span>
             <textarea rows={4} value={typed} onChange={e => setTyped(e.target.value)} maxLength={1000} className="text-base" />
           </label>
-          <button type="button" className={`${BTN_SOLID} w-full sm:w-auto`} disabled={checking || !typed.trim()} onClick={check}>{checking ? 'Checking…' : 'Check'}</button>
+          {checking
+            ? <Working kind="check" size="sm" label="Checking your answer" className="text-sm text-muted" />
+            : <button type="button" className={`${BTN_SOLID} w-full sm:w-auto`} disabled={!typed.trim()} onClick={check}>Check</button>}
         </div>
       )}
 

@@ -6,7 +6,7 @@ import { CardFace } from '@/components/flashcards/CardFace'
 import { TypedAnswer } from '@/components/flashcards/TypedAnswer'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Layers, Loader2 } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listDueCards, listPracticeCards, rateCard } from '@/lib/data/cards'
@@ -16,6 +16,7 @@ import { reviewMode, useReviewMode } from '@/lib/ui/reviewMode'
 import { reviewKeyAction } from '@/lib/ui/reviewKeys'
 import { advanceQueue, RatingLedger } from '@/lib/ui/reviewQueue'
 import type { Card } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 const LABELS: Record<Rating, string> = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' }
 const VERDICT = { correct: { text: 'Correct', color: 'text-success' }, close: { text: 'Close', color: 'text-warn' }, different: { text: 'Not quite', color: 'text-danger' } } as const
@@ -139,7 +140,7 @@ function Review() {
         {revealed && typed && (
           <div role="status" className="w-full space-y-1 border-t border-line pt-4 text-left">
             {typed.marking
-              ? <p className="flex items-center gap-1.5 text-sm text-muted"><Loader2 size={14} className="animate-spin" aria-hidden />Checking the meaning…</p>
+              ? <Working kind="check" size="sm" label="Checking the meaning" className="text-sm text-muted" />
               : <>
                   <p className={`text-sm font-medium ${VERDICT[typed.check.verdict].color}`}>{VERDICT[typed.check.verdict].text}</p>
                   {typed.feedback && <p className="text-sm">{typed.feedback}</p>}

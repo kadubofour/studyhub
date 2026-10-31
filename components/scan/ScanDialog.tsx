@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, Camera, FileText, ImagePlus, Images, Layers, Loader2, ScanLine } from 'lucide-react'
+import { CalendarDays, Camera, FileText, ImagePlus, Images, Layers, ScanLine } from 'lucide-react'
+import { Working } from '@/components/ui/Working'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { DropZone } from '@/components/ui/DropZone'
 import { OptionCards, type OptionCard } from '@/components/ui/OptionCards'
@@ -206,15 +207,14 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved, initialFiles
         </div>
       )}
       {stage === 'reading' && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-9 text-center" role="status">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-9 text-center">
           <div className="flex -space-x-3" aria-hidden>
             {pages.filter(p => p.preview).slice(0, 4).map(p => (
               // eslint-disable-next-line @next/next/no-img-element -- a local photo preview (blob URL)
               <img key={p.id} src={p.preview ?? undefined} alt="" className="size-14 rounded-lg border-2 border-bg object-cover shadow" />
             ))}
           </div>
-          <Loader2 size={26} className="animate-spin text-accent" aria-hidden />
-          <p className="text-sm font-medium">Reading your pages…</p>
+          <Working kind="scan" label="Reading your pages" steps={['Making out the handwriting', 'Following the layout', 'Putting it in order']} />
           <p className="text-xs text-muted">Usually 10–30 seconds.</p>
           <button type="button" className={`${BTN_OUTLINE} mt-1`} onClick={cancel}>Cancel scan</button>
         </div>

@@ -15,6 +15,7 @@ import { TranscriptEditor } from '@/components/lectures/TranscriptEditor'
 import { runAccurate } from '@/lib/lectures/accurate'
 import { usePlan } from '@/components/billing/usePlan'
 import { formatClock, type TranscriptLine } from '@/lib/lectures/time'
+import { Working } from '@/components/ui/Working'
 
 type Problem = { code: string; message: string }
 
@@ -104,7 +105,7 @@ export default function LecturePage() {
     try { await deleteLecture(supabase(), lecture); router.push('/lectures') } catch { setProblem({ code: 'delete', message: 'Couldn\'t delete the lecture. Try again.' }) }
   }
 
-  if (!lecture) return problem ? <p role="alert" className="text-sm text-danger">{problem.message}</p> : <p className="text-sm text-muted">Loading…</p>
+  if (!lecture) return problem ? <p role="alert" className="text-sm text-danger">{problem.message}</p> : <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
 
   const done = lecture.parts.filter(p => p.transcribed).length
   const accurateDone = lecture.transcript_source === 'openai' && lecture.transcript_status === 'done'

@@ -15,6 +15,7 @@ import { applyUpdate, fromAi, tidy, toDrafts } from '@/lib/topics/edit'
 import { STATUS_LABEL, evidence, progressLine, weakSpots } from '@/lib/topics/status'
 import type { CourseMaterial, DraftTopic, TopicDraft, TopicLink, TopicStat, TopicStatus } from '@/lib/topics/types'
 import type { Course } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 const ICON = { not_started: Circle, covered: CircleDot, weak: AlertTriangle, mastered: CircleCheck } as const
 const TONE: Record<TopicStatus, string> = { not_started: 'text-muted', covered: 'text-accent', weak: 'text-danger', mastered: 'text-success' }
@@ -109,7 +110,9 @@ export function TopicsSection() {
       ) : data.stats.length === 0 ? (
         <div className="space-y-2">
           <p className="text-sm text-muted">Topics split a course into things you can revise one by one, and show which ones are strong or weak. The AI drafts them from this course&apos;s notes and lectures, and you fix them before they are saved.</p>
-          <button type="button" className="btn-primary" disabled={busy} onClick={() => { void ask('draft') }}>{busy ? 'Drafting…' : 'Draft topics'}</button>
+          {busy
+            ? <Working kind="write" label="Drafting topics" steps={['Reading the notes and lectures', 'Grouping them by idea', 'Naming each topic']} className="rounded-2xl bg-surface py-5" />
+            : <button type="button" className="btn-primary" onClick={() => { void ask('draft') }}>Draft topics</button>}
           <p className="text-xs text-muted">Uses 1 AI action. Needs at least two notes or lectures in this course.</p>
         </div>
       ) : (
@@ -136,7 +139,9 @@ export function TopicsSection() {
           </ul>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn" onClick={() => { setSaveError(null); setEditing(e => ({ list: toDrafts(data.stats, data.links), fresh: false, n: (e?.n ?? 0) + 1 })) }}>Edit topics</button>
-            {unlinked > 0 && <button type="button" className="btn" disabled={busy} onClick={() => { void ask('update') }}>{busy ? 'Looking…' : 'Update topics'}</button>}
+            {unlinked > 0 && (busy
+              ? <Working kind="read" size="sm" label="Looking at the new material" className="text-sm text-muted" />
+              : <button type="button" className="btn" onClick={() => { void ask('update') }}>Update topics</button>)}
           </div>
         </>
       )}

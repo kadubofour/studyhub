@@ -18,6 +18,7 @@ import { LIVE_LANGUAGES, saveLiveLanguage, savedLiveLanguage } from '@/lib/lectu
 import { MAX_LECTURE_SECONDS, WARN_LECTURE_SECONDS, formatClock, storageState, type TranscriptLine } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
+import { Working } from '@/components/ui/Working'
 
 export type RecorderDeps = {
   getUserMedia: (c: MediaStreamConstraints) => Promise<MediaStream>
@@ -304,7 +305,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
         <div className="max-h-64 overflow-y-auto rounded-xl border border-line p-3 text-sm" aria-live="polite" aria-label="Live transcript">
           {lines.map((l, i) => <p key={i}><span className="text-muted">{formatClock(l.start)}</span> {l.text}</p>)}
           {interim && <p className="text-muted">{interim}</p>}
-          {!lines.length && !interim && !trouble && <p className="text-muted">Listening…</p>}
+          {!lines.length && !interim && !trouble && <Working kind="listen" size="sm" label="Listening" className="text-muted" />}
           {trouble && <p className="text-xs text-muted">{TROUBLE[trouble] ?? 'Live transcript stopped for a moment.'} Trying again… (the recording itself is fine)</p>}
         </div>
       )}

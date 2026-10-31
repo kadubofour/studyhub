@@ -14,6 +14,7 @@ import {
 import { inviteLink, inviteToken } from '@/lib/social/links'
 import { supabase } from '@/lib/supabase/client'
 import { copyText } from './FriendsPanel'
+import { Working } from '@/components/ui/Working'
 
 const JOIN: Record<Exclude<JoinStatus, 'ok'>, string> = {
   not_found: 'No group has that invite. It may have been replaced by a new one.',
@@ -145,7 +146,7 @@ export function GroupsPanel({ groups, selected, onSelect, onChange }: {
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-muted">Loading…</p>}
+          ) : <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />}
           <div className="mt-5 border-t border-line pt-4">
             {selected.is_owner
               ? <button type="button" className="btn w-full justify-center text-danger" onClick={() => deleteIt(selected)}><Trash2 size={15} aria-hidden />Delete group</button>

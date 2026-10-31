@@ -18,6 +18,7 @@ import { cardsDue, courseSections, examLine, summaryLine } from '@/lib/course/su
 import { STATUS_LABEL, evidence, progressLine, weakSpots } from '@/lib/topics/status'
 import type { Kind } from '@/lib/library/items'
 import type { TopicStatus } from '@/lib/topics/types'
+import { Working } from '@/components/ui/Working'
 
 const KIND: Record<Kind, { plural: string; icon: LucideIcon; tone: 'a' | 'b' | 'c' }> = {
   note: { plural: 'Notes', icon: FileText, tone: 'b' },
@@ -67,7 +68,7 @@ export default function CoursePageRoute() {
       <button type="button" className="btn mt-2" onClick={() => { void load() }}>Try again</button>
     </div>
   )
-  if (data === undefined) return <p className="text-sm text-muted">Loading…</p>
+  if (data === undefined) return <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
   if (data === null) return (
     <EmptyState icon={FolderOpen} tone="b" title="Course not found" body="We couldn't find that course. It may have been deleted.">
       <Link href="/library" className="btn-primary">Go to Library</Link>

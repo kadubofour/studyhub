@@ -1,7 +1,8 @@
 'use client'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, FileUp, FolderOpen, Loader2, Mic, Sparkles, UploadCloud } from 'lucide-react'
+import { Camera, FileUp, FolderOpen, Mic, Sparkles, UploadCloud } from 'lucide-react'
+import { Working } from '@/components/ui/Working'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { DropZone } from '@/components/ui/DropZone'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -42,7 +43,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
   // the file chosen, before it is kept or read
   const [picked, setPicked] = useState<Picked | null>(() => (fromMaterial ? { file: fromMaterial.file, kind: kindOfMime(fromMaterial.file.type) } : null))
   const [next, setNext] = useState<Next>('')
-  const [working, setWorking] = useState('')
+  const [working, setWorking] = useState<{ label: string; steps?: string[] }>({ label: '' })
   const [draft, setDraft] = useState<Draft | null>(null)
   // the file the draft was read from, kept in the Library when the note is saved
   const [source, setSource] = useState<Picked | null>(null)
@@ -91,19 +92,19 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
     try {
       let result: Draft
       if (kind === 'docx') {
-        setWorking('Reading your Word document…')
+        setWorking({ label: 'Reading your Word document' })
         const { docxToNote } = await import('@/lib/import/docxToNote')
         result = await docxToNote(await file.arrayBuffer(), file.name)
       } else if (kind === 'pptx') {
-        setWorking('Reading your slides…')
+        setWorking({ label: 'Reading your slides' })
         const { pptxToNote } = await import('@/lib/import/pptxToNote')
         result = await pptxToNote(await file.arrayBuffer(), file.name)
       } else if (kind === 'text') {
-        setWorking('Reading your file…')
+        setWorking({ label: 'Reading your file' })
         const { textToNote } = await import('@/lib/import/textToNote')
         result = textToNote(await file.arrayBuffer(), file.name)
       } else {
-        setWorking('Reading your PDF with AI — headings, lists, tables and equations…')
+        setWorking({ label: 'Reading your PDF with AI', steps: ['Finding the headings', 'Laying out lists and tables', 'Writing out the equations', 'Putting your note together'] })
         const { importPdf } = await import('@/lib/import/pdfImport')
         result = await importPdf(file, profile.id, controller.signal)
       }
@@ -268,9 +269,8 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
         </div>
       )}
       {stage === 'working' && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center" role="status">
-          <Loader2 size={30} className="animate-spin text-accent" aria-hidden />
-          <p className="text-sm font-medium">{working}</p>
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center">
+          <Working kind="read" label={working.label} steps={working.steps} />
           <p className="text-xs text-muted">You can cancel any time.</p>
           <button type="button" className={`${BTN_OUTLINE} mt-1`} onClick={reset}>Cancel upload</button>
         </div>

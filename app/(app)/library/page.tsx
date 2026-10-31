@@ -24,6 +24,7 @@ import { requestQuiz } from '@/lib/quiz/events'
 import { useView } from '@/lib/ui/listView'
 import { countsByKind, folders, isMovable, visible, withKnownNotebooks, type Kind, type LibraryItem, type View } from '@/lib/library/items'
 import type { Course, Notebook } from '@/lib/types'
+import { Working } from '@/components/ui/Working'
 
 // Each kind has its own section, in this order, named with its heading
 const KIND: Record<Kind, { heading: string; icon: LucideIcon }> = {
@@ -148,7 +149,7 @@ export default function LibraryPage() {
       <button type="button" className="btn mt-2" onClick={() => { void load() }}>Try again</button>
     </div>
   )
-  if (!items) return <div><PageHeader title="Library" /><p className="text-sm text-muted">Loading…</p></div>
+  if (!items) return <div><PageHeader title="Library" /><Working kind="load" size="sm" label="Loading" className="text-sm text-muted" /></div>
 
   const empty = items.length === 0 && notebooks.length === 0
   return (
