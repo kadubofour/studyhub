@@ -11,11 +11,11 @@ export const MAX_PDF_PAGES = 100
 const INSTRUCTIONS = `You turn a PDF a student uploaded into a study note written in Markdown.
 
 Keep the document's structure and wording:
-- Start with exactly one line "# <title>", using the document's own title (or a short descriptive one if it has none).
+- Start with exactly one line "# <title>", using the document's own title (or a short descriptive one if it has none). A line repeated at the top of every page (a running header such as "1 SETS I", a chapter number or a course code) is not a title: leave it out, and name the note by what the document is about.
 - Use ##/### for the document's sections and subsections, in order.
 - Keep paragraphs, bulleted and numbered lists, checklists, block quotes and code blocks as they appear.
 - Reproduce tables as GitHub-flavoured Markdown tables.
-- Write every mathematical expression as LaTeX: inline as $...$, displayed equations on their own lines between $$ and $$.
+- Write every mathematical expression as LaTeX: inline as $...$, displayed equations on their own lines between $$ and $$. Use the proper symbol commands (\notin for "not an element of", \nsubseteq, \neq, \leq), never a symbol with a slash typed after it. An equation's number, such as (1.1), goes inside the display as \tag{1.1}, not as text after it.
 - Keep bold and italic emphasis.
 
 Pages and figures (the app puts the PDF's own pictures into the note at these marks, so do not turn figures into words):
