@@ -12,6 +12,11 @@ const RGBA = 3, RGB = 2, GRAY_1BPP = 1 // pdf.js ImageKind
 const WAIT_MS = 4000
 const DRAW_WIDTH = 1600 // a page is drawn about this wide, so a figure cut from it is sharp
 const SHAPE_OPS = 25 // a page with this many paths is drawing something besides text
+const MIN_SHOWN = 0.02 // a picture smaller than this share of its page (a logo, a signature, a bullet) is decoration, not a figure
+
+type Matrix = number[]
+const times = ([a0, b0, c0, d0, e0, f0]: Matrix, [a, b, c, d, e, f]: Matrix): Matrix =>
+  [a0 * a + c0 * b, b0 * a + d0 * b, a0 * c + c0 * d, b0 * c + d0 * d, a0 * e + c0 * f + e0, b0 * e + d0 * f + f0]
 
 // A painted image's object, once pdf.js has decoded it (page objects, or document-wide ones whose names start "g_")
 function imageObject(page: PDFPageProxy, name: string): Promise<PdfImage | null> {
@@ -55,11 +60,23 @@ export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: R
 
   const operators = (n: number) => {
     if (!ops.has(n)) ops.set(n, (async () => {
-      const list = await (await doc.getPage(n)).getOperatorList()
+      const pg = await doc.getPage(n)
+      const list = await pg.getOperatorList()
+      const view = pg.getViewport({ scale: 1 })
       const names: string[] = []
       let shapes = 0
+      // the drawing position is followed so a picture's size on the page is known: an image is placed in a unit square scaled by the transform
+      let ctm: Matrix = [1, 0, 0, 1, 0, 0]
+      const saved: Matrix[] = []
       list.fnArray.forEach((fn, i) => {
-        if (fn === OPS.paintImageXObject || fn === OPS.paintImageXObjectRepeat) names.push(String(list.argsArray[i][0]))
+        const args = list.argsArray[i]
+        if (fn === OPS.save || fn === OPS.paintFormXObjectBegin) { saved.push(ctm); if (fn === OPS.paintFormXObjectBegin && Array.isArray(args?.[0])) ctm = times(ctm, args[0] as Matrix) }
+        else if (fn === OPS.restore || fn === OPS.paintFormXObjectEnd) ctm = saved.pop() ?? ctm
+        else if (fn === OPS.transform) ctm = times(ctm, args as Matrix)
+        else if (fn === OPS.paintImageXObject || fn === OPS.paintImageXObjectRepeat) {
+          const shown = Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2]) / (view.width * view.height)
+          if (shown >= MIN_SHOWN) names.push(String(args[0]))
+        }
         else if (fn === OPS.constructPath) shapes++
       })
       return { names, shapes }
