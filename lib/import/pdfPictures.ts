@@ -1,6 +1,7 @@
 'use client'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
-import type { KeepPicture } from './pictures'
+import { svgToPng, type DrawSvg, type KeepPicture } from './pictures'
+import { redrawFigure } from './pdfRedraw'
 import type { Box, PagePictures } from './placeFigures'
 
 // What a PDF page shows besides text, taken out of the PDF itself: the picture files it embeds (photos, scanned diagrams), and any area of
@@ -53,7 +54,7 @@ async function toBlob(img: PdfImage): Promise<Blob | null> {
 }
 
 /** Reads a loaded PDF's pictures, page by page, for placeFigures. Each page is read once, whatever asks for it. */
-export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: Record<string, number>): PagePictures {
+export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: Record<string, number>, draw: DrawSvg = svgToPng): PagePictures {
   const ops = new Map<number, Promise<{ names: string[]; shapes: number }>>()
   const read = new Map<number, Promise<string[]>>()
   const inRange = (n: number) => n >= 1 && n <= doc.numPages
@@ -125,6 +126,14 @@ export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: R
     // A figure: its box (percent of the page, with a little room round it so labels are not cut) taken from the drawn page
     crop: async (n: number, box: Box, caption: string) => {
       if (!inRange(n)) return null
+      // a figure of lines and labels is drawn again from them (sharp, and as large as the drawing); anything else is cut from the page
+      const fig = await redrawFigure(await doc.getPage(n), box, OPS).catch(() => null)
+      if (fig) {
+        const width = Math.round(Math.min(1800, Math.max(700, fig.width * 3)))
+        const png = await draw(fig.svg, width, Math.round((width * fig.height) / fig.width)).catch(() => null)
+        const md = png ? await keep(png, caption).catch(() => null) : null
+        if (md) return md
+      }
       const c = await page(n)
       if (!c) return null
       const pad = 1.5
