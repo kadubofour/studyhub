@@ -27,11 +27,11 @@ export async function* readTutorStream(res: Response): AsyncGenerator<TutorLine>
   if (last) yield last
 }
 
-export async function sendTutorMessage(chatId: string, message: string, signal?: AbortSignal, attachments?: Attachment[]): Promise<
+export async function sendTutorMessage(chatId: string, message: string, signal?: AbortSignal, attachments?: Attachment[], options?: { voice?: boolean }): Promise<
   { ok: true; lines: AsyncGenerator<TutorLine> } | { ok: false; error: string; message: string }
 > {
   try {
-    const res = await fetch('/api/ai/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(attachments?.length ? { chatId, message, attachments } : { chatId, message }), signal })
+    const res = await fetch('/api/ai/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId, message, ...(attachments?.length ? { attachments } : {}), ...(options?.voice ? { voice: true } : {}) }), signal })
     if (!res.ok || !res.body) {
       const error = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'ai_failed'
       return { ok: false, error, message: AI_MESSAGES[error] ?? AI_MESSAGES.ai_failed }

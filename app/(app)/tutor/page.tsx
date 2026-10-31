@@ -2,12 +2,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BookOpenCheck, ClipboardList, FileText, HelpCircle, MessageSquarePlus, MessagesSquare } from 'lucide-react'
+import { AudioLines, BookOpenCheck, ClipboardList, FileText, HelpCircle, MessageSquarePlus, MessagesSquare } from 'lucide-react'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickDialog'
+import { useLiveTutor } from '@/components/voice/LiveTutorProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { createChat, listChatContexts, listChats, type TutorChat } from '@/lib/data/tutor'
@@ -43,6 +44,12 @@ export default function TutorPage() {
     try { router.push(`/tutor/${(await createChat(supabase(), input)).id}${message ? `?ask=${encodeURIComponent(message)}` : ''}`) } catch { setFailed(true) /* stays here; the buttons work again */ }
   }
   const start = () => open({})
+  const voice = useLiveTutor()
+  // A live session in a chat of its own: nothing is opened, the session fills the screen and the chat appears in the list
+  async function talk() {
+    setFailed(false)
+    try { const c = await createChat(supabase(), {}); setChats(list => [c, ...(list ?? [])]); voice.start(c.id) } catch { setFailed(true) }
+  }
   function picked(t: TutorTarget, starter: string | null) {
     setPicking(null)
     const about = { title: t.title.slice(0, 200) || 'New chat', course_id: t.course_id, ...(t.kind === 'note' ? { note_id: t.id } : t.kind === 'lecture' ? { lecture_id: t.id } : {}) }
@@ -63,6 +70,7 @@ export default function TutorPage() {
       {/* a phone gets the list notes apps have: the starters in a row that scrolls, then the chats by day */}
       {showsPhone(screen) && <div className="pb-24 md:hidden">
         <PhoneTitle title="Tutor" menuLabel="Tutor options" menu={[
+          { label: 'Voice chat', icon: AudioLines, onSelect: () => { void talk() } },
           { label: 'Chat about…', icon: MessagesSquare, onSelect: () => setPicking({ starter: null }) },
           ...(withChats.length > 1 ? ['sep' as const, tick('All courses', !courseId, () => setCourseId('')), ...withChats.map(c => tick(c.name, courseId === c.id, () => setCourseId(c.id)))] : []),
         ]} />
@@ -99,6 +107,7 @@ export default function TutorPage() {
         <ComposeButton label="New chat" icon={MessageSquarePlus} onClick={() => { void start() }} />
       </div>}
       {showsComputer(screen) && <div className="max-md:hidden">      <PageHeader title="Tutor" actions={<>
+        <button type="button" className="btn" onClick={() => { void talk() }}><AudioLines size={14} aria-hidden />Voice chat</button>
         <button type="button" className="btn" onClick={() => setPicking({ starter: null })}><MessagesSquare size={14} aria-hidden />Chat about…</button>
         <button type="button" className="btn-primary" onClick={start}><MessageSquarePlus size={14} aria-hidden />New chat</button>
       </>} />

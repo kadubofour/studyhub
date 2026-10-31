@@ -2,15 +2,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Dictation: the browser's own speech recognition turns speech into text as the student talks. Nothing is recorded or sent by the app.
-interface Recognition {
+export interface Recognition {
   continuous: boolean; interimResults: boolean; lang: string
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
   onerror: ((e: { error: string }) => void) | null
   onend: (() => void) | null
   start(): void; stop(): void; abort(): void
 }
-type Ctor = new () => Recognition
-const ctor = (): Ctor | null => {
+export type Ctor = new () => Recognition
+export const recognitionCtor = (): Ctor | null => {
   if (typeof window === 'undefined') return null
   const w = window as unknown as { SpeechRecognition?: Ctor; webkitSpeechRecognition?: Ctor }
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
@@ -18,7 +18,7 @@ const ctor = (): Ctor | null => {
 
 /** `onText` gets everything said since dictation started (so far, including words the browser may still change) */
 export function useDictation(onText: (spoken: string) => void) {
-  const [supported] = useState(() => ctor() !== null)
+  const [supported] = useState(() => recognitionCtor() !== null)
   const [listening, setListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const rec = useRef<Recognition | null>(null)
@@ -27,7 +27,7 @@ export function useDictation(onText: (spoken: string) => void) {
 
   const stop = useCallback(() => { rec.current?.stop() }, [])
   const start = useCallback(() => {
-    const C = ctor()
+    const C = recognitionCtor()
     if (!C || rec.current) return
     const r = new C()
     r.continuous = true; r.interimResults = true; r.lang = navigator.language || 'en-US'

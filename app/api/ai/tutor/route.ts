@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return bad(401, 'unauthorized')
-  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown } | null
+  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown; voice?: unknown } | null
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
   if (typeof body?.chatId !== 'string' || !UUID.test(body.chatId) || message.length > MAX_MESSAGE) return bad(400, 'bad_request')
   const attachments = checkAttachments(body.attachments, user.id, body.chatId)
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 
   const gen = streamTutor(openai(), {
-    instructions: tutorInstructions(!!chat.note_id, !!chat.guided), tools: toolDefinitions(!!chat.note_id), signal: request.signal,
+    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: toolDefinitions(!!chat.note_id), signal: request.signal,
     input: buildInput({ history, context: context.text, message, parts: attachmentParts(counted, fresh.files) }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status

@@ -51,14 +51,25 @@ function Shape({ el, now, focus, step }: { el: LessonElement; now: boolean; focu
   )
 }
 
+/** The board as it is at a step: everything shown so far, with what the voice points at lit */
+export function LessonBoard({ script, step, className = 'block h-auto w-full rounded-xl bg-bg' }: { script: LessonScript; step: number; className?: string }) {
+  const at = useMemo(() => revealedAt(script), [script])
+  const focus = useMemo(() => new Set(script.steps[step]?.focus ?? []), [script, step])
+  return (
+    <svg viewBox={`0 0 ${BOARD_W} ${BOARD_H}`} role="img" aria-label={`The board at step ${step + 1} of ${script.steps.length}`} className={className}>
+      {script.elements.filter(e => (at.get(e.id) ?? 0) <= step).map(e => (
+        <Shape key={e.id} el={e} now={at.get(e.id) === step} focus={focus.has(e.id)} step={at.get(e.id) ?? 0} />
+      ))}
+    </svg>
+  )
+}
+
 export function LessonPlayer({ script, voices, onDelete }: { script: LessonScript; voices: (string | null)[]; onDelete?: () => void }) {
   const [step, setStep] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [started, setStarted] = useState(false) // played at least once: a pause then says Resume
   const audio = useRef<HTMLAudioElement>(null)
   const last = script.steps.length - 1
-  const at = useMemo(() => revealedAt(script), [script])
-  const focus = useMemo(() => new Set(script.steps[step].focus), [script, step])
 
   const next = useCallback(() => { if (step < last) setStep(s => s + 1); else setPlaying(false) }, [step, last])
 
@@ -88,11 +99,7 @@ export function LessonPlayer({ script, voices, onDelete }: { script: LessonScrip
         {onDelete && <button type="button" className="btn-ghost !px-2 !py-1 text-muted hover:!text-danger" aria-label="Delete lesson" title="Delete lesson" onClick={onDelete}><Trash2 size={14} aria-hidden /></button>}
       </div>
       <div className="px-3 pb-1 pt-2">
-        <svg viewBox={`0 0 ${BOARD_W} ${BOARD_H}`} role="img" aria-label={`The board at step ${step + 1} of ${script.steps.length}`} className="block h-auto w-full rounded-xl bg-bg">
-          {script.elements.filter(e => (at.get(e.id) ?? 0) <= step).map(e => (
-            <Shape key={e.id} el={e} now={at.get(e.id) === step} focus={focus.has(e.id)} step={at.get(e.id) ?? 0} />
-          ))}
-        </svg>
+        <LessonBoard script={script} step={step} />
       </div>
       <p aria-live="polite" className="min-h-[3.25rem] px-4 py-2 text-[15px] leading-relaxed">{script.steps[step].narration}</p>
       <div className="flex items-center gap-1.5 border-t border-line px-3 py-2">

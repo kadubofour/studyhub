@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowDown, ArrowUp, ClipboardCopy, Copy, FileText, Loader2, Mic, Paperclip, Pencil, RefreshCw, Square, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Loader2, Mic, Paperclip, Pencil, RefreshCw, Square, Trash2, X } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
@@ -29,6 +29,7 @@ import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import { Working } from '@/components/ui/Working'
 import { MessageLesson } from '@/components/tutor/MessageLesson'
+import { useLiveTutor } from '@/components/voice/LiveTutorProvider'
 import { listLessons, type Lesson } from '@/lib/data/lessons'
 
 const nowMs = () => Date.now() // a plain function, so reading the clock in a click handler is not mistaken for reading it while drawing
@@ -54,6 +55,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [renaming, setRenaming] = useState<string | null>(null) // the new name being typed; null when not renaming
   const [picking, setPicking] = useState(false)
   const plan = usePlan()
+  const voice = useLiveTutor()
   const abort = useRef<AbortController | null>(null)
   const stopped = useRef(false) // the student pressed Stop: an ended reply is not an error
   const liveText = useRef('') // what has been written of the reply so far
@@ -145,6 +147,15 @@ export function ChatView({ chatId }: { chatId: string }) {
   useEffect(() => { if (ask) router.replace(`/tutor/${chatId}`) }, [ask, chatId, router])
 
   async function reload() { const m = await listMessages(supabase(), chatId); latest.current = m; setMessages(m) }
+  // A live session in this chat adds messages of its own: they show here as they are saved
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      if ((e as CustomEvent<{ chatId?: string }>).detail?.chatId !== chatId) return
+      listMessages(supabase(), chatId).then(m => { latest.current = m; setMessages(m) }).catch(() => {})
+    }
+    window.addEventListener('studyhub:tutor-changed', onChanged)
+    return () => window.removeEventListener('studyhub:tutor-changed', onChanged)
+  }, [chatId])
 
   async function addFiles(files: File[]) {
     if (uploading) return // what is in the bar is being sent: nothing joins it now
@@ -293,6 +304,7 @@ export function ChatView({ chatId }: { chatId: string }) {
           : <input aria-label="Chat name" className="input mr-auto min-w-0 flex-1 text-lg font-medium" value={renaming} maxLength={200} autoFocus
               onChange={e => setRenaming(e.target.value)} onBlur={() => { void finishRename() }}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void finishRename() } else if (e.key === 'Escape') { renameSettled.current = true; setRenaming(null) } }} />}
+        <button type="button" className="btn !rounded-full !py-1.5 text-sm" aria-label="Start a live voice session" title="Talk with the tutor" onClick={() => voice.start(chatId)}><AudioLines size={15} aria-hidden />Voice</button>
         {renaming === null && <button type="button" className="btn-ghost" aria-label="Rename" title="Rename" onClick={() => { renameSettled.current = false; setRenaming(chat.title) }}><Pencil size={15} aria-hidden /></button>}
         {messages.length > 0 && <button type="button" className="btn-ghost" aria-label="Copy chat" title="Copy the whole chat" onClick={() => { void copy(transcript(chat.title, messages)) }}><ClipboardCopy size={15} aria-hidden /></button>}
         <button type="button" className="btn-ghost text-danger" aria-label="Delete chat" title="Delete chat" onClick={remove}><Trash2 size={15} aria-hidden /></button>
