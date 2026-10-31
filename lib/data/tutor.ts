@@ -66,12 +66,15 @@ export async function deleteChat(sb: SupabaseClient, id: string): Promise<void> 
   const { data: { user } } = await sb.auth.getUser()
   if (user) {
     const folder = `${user.id}/${id}`
-    const bucket = sb.storage.from('tutor-files')
-    try {
-      const { data } = await bucket.list(folder, { limit: 1000 })
-      const paths = (data ?? []).filter(f => f.id !== null).map(f => `${folder}/${f.name}`)
-      if (paths.length) await bucket.remove(paths)
-    } catch { /* the files are removed with the account at the latest */ }
+    // the photos and PDFs added to the chat, and the voices of its visual lessons: each in a folder of its own
+    for (const name of ['tutor-files', 'lessons']) {
+      const bucket = sb.storage.from(name)
+      try {
+        const { data } = await bucket.list(folder, { limit: 1000 })
+        const paths = (data ?? []).filter(f => f.id !== null).map(f => `${folder}/${f.name}`)
+        if (paths.length) await bucket.remove(paths)
+      } catch { /* the files are removed with the account at the latest */ }
+    }
   }
   check(await sb.from('tutor_chats').delete().eq('id', id))
 }

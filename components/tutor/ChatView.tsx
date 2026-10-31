@@ -28,6 +28,8 @@ import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import { Working } from '@/components/ui/Working'
+import { MessageLesson } from '@/components/tutor/MessageLesson'
+import { listLessons, type Lesson } from '@/lib/data/lessons'
 
 const nowMs = () => Date.now() // a plain function, so reading the clock in a click handler is not mistaken for reading it while drawing
 const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for good: a new one each render would make the picker load everything again
@@ -44,6 +46,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [chat, setChat] = useState<TutorChat | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [messages, setMessages] = useState<TutorMessage[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([]) // the visual lessons made for this chat's replies
   const [text, setText] = useState(() => (ask ?? '').slice(0, 4000)) // a Revise button leaves the message ready; it is only sent when the student presses Send
   const [live, setLive] = useState<string | null>(null) // the reply being written; null when none
   const [problem, setProblem] = useState<{ code: string; message: string } | null>(null)
@@ -97,6 +100,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     // student flipped Guided would flip it back (and a chat opened, left and opened again must not mix with the first)
     let current = true
     const sb = supabase()
+    listLessons(sb, chatId).then(l => { if (current) setLessons(l) }).catch(() => {}) // the chat works without them
     Promise.all([getChat(sb, chatId), listMessages(sb, chatId), listCourses(sb)]).then(async ([c, m, cs]) => {
       if (!current) return
       setChat(c); latest.current = m; setMessages(m); setCourses(cs)
@@ -366,6 +370,10 @@ export function ChatView({ chatId }: { chatId: string }) {
                 )}
                 {time && <span className="ml-auto self-center text-xs">{time}</span>}
               </div>
+              {m.id !== 'pending' && m.status === 'ok' && (
+                <MessageLesson chatId={chatId} messageId={m.id} content={m.content} lesson={lessons.find(l => l.message_id === m.id)}
+                  onMade={l => setLessons(ls => [...ls, l])} onRemoved={id => setLessons(ls => ls.filter(l => l.id !== id))} />
+              )}
               {m.proposals.map(p => (
                 <ProposalCard key={p.id} proposal={p} onAdd={e => add(m.id, e)} onDiscard={() => { change(m.id, p.id, { state: 'discarded' }).catch(() => toast('Couldn\'t save that.')) }} />
               ))}

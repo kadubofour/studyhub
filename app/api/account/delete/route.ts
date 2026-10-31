@@ -5,7 +5,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { billing } from '@/lib/billing/provider'
 
 // Where a student's files live; every path starts with their user id
-const BUCKETS = ['imports', 'lectures', 'materials', 'note-images', 'tutor-files'] as const
+const BUCKETS = ['imports', 'lectures', 'lessons', 'materials', 'note-images', 'tutor-files'] as const
 const BATCH = 100
 
 const PAGE = 1000

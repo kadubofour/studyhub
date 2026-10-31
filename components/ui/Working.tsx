@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 // What the app is busy doing, drawn instead of a spinner and "Processing…": each kind of work has its own small moving picture,
 // in the student's colour, with a line saying what is happening. Long work can name its steps, shown one after another, so the
 // wait reads as progress. The pictures hold still for anyone who asks for less motion (app/globals.css, .working-*).
-export type WorkKind = 'read' | 'scan' | 'write' | 'cards' | 'quiz' | 'check' | 'search' | 'listen' | 'think' | 'load'
+export type WorkKind = 'read' | 'scan' | 'write' | 'cards' | 'quiz' | 'check' | 'search' | 'listen' | 'think' | 'load' | 'draw'
 
 const A = 'var(--accent-solid)'
 const SOFT = 'color-mix(in srgb, var(--accent-solid) 22%, transparent)'
@@ -79,6 +79,15 @@ function Art({ kind }: { kind: WorkKind }) {
         <svg viewBox="0 0 56 56" className="working-art">
           <path d="M10 14 h36 a5 5 0 0 1 5 5 v14 a5 5 0 0 1 -5 5 h-22 l-8 7 v-7 h-6 a5 5 0 0 1 -5 -5 v-14 a5 5 0 0 1 5 -5 z" fill={SOFT} />
           {[20, 28, 36].map((x, i) => <circle key={x} className="working-dot" style={{ animationDelay: `${i * 0.18}s` }} cx={x} cy="26" r="2.8" fill={A} />)}
+        </svg>
+      )
+    case 'draw': // a board, a box and an arrow drawing themselves
+      return (
+        <svg viewBox="0 0 56 56" className="working-art">
+          <rect x="6" y="10" width="44" height="36" rx="5" fill="var(--raised)" stroke={LINE} strokeWidth="1.5" />
+          <rect className="working-pop" x="12" y="17" width="14" height="10" rx="2.5" fill={SOFT} stroke={A} strokeWidth="1.5" />
+          <path className="working-tick" d="M28 22 H38" fill="none" stroke={A} strokeWidth="2" strokeLinecap="round" />
+          <circle className="working-pop working-pop-late" cx="41" cy="34" r="5" fill={SOFT} stroke={A} strokeWidth="1.5" />
         </svg>
       )
     default: // load: three soft dots

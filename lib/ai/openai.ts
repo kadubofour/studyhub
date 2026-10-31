@@ -5,7 +5,9 @@ export const MODELS = {
   light: 'gpt-6-luna',    // summaries, flashcards, quizzes, marking
   strong: 'gpt-6.1-sol',  // PDF import, scans, lecture notes
   transcribe: 'whisper-1', // accurate lecture transcripts (segment timestamps for tap-to-seek)
+  speech: 'gpt-4o-mini-tts', // the natural voice of a visual lesson
 } as const
+export const LESSON_VOICE = 'marin'
 
 export type AiClient = Pick<OpenAI, 'responses' | 'audio'>
 

@@ -23,7 +23,7 @@ describe('a wait, drawn', () => {
     expect(screen.getByText('Writing them up short')).toBeTruthy()
   })
   it('has a picture for each kind of work', () => {
-    for (const kind of ['read', 'scan', 'write', 'cards', 'quiz', 'check', 'search', 'listen', 'think', 'load'] as const) {
+    for (const kind of ['read', 'scan', 'write', 'cards', 'quiz', 'check', 'search', 'listen', 'think', 'load', 'draw'] as const) {
       const { container, unmount } = render(<Working kind={kind} label="x" size="sm" />)
       expect(container.querySelector('svg.working-art')?.childNodes.length, kind).toBeGreaterThan(0)
       unmount()
