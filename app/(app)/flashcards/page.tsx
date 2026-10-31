@@ -8,7 +8,10 @@ import { StackTile } from '@/components/ui/StackTile'
 import { requestQuiz } from '@/lib/quiz/events'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ViewOptions } from '@/components/ui/ViewOptions'
-import { sortDecks, useView } from '@/lib/ui/listView'
+import { VIEW_CHOICES, sortDecks, useView, viewStore } from '@/lib/ui/listView'
+import { CardsMark, ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneRow, PhoneSearch, PhoneTitle, tick } from '@/components/ui/PhoneList'
+import type { MenuEntry } from '@/components/ui/ContextMenu'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import { useScanSaved } from '@/lib/scan/events'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Dialog } from '@/components/ui/Dialog'
@@ -49,11 +52,18 @@ export default function FlashcardsPage() {
 
   const totalDue = decks?.reduce((n, d) => n + d.due, 0) ?? 0
   const view = useView('decks')
+  const screen = useScreen()
   const shown = sortDecks(decks ?? [], view.sort)
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
 
+  const phone = showsPhone(screen) && (
+    <PhoneDecks decks={decks} courses={courses} sort={view.sort} onSort={s => viewStore('decks').set({ ...view, sort: s })} onNew={() => setOpen(true)} />
+  )
+
   return (
     <div>
+      {phone && <div className="md:hidden">{phone}</div>}
+      {showsComputer(screen) && <div className="max-md:hidden">
       <PageHeader title="Flashcards" actions={<>
         {totalDue > 0 && <Link href="/review" className="btn-primary">Review all ({totalDue})</Link>}
         <button className="btn" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
@@ -82,6 +92,7 @@ export default function FlashcardsPage() {
           )
         })}
       </ItemList>
+      </div>}
       <Dialog open={open} onClose={() => setOpen(false)} title="New deck">
         <form onSubmit={create} className="space-y-3">
           <label className="field"><span>Name</span><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Cell biology" /></label>
@@ -91,6 +102,51 @@ export default function FlashcardsPage() {
           <div className="flex justify-end gap-2"><button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn-primary">Create</button></div>
         </form>
       </Dialog>
+    </div>
+  )
+}
+
+// The decks on a phone, as the notes list is: due decks first, each with its fanned cards, how many are due and how many it holds
+function PhoneDecks({ decks, courses, sort, onSort, onNew }: { decks: DeckWithDue[] | null; courses: Course[]; sort: string; onSort: (s: string) => void; onNew: () => void }) {
+  const [q, setQ] = useState('')
+  const term = q.trim().toLowerCase()
+  const shown = sortDecks((decks ?? []).filter(d => !term || d.name.toLowerCase().includes(term)), sort)
+  const totalDue = decks?.reduce((n, d) => n + d.due, 0) ?? 0
+  const groups = sort === 'due' && !term
+    ? [{ label: 'Due now', decks: shown.filter(d => d.due > 0) }, { label: 'All caught up', decks: shown.filter(d => d.due === 0) }]
+    : [{ label: '', decks: shown }]
+  const courseOf = (id: string | null) => courses.find(c => c.id === id)
+  const menu: MenuEntry[] = [
+    { label: 'Quiz', icon: ListChecks, onSelect: requestQuiz },
+    'sep',
+    ...VIEW_CHOICES.decks.sorts.map(s => tick(s.label, sort === s.value, () => onSort(s.value))),
+  ]
+  return (
+    <div className="pb-24">
+      <PhoneTitle title="Flashcards" menuLabel="Flashcards options" menu={menu} />
+      <PhoneSearch label="Search decks" value={q} onChange={setQ} />
+      {totalDue > 0 && !term && (
+        <Link href="/review" className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-accent-soft px-4 py-3 active:opacity-80">
+          <span><span className="block text-[16px] font-semibold text-accent">{totalDue} {totalDue === 1 ? 'card' : 'cards'} due</span><span className="block text-[14px] text-muted">Review them all now</span></span>
+          <span className="btn-primary pointer-events-none">Review</span>
+        </Link>
+      )}
+      {decks?.length === 0 && <PhoneEmpty>No decks yet. Tap + to make one.</PhoneEmpty>}
+      {decks && decks.length > 0 && shown.length === 0 && <PhoneEmpty>No decks match.</PhoneEmpty>}
+      {groups.map(g => g.decks.length > 0 && (
+        <PhoneGroup key={g.label || 'all'} label={g.label} name="Decks">
+          {g.decks.map(d => {
+            const c = courseOf(d.course_id)
+            return (
+              <PhoneRow key={d.id} href={`/flashcards/${d.id}`} title={d.name} mark={<CardsMark color={c?.color} />}
+                date={d.due > 0 ? `${d.due} due` : undefined}
+                line={[c?.name, `${d.total} ${d.total === 1 ? 'card' : 'cards'}`].filter(Boolean).join(' · ')} />
+            )
+          })}
+        </PhoneGroup>
+      ))}
+      <PhoneCount n={shown.length} one="deck" many="decks" />
+      <ComposeButton label="New deck" icon={Plus} onClick={onNew} />
     </div>
   )
 }

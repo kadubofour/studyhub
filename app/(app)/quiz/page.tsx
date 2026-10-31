@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ListChecks, Plus, Search, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -14,6 +15,10 @@ import { buildQuizHub, filterRows, type HubRow, type HubSort } from '@/lib/quiz/
 import { requestQuiz } from '@/lib/quiz/events'
 import { useProgressChanged } from '@/lib/xp/events'
 import { Dropdown } from '@/components/ui/Dropdown'
+import { ChecklistMark, ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneRow, PhoneSearch, PhoneTitle, tick } from '@/components/ui/PhoneList'
+import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
+import { Working } from '@/components/ui/Working'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 
 const SORTS: [HubSort, string][] = [['newest', 'Newest'], ['oldest', 'Oldest'], ['lowest', 'Lowest score'], ['most', 'Most taken']]
 
@@ -50,11 +55,19 @@ export default function QuizHubPage() {
     catch { toast('Couldn\'t delete that quiz.') }
   }
 
+  const screen = useScreen()
+  // A phone gets the list notes apps have (PhoneQuiz); a computer keeps the numbers, charts and cards
+  const page = (content: React.ReactNode) => (<>
+    {showsPhone(screen) && <div className="md:hidden"><PhoneQuiz hub={hub} rows={rows} failed={failed && !data} reload={load} query={query} onQuery={setQuery} courses={courses} hasLoose={hasLoose}
+      course={activeCourse} onCourse={setCourse} sort={sort} onSort={setSort} onDelete={r => { void remove(r) }} date={date} /></div>}
+    {showsComputer(screen) && <div className="max-md:hidden">{content}</div>}
+  </>)
+
   const header = <PageHeader title="Quiz" actions={<button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />New quiz</button>} />
-  if (failed && !data) return <div>{header}<p role="alert" className="text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={load}>Try again</button></p></div>
-  if (!hub) return <div>{header}<p role="status" className="text-sm text-muted">Loading your quizzes…</p></div>
+  if (failed && !data) return page(<div>{header}<p role="alert" className="text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={load}>Try again</button></p></div>)
+  if (!hub) return page(<div>{header}<Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" /></div>)
   if (hub.rows.length === 0) {
-    return (
+    return page(
       <div>
         {header}
         <EmptyState icon={ListChecks} tone="a" title="No quizzes yet" body="Pick a note and Studyhub writes questions from it. Every quiz you make, and how each one went, is kept here.">
@@ -72,7 +85,7 @@ export default function QuizHubPage() {
     ['Questions right', String(stats.right), `of ${stats.answered} answered`],
   ]
 
-  return (
+  return page(
     <div>
       {header}
       <section aria-label="Your quiz numbers" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -168,6 +181,56 @@ export default function QuizHubPage() {
             </ul>
           )}
       </section>
+    </div>
+  )
+}
+
+// The quizzes on a phone, as the notes list is: how they are going in one line, the ones worth another go, then every quiz with its
+// ticked list, its last score and what it is from. A long press offers Retake and Delete.
+function PhoneQuiz({ hub, rows, failed, reload, query, onQuery, courses, hasLoose, course, onCourse, sort, onSort, onDelete, date }: {
+  hub: ReturnType<typeof buildQuizHub> | null; rows: HubRow[]; failed: boolean; reload: () => void; query: string; onQuery: (q: string) => void
+  courses: [string, string][]; hasLoose: boolean; course: string; onCourse: (c: string) => void; sort: HubSort; onSort: (s: HubSort) => void
+  onDelete: (r: HubRow) => void; date: (iso: string) => string
+}) {
+  const router = useRouter()
+  const [menu, setMenu] = useState<{ x: number; y: number; row: HubRow } | null>(null)
+  const options: MenuEntry[] = [
+    ...SORTS.map(([v, l]) => tick(l, sort === v, () => onSort(v))),
+    ...(courses.length ? ['sep' as const, tick('All courses', course === 'all', () => onCourse('all')), ...courses.map(([id, name]) => tick(name, course === id, () => onCourse(id))),
+      ...(hasLoose ? [tick('No course', course === 'none', () => onCourse('none'))] : [])] : []),
+  ]
+  const open = (e: React.MouseEvent, row: HubRow) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, row }) }
+  const row = (r: HubRow) => (
+    <PhoneRow key={r.id} href={`/quiz/${r.id}`} title={r.title} mark={<ChecklistMark color={r.courseColor ?? undefined} />}
+      date={r.attempts === 0 ? 'New' : `${r.lastPct}%`} line={[r.courseName, `${r.questions} ${r.questions === 1 ? 'question' : 'questions'}`, r.lastAt ? `last ${date(r.lastAt)}` : ''].filter(Boolean).join(' · ')}
+      onContextMenu={e => open(e, r)} />
+  )
+  const s = hub?.stats
+  return (
+    <div className="pb-24">
+      <PhoneTitle title="Quiz" menuLabel="Quiz options" menu={options} />
+      {failed && <p role="alert" className="mb-4 text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={reload}>Try again</button></p>}
+      {!hub && !failed && <Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" />}
+      {hub && hub.rows.length === 0 && <PhoneEmpty>No quizzes yet. Tap + and Studyhub writes questions from a note.</PhoneEmpty>}
+      {hub && hub.rows.length > 0 && s && <>
+        <PhoneSearch label="Search quizzes" value={query} onChange={onQuery} />
+        {s.taken > 0 && (
+          <section aria-label="Your quiz numbers" className="mb-6 grid grid-cols-3 divide-x divide-line rounded-2xl bg-raised py-3 text-center">
+            {([['Taken', String(s.taken)], ['Average', s.average === null ? '–' : `${s.average}%`], ['Best', s.best === null ? '–' : `${s.best}%`]] as const).map(([label, value]) => (
+              <div key={label}><p className="text-xl font-semibold tabular-nums">{value}</p><p className="text-[13px] text-muted">{label}</p></div>
+            ))}
+          </section>
+        )}
+        {hub.needsWork.length > 0 && !query.trim() && <PhoneGroup label="Worth another go">{hub.needsWork.map(row)}</PhoneGroup>}
+        {rows.length === 0 ? <PhoneEmpty>No quizzes match.</PhoneEmpty> : <PhoneGroup label="All quizzes">{rows.map(row)}</PhoneGroup>}
+        <PhoneCount n={rows.length} one="quiz" many="quizzes" />
+      </>}
+      <ComposeButton label="New quiz" icon={Plus} onClick={requestQuiz} />
+      {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.row.title} onClose={() => setMenu(null)} items={[
+        { label: menu.row.attempts === 0 ? 'Take' : 'Retake', icon: ListChecks, onSelect: () => router.push(`/quiz/${menu.row.id}`) },
+        'sep',
+        { label: 'Delete', icon: Trash2, danger: true, onSelect: () => onDelete(menu.row) },
+      ]} />}
     </div>
   )
 }

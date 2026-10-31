@@ -14,6 +14,9 @@ import { createChat, listChatContexts, listChats, type TutorChat } from '@/lib/d
 import { aboutLine, filterChats, type ChatContext } from '@/lib/tutor/chatList'
 import { STARTERS, starterMessage } from '@/lib/tutor/starters'
 import type { Course } from '@/lib/types'
+import { ChatMark, ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneHeading, PhoneRow, PhoneSearch, PhoneTitle, tick } from '@/components/ui/PhoneList'
+import { groupByDate, rowDate } from '@/lib/notes/noteRows'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 const ICONS = { explain: HelpCircle, quiz: ClipboardList, revise: BookOpenCheck, summarise: FileText } as const
@@ -49,10 +52,53 @@ export default function TutorPage() {
   const withChats = useMemo(() => courses.filter(c => chats?.some(x => x.course_id === c.id)), [courses, chats])
   const shown = useMemo(() => filterChats(chats ?? [], contexts, courseId || null, ''), [chats, contexts, courseId])
   const filtering = courseId !== ''
+  const screen = useScreen()
+  const [q, setQ] = useState('')
+  const [now] = useState(() => new Date())
+  const phoneShown = useMemo(() => filterChats(chats ?? [], contexts, courseId || null, q), [chats, contexts, courseId, q])
+  const phoneGroups = q.trim() ? [{ label: '', notes: phoneShown }] : groupByDate(phoneShown, now)
 
   return (
     <div>
-      <PageHeader title="Tutor" actions={<>
+      {/* a phone gets the list notes apps have: the starters in a row that scrolls, then the chats by day */}
+      {showsPhone(screen) && <div className="pb-24 md:hidden">
+        <PhoneTitle title="Tutor" menuLabel="Tutor options" menu={[
+          { label: 'Chat about…', icon: MessagesSquare, onSelect: () => setPicking({ starter: null }) },
+          ...(withChats.length > 1 ? ['sep' as const, tick('All courses', !courseId, () => setCourseId('')), ...withChats.map(c => tick(c.name, courseId === c.id, () => setCourseId(c.id)))] : []),
+        ]} />
+        {failed && <p role="alert" className="mb-3 text-sm text-danger">Couldn&apos;t start a chat. Check your connection and try again.</p>}
+        <PhoneSearch label="Search chats" value={q} onChange={setQ} />
+        <section aria-label="Ways to start" className="mb-6">
+          <PhoneHeading>Start with</PhoneHeading>
+          <ul className="no-scrollbar -mx-5 flex gap-2.5 overflow-x-auto px-5 pb-1">
+            {STARTERS.map(s => {
+              const Icon = ICONS[s.id as keyof typeof ICONS]
+              return (
+                <li key={s.id} className="w-36 shrink-0">
+                  <button type="button" onClick={() => setPicking({ starter: s.id })} className="flex h-full w-full flex-col items-start gap-1 rounded-2xl bg-raised p-3 text-left active:bg-surface">
+                    <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon size={16} /></span>
+                    <span className="text-[15px] font-semibold leading-snug">{s.title}</span>
+                    <span className="text-[13px] leading-snug text-muted">{s.hint}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+        {chats?.length === 0 && <PhoneEmpty>No chats yet. Pick a way to start above, or tap the button below.</PhoneEmpty>}
+        {chats && chats.length > 0 && phoneShown.length === 0 && <PhoneEmpty>No chats match.</PhoneEmpty>}
+        {phoneGroups.map(g => g.notes.length > 0 && (
+          <PhoneGroup key={g.label || 'all'} label={g.label} name="Chats">
+            {g.notes.map(c => (
+              <PhoneRow key={c.id} href={`/tutor/${c.id}`} title={c.title} mark={<ChatMark color={courses.find(x => x.id === c.course_id)?.color} />}
+                date={rowDate(c.updated_at, now)} line={aboutLine(contexts[c.id]) || courses.find(x => x.id === c.course_id)?.name} />
+            ))}
+          </PhoneGroup>
+        ))}
+        <PhoneCount n={phoneShown.length} one="chat" many="chats" />
+        <ComposeButton label="New chat" icon={MessageSquarePlus} onClick={() => { void start() }} />
+      </div>}
+      {showsComputer(screen) && <div className="max-md:hidden">      <PageHeader title="Tutor" actions={<>
         <button type="button" className="btn" onClick={() => setPicking({ starter: null })}><MessagesSquare size={14} aria-hidden />Chat about…</button>
         <button type="button" className="btn-primary" onClick={start}><MessageSquarePlus size={14} aria-hidden />New chat</button>
       </>} />
@@ -98,6 +144,7 @@ export default function TutorPage() {
           )
         })}
       </ul>
+      </div>}
 
       <TutorPickDialog open={picking !== null} onClose={() => setPicking(null)} onPick={t => { void picked(t, picking?.starter ?? null) }}
         title={picking?.starter ? STARTERS.find(s => s.id === picking.starter)!.title : 'Chat about…'}

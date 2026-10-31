@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ItemList, ItemTile } from '@/components/ui/ItemTile'
 import { StackTile } from '@/components/ui/StackTile'
 import { ViewOptions } from '@/components/ui/ViewOptions'
-import { sortLectures, useView } from '@/lib/ui/listView'
+import { VIEW_CHOICES, sortLectures, useView, viewStore } from '@/lib/ui/listView'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { Dialog } from '@/components/ui/Dialog'
@@ -25,6 +25,9 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { AUDIO_QUOTA_BYTES, formatClock, formatMb, storageState } from '@/lib/lectures/time'
 import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
+import { ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneRow, PhoneSearch, PhoneTitle, StripMark, tick } from '@/components/ui/PhoneList'
+import { groupByDate, rowDate } from '@/lib/notes/noteRows'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 
 const STATUS: Record<TranscriptStatus, string> = {
   none: 'No transcript', live: 'Live transcript', processing: 'Transcribing…', done: 'Accurate transcript', failed: 'Transcript failed',
@@ -52,6 +55,9 @@ export default function LecturesPage() {
   const [editing, setEditing] = useState<Editing | null>(null)
   const [busy, setBusy] = useState(false)
   const view = useView('lectures')
+  const screen = useScreen()
+  const [q, setQ] = useState('')
+  const [now] = useState(() => new Date())
 
   useEffect(() => {
     const sb = supabase()
@@ -141,19 +147,46 @@ export default function LecturesPage() {
   const full = storageState(used) === 'full'
   const courseOf = (id: string | null) => courses.find(c => c.id === id)
 
+  const unsaved = leftover && (
+    <div role="status" className="card mb-4 space-y-2">
+      <p className="text-sm">A recording wasn&apos;t saved: <b>{leftover.title}</b>.</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn-primary" disabled={recovering} onClick={recover}>{recovering ? 'Saving…' : 'Recover unsaved recording'}</button>
+        <button type="button" className="btn" disabled={recovering} onClick={discard}>Discard</button>
+      </div>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+    </div>
+  )
+  // On a phone, as the notes list is: by the day recorded, each with its sound strip, length and transcript
+  const term = q.trim().toLowerCase()
+  const phoneShown = sortLectures(lectures ?? [], view.sort).filter(l => !term || l.title.toLowerCase().includes(term))
+  const phoneGroups = view.sort === 'newest' && !term
+    ? groupByDate(phoneShown.map(l => ({ ...l, updated_at: l.recorded_at })), now)
+    : [{ label: '', notes: phoneShown.map(l => ({ ...l, updated_at: l.recorded_at })) }]
+
   return (
     <div>
+      {showsPhone(screen) && <div className="pb-24 md:hidden">
+        <PhoneTitle title="Lectures" menuLabel="Lectures options" menu={VIEW_CHOICES.lectures.sorts.map(s => tick(s.label, view.sort === s.value, () => viewStore('lectures').set({ ...view, sort: s.value })))} />
+        {unsaved}
+        <div className="mb-3 space-y-1"><p className="text-[13px] text-muted">{formatMb(used)} of {formatMb(AUDIO_QUOTA_BYTES)} audio</p><StorageMessage used={used} /></div>
+        <PhoneSearch label="Search lectures" value={q} onChange={setQ} />
+        {lectures?.length === 0 && <PhoneEmpty>No lectures yet. Tap the microphone at the start of your next lecture.</PhoneEmpty>}
+        {!!lectures?.length && phoneShown.length === 0 && <PhoneEmpty>No lectures match.</PhoneEmpty>}
+        {phoneGroups.map(g => g.notes.length > 0 && (
+          <PhoneGroup key={g.label || 'all'} label={g.label} name="Lectures">
+            {g.notes.map(l => (
+              <PhoneRow key={l.id} href={`/lectures/${l.id}`} title={l.title} mark={<StripMark color={courseOf(l.course_id)?.color} />}
+                date={rowDate(l.recorded_at, now)} line={`${formatClock(l.duration_seconds)} · ${statusOf(l)}`} onContextMenu={e => openMenu(e, l)} />
+            ))}
+          </PhoneGroup>
+        ))}
+        <PhoneCount n={phoneShown.length} one="lecture" many="lectures" />
+        {!full && <ComposeButton label="Record a lecture" icon={Mic} href="/lectures/record" />}
+      </div>}
+      {showsComputer(screen) && <div className="max-md:hidden">
       <PageHeader title="Lectures" actions={!full && <Link href="/lectures/record" className="btn-primary"><Mic size={14} aria-hidden />Record</Link>} />
-      {leftover && (
-        <div role="status" className="card mb-4 space-y-2">
-          <p className="text-sm">A recording wasn&apos;t saved: <b>{leftover.title}</b>.</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary" disabled={recovering} onClick={recover}>{recovering ? 'Saving…' : 'Recover unsaved recording'}</button>
-            <button type="button" className="btn" disabled={recovering} onClick={discard}>Discard</button>
-          </div>
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-        </div>
-      )}
+      {unsaved}
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div className="space-y-1">
           <p className="text-xs text-muted">{formatMb(used)} of {formatMb(AUDIO_QUOTA_BYTES)} audio</p>
@@ -177,6 +210,7 @@ export default function LecturesPage() {
           )
         })}
       </ItemList>
+      </div>}
       {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.lecture.title} items={menuItems(menu.lecture)} onClose={() => setMenu(null)} />}
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={editing?.kind === 'course' ? 'Change course' : 'Rename lecture'}>
         {editing && (

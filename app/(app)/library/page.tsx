@@ -1,8 +1,8 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon, CheckSquare } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -25,6 +25,10 @@ import { useView } from '@/lib/ui/listView'
 import { countsByKind, folders, isMovable, visible, withKnownNotebooks, type Kind, type LibraryItem, type View } from '@/lib/library/items'
 import type { Course, Notebook } from '@/lib/types'
 import { Working } from '@/components/ui/Working'
+import { CardsMark, ChatMark, ChecklistMark, ComposeButton, FileMark, PhoneCount, PhoneEmpty, PhoneGroup, PhoneHeading, PhoneRow, PhoneSearch, PhoneTitle, SheetMark, StripMark, tick } from '@/components/ui/PhoneList'
+import type { MenuEntry } from '@/components/ui/ContextMenu'
+import { rowDate } from '@/lib/notes/noteRows'
+import { useScreen } from '@/lib/ui/useScreen'
 
 // Each kind has its own section, in this order, named with its heading
 const KIND: Record<Kind, { heading: string; icon: LucideIcon }> = {
@@ -36,6 +40,8 @@ const KIND: Record<Kind, { heading: string; icon: LucideIcon }> = {
   file: { heading: 'Files', icon: Paperclip },
 }
 const KINDS = Object.keys(KIND) as Kind[]
+// Each kind's small drawing in a phone's rows
+const MARK: Record<Kind, (p: { color?: string }) => React.ReactNode> = { note: SheetMark, deck: CardsMark, lecture: StripMark, quiz: ChecklistMark, chat: ChatMark, file: FileMark }
 const key = (i: { kind: Kind; id: string }) => `${i.kind}:${i.id}`
 const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '')
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
@@ -57,6 +63,11 @@ export default function LibraryPage() {
   const [target, setTarget] = useState('')
   const [moving, setMoving] = useState(false)
   const [dialog, setDialog] = useState<null | 'new' | 'file' | 'upload'>(null)
+  // On a phone: the list notes apps have, and ticking things only after choosing Select
+  const phone = useScreen() === 'phone'
+  const [selecting, setSelecting] = useState(false)
+  const [now] = useState(() => new Date())
+  const router = useRouter()
 
   // The items and the notebooks are read together, so a note never shows (or hides) against an out-of-date list of folders
   const read = () => Promise.all([loadLibrary(supabase(), new Date()), listNotebooks(supabase())])
@@ -152,9 +163,20 @@ export default function LibraryPage() {
   if (!items) return <div><PageHeader title="Library" /><Working kind="load" size="sm" label="Loading" className="text-sm text-muted" /></div>
 
   const empty = items.length === 0 && notebooks.length === 0
+  const phoneMenu: MenuEntry[] = [
+    { label: 'Upload file', icon: Upload, onSelect: () => setDialog('upload') },
+    { label: 'New notebook', icon: FolderPlus, onSelect: () => setDialog('new') },
+    { label: 'Quiz', icon: ListChecks, onSelect: requestQuiz },
+    ...(courseName ? [{ label: 'Open course page', icon: FolderOpen, onSelect: () => router.push(`/courses/${course}`) }] : []),
+    { label: 'Select', icon: CheckSquare, onSelect: () => setSelecting(true), disabled: empty },
+    'sep',
+    tick('Newest first', view.sort === 'recent', () => setView(v => ({ ...v, sort: 'recent' }))),
+    tick('Name', view.sort === 'name', () => setView(v => ({ ...v, sort: 'name' }))),
+  ]
   return (
-    <div>
-      <PageHeader title="Library" actions={!empty && (
+    <div className={phone ? 'pb-24' : undefined}>
+      {phone ? <PhoneTitle title="Library" menuLabel="Library options" menu={phoneMenu} selecting={selecting} onDone={() => { setSelecting(false); setSelected(new Set()) }} />
+      : <PageHeader title="Library" actions={!empty && (
         <>
           {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
           <button type="button" className="btn" onClick={() => setDialog('upload')}><Upload size={14} aria-hidden />Upload file</button>
@@ -162,8 +184,10 @@ export default function LibraryPage() {
           {/* notes, decks and uploads are made from the Create button; a quiz is started here on a phone */}
           <button type="button" className="btn md:hidden" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
         </>
-      )} />
-      {empty ? (
+      )} />}
+      {empty && phone ? (
+        <PhoneEmpty>Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Tap the button below to upload your first file.</PhoneEmpty>
+      ) : empty ? (
         <EmptyState icon={FolderOpen} tone="b" title="Your library starts here" body="Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Bring your first material in.">
           <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
           <button type="button" className="btn" onClick={() => setDialog('upload')}>Just keep a file</button>
@@ -177,7 +201,7 @@ export default function LibraryPage() {
               unsorted={{ active: course === 'none', onClick: () => chooseCourse('none') }} />
           </div>
 
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          {phone ? <PhoneSearch label="Search the library" value={view.q} onChange={q => setView(v => ({ ...v, q }))} className="mb-3" /> : <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="relative min-w-48 flex-1 max-sm:basis-full">
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
               <input className="input w-full pl-9" placeholder="Search the library" aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
@@ -186,7 +210,7 @@ export default function LibraryPage() {
             <ChoiceChips className="flex-nowrap" label="Sort" value={view.sort} options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} onChange={v => setView(prev => ({ ...prev, sort: v as View['sort'] }))} />
             <ViewOptions page="library" sort={false} />
             </div>
-          </div>
+          </div>}
           {(
             <div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
               {KINDS.map(k => (
@@ -200,10 +224,10 @@ export default function LibraryPage() {
 
           {shelf.length > 0 && (
             <section aria-labelledby="lib-notebooks" className="mb-7">
-              <h2 id="lib-notebooks" className="section-label">Notebooks</h2>
-              <ul aria-label="Notebooks" className="flex flex-wrap gap-4">
+              {phone ? <PhoneHeading id="lib-notebooks">Notebooks</PhoneHeading> : <h2 id="lib-notebooks" className="section-label">Notebooks</h2>}
+              <ul aria-label="Notebooks" className={phone ? 'no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1' : 'flex flex-wrap gap-4'}>
                 {shelf.map(({ notebook, count }) => (
-                  <li key={notebook.id} className="w-32">
+                  <li key={notebook.id} className={phone ? 'w-24 shrink-0' : 'w-32'}>
                     <Link href={`/notebooks/${notebook.id}`} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
                       className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent">
                       <NotebookCover name={notebook.name} count={count} color={notebookColor(notebook, known ?? [], courses)} />
@@ -214,7 +238,7 @@ export default function LibraryPage() {
             </section>
           )}
 
-          <div className="mb-2 flex min-h-9 flex-wrap items-center justify-between gap-2 text-sm">
+          {(!phone || selecting) && <div className="mb-2 flex min-h-9 flex-wrap items-center justify-between gap-2 text-sm">
             <label className="flex items-center gap-2 text-muted">
               <input type="checkbox" checked={allShownPicked} disabled={movableShown.length === 0} onChange={toggleAll} aria-label="Select all shown" />
               <span>{picked.length > 0 ? `${picked.length} selected` : plural(shown.length, 'item')}</span>
@@ -229,7 +253,7 @@ export default function LibraryPage() {
                 <button type="button" className="btn-primary" disabled={!target || moving} onClick={() => { void move() }}>Move</button>
               </div>
             )}
-          </div>
+          </div>}
 
           <span role="status" className="sr-only">{picked.length > 0 ? `${plural(picked.length, 'item')} selected` : ''}</span>
           {shown.length === 0 ? (
@@ -241,6 +265,26 @@ export default function LibraryPage() {
             ) : (
               <div className="card py-8 text-center text-sm text-muted">{course === 'none' ? 'Everything is in a course.' : courseName ? 'Nothing in this course yet.' : 'Nothing here yet.'}</div>
             )
+          ) : phone ? (
+            <section aria-label="Library items">
+              {KINDS.filter(k => shown.some(i => i.kind === k)).map(kind => {
+                const Mark = MARK[kind]
+                return (
+                  <PhoneGroup key={kind} label={KIND[kind].heading}>
+                    {shown.filter(i => i.kind === kind).map(i => {
+                      const c = courseOf(i.course_id)
+                      const book = i.kind === 'note' ? bookOf(i.notebook_id) : null
+                      return (
+                        <PhoneRow key={key(i)} href={i.href} title={i.title} mark={<Mark color={c?.color} />} date={rowDate(i.at, now)}
+                          line={[book ? `In ${book.name}` : i.meta, c?.name].filter(Boolean).join(' · ')}
+                          select={selecting && isMovable(i) ? { on: selected.has(key(i)), onToggle: () => toggle(i) } : undefined} />
+                      )
+                    })}
+                  </PhoneGroup>
+                )
+              })}
+              <PhoneCount n={shown.length} one="item" many="items" />
+            </section>
           ) : (
             <section aria-label="Library items" className="space-y-8">
               {KINDS.filter(k => shown.some(i => i.kind === k)).map(kind => {
@@ -277,6 +321,7 @@ export default function LibraryPage() {
         </>
       )}
 
+      {phone && !selecting && <ComposeButton label="Upload a file" icon={Upload} onClick={() => setDialog('upload')} />}
       <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create"
         courses={courses} initialCourse={course !== 'all' && course !== 'none' ? course : null} onSubmit={(n, cid) => { void create(n, cid) }} />
       {/* a fresh dialog each time it opens, so nothing from the last upload is left in it */}
