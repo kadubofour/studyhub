@@ -187,11 +187,12 @@ describe('the command palette', () => {
 })
 
 describe('on a phone', () => {
-  it('a dock with Home, Planner, Create, Notes and Flashcards', async () => {
+  it('a dock with Home, Planner and Notes, then Create, then Flashcards and the Tutor', async () => {
     path = '/notes'
     await shell()
-    const dock = within(screen.getByRole('navigation', { name: 'Main' }))
-    expect(dock.getAllByRole('link').map(l => l.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Notes', 'Flashcards'])
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    const dock = within(nav)
+    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Notes', 'Create new', 'Flashcards', 'Tutor'])
     expect(dock.getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBe('page')
     fireEvent.click(dock.getByRole('button', { name: 'Create new' }))
     expect(screen.getByRole('menu', { name: 'Create' })).toBeTruthy()

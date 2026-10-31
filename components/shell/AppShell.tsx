@@ -30,7 +30,7 @@ import { listLectures } from '@/lib/data/lectures'
 import { appearanceVars, contentWidthOf } from '@/lib/appearance'
 import { useCoursesChanged } from '@/lib/course/events'
 import { listCourses } from '@/lib/data/courses'
-import { DOCK, MORE_PLACES, PLACES, isActive } from '@/lib/shell/nav'
+import { DOCK, DOCK_SPLIT, MORE_PLACES, PLACES, isActive } from '@/lib/shell/nav'
 import type { PaletteItem } from '@/lib/shell/palette'
 import type { Course } from '@/lib/types'
 import { useSidebarCollapsed } from '@/lib/ui/sidebarPref'
@@ -276,12 +276,12 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       </div>
       {!immersive && (
         <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit items-center gap-1 rounded-full border border-line bg-raised px-2 py-1 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.3)] md:hidden">
-          {DOCK.slice(0, 2).map(dockLink)}
+          {DOCK.slice(0, DOCK_SPLIT).map(dockLink)}
           <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => setCreating(c => (c ? null : 'dock'))}
             className={`${dockItem} ${creating === 'dock' ? 'text-accent-solid' : 'text-fg'}`}>
             <Plus size={26} strokeWidth={creating === 'dock' ? 2.6 : 2} aria-hidden />
           </button>
-          {DOCK.slice(2).map(dockLink)}
+          {DOCK.slice(DOCK_SPLIT).map(dockLink)}
         </nav>
       )}
       {creating && <CreateMenu from={creating} onPick={act} onClose={() => setCreating(null)} />}

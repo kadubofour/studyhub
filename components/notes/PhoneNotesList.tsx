@@ -1,11 +1,23 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronRight, Circle, CircleCheck, Folder, FolderPlus, MoreHorizontal, Search, SquarePen, Upload, CheckSquare, type LucideIcon } from 'lucide-react'
+import { Check, Circle, CircleCheck, FolderPlus, MoreHorizontal, Search, SquarePen, Upload, CheckSquare, type LucideIcon } from 'lucide-react'
+import { NotebookCover } from '@/components/notes/NotebookCover'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { groupByDate, previewLine, rowDate } from '@/lib/notes/noteRows'
 import { VIEW_CHOICES } from '@/lib/ui/listView'
 import type { Course, NoteSummary } from '@/lib/types'
+
+// A note's mark in its row: the ruled sheets the note tiles have in their corner, small, in the course's colour (the accent with none)
+function SheetMark({ color = 'var(--accent-solid)' }: { color?: string }) {
+  return (
+    <span aria-hidden data-motif="sheets" className="relative h-10 w-8 shrink-0">
+      <span className="absolute inset-0 rotate-[8deg] rounded-[5px] opacity-25" style={{ background: color }} />
+      <span className="absolute inset-0 -rotate-[3deg] rounded-[5px]"
+        style={{ background: `repeating-linear-gradient(to bottom, transparent 0 6px, color-mix(in srgb, ${color} 55%, transparent) 6px 7px), color-mix(in srgb, ${color} 22%, var(--raised))` }} />
+    </span>
+  )
+}
 
 // An empty space the size of an icon, so a menu's unchosen options line up with the chosen one's tick
 const NoIcon = (({ size = 15 }: { size?: number | string }) => <span aria-hidden className="inline-block" style={{ width: size, height: size }} />) as unknown as LucideIcon
@@ -62,14 +74,12 @@ export function PhoneNotesList({ notes, loaded, searching, q, onSearch, books, c
       {books.length > 0 && !searching && (
         <section aria-labelledby="phone-notebooks" className="mb-6">
           <h2 id="phone-notebooks" className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Notebooks</h2>
-          <ul aria-label="Notebooks" className="divide-y divide-line overflow-hidden rounded-2xl bg-raised">
+          {/* the notebooks drawn as notebooks, as on a computer, in a row that scrolls sideways */}
+          <ul aria-label="Notebooks" className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
             {books.map(b => (
-              <li key={b.id}>
-                <Link href={`/notebooks/${b.id}`} className="flex min-h-12 items-center gap-3 px-4 active:bg-surface">
-                  <Folder size={20} aria-hidden style={{ color: b.color }} className="shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-[16px]">{b.name}</span>
-                  <span className="text-[15px] text-muted">{b.count}</span>
-                  <ChevronRight size={17} aria-hidden className="shrink-0 text-muted" />
+              <li key={b.id} className="w-24 shrink-0">
+                <Link href={`/notebooks/${b.id}`} aria-label={`Open ${b.name}, ${b.count} note${b.count === 1 ? '' : 's'}`} className="block rounded-xl active:scale-95 transition">
+                  <NotebookCover name={b.name} count={b.count} color={b.color} />
                 </Link>
               </li>
             ))}
@@ -91,6 +101,7 @@ export function PhoneNotesList({ notes, loaded, searching, q, onSearch, books, c
               const body = (
                 <>
                   {selecting && (on ? <CircleCheck size={22} aria-hidden className="shrink-0 text-accent" /> : <Circle size={22} aria-hidden className="shrink-0 text-muted" />)}
+                  <SheetMark color={courses.find(c => c.id === n.course_id)?.color} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[16px] font-semibold">{n.title || 'Untitled'}</span>
                     <span className="block truncate text-[14px] text-muted">

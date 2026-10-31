@@ -22,7 +22,8 @@ export const MORE_PLACES: Place[] = [
   { href: '/profile', label: 'Profile', icon: FolderOpen, keywords: 'me account avatar' },
   { href: '/review', label: 'Review cards', icon: Layers, keywords: 'due flashcards spaced repetition' },
 ]
-// A phone's dock: four places, with Create in the middle
-export const DOCK = ['/home', '/planner', '/notes', '/flashcards']
+// A phone's dock: five places, the first DOCK_SPLIT before Create and the rest after it
+export const DOCK = ['/home', '/planner', '/notes', '/flashcards', '/tutor']
+export const DOCK_SPLIT = 3
 
 export const isActive = (path: string, href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review')) || (href === '/notes' && path.startsWith('/notebooks/'))

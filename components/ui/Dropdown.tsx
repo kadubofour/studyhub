@@ -126,28 +126,30 @@ export function Dropdown<T extends string>({ label, value, options, onChange, pl
 
   const pad = size === 'sm' ? 'min-h-9 px-3 text-sm' : 'min-h-11 px-4 text-[15px]'
   const joined = open && place ? (place.up ? 'rounded-t-none' : 'rounded-b-none') : ''
+  // In the look's own colours, not the accent: the page's raised colour, its line and its ink, so a dropdown sits quietly in a form.
+  // As wide as its choice needs (a page can give it a width); the list is at least as wide as the button.
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative inline-block min-w-36 max-w-full align-middle ${/(^|\s)w-/.test(className) ? '' : 'w-fit'} ${className}`}>
       <button ref={button} id={buttonId} type="button" disabled={disabled} aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
         aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
         onClick={() => (open ? close() : show(chosen))} onKeyDown={onKeyDown}
-        className={`flex w-full items-center justify-between gap-3 rounded-xl bg-[var(--accent-solid)] font-medium text-white shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--accent-solid)] focus-visible:ring-offset-2 focus-visible:ring-offset-raised disabled:opacity-50 ${pad} ${joined}`}>
-        <span className={`min-w-0 truncate text-left ${current ? '' : 'text-white/75'}`}>{current?.label ?? placeholder}</span>
-        <ChevronDown size={size === 'sm' ? 16 : 18} aria-hidden className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        className={`flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-raised font-medium text-fg outline-none transition hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${open ? 'bg-surface' : ''} ${pad} ${joined}`}>
+        <span className={`min-w-0 truncate text-left ${current ? '' : 'text-muted'}`}>{current?.label ?? placeholder}</span>
+        <ChevronDown size={size === 'sm' ? 16 : 18} aria-hidden className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && place && (
         <ul ref={panel} id={listId} role="listbox" aria-label={label} popover={canPopover() ? 'manual' : undefined} tabIndex={-1}
-          style={{ position: 'fixed', inset: 'auto', margin: 0, left: place.left, width: place.width, top: place.top, bottom: place.bottom }}
-          className={`z-[60] max-h-80 overflow-y-auto border-0 bg-[var(--accent-solid)] p-1 text-white shadow-[0_14px_30px_-12px_rgb(0_0_0/0.45)] ${place.up ? 'rounded-t-xl pb-0' : 'rounded-b-xl pt-0'}`}>
+          style={{ position: 'fixed', inset: 'auto', margin: 0, left: place.left, minWidth: place.width, maxWidth: `min(22rem, calc(100vw - ${place.left + 12}px))`, top: place.top, bottom: place.bottom }}
+          className={`z-[60] max-h-80 overflow-y-auto border border-line bg-surface p-1 text-fg shadow-[0_14px_30px_-12px_rgb(0_0_0/0.35)] ${place.up ? 'rounded-t-xl rounded-br-xl border-b-0 pb-0' : 'rounded-b-xl rounded-tr-xl border-t-0 pt-0'}`}>
           {options.map((o, i) => {
             const on = o.value === value
             return (
               <li key={o.value} id={`${listId}-${i}`} data-index={i} role="option" aria-selected={on} aria-disabled={o.disabled || undefined}
                 onPointerMove={() => { if (enabled(i)) setActive(i) }} onClick={() => pick(i)}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 ${size === 'sm' ? 'py-1.5 text-sm' : 'py-2 text-[15px]'} ${o.disabled ? 'cursor-default opacity-40' : ''} ${i === active ? 'bg-white/15 text-white' : on ? 'text-white' : 'text-white/75'}`}>
+                className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 ${size === 'sm' ? 'py-1.5 text-sm' : 'py-2 text-[15px]'} ${o.disabled ? 'cursor-default opacity-40' : ''} ${i === active ? 'bg-raised text-fg' : on ? 'text-fg' : 'text-muted'}`}>
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate ${on ? 'font-semibold' : ''}`}>{o.label}</span>
-                  {o.hint && <span className="block truncate text-xs text-white/60">{o.hint}</span>}
+                  {o.hint && <span className="block truncate text-xs text-muted">{o.hint}</span>}
                 </span>
                 {on && <Check size={15} aria-hidden className="shrink-0" />}
               </li>

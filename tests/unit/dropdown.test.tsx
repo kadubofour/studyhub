@@ -14,6 +14,16 @@ const button = () => screen.getByRole('button', { name: 'Friend' })
 const list = () => screen.queryByRole('listbox', { name: 'Friend' })
 
 describe('the dropdown', () => {
+  it('is in the look\'s own quiet colours, not the accent, and only as wide as it needs unless given a width', () => {
+    render(<Pick />)
+    fireEvent.click(button())
+    for (const el of [button(), list()!]) expect(el.className).not.toContain('accent-solid')
+    expect(button().className).toContain('bg-raised')
+    expect(button().parentElement!.className).toContain('w-fit')
+    cleanup()
+    render(<Dropdown label="Sort" className="w-44" value="a" options={[{ value: 'a', label: 'A' }]} onChange={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Sort' }).parentElement!.className).not.toContain('w-fit')
+  })
   it('shows the chosen option on a button that says it opens a list', () => {
     render(<Pick />)
     expect(button().textContent).toBe('Ama')

@@ -30,11 +30,14 @@ describe('the notes list on a phone', () => {
     expect(week.textContent).toContain('No additional text')
     expect(screen.getByText('2 notes')).toBeTruthy()
   })
-  it('shows the notebooks as folder rows with their counts', () => {
+  it('draws the notebooks as notebook covers, and each note with the ruled sheets the note tiles have', () => {
     render(<PhoneNotesList {...props()} />)
     const book = within(screen.getByRole('list', { name: 'Notebooks' })).getByRole('link')
     expect(book.getAttribute('href')).toBe('/notebooks/n1')
-    expect(book.textContent).toContain('Biology3')
+    expect(book.getAttribute('aria-label')).toBe('Open Biology, 3 notes')
+    expect(book.querySelector('[data-notebook-cover]')).toBeTruthy()
+    const row = within(screen.getByRole('list', { name: 'Today' })).getByRole('link')
+    expect(row.querySelector('[data-motif="sheets"]')).toBeTruthy()
   })
   it('writes a new note from the button at the bottom right', () => {
     const p = props()
