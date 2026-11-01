@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Loader2, Mic, Paperclip, Pencil, RefreshCw, Square, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Link2Off, Loader2, Mic, MoreHorizontal, Paperclip, Pencil, RefreshCw, Square, Trash2, X, ChevronLeft } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
@@ -27,6 +27,10 @@ import type { Attachment } from '@/lib/tutor/attachments'
 import type { Proposal } from '@/lib/ai/tutorTools'
 import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
+import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
+import { tick } from '@/components/ui/PhoneList'
+import { STARTER_ICONS } from '@/components/tutor/starterIcons'
+import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import { Working } from '@/components/ui/Working'
 import { MessageLesson } from '@/components/tutor/MessageLesson'
 import { useLiveTutor } from '@/components/voice/LiveTutorProvider'
@@ -54,6 +58,8 @@ export function ChatView({ chatId }: { chatId: string }) {
   const [attachedTitle, setAttachedTitle] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null) // the new name being typed; null when not renaming
   const [picking, setPicking] = useState(false)
+  const screen = useScreen()
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null) // the phone's ⋯ menu
   const plan = usePlan()
   const voice = useLiveTutor()
   const abort = useRef<AbortController | null>(null)
@@ -298,7 +304,36 @@ export function ChatView({ chatId }: { chatId: string }) {
   const left = plan.billing && !plan.isPremium && !plan.loading ? Math.max(0, FREE_DAILY_TUTOR_MESSAGES - plan.tutorToday) : null
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-3xl flex-col gap-3 max-md:min-h-[calc(100dvh-13rem)]">
-      <div className="flex items-center gap-1">
+      {/* a phone gets a bar like the other screens: back to the Tutor, the name, and one ⋯ menu for everything else */}
+      {showsPhone(screen) && <div className="sticky top-0 z-20 -mx-1 flex items-center gap-1 bg-bg/90 py-1 backdrop-blur md:hidden">
+        <Link href="/tutor" aria-label="Back to the Tutor" className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-accent active:bg-surface"><ChevronLeft size={26} aria-hidden /></Link>
+        {renaming === null
+          ? <h1 className="min-w-0 flex-1 truncate font-display text-[1.35rem] font-bold leading-tight tracking-tight">{chat.title}</h1>
+          : <input aria-label="Chat name" className="input min-w-0 flex-1 text-lg font-semibold" value={renaming} maxLength={200} autoFocus
+              onChange={e => setRenaming(e.target.value)} onBlur={() => { void finishRename() }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void finishRename() } else if (e.key === 'Escape') { renameSettled.current = true; setRenaming(null) } }} />}
+        <button type="button" aria-label="Chat options" aria-haspopup="menu" className="grid size-10 shrink-0 place-items-center rounded-full text-accent active:bg-surface"
+          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenuAt({ x: r.right, y: r.bottom + 4 }) }}><MoreHorizontal size={22} aria-hidden /></button>
+        {menuAt && <ContextMenu x={menuAt.x} y={menuAt.y} label="Chat options" onClose={() => setMenuAt(null)} items={[
+          { label: 'Voice chat', icon: AudioLines, onSelect: () => voice.start(chatId) },
+          { label: 'Rename', icon: Pencil, onSelect: () => { renameSettled.current = false; setRenaming(chat.title) } },
+          tick('Guided', chat.guided, () => { void toggleGuided(!chat.guided) }),
+          'sep',
+          { label: where ? 'Change what it is about' : 'Choose a note or lecture', icon: FileText, onSelect: () => setPicking(true) },
+          ...(where ? [{ label: 'Remove what it is about', icon: Link2Off, onSelect: () => { void aboutPicked(null) } } as MenuEntry] : []),
+          ...(messages.length > 0 ? [{ label: 'Copy chat', icon: ClipboardCopy, onSelect: () => { void copy(transcript(chat.title, messages)) } } as MenuEntry] : []),
+          'sep',
+          { label: 'Delete chat', icon: Trash2, danger: true, onSelect: () => { void remove() } },
+        ]} />}
+      </div>}
+      {showsPhone(screen) && <div className="flex items-center gap-2 text-[13px] md:hidden">
+        {where && attachedTitle
+          ? <Link href={where} className="inline-flex max-w-[70%] items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 font-medium text-accent"><FileText size={13} aria-hidden /><span className="truncate">{attachedTitle}</span></Link>
+          : <button type="button" className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-muted" onClick={() => setPicking(true)}><FileText size={13} aria-hidden />Not about a note or lecture</button>}
+        <Dropdown label="Course" size="sm" className="ml-auto w-36" value={chat.course_id ?? ''} options={courseOptions(courses)}
+          onChange={x => { const v = x || null; setChat({ ...chat, course_id: v }); void setChatCourse(supabase(), chatId, v) }} />
+      </div>}
+      {showsComputer(screen) && <div className="flex items-center gap-1 max-md:hidden">
         {renaming === null
           ? <h1 className="mr-auto min-w-0 truncate text-lg font-medium">{chat.title}</h1>
           : <input aria-label="Chat name" className="input mr-auto min-w-0 flex-1 text-lg font-medium" value={renaming} maxLength={200} autoFocus
@@ -308,8 +343,8 @@ export function ChatView({ chatId }: { chatId: string }) {
         {renaming === null && <button type="button" className="btn-ghost" aria-label="Rename" title="Rename" onClick={() => { renameSettled.current = false; setRenaming(chat.title) }}><Pencil size={15} aria-hidden /></button>}
         {messages.length > 0 && <button type="button" className="btn-ghost" aria-label="Copy chat" title="Copy the whole chat" onClick={() => { void copy(transcript(chat.title, messages)) }}><ClipboardCopy size={15} aria-hidden /></button>}
         <button type="button" className="btn-ghost text-danger" aria-label="Delete chat" title="Delete chat" onClick={remove}><Trash2 size={15} aria-hidden /></button>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+      </div>}
+      {showsComputer(screen) && <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted max-md:hidden">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {where && attachedTitle ? <>About <Link className="text-accent" href={where}>{attachedTitle}</Link></> : <>Not about a note or lecture</>}
           <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => setPicking(true)}>{where ? 'Change' : 'Choose one'}</button>
@@ -317,11 +352,35 @@ export function ChatView({ chatId }: { chatId: string }) {
         </p>
         <Dropdown label="Course" size="sm" className="w-40" value={chat.course_id ?? ''} options={courseOptions(courses)}
           onChange={x => { const v = x || null; setChat({ ...chat, course_id: v }); void setChatCourse(supabase(), chatId, v) }} />
-      </div>
+      </div>}
 
       <div className="flex-1 space-y-3" aria-live="polite" aria-label="Conversation">
-        {messages.length === 0 && live === null && (
-          <div className="space-y-4 py-10 text-center">
+        {showsPhone(screen) && messages.length === 0 && live === null && (
+          <div className="space-y-5 pb-2 pt-4 md:hidden">
+            <div>
+              <h2 className="font-display text-[2rem] font-bold leading-tight tracking-tight">{today.getHours() < 12 ? 'Good morning' : today.getHours() < 18 ? 'Good afternoon' : 'Good evening'}{profile.display_name ? `, ${profile.display_name}` : ''}</h2>
+              <p className="mt-1 text-[15px] text-muted">Ask anything about your courses. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
+            </div>
+            {/* ideas put a message in the box to finish and send; nothing is sent from here */}
+            <ul aria-label="Ideas to start with" className="grid grid-cols-2 gap-2.5">
+              {STARTERS.map(s => {
+                const Icon = STARTER_ICONS[s.id as keyof typeof STARTER_ICONS]
+                return (
+                  <li key={s.id}>
+                    <button type="button" className="flex h-full w-full flex-col items-start gap-1 rounded-2xl bg-raised p-3 text-left active:bg-surface"
+                      onClick={() => { setText(starterMessage(s, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }}>
+                      <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon size={16} /></span>
+                      <span className="text-[15px] font-semibold leading-snug">{s.title}</span>
+                      <span className="text-[13px] leading-snug text-muted">{s.hint}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+        {showsComputer(screen) && messages.length === 0 && live === null && (
+          <div className="space-y-4 py-10 text-center max-md:hidden">
             <h2 className="text-2xl font-medium">{today.getHours() < 12 ? 'Good morning' : today.getHours() < 18 ? 'Good afternoon' : 'Good evening'}{profile.display_name ? `, ${profile.display_name}` : ''}</h2>
             <p className="mx-auto max-w-md text-sm text-muted">Ask anything about your courses. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
             {/* ideas put a message in the box to finish and send; nothing is sent from here */}
@@ -357,7 +416,7 @@ export function ChatView({ chatId }: { chatId: string }) {
                   ))}
                 </ul>
               )}
-              {m.content && <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm">{m.content}</p>}
+              {m.content && <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-sm max-md:bg-accent-solid max-md:text-[15px] max-md:text-white">{m.content}</p>}
               {m.id !== 'pending' && (
                 <div className="flex items-center gap-1 text-xs text-muted">
                   {time && <span>{time}</span>}
@@ -368,7 +427,7 @@ export function ChatView({ chatId }: { chatId: string }) {
           )
           : (
             <div className="space-y-2">
-              <MarkdownView source={m.content} />
+              <div className="max-md:rounded-2xl max-md:rounded-bl-md max-md:bg-raised max-md:px-4 max-md:py-3"><MarkdownView source={m.content} /></div>
               {m.status === 'cut_off' && <p className="text-xs text-muted">Reply was cut off.</p>}
               {m.sources.length > 0 && (
                 <p className="text-xs text-muted">From: {m.sources.map((s, i) => (
@@ -395,16 +454,16 @@ export function ChatView({ chatId }: { chatId: string }) {
           )
         })}
         {partial && last?.role === 'user' && idle && (
-          <div className="space-y-1"><MarkdownView source={partial} /><p className="text-xs text-muted">Stopped.</p></div>
+          <div className="space-y-1"><div className="max-md:rounded-2xl max-md:rounded-bl-md max-md:bg-raised max-md:px-4 max-md:py-3"><MarkdownView source={partial} /></div><p className="text-xs text-muted">Stopped.</p></div>
         )}
-        {live !== null && (live ? <MarkdownView source={live} /> : <Working kind="think" size="sm" label="Thinking" className="text-sm text-muted" />)}
+        {live !== null && (live ? <div className="max-md:rounded-2xl max-md:rounded-bl-md max-md:bg-raised max-md:px-4 max-md:py-3"><MarkdownView source={live} /></div> : <Working kind="think" size="sm" label="Thinking" className="text-sm text-muted" />)}
         <div ref={end} />
       </div>
 
       {problem && <AiError code={problem.code} message={problem.message} />}
       {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
       {canFollowUp && (
-        <div role="group" aria-label="Follow-up questions" className="flex flex-wrap gap-2">
+        <div role="group" aria-label="Follow-up questions" className="flex flex-wrap gap-2 max-md:no-scrollbar max-md:-mx-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-1 max-md:[&>button]:shrink-0 max-md:[&>button]:whitespace-nowrap">
           {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5" onClick={() => { void send(f.message) }}>{f.label}</button>)}
         </div>
       )}
@@ -419,7 +478,7 @@ export function ChatView({ chatId }: { chatId: string }) {
           <button type="button" aria-label="Jump to latest" title="Latest" className="btn absolute -top-11 left-1/2 grid size-9 -translate-x-1/2 place-items-center !rounded-full !p-0 shadow-md" onClick={jumpToLatest}><ArrowDown size={16} aria-hidden /></button>
         )}
         {/* one rounded box, the way a chat is written: the text and its Send button together */}
-        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent"
+        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent max-md:border-transparent max-md:shadow-[0_8px_24px_-10px_rgb(0_0_0/0.35)]"
           onDragOver={e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault() }}
           onDrop={e => { const f = Array.from(e.dataTransfer?.files ?? []); if (f.length) { e.preventDefault(); void addFiles(f) } }}>
           {(pending.length > 0 || reading > 0) && (
@@ -450,7 +509,7 @@ export function ChatView({ chatId }: { chatId: string }) {
             <input ref={fileInput} type="file" multiple aria-label="Files to add" className="sr-only" tabIndex={-1}
               accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,application/pdf,.docx,.pptx,.txt,.md,.markdown"
               onChange={e => { const f = Array.from(e.target.files ?? []); e.target.value = ''; if (f.length) void addFiles(f) }} />
-            <span className="flex items-center gap-2 text-xs text-muted">
+            <span className="flex items-center gap-2 text-xs text-muted max-md:hidden">
               <span id="guided-label">Guided</span>
               <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
               <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
