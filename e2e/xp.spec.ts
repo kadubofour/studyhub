@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, openStudy } from './helpers'
 
 test('a new student starts at level 1; ticking a task and finishing a quiz earn XP on Home and Progress', async ({ page }) => {
   await signUp(page)
@@ -12,7 +12,7 @@ test('a new student starts at level 1; ticking a task and finishing a quiz earn 
   await expect(page.getByRole('banner', { name: 'Today at a glance' }).getByRole('status')).toHaveText('+5 XP') // the top bar cheers at once
 
   await noteWithText(page)
-  await page.getByRole('button', { name: '✦ Study' }).click()
+  await openStudy(page)
   const study = page.getByRole('complementary', { name: 'Study' })
   await study.getByRole('tab', { name: 'Quiz' }).click()
   await study.getByRole('button', { name: '✦ New quiz' }).click()

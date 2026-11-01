@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { signUp, noteWithText } from './helpers'
+import { signUp, noteWithText, openStudy } from './helpers'
 
 test('free limit → Get Premium → pay with MoMo → Premium', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
-  await page.getByRole('button', { name: '✦ Study' }).click()
+  await openStudy(page)
   const study = page.getByRole('complementary', { name: 'Study' })
   await expect(study.getByText('10 of 10 free AI actions left today')).toBeVisible()
   expect((await page.request.post('/api/test-openai/burn-free?count=10')).ok()).toBe(true) // use up today's free actions

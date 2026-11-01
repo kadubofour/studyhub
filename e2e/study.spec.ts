@@ -1,22 +1,22 @@
 import { test, expect } from '@playwright/test'
-import { signUp, noteWithText, noteSaved } from './helpers'
+import { signUp, noteWithText, noteSaved, openStudy } from './helpers'
 
-const openStudy = async (page: import('@playwright/test').Page) => {
-  await page.getByRole('button', { name: '✦ Study' }).click()
+const studyPanel = async (page: import('@playwright/test').Page) => {
+  await openStudy(page)
   return page.getByRole('complementary', { name: 'Study' })
 }
 
 test('summary: add at the top of the note, then remove it', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
-  const study = await openStudy(page)
+  const study = await studyPanel(page)
   await study.getByRole('button', { name: '✦ Summarise' }).click()
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('Summary')
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('NADH')
   await noteSaved(page)
   await page.reload()
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('NADH') // it was saved
-  const again = await openStudy(page)
+  const again = await studyPanel(page)
   await again.getByRole('button', { name: 'Remove summary' }).click()
   await expect(page.locator('.ProseMirror blockquote')).toHaveCount(0)
 })
@@ -24,7 +24,7 @@ test('summary: add at the top of the note, then remove it', async ({ page }) => 
 test('flashcards: review, untick one, save to a new deck', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  const study = await openStudy(page)
+  const study = await studyPanel(page)
   await study.getByRole('tab', { name: 'Cards' }).click()
   await study.getByRole('button', { name: '✦ Make flashcards' }).click()
   await study.getByRole('checkbox', { name: 'Keep card 2' }).uncheck()
@@ -37,7 +37,7 @@ test('flashcards: review, untick one, save to a new deck', async ({ page }) => {
 test('quiz: take it, get marked, results, wrong answers to cards, score on Progress', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
-  const study = await openStudy(page)
+  const study = await studyPanel(page)
   await study.getByRole('tab', { name: 'Quiz' }).click()
   await study.getByRole('button', { name: '✦ New quiz' }).click()
   await expect(page).toHaveURL(/\/quiz\/[0-9a-f-]{36}$/)
@@ -65,7 +65,7 @@ test('quiz: take it, get marked, results, wrong answers to cards, score on Progr
 test('refreshing mid-quiz resumes where you left off', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
-  const study = await openStudy(page)
+  const study = await studyPanel(page)
   await study.getByRole('tab', { name: 'Quiz' }).click()
   await study.getByRole('button', { name: '✦ New quiz' }).click()
   const saved = page.waitForResponse(r => r.url().includes('/quiz_attempts') && r.request().method() === 'PATCH')
@@ -80,7 +80,7 @@ test('going too fast gets a "try again in a minute" message, not a cap', async (
   await signUp(page)
   await noteWithText(page)
   expect((await page.request.post('/api/test-openai/flood')).ok()).toBe(true)
-  const study = await openStudy(page)
+  const study = await studyPanel(page)
   await study.getByRole('button', { name: '✦ Summarise' }).click()
   await expect(study.getByRole('alert')).toHaveText('You\'re going a bit fast. Try again in a minute.')
 })

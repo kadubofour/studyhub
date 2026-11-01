@@ -27,6 +27,17 @@ async function inSheet(page: Page) {
   return page.getByRole('dialog', { name: 'Note options' })
 }
 
+// The note's own buttons: a computer's top bar has them; a phone keeps Study and Ask the tutor in the Note options sheet
+export async function openStudy(page: Page) {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('button', { name: '✦ Study' }).click(); return }
+  await page.getByRole('button', { name: '✦ Study' }).click()
+}
+
+export async function askTutorAboutNote(page: Page) {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('button', { name: 'Ask the tutor' }).click(); return }
+  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+}
+
 export async function switchToMarkdown(page: Page) {
   if (await onPhone(page)) { await (await inSheet(page)).getByRole('radio', { name: 'Markdown' }).click(); await page.keyboard.press('Escape'); return }
   await page.getByRole('menuitem', { name: 'View' }).click()
@@ -115,13 +126,17 @@ export async function rpcAs<T = unknown>(email: string, fn: string, args: Record
 
 // Puts the open note in Biology, and waits for that to be saved, unless it is there already (a note made from another note starts in its course)
 export async function inBiology(page: Page) {
-  const course = page.getByRole('button', { name: 'Course', exact: true })
+  const phone = await onPhone(page)
+  const scope = phone ? await inSheet(page) : page
+  const course = scope.getByRole('button', { name: 'Course', exact: true })
   await expect(course).toBeVisible()
-  if ((await course.innerText()).includes('Biology')) return
-  await Promise.all([
-    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    choose(page, 'Course', 'Biology'),
-  ])
+  if (!(await course.innerText()).includes('Biology')) {
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
+      choose(scope, 'Course', 'Biology'),
+    ])
+  }
+  if (phone) await page.keyboard.press('Escape')
 }
 
 // Waits until the note is saved. A computer says "Saved"; a phone shows a tick labelled Saved only once writing is done (the keyboard hides it,

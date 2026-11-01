@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, openStudy } from './helpers'
 
 test('review: answer a flashcard by typing, get it checked, rate it, and the choice is remembered', async ({ page }) => {
   test.setTimeout(120_000)
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.getByRole('button', { name: '✦ Study' }).click()
+  await openStudy(page)
   const study = page.getByRole('complementary', { name: 'Study' })
   await study.getByRole('tab', { name: 'Cards' }).click()
   await study.getByRole('button', { name: '✦ Make flashcards' }).click()
@@ -34,7 +34,7 @@ test('review: practise cards that are not due, without touching the schedule', a
   test.setTimeout(120_000)
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.getByRole('button', { name: '✦ Study' }).click()
+  await openStudy(page)
   const study = page.getByRole('complementary', { name: 'Study' })
   await study.getByRole('tab', { name: 'Cards' }).click()
   await study.getByRole('button', { name: '✦ Make flashcards' }).click()

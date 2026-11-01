@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, askTutorAboutNote } from './helpers'
 
 async function askFromNote(page: import('@playwright/test').Page) {
   await signUp(page)
   await noteWithText(page)
-  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+  await askTutorAboutNote(page)
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
 }
 

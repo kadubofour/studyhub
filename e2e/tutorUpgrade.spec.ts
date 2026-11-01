@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { create, noteWithText, signUp, noteSaved } from './helpers'
+import { create, noteWithText, signUp, noteSaved, askTutorAboutNote } from './helpers'
 
 test('the Tutor page: ways to start, a starter that asks what it is about, and a chat that opens with its message ready', async ({ page }) => {
   test.setTimeout(120_000)
@@ -35,7 +35,7 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
   await noteSaved(page)
-  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+  await askTutorAboutNote(page)
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   await page.getByLabel('Message').fill('Where does it happen?')
   await page.getByRole('button', { name: 'Send' }).click()
@@ -96,7 +96,7 @@ test('in a chat: ideas to start with, times, copying, and a message box that gro
 test('the Tutor page lists chats with what they are about', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+  await askTutorAboutNote(page)
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   await page.goto('/tutor')
   const link = page.getByRole('link', { name: /Krebs cycle/ })
