@@ -78,7 +78,8 @@ describe('Tutor page', () => {
   it('shows the four ways to start, and a starter asks what it is about before it opens a chat with its message ready', async () => {
     await open()
     const ways = within(screen.getByRole('region', { name: 'Ways to start' }))
-    expect(ways.getAllByRole('button').map(b => b.querySelector('span:nth-of-type(2)')?.textContent)).toEqual(['Explain a topic', 'Quiz me', 'Plan my revision', 'Summarise my notes'])
+    expect(ways.getAllByRole('button').map(b => b.textContent)).toEqual(['Explain a topic', 'Quiz me', 'Plan my revision', 'Summarise my notes'])
+    expect(ways.getByRole('button', { name: 'Quiz me' }).getAttribute('title')).toBe('A few questions to test myself') // what it does is a tooltip, not a line of its own
     await act(async () => { fireEvent.click(ways.getByRole('button', { name: /Quiz me/ })) })
     await act(async () => { fireEvent.click(within(screen.getByRole('list', { name: 'Notes' })).getByRole('button', { name: /Krebs cycle/ })) })
     expect(createChat).toHaveBeenCalledWith(expect.anything(), { title: 'Krebs cycle', course_id: 'k1', note_id: 'n1' })

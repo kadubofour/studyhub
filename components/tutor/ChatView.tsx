@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { deleteChat, getChat, listMessages, renameChat, saveProposals, setChatContext, setChatCourse, setChatGuided, type TutorChat, type TutorMessage } from '@/lib/data/tutor'
 import { FREE_DAILY_TUTOR_MESSAGES } from '@/lib/billing/plans'
-import { FOLLOW_UPS, STARTERS, starterMessage } from '@/lib/tutor/starters'
+import { FOLLOW_UPS, starterMessage } from '@/lib/tutor/starters'
 import { dayHeading, nearBottom, questionText, timeOf, transcript } from '@/lib/tutor/conversation'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
@@ -29,7 +29,7 @@ import type { Course } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { tick } from '@/components/ui/PhoneList'
-import { STARTER_ICONS } from '@/components/tutor/starterIcons'
+import { StarterChips } from '@/components/tutor/StarterChips'
 import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import { Working } from '@/components/ui/Working'
 import { MessageLesson } from '@/components/tutor/MessageLesson'
@@ -362,21 +362,7 @@ export function ChatView({ chatId }: { chatId: string }) {
               <p className="mt-1 text-[15px] text-muted">Ask anything about your courses. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
             </div>
             {/* ideas put a message in the box to finish and send; nothing is sent from here */}
-            <ul aria-label="Ideas to start with" className="grid grid-cols-2 gap-2.5">
-              {STARTERS.map(s => {
-                const Icon = STARTER_ICONS[s.id as keyof typeof STARTER_ICONS]
-                return (
-                  <li key={s.id}>
-                    <button type="button" className="flex h-full w-full flex-col items-start gap-1 rounded-2xl bg-raised p-3 text-left active:bg-surface"
-                      onClick={() => { setText(starterMessage(s, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }}>
-                      <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon size={16} /></span>
-                      <span className="text-[15px] font-semibold leading-snug">{s.title}</span>
-                      <span className="text-[13px] leading-snug text-muted">{s.hint}</span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+            <StarterChips label="Ideas to start with" onPick={st => { setText(starterMessage(st, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }} />
           </div>
         )}
         {showsComputer(screen) && messages.length === 0 && live === null && (
@@ -384,11 +370,8 @@ export function ChatView({ chatId }: { chatId: string }) {
             <h2 className="text-2xl font-medium">{today.getHours() < 12 ? 'Good morning' : today.getHours() < 18 ? 'Good afternoon' : 'Good evening'}{profile.display_name ? `, ${profile.display_name}` : ''}</h2>
             <p className="mx-auto max-w-md text-sm text-muted">Ask anything about your courses. I&apos;ll start from your notes and say when I&apos;m going beyond them.</p>
             {/* ideas put a message in the box to finish and send; nothing is sent from here */}
-            <div role="group" aria-label="Ideas to start with" className="flex flex-wrap justify-center gap-2">
-              {STARTERS.map(s => (
-                <button key={s.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5"
-                  onClick={() => { setText(starterMessage(s, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }}>{s.title}</button>
-              ))}
+            <div role="group" aria-label="Ideas to start with" className="flex justify-center">
+              <StarterChips label="Ideas" onPick={st => { setText(starterMessage(st, where && attachedTitle ? attachedTitle : null).slice(0, 4000)); box.current?.focus() }} />
             </div>
           </div>
         )}
@@ -463,8 +446,8 @@ export function ChatView({ chatId }: { chatId: string }) {
       {problem && <AiError code={problem.code} message={problem.message} />}
       {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
       {canFollowUp && (
-        <div role="group" aria-label="Follow-up questions" className="flex flex-wrap gap-2 max-md:no-scrollbar max-md:-mx-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-1 max-md:[&>button]:shrink-0 max-md:[&>button]:whitespace-nowrap">
-          {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !text-xs pointer-coarse:!py-2.5" onClick={() => { void send(f.message) }}>{f.label}</button>)}
+        <div role="group" aria-label="Follow-up questions" className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 [&>button]:shrink-0 [&>button]:whitespace-nowrap">
+          {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !px-3 !py-1 !text-xs pointer-coarse:!py-2" onClick={() => { void send(f.message) }}>{f.label}</button>)}
         </div>
       )}
       {chat.guided && messages.length > 0 && (
