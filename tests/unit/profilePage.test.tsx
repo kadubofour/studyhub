@@ -47,7 +47,7 @@ describe('Profile page: who the student is', () => {
     await open({ ...base, display_name: null, school: null, programme: null })
     expect(screen.getByRole('heading', { level: 1, name: 'Your profile' })).toBeTruthy()
     expect(screen.getByTestId('avatar').textContent).toBe('A') // from the email
-    expect(within(screen.getByRole('region', { name: 'Your profile' })).queryByText(/·/)).toBeNull()
+    expect(within(screen.getByRole('region', { name: 'Your profile' })).queryByText(/·/, { ignore: 'script, style, a' })).toBeNull() // no programme · school line (the link to Progress has its own dot)
   })
   it('names the plan', async () => {
     await open()
@@ -88,50 +88,44 @@ describe('Profile page: when XP cannot be read', () => {
     await open()
     const tiles = screen.getByRole('list', { name: 'Study totals' })
     expect(within(tiles).getByText('Notes').closest('li')!.textContent).toContain('12')
-    expect(within(tiles).queryByText('Level')).toBeNull()
-    expect(within(tiles).queryByText('Streak')).toBeNull()
   })
 })
 
 describe('Profile page: what the student has done', () => {
-  it('shows the totals', async () => {
+  it('shows what the student has made, and leaves how they are doing to Progress', async () => {
     await open()
     const tiles = screen.getByRole('list', { name: 'Study totals' })
     const t = (label: string) => within(tiles).getByText(label).closest('li')!.textContent
-    expect(within(tiles).queryByText('Level')).toBeNull() // the ring above already says it
-    expect(t('Streak')).toContain('3 days')
-    expect(t('Best streak')).toContain('8 days')
-    expect(t('Focus time')).toContain('5h 30m')
     expect(t('Notes')).toContain('12')
     expect(t('Flashcards')).toContain('80')
     expect(t('Lectures')).toContain('2')
     expect(t('Quizzes finished')).toContain('5')
+    for (const label of ['Level', 'Streak', 'Best streak', 'Focus time']) expect(within(tiles).queryByText(label)).toBeNull()
+    expect(screen.queryByTestId('level-ring')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
   it('puts a picture on every total, and leaves it out of the reading order', async () => {
     await open()
     const tiles = screen.getByRole('list', { name: 'Study totals' })
     for (const li of within(tiles).getAllByRole('listitem')) expect(li.querySelector('svg[aria-hidden="true"]'), li.textContent ?? '').not.toBeNull()
   })
-  it('shows the level as a ring with the number in it', async () => {
+  it('says the level and streak in one line that opens Progress', async () => {
     await open()
-    const ring = screen.getByTestId('level-ring')
-    expect(ring.textContent).toBe('2')
-    expect(ring.getAttribute('aria-hidden')).toBe('true')
+    const link = screen.getByRole('link', { name: /Level 2 · 3-day streak/ })
+    expect(link.getAttribute('href')).toBe('/progress')
   })
-  it('shows the progress to the next level in words', async () => {
+  it('has no Progress line when XP cannot be read', async () => {
+    xp = null
     await open()
-    const bar = screen.getByRole('progressbar', { name: 'Progress to level 3' })
-    expect(bar.getAttribute('aria-valuetext')).toBe('70 of 150 XP')
-    expect(screen.getByText('120 XP in all')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /Level/ })).toBeNull()
   })
   it('keeps going when the totals cannot be loaded', async () => {
     statsFail = true
     await open()
     expect(screen.getByRole('alert').textContent).toContain('Could not load your study totals')
     expect(screen.getByRole('heading', { level: 1, name: 'Ama Mensah' })).toBeTruthy()
-    const tiles = screen.getByRole('list', { name: 'Study totals' })
-    expect(within(tiles).getByText('Streak')).toBeTruthy() // what came from XP still shows
-    expect(within(tiles).queryByText('Notes')).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Study totals' })).toBeNull()
+    expect(screen.getByRole('link', { name: /Level 2/ })).toBeTruthy() // what came from XP still shows
   })
   it('links each course to its course page', async () => {
     await open()

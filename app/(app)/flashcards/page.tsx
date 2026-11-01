@@ -14,6 +14,7 @@ import type { MenuEntry } from '@/components/ui/ContextMenu'
 import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 import { useScanSaved } from '@/lib/scan/events'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StudyTabs } from '@/components/ui/StudyTabs'
 import { Dialog } from '@/components/ui/Dialog'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -70,6 +71,7 @@ export default function FlashcardsPage() {
         {/* one ink button per header, as on every page: Review all when cards are due, otherwise making a deck */}
         <button className={totalDue > 0 ? 'btn' : 'btn-primary'} onClick={() => setOpen(true)}><Plus size={14} aria-hidden />Deck</button>
       </>} />
+      <StudyTabs current="cards" />
       {decks?.length === 0 && (
         <EmptyState icon={Layers} tone="a" title="Make your first deck" body="Group cards into decks, one per topic. Reviews are scheduled so you remember for longer.">
           <button className="btn-primary" onClick={() => setOpen(true)}>Create a deck</button>
@@ -124,6 +126,7 @@ function PhoneDecks({ decks, courses, sort, onSort, onNew }: { decks: DeckWithDu
   return (
     <div className="pb-24">
       <PhoneTitle title="Flashcards" menuLabel="Flashcards options" menu={menu} />
+      <StudyTabs current="cards" />
       <PhoneSearch label="Search decks" value={q} onChange={setQ} />
       {totalDue > 0 && !term && (
         <Link href="/review" className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-accent-soft px-4 py-3 active:opacity-80">

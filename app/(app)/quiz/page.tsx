@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ListChecks, Plus, Search, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StudyTabs } from '@/components/ui/StudyTabs'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BTN_OUTLINE, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -63,7 +64,7 @@ export default function QuizHubPage() {
     {showsComputer(screen) && <div className="max-md:hidden">{content}</div>}
   </>)
 
-  const header = <PageHeader title="Quiz" actions={<button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />New quiz</button>} />
+  const header = <><PageHeader title="Quiz" actions={<button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />New quiz</button>} /><StudyTabs current="quiz" /></>
   if (failed && !data) return page(<div>{header}<p role="alert" className="text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={load}>Try again</button></p></div>)
   if (!hub) return page(<div>{header}<Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" /></div>)
   if (hub.rows.length === 0) {
@@ -209,6 +210,7 @@ function PhoneQuiz({ hub, rows, failed, reload, query, onQuery, courses, hasLoos
   return (
     <div className="pb-24">
       <PhoneTitle title="Quiz" menuLabel="Quiz options" menu={options} />
+      <StudyTabs current="quiz" />
       {failed && <p role="alert" className="mb-4 text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={reload}>Try again</button></p>}
       {!hub && !failed && <Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" />}
       {hub && hub.rows.length === 0 && <PhoneEmpty>No quizzes yet. Tap + and Studyhub writes questions from a note.</PhoneEmpty>}

@@ -60,10 +60,13 @@ test('the Quiz page keeps every quiz and how it went: make one, take it, see the
   await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
 })
 
-test('the sidebar has a Quiz page', async ({ page, isMobile }) => {
+test('Quiz is a tab beside Flashcards, which stays lit in the sidebar', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the sidebar is for a computer')
   await signUp(page)
-  await page.getByRole('navigation').first().getByRole('link', { name: 'Quiz', exact: true }).click()
+  const rail = page.getByRole('navigation').first()
+  await rail.getByRole('link', { name: 'Flashcards', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Practice' }).getByRole('link', { name: 'Quizzes' }).click()
   await expect(page).toHaveURL(/\/quiz$/)
-  await expect(page.getByRole('navigation').first().getByRole('link', { name: 'Quiz', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(rail.getByRole('link', { name: 'Flashcards', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(rail.getByRole('link', { name: 'Quiz', exact: true })).toHaveCount(0)
 })

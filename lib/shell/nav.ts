@@ -11,7 +11,6 @@ export const PLACES: Place[] = [
   { href: '/flashcards', label: 'Flashcards', icon: Layers, keywords: 'cards decks review' },
   { href: '/lectures', label: 'Lectures', icon: Mic, keywords: 'record recordings transcript audio' },
   { href: '/tutor', label: 'Tutor', icon: MessagesSquare, keywords: 'ai chat ask help' },
-  { href: '/quiz', label: 'Quiz', icon: ListChecks, keywords: 'test questions quizzes' },
   { href: '/progress', label: 'Progress', icon: BarChart3, keywords: 'stats streak xp level topics' },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, keywords: 'friends groups rank xp' },
 ]
@@ -21,9 +20,10 @@ export const MORE_PLACES: Place[] = [
   { href: '/settings', label: 'Settings', icon: FolderOpen, keywords: 'preferences appearance accent font reminders account' },
   { href: '/profile', label: 'Profile', icon: FolderOpen, keywords: 'me account avatar' },
   { href: '/review', label: 'Review cards', icon: Layers, keywords: 'due flashcards spaced repetition' },
+  { href: '/quiz', label: 'Quiz', icon: ListChecks, keywords: 'test questions quizzes scores' },
 ]
 // A phone's dock: five places, the first DOCK_SPLIT before Create and the rest after it
 export const DOCK = ['/home', '/planner', '/notes', '/flashcards', '/tutor']
 export const DOCK_SPLIT = 3
 
-export const isActive = (path: string, href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && path.startsWith('/review')) || (href === '/notes' && path.startsWith('/notebooks/'))
+export const isActive = (path: string, href: string) => path === href || path.startsWith(href + '/') || (href === '/flashcards' && (path.startsWith('/review') || path.startsWith('/quiz'))) || (href === '/notes' && path.startsWith('/notebooks/'))
