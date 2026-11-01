@@ -193,10 +193,12 @@ export default function HomePage() {
               {due > 0 && <li><Link href="/review" className="inline-flex items-center gap-2.5 font-medium text-accent hover:underline"><Layers size={17} aria-hidden />{due} {due === 1 ? 'card' : 'cards'} to review<ArrowRight size={15} aria-hidden /></Link></li>}
             </ul>
           )}
-          {sessions.map(({ v, s }) => (
-            <SessionRow key={s.id} s={s} course={courseOf(v.courseId)} done={!!s.done_at}
-              onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
-          ))}
+          {sessions.length > 0 && <div className="mb-2 divide-y divide-line overflow-hidden rounded-xl bg-surface/60">
+            {sessions.map(({ v, s }) => (
+              <SessionRow key={s.id} s={s} course={courseOf(v.courseId)} done={!!s.done_at}
+                onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
+            ))}
+          </div>}
           {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
           {list.length === 0 && sessions.length === 0 && <p className="py-2 text-[15px] text-muted">{doneToday > 0 ? 'All done for today. Add something below if you like.' : 'Nothing due today. Add something below.'}</p>}
           {list.map(t => (
