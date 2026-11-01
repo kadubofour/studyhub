@@ -90,7 +90,7 @@ export async function newNoteFromNote(page: Page) {
     await page.getByRole('menu', { name: 'File' }).locator('[role^="menuitem"]', { hasText: 'New note' }).click()
   } else {
     await page.goto('/notes')
-    await page.getByRole('button', { name: 'Note', exact: true }).click()
+    await page.getByRole('button', { name: 'New note', exact: true }).click()
     await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
     await page.waitForLoadState('networkidle')
   }
@@ -145,4 +145,15 @@ export async function noteSaved(page: Page) {
   const done = page.getByRole('button', { name: 'Done', exact: true })
   if (await done.isVisible()) await done.click()
   await expect(page.getByText('Saved').or(page.getByRole('status', { name: 'Saved' })).first()).toBeVisible()
+}
+
+// Something in a tutor chat's options: a button on a computer; a phone has one ⋯ Chat options menu, where it can be worded differently
+export async function chatOption(page: Page, computerName: string, phoneName = computerName) {
+  if (await onPhone(page)) {
+    // the menu closes if the page is still scrolling to a new reply, so open it again until it stays
+    await expect(async () => {
+      await page.getByRole('button', { name: 'Chat options' }).click()
+      await page.getByRole('menu', { name: 'Chat options' }).getByRole('menuitem', { name: phoneName }).click({ timeout: 3000 })
+    }).toPass({ timeout: 20_000 })
+  } else await page.getByRole('button', { name: computerName }).click()
 }

@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, inBiology, noteSaved, openStudy } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, inBiology, noteSaved, openStudy as openNoteStudy } from './helpers'
 
 const openStudy = async (page: Page) => {
-  await openStudy(page)
+  await openNoteStudy(page)
   return page.getByRole('complementary', { name: 'Study' })
 }
 // Wrong on the multiple choice and the true/false, right on the two short answers: 2 of 4
