@@ -113,3 +113,22 @@ describe('guided mode instructions', () => {
     expect(tutorInstructions(false)).not.toMatch(/one hint at a time/i)
   })
 })
+
+describe('how the tutor teaches', () => {
+  const t = tutorInstructions(true)
+  it('builds understanding from the student\'s own material: its notation, its examples, one worked example, one check question', () => {
+    expect(t).toMatch(/understands, not that they get a summary/)
+    expect(t).toMatch(/its own words, notation, definitions and worked examples/)
+    expect(t).toMatch(/worked example/)
+    expect(t).toMatch(/one short question at the end, and wait for the answer/)
+  })
+  it('never draws with text characters, and points to Explain visually instead', () => {
+    expect(t).toMatch(/Never draw a diagram, graph, arrows or a table out of text characters/)
+    expect(t).toMatch(/code block/)
+    expect(t).toMatch(/"Explain visually"/)
+  })
+  it('keeps the voice and guided versions on the same rules', () => {
+    expect(tutorInstructions(true, true)).toContain('Never draw a diagram')
+    expect(tutorInstructions(true, false, true)).toContain('Never draw a diagram')
+  })
+})

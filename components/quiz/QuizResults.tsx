@@ -8,6 +8,7 @@ import { DeckPicker, resolveDeck, type DeckChoice } from '@/components/ai/DeckPi
 import { useToast } from '@/components/providers/ToastProvider'
 import { BTN_OUTLINE, BTN_SOFT, BTN_SOLID } from '@/components/ui/buttonStyles'
 import { MarkdownView } from '@/components/notes/MarkdownView'
+import { MathText } from '@/components/ui/MathText'
 import { answerText, missedQuestions, percent, ringDash, scoreLine } from '@/lib/quiz/summary'
 import type { Quiz, QuizAttempt } from '@/lib/quiz/types'
 
@@ -98,10 +99,10 @@ export function QuizResults({ quiz, attempt, previous, onRetake, onRetryMissed }
                   <span className="min-w-0 flex-1 text-sm font-medium"><span className="sr-only">{ok ? 'Correct. ' : 'Wrong. '}Question {i + 1}. </span><MarkdownView source={q.prompt} /></span>
                 </summary>
                 <div className="space-y-1.5 border-t border-line px-3.5 pb-3.5 pt-3 text-sm">
-                  {!ok && <p><span className="text-muted">Your answer: </span>{a ? answerText(q, a.given) : 'No answer'}</p>}
-                  <p><span className="text-muted">Answer: </span><span className="font-medium">{answerText(q, q.answer)}</span></p>
-                  {a?.feedback && <p>{a.feedback}</p>}
-                  {q.explanation && <p className="text-muted">{q.explanation}</p>}
+                  {!ok && <p><span className="text-muted">Your answer: </span>{a ? <MathText>{answerText(q, a.given)}</MathText> : 'No answer'}</p>}
+                  <p><span className="text-muted">Answer: </span><span className="font-medium"><MathText>{answerText(q, q.answer)}</MathText></span></p>
+                  {a?.feedback && <p><MathText>{a.feedback}</MathText></p>}
+                  {q.explanation && <p className="text-muted"><MathText>{q.explanation}</MathText></p>}
                 </div>
               </details>
             </li>

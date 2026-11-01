@@ -110,3 +110,37 @@ describe('QuizResults', () => {
     ], { noteId: 'n1' }) // cards remember the quiz's note
   })
 })
+
+describe('maths in a quiz', () => {
+  const maths: Quiz = { id: 'qm', note_id: 'n1', title: 'Vectors', created_at: '', questions: [
+    { id: 'm1', type: 'mcq', prompt: 'The midpoint of $A$ and $B$ is?', options: ['$\\frac{\\vec a+\\vec b}{2}$', '$\\vec a-\\vec b$', '$2\\vec a$', '$\\vec 0$'], answer: '$\\frac{\\vec a+\\vec b}{2}$',
+      explanation: 'Equal weights give $\\frac{\\vec a+\\vec b}{2}$.' },
+    { id: 'm2', type: 'mcq', prompt: 'x?', options: ['plain one', 'plain two', 'plain three', 'plain four'], answer: 'plain one', explanation: '' },
+  ] }
+  const open = (q: Quiz) => render(<ToastProvider><QuizPlayer quiz={q} attempt={attempt()} onFinished={() => {}} /></ToastProvider>)
+
+  it('draws the answer choices as maths, not as LaTeX text', () => {
+    const { container } = open(maths)
+    expect(container.querySelectorAll('button .katex-html').length).toBe(4)
+    expect([...container.querySelectorAll('button')].some(b => b.textContent?.includes('$'))).toBe(false) // no dollar signs left showing
+  })
+  it('draws the answer and the explanation as maths once a choice is made', async () => {
+    const { container } = open(maths)
+    await act(async () => { fireEvent.click(container.querySelectorAll('button')[1]) }) // a wrong choice (the second)
+    const note = screen.getByText(/Not quite/).closest('div') as HTMLElement
+    expect(note.querySelectorAll('.katex-html').length).toBeGreaterThanOrEqual(2) // the answer, and the explanation
+    expect(note.textContent).not.toContain('$')
+    void container
+  })
+  it('draws the results as maths too: the answers, the feedback and the explanation', () => {
+    const done: QuizAttempt = { ...attempt({ m1: { given: '$\\vec a-\\vec b$', correct: false, feedback: 'You subtracted; add, then halve: $\\frac12$.' }, m2: { given: 'plain one', correct: true, feedback: null } }), finished_at: 'x', correct: 1, total: 2 }
+    const { container } = render(<ToastProvider><QuizResults quiz={maths} attempt={done} previous={null} onRetake={() => {}} /></ToastProvider>)
+    const answers = container.querySelector('ul, ol, section') ? container : container
+    expect(answers.querySelectorAll('.katex-html').length).toBeGreaterThanOrEqual(5) // the question, your answer, the answer, the feedback, the explanation
+    expect(screen.queryByText(/\$/)).toBeNull() // no dollar signs left in view
+  })
+  it('leaves plain text as it is', () => {
+    open({ ...maths, questions: [maths.questions[1]] })
+    expect(screen.getByRole('button', { name: /plain two/ }).textContent).toContain('plain two')
+  })
+})

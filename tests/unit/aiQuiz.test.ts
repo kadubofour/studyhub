@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { validateQuestions, makeQuiz, type RawQuestion } from '@/lib/ai/quiz'
+import { isFormulaic, validateQuestions, makeQuiz, type RawQuestion } from '@/lib/ai/quiz'
 import { AiEmptyError } from '@/lib/ai/openai'
 
 const all = ['mcq', 'true_false', 'short'] as const
@@ -46,5 +46,26 @@ describe('makeQuiz', () => {
   it('rejects a quiz with fewer than 3 usable questions', async () => {
     parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { title: 'x', questions: [raw({}), raw({ answer: 'nope' })] } })
     await expect(makeQuiz({ responses: { parse } } as never, { title: 'K', content_md: 'x' }, { count: 5, types: ['mcq'] })).rejects.toBeInstanceOf(AiEmptyError)
+  })
+})
+
+describe('answers that cannot be typed accurately', () => {
+  const short = (answer: string): RawQuestion => ({ type: 'short', prompt: 'What is it?', options: null, answer, explanation: 'Because.' })
+  const mcq = (answer: string): RawQuestion => ({ type: 'mcq', prompt: 'Which?', options: [answer, 'x', 'y', 'z'], answer, explanation: 'Because.' })
+
+  it('tells a formula, an expression or a symbol from a word, a name, a number or a short phrase', () => {
+    for (const a of ['$\\frac{\\vec a+\\vec b}{2}$', '\\vec a-\\vec b', 'x^2', 'y = mx + c', 'a+b', 'p ∈ A', 'v⃗', '√2', 'x ≥ 3']) expect(isFormulaic(a), a).toBe(true)
+    for (const a of ['Matrix', 'NADH', '3.5 m/s', '-5', 'the mitochondrial matrix', 'H2O', 'Kenneth Dadedzi', '12']) expect(isFormulaic(a), a).toBe(false)
+  })
+  it('never lets a formula through as a typed question', () => {
+    const qs = validateQuestions([short('$\\frac{a+b}{2}$'), short('Matrix')], ['short'], 5)
+    expect(qs.map(q => q.answer)).toEqual(['Matrix'])
+  })
+  it('welcomes a multiple choice question with a formula answer even when only short answers were asked for', () => {
+    const qs = validateQuestions([mcq('$\\frac{a+b}{2}$'), mcq('Matrix')], ['short'], 5)
+    expect(qs.map(q => q.type)).toEqual(['mcq']) // the formula one is kept; a plain multiple choice question was not asked for
+  })
+  it('keeps multiple choice with a formula answer when multiple choice was asked for', () => {
+    expect(validateQuestions([mcq('$\\vec a+\\vec b$')], ['mcq', 'short'], 5)).toHaveLength(1)
   })
 })
