@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type Locator, type Page, type TestInfo } from '@playwright/test'
 import path from 'node:path'
-import { rpcAs, signUp } from './helpers'
+import { rpcAs, signUp, saved } from './helpers'
 
 const CELL = path.join(__dirname, 'fixtures', 'cell.png')
 
@@ -26,7 +26,7 @@ test('a signed-out visitor opens a shared note, signs up, copies it, and the cop
   await page.getByLabel('Title').fill('Cell notes')
   await page.getByLabel('Choose pictures').setInputFiles(CELL)
   await expect(page.locator('.ProseMirror img[alt="cell"]')).toBeVisible()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   const token = await rpcAs<string>(email, 'share_item', { p_kind: 'note', p_item: original })
 
   const visitor = await second(browser, info)

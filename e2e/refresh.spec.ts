@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { noteFileAction, signUp, switchToMarkdown } from './helpers'
+import { noteFileAction, signUp, switchToMarkdown, saved } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -81,7 +81,7 @@ test('printing from dark mode gives dark text on white paper', async ({ page }) 
   await page.getByLabel('Title').fill('Printable')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('> a quoted line')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   const id = page.url().split('/').pop()
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.goto(`/print/notes?ids=${id}`)
@@ -105,7 +105,7 @@ test('select notes and export just those as a PDF', async ({ page, context }) =>
     await page.goto('/notes')
     await page.getByRole('button', { name: /Write your first note|^Note$/ }).first().click()
     await page.getByLabel('Title').fill(title)
-    await expect(page.getByText('Saved')).toBeVisible()
+    await expect(saved(page)).toBeVisible()
   }
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Select' }).click()

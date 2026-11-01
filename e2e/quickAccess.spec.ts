@@ -30,7 +30,7 @@ test('Home on a phone: a course card opens the course page, which can start a de
   await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 })
   await page.getByRole('link', { name: 'New deck' }).click()
   await expect(page.getByRole('heading', { name: 'New deck' })).toBeVisible()
-  await expect(page.getByRole('dialog').getByLabel('Course')).toHaveValue(/.+/) // the course is already chosen
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Course', exact: true })).not.toContainText('No course') // the course is already chosen
 })
 
 test('Progress has its quick actions by the title on every screen, and no lines between the stats', async ({ page }) => {

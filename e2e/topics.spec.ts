@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, inBiology } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, inBiology, saved } from './helpers'
 
 async function secondNote(page: Page, title: string, text: string) {
   await newNoteFromNote(page)
@@ -7,7 +7,7 @@ async function secondNote(page: Page, title: string, text: string) {
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type(text.repeat(4))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await inBiology(page)
 }
 // Two Biology notes, then draft and save topics on Progress; returns the first note's address

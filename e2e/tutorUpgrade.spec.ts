@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { create, noteWithText, signUp } from './helpers'
+import { create, noteWithText, signUp, saved } from './helpers'
 
 test('the Tutor page: ways to start, a starter that asks what it is about, and a chat that opens with its message ready', async ({ page }) => {
   test.setTimeout(120_000)
@@ -34,7 +34,7 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   await page.getByLabel('Title').fill('Krebs cycle')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.getByRole('button', { name: 'Ask the tutor' }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   await page.getByLabel('Message').fill('Where does it happen?')

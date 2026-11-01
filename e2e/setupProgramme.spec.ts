@@ -53,7 +53,7 @@ test('Courses has From my programme, which suggests courses again for a student 
   await expect(page).toHaveURL(/\/home/)
   await page.goto('/courses')
   await page.getByRole('button', { name: 'From my programme' }).click()
-  await page.getByLabel('Programme').fill('BSc Biology')
+  await page.getByRole('textbox', { name: 'Programme' }).fill('BSc Biology')
   await page.getByRole('button', { name: 'Find my courses' }).click()
   await expect(page.getByRole('list', { name: 'Suggested courses' }).getByRole('checkbox')).toHaveCount(3)
   await page.getByRole('switch', { name: /Write starter notes/ }).click() // the courses only

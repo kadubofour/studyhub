@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { signUp, noteWithText } from './helpers'
+import { signUp, noteWithText, saved } from './helpers'
 
 const openStudy = async (page: import('@playwright/test').Page) => {
   await page.getByRole('button', { name: '✦ Study' }).click()
@@ -13,7 +13,7 @@ test('summary: add at the top of the note, then remove it', async ({ page }) => 
   await study.getByRole('button', { name: '✦ Summarise' }).click()
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('Summary')
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('NADH')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror blockquote').first()).toContainText('NADH') // it was saved
   const again = await openStudy(page)

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { signUp } from './helpers'
+import { create, signUp } from './helpers'
 
 // Serious and critical findings from axe (contrast, missing names, bad structure) on the pages students use most
 async function problems(page: Page, label: string) {
@@ -42,7 +42,7 @@ test('the Upload and Delete-account dialogs have no serious accessibility proble
   await signUp(page)
   await page.goto('/notes')
   await settle(page)
-  await page.getByRole('button', { name: 'Upload' }).first().click()
+  await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   const found = await problems(page, 'upload dialog')
   await page.keyboard.press('Escape')

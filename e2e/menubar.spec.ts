@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { signUp } from './helpers'
+import { signUp, saved } from './helpers'
 
 // File, Edit and View are for wider screens: a phone has the toolbar (and the note page hides this bar there)
 test.beforeEach(({}, info) => { test.skip(info.project.name === 'mobile', 'the menu bar is not on phones') })
@@ -43,7 +43,7 @@ test('Edit > Insert table: pick the size on a grid, and it is saved with the not
   await page.keyboard.type('Organelle')
   await page.getByRole('toolbar', { name: 'Table' }).getByRole('button', { name: 'Add row below' }).click()
   await expect(table.locator('tr')).toHaveCount(3)
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror table th').first()).toHaveText('Organelle')
 })
@@ -65,7 +65,7 @@ test('maths typed without dollars turns into an equation', async ({ page }) => {
   await page.keyboard.type('Then x^2 grows and my_variable stays ')
   await expect(page.locator('.ProseMirror [data-type="inline-math"] .katex')).toHaveCount(1)
   await expect(page.locator('.ProseMirror')).toContainText('my_variable')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.getByRole('menuitem', { name: 'View', exact: true }).click()
   await page.getByRole('menuitemradio', { name: 'Markdown editor' }).click()
   const md = page.getByLabel('Markdown')
@@ -89,7 +89,7 @@ test('typed $…$ becomes an equation, and clicking it opens it for editing', as
   await expect(box).toHaveValue('\\pi r^2')
   await box.fill('2\\pi r')
   await page.getByRole('button', { name: 'Update' }).click()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.reload()
   await page.getByRole('menuitem', { name: 'View', exact: true }).click()
   await page.getByRole('menuitemradio', { name: 'Markdown editor' }).click()
@@ -126,7 +126,7 @@ test('Edit > Insert equation, reading mode and find', async ({ page }) => {
 test('File > New note and Delete note', async ({ page }) => {
   await signUp(page)
   await newNote(page, 'First')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   const first = page.url()
   await menu(page, 'File', 'New note')
   await expect(page).not.toHaveURL(first)
@@ -193,7 +193,7 @@ test('automatic maths can be switched off from the View menu', async ({ page }) 
 test('notes list: right-click a note to delete it', async ({ page }) => {
   await signUp(page)
   await newNote(page, 'Throwaway')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.goto('/notes')
   await page.getByRole('link', { name: /Throwaway/ }).click({ button: 'right' })
   await page.getByRole('menu', { name: 'Throwaway' }).getByRole('menuitem', { name: 'Delete' }).click()

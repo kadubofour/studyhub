@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { signUp, switchToMarkdown } from './helpers'
+import { signUp, switchToMarkdown, saved } from './helpers'
 
 test('logged-out users are sent to login with a return path', async ({ page }) => {
   await page.goto('/planner')
@@ -106,7 +106,7 @@ test('a note persists after reload, including math', async ({ page, isMobile }) 
   await page.getByLabel('Title').fill('Quadratics')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('## Formula\n\n$x^2$')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.reload()
   await switchToMarkdown(page)
   await expect(page.getByLabel('Markdown')).toHaveValue('## Formula\n\n$x^2$')
@@ -122,7 +122,7 @@ test('notes: search finds words inside a note', async ({ page, isMobile }) => {
   await page.getByLabel('Title').fill('Week 3')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.goto('/notes')
   await page.getByLabel('Search notes').filter({ visible: true }).fill('krebs')
   await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()

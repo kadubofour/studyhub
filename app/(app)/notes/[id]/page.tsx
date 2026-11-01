@@ -292,7 +292,7 @@ function NoteEditor({ id }: { id: string }) {
           <div role="radiogroup" aria-label="Type or draw" className="ml-1 flex rounded-full bg-surface p-0.5">
             {([[false, 'Type', Type], [true, 'Draw', PenLine]] as const).map(([pen, label, Icon]) => (
               <button key={label} type="button" role="radio" aria-checked={inking === pen} aria-label={label} onClick={() => setInking(pen)}
-                className={`grid size-8 place-items-center rounded-full transition ${inking === pen ? 'bg-raised text-accent shadow-sm' : 'text-muted'}`}><Icon size={17} aria-hidden /></button>
+                className={`grid size-9 place-items-center rounded-full transition pointer-coarse:size-10 ${inking === pen ? 'bg-raised text-accent shadow-sm' : 'text-muted'}`}><Icon size={17} aria-hidden /></button>
             ))}
           </div>
         )}

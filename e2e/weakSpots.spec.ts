@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, inBiology } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, inBiology, saved } from './helpers'
 
 const openStudy = async (page: Page) => {
   await page.getByRole('button', { name: '✦ Study' }).click()
@@ -35,7 +35,7 @@ async function topicsSaved(page: Page) {
   await page.getByLabel('Title').fill('Glycolysis notes')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. '.repeat(4))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })

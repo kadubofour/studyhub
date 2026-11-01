@@ -54,7 +54,7 @@ export async function noteWithText(page: Page, title = 'Krebs cycle') {
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
 }
 
 // Pays for a month of Premium through the fake Paystack (E2E only)
@@ -123,3 +123,6 @@ export async function inBiology(page: Page) {
     choose(page, 'Course', 'Biology'),
   ])
 }
+
+// The note's "Saved" sign: the word on a computer, a small tick labelled Saved on a phone
+export const saved = (page: Page) => page.getByText('Saved').or(page.getByRole('status', { name: 'Saved' })).first()

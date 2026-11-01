@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import path from 'node:path'
-import { readingMode, signUp, switchToMarkdown } from './helpers'
+import { readingMode, signUp, switchToMarkdown, saved } from './helpers'
 
 const CELL = path.join(__dirname, 'fixtures', 'cell.png')
 
@@ -15,7 +15,7 @@ async function newNote(page: Page, title: string) {
 async function addCell(page: Page) {
   await page.getByLabel('Choose pictures').setInputFiles(CELL)
   await expect(page.locator('.ProseMirror img[alt="cell"]')).toBeVisible()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
 }
 // The picture's address as it is stored, read from the Markdown editor
 async function storedToken(page: Page) {
@@ -73,7 +73,7 @@ test('highlight words in a note: one button, it stays after a reload and shows i
   await expect(page.getByRole('button', { name: /^Highlight/ })).toHaveCount(1) // a single button: no colours on show
   await page.getByRole('button', { name: 'Highlight', exact: true }).click()
   await expect(page.locator('.ProseMirror mark.hl-yellow')).toContainText('Krebs')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror mark.hl-yellow')).toContainText('Krebs')
   await readingMode(page)
@@ -95,7 +95,7 @@ test('draw freehand on a note: the drawing stays after a reload, and the note ca
   await newNote(page, 'Inked')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle runs in the matrix')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.getByRole('button', { name: 'Draw', exact: true }).click()
   const bar = page.getByRole('group', { name: 'Draw on the note' })
   await expect(bar).toBeVisible()
@@ -109,7 +109,7 @@ test('draw freehand on a note: the drawing stays after a reload, and the note ca
   await expect.poll(() => inkPixels(page)).toBeGreaterThan(200)
   await bar.getByRole('button', { name: 'Done' }).dispatchEvent('click') // the dev-only Next.js badge can sit over it on a phone
   await expect(bar).toBeHidden()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   const before = await inkPixels(page)
   await page.reload()
   await expect.poll(() => inkPixels(page), { timeout: 20_000 }).toBeGreaterThan(before * 0.6)
@@ -181,7 +181,7 @@ test('right-click the Highlight button to change its colour', async ({ page }) =
   await page.keyboard.press('Control+Shift+ArrowLeft') // selects "matrix"
   await page.getByRole('button', { name: 'Highlight', exact: true }).click()
   await expect(page.locator('.ProseMirror mark.hl-pink')).toHaveCount(2)
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(saved(page)).toBeVisible()
   await page.reload()
   await expect(page.locator('.ProseMirror mark.hl-pink')).toHaveCount(2)
 })
