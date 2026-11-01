@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { SplitCard } from '@/components/ui/cards'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { NewCourseButton } from '@/components/quick/NewCourseButton'
+import { ProgrammeButton } from '@/components/setup/ProgrammeButton'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary } from '@/lib/data/library'
@@ -31,18 +32,20 @@ export default function CoursesPage() {
   if (failed) return <div><PageHeader title="Courses" /><p role="alert" className="text-sm text-danger">Could not load your courses. Check your connection.</p></div>
   if (!courses) return <div><PageHeader title="Courses" /><Working kind="load" size="sm" label="Loading" className="text-sm text-muted" /></div>
   const add = (c: Course) => setCourses(cs => [...(cs ?? []), c])
+  const reload = () => { listCourses(supabase()).then(setCourses).catch(() => {}) }
   if (courses.length === 0) return (
     <div>
       <PageHeader title="Courses" />
       <EmptyState icon={BookOpen} tone="b" title="No courses yet" body="A course gathers its notes, decks, lectures and topics in one place. Add your first one here, or with its timetable in the Planner.">
         <NewCourseButton count={0} onAdded={add} />
+        <ProgrammeButton existing={[]} onDone={reload} />
         <Link href="/planner" className="btn">Open the Planner</Link>
       </EmptyState>
     </div>
   )
   return (
     <div>
-      <PageHeader title="Courses" actions={<NewCourseButton count={courses.length} onAdded={add} />} />
+      <PageHeader title="Courses" actions={<><ProgrammeButton existing={courses.map(c => c.name)} onDone={reload} /><NewCourseButton count={courses.length} onAdded={add} /></>} />
       <ul aria-label="Your courses" className="grid gap-3 sm:grid-cols-2">
         {courses.map(c => (
           <li key={c.id}>
