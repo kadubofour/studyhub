@@ -56,7 +56,7 @@ test('a PDF is structured by AI', async ({ page }) => {
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles(fixture('cells.pdf'))
   await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
-  await expect(page.getByText('Structured by AI — check it before saving.')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('Check it before saving.')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByLabel('Preview').getByText('Converted by the fake AI.')).toBeVisible()
 })
 

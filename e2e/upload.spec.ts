@@ -40,7 +40,7 @@ test('upload a PowerPoint: its slides become sections of a note', async ({ page 
   const preview = page.getByLabel('Preview')
   await expect(preview.getByRole('heading', { name: 'Slide 1: Intro to cells' })).toBeVisible()
   await expect(preview.getByText('Mitochondria make ATP')).toBeVisible()
-  await expect(page.getByText(/Structured by AI/)).toHaveCount(0)
+  await expect(page.getByText('Check it before saving.')).toHaveCount(0)
   await page.getByRole('button', { name: 'Save note' }).click()
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await expect(page.getByRole('complementary', { name: 'Study' })).toHaveCount(0)
