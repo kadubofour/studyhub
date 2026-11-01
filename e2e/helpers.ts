@@ -112,3 +112,14 @@ export async function rpcAs<T = unknown>(email: string, fn: string, args: Record
   const text = await res.text()
   return (text ? JSON.parse(text) : null) as T
 }
+
+// Puts the open note in Biology, and waits for that to be saved, unless it is there already (a note made from another note starts in its course)
+export async function inBiology(page: Page) {
+  const course = page.getByRole('button', { name: 'Course', exact: true })
+  await expect(course).toBeVisible()
+  if ((await course.innerText()).includes('Biology')) return
+  await Promise.all([
+    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
+    choose(page, 'Course', 'Biology'),
+  ])
+}

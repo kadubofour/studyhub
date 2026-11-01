@@ -1,12 +1,6 @@
-import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, choose } from './helpers'
+import { test, expect } from '@playwright/test'
+import { newNoteFromNote, noteWithText, signUp, inBiology } from './helpers'
 
-async function inBiology(page: Page) {
-  await Promise.all([
-    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    choose(page, 'Course', 'Biology'),
-  ])
-}
 
 test('find resources for a topic, keep them across a reload, and remove one', async ({ page }) => {
   await signUp(page)

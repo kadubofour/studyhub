@@ -124,9 +124,9 @@ test('notes: search finds words inside a note', async ({ page, isMobile }) => {
   await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')
   await expect(page.getByText('Saved')).toBeVisible()
   await page.goto('/notes')
-  await page.getByLabel('Search notes').fill('krebs')
+  await page.getByLabel('Search notes').filter({ visible: true }).fill('krebs')
   await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()
-  await page.getByLabel('Search notes').fill('photosynthesis')
+  await page.getByLabel('Search notes').filter({ visible: true }).fill('photosynthesis')
   await expect(page.getByRole('link', { name: /Week 3/ })).toHaveCount(0)
 })
 

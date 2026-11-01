@@ -1,12 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, choose } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, inBiology } from './helpers'
 
-async function inBiology(page: Page) {
-  await Promise.all([
-    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    choose(page, 'Course', 'Biology'),
-  ])
-}
 async function secondNote(page: Page, title: string, text: string) {
   await newNoteFromNote(page)
   await expect(page.getByLabel('Title')).toHaveValue('Untitled')

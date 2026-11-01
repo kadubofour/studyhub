@@ -36,6 +36,7 @@ test('import a Word document with equations, then export it back to Word', async
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Upload' }).first().click()
   await page.getByLabel('File to upload').setInputFiles(fixture('quadratics.docx'))
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByLabel('Title')).toHaveValue('Quadratics')
   const preview = page.getByLabel('Preview')
   await expect(preview.getByRole('heading', { name: 'Formula' })).toBeVisible()
@@ -54,6 +55,7 @@ test('a PDF is structured by AI', async ({ page }) => {
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Upload' }).first().click()
   await page.getByLabel('File to upload').setInputFiles(fixture('cells.pdf'))
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByText('Structured by AI — check it before saving.')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByLabel('Preview').getByText('Converted by the fake AI.')).toBeVisible()
 })
@@ -64,6 +66,7 @@ test('a PDF falls back to plain text when the AI cannot convert it', async ({ pa
   await page.getByRole('button', { name: 'Upload' }).first().click()
   // The E2E fake AI refuses files named "…fallback…"
   await page.getByLabel('File to upload').setInputFiles({ name: 'cells-fallback.pdf', mimeType: 'application/pdf', buffer: fs.readFileSync(fixture('cells.pdf')) })
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByText(/only the plain text was kept/)).toBeVisible({ timeout: 20_000 })
   await expect(page.getByLabel('Preview').getByText('The Krebs cycle makes ATP.')).toBeVisible()
   await page.getByRole('button', { name: 'Save note' }).click()

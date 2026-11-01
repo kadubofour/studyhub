@@ -18,6 +18,7 @@ test('upload a text file and open it on the Flashcards tab', async ({ page }) =>
   await page.getByRole('button', { name: 'Upload' }).first().click()
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   await page.getByLabel('File to upload').setInputFiles({ name: 'enzymes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Enzymes\n\nThey speed up reactions.\n') })
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByLabel('Title')).toHaveValue('Enzymes')
   await expect(page.getByLabel('Preview').getByText('They speed up reactions.')).toBeVisible()
   await page.getByRole('radio', { name: 'Open with Flashcards' }).check()
@@ -34,6 +35,7 @@ test('upload a PowerPoint: its slides become sections of a note', async ({ page 
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Upload' }).first().click()
   await page.getByLabel('File to upload').setInputFiles({ name: 'week 1.pptx', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', buffer: await deck() })
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByLabel('Title')).toHaveValue('Intro to cells')
   const preview = page.getByLabel('Preview')
   await expect(preview.getByRole('heading', { name: 'Slide 1: Intro to cells' })).toBeVisible()
@@ -49,6 +51,7 @@ test('a photo is handed to Scan and a recording to Lectures', async ({ page, isM
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Upload' }).first().click()
   await page.getByLabel('File to upload').setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer: Buffer.from('not really a png') })
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   void isMobile
   await expect(page.getByRole('heading', { name: 'Scan pages' })).toBeVisible()
   await expect(page.getByRole('button', { name: '✦ Scan 1 page' })).toBeVisible() // the photo came with it
@@ -66,6 +69,7 @@ test('Upload in the Create menu opens the dialog from any page, and a photo goes
   await create(page, 'Upload')
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   await page.getByLabel('File to upload').setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer: Buffer.from('not really a png') })
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByRole('heading', { name: 'Scan pages' })).toBeVisible()
   await expect(page.getByRole('button', { name: '✦ Scan 1 page' })).toBeVisible()
 })
