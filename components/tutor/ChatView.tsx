@@ -478,11 +478,11 @@ export function ChatView({ chatId }: { chatId: string }) {
           <button type="button" aria-label="Jump to latest" title="Latest" className="btn absolute -top-11 left-1/2 grid size-9 -translate-x-1/2 place-items-center !rounded-full !p-0 shadow-md" onClick={jumpToLatest}><ArrowDown size={16} aria-hidden /></button>
         )}
         {/* one rounded box, the way a chat is written: the text and its Send button together */}
-        <div className="rounded-3xl border border-line bg-raised p-2 pl-4 shadow-sm focus-within:border-accent max-md:border-transparent max-md:shadow-[0_8px_24px_-10px_rgb(0_0_0/0.35)]"
+        <div className="rounded-[1.75rem] border border-line bg-raised p-1.5 shadow-sm focus-within:border-accent max-md:border-transparent max-md:shadow-[0_8px_24px_-10px_rgb(0_0_0/0.35)]"
           onDragOver={e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault() }}
           onDrop={e => { const f = Array.from(e.dataTransfer?.files ?? []); if (f.length) { e.preventDefault(); void addFiles(f) } }}>
           {(pending.length > 0 || reading > 0) && (
-            <ul aria-label="Files to send" className="flex flex-wrap gap-2 pb-1 pt-1">
+            <ul aria-label="Files to send" className="flex flex-wrap gap-2 px-2 pb-1.5 pt-1">
               {pending.map(p => (
                 <li key={p.id} className="flex max-w-60 items-center gap-1.5 rounded-xl border border-line bg-bg py-1 pl-1.5 pr-1 text-xs">
                   {p.kind === 'photo' && p.preview ? <img src={p.preview} alt="" className="size-8 rounded object-cover" /> : <FileText size={15} aria-hidden className="ml-1 text-muted" />}
@@ -497,24 +497,24 @@ export function ChatView({ chatId }: { chatId: string }) {
               {reading > 0 && <li className="flex items-center rounded-xl border border-line px-2.5 py-1 text-xs text-muted"><Working kind="read" size="sm" label="Reading" /></li>}
             </ul>
           )}
-          <textarea ref={box} className="block max-h-48 min-h-11 w-full resize-none border-0 bg-transparent py-2 text-sm outline-none focus:ring-0" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
-            onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }}
-            onPaste={e => {
-              // Text wins: copying from Word or a web page often brings a picture of it too
-              const f = Array.from(e.clipboardData?.files ?? [])
-              if (f.length && !e.clipboardData.getData?.('text/plain')) { e.preventDefault(); void addFiles(f) }
-            }} />
-          <div className="flex items-center gap-2 pt-1">
-            <button type="button" aria-label="Add files or photos" title="Add files or photos" disabled={uploading} className="btn-ghost -ml-2 grid size-10 shrink-0 place-items-center !rounded-full !p-0 text-muted" onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden /></button>
+          <div className="flex items-end gap-1">
+            <button type="button" aria-label="Add files or photos" title="Add files or photos" disabled={uploading} className="btn-ghost grid size-10 shrink-0 place-items-center !rounded-full !p-0 text-muted" onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden /></button>
             <input ref={fileInput} type="file" multiple aria-label="Files to add" className="sr-only" tabIndex={-1}
               accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,application/pdf,.docx,.pptx,.txt,.md,.markdown"
               onChange={e => { const f = Array.from(e.target.files ?? []); e.target.value = ''; if (f.length) void addFiles(f) }} />
-            <span className="flex items-center gap-2 text-xs text-muted max-md:hidden">
+            <textarea ref={box} className="block max-h-48 min-h-10 min-w-0 flex-1 resize-none border-0 bg-transparent py-2.5 text-[16px] outline-none focus:ring-0 md:text-sm" rows={1} aria-label="Message" placeholder="Ask the tutor…" value={text} maxLength={4000}
+              onChange={e => setText(e.target.value)} onKeyDown={e => { if (enterSends(e)) { e.preventDefault(); void send() } }}
+              onPaste={e => {
+                // Text wins: copying from Word or a web page often brings a picture of it too
+                const f = Array.from(e.clipboardData?.files ?? [])
+                if (f.length && !e.clipboardData.getData?.('text/plain')) { e.preventDefault(); void addFiles(f) }
+              }} />
+            <span className="flex h-10 items-center gap-2 pr-1 text-xs text-muted max-md:hidden">
               <span id="guided-label">Guided</span>
               <Switch checked={chat.guided} onChange={v => { void toggleGuided(v) }} labelledBy="guided-label" describedBy="guided-hint" />
               <span id="guided-hint" className="sr-only">The tutor asks you to try first and gives hints one step at a time.</span>
             </span>
-            <span className="ml-auto flex items-center gap-1">
+            <span className="flex items-center gap-1">
               {dictation.supported && (
                 <button type="button" aria-label={dictation.listening ? 'Stop dictating' : 'Dictate'} aria-pressed={dictation.listening} title={dictation.listening ? 'Stop dictating' : 'Dictate'}
                   className={`btn-ghost grid size-10 place-items-center !rounded-full !p-0 ${dictation.listening ? '!bg-accent-soft text-accent motion-safe:animate-pulse' : 'text-muted'}`}
