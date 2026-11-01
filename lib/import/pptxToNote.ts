@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { mediaType, svgToPng, type DrawSvg, type KeepPicture } from './pictures'
+import { isDecorationAlt, mediaType, svgToPng, type DrawSvg, type KeepPicture } from './pictures'
 import { hasVisualAid, treeToSvg, type Env } from './drawingml'
 import { readRels, readTheme, readXml } from './ooxml'
 
@@ -47,8 +47,10 @@ function readTree(tree: Element, out: Content) {
       else for (const text of paras) out.items.push({ kind: 'text', text })
     } else if (local(node) === 'pic') {
       const rid = node.getElementsByTagNameNS(A_NS, 'blip')[0]?.getAttributeNS(R_NS, 'embed')
-      const alt = node.getElementsByTagNameNS(P_NS, 'cNvPr')[0]?.getAttribute('descr') ?? ''
-      if (rid) out.items.push({ kind: 'pic', rid, alt })
+      const props = node.getElementsByTagNameNS(P_NS, 'cNvPr')[0]
+      const alt = props?.getAttribute('descr') ?? ''
+      // named or described as a logo, a background and the like: it is there to look nice, not to teach
+      if (rid && !isDecorationAlt(`${props?.getAttribute('name') ?? ''} ${alt}`)) out.items.push({ kind: 'pic', rid, alt })
     } else if (local(node) === 'graphicFrame') {
       const tbl = node.getElementsByTagNameNS(A_NS, 'tbl')[0]
       if (!tbl) continue

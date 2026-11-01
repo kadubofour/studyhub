@@ -13,7 +13,9 @@ const RGBA = 3, RGB = 2, GRAY_1BPP = 1 // pdf.js ImageKind
 const WAIT_MS = 4000
 const DRAW_WIDTH = 1600 // a page is drawn about this wide, so a figure cut from it is sharp
 const SHAPE_OPS = 25 // a page with this many paths is drawing something besides text
-const MIN_SHOWN = 0.02 // a picture smaller than this share of its page (a logo, a signature, a bullet) is decoration, not a figure
+const MIN_SHOWN = 0.03 // a picture smaller than this share of its page (a logo, a signature, a bullet) is decoration, not a figure
+const HEADER = 0.1, FOOTER = 0.92 // a picture centred in the top tenth or the bottom of a page is a running header or footer (a logo, a crest), not a figure
+const STRETCH = 5 // a picture shown more than this many times longer than it is tall (or the other way) is a banner or a rule
 
 type Matrix = number[]
 const times = ([a0, b0, c0, d0, e0, f0]: Matrix, [a, b, c, d, e, f]: Matrix): Matrix =>
@@ -76,7 +78,12 @@ export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: R
         else if (fn === OPS.transform) ctm = times(ctm, args as Matrix)
         else if (fn === OPS.paintImageXObject || fn === OPS.paintImageXObjectRepeat) {
           const shown = Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2]) / (view.width * view.height)
-          if (shown >= MIN_SHOWN) names.push(String(args[0]))
+          const w = Math.hypot(ctm[0], ctm[1]), h = Math.hypot(ctm[2], ctm[3])
+          const fromTop = 1 - (ctm[5] + (ctm[1] + ctm[3]) / 2) / view.height // where its centre is, from the top of the page (0 to 1)
+          const name = String(args[0])
+          // a picture the document shares across its pages (pdf.js calls these "g_…") is a logo or a watermark; the page's own are figures
+          const keepIt = shown >= MIN_SHOWN && !name.startsWith('g_') && fromTop > HEADER && fromTop < FOOTER && Math.max(w, h) / Math.max(1e-6, Math.min(w, h)) <= STRETCH
+          if (keepIt) names.push(name)
         }
         else if (fn === OPS.constructPath) shapes++
       })
