@@ -64,7 +64,7 @@ export default function QuizHubPage() {
     {showsComputer(screen) && <div className="max-md:hidden">{content}</div>}
   </>)
 
-  const header = <><PageHeader title="Quiz" actions={<button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />New quiz</button>} /><StudyTabs current="quiz" /></>
+  const header = <><PageHeader title="Practice" actions={<button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />New quiz</button>} /><StudyTabs current="quiz" /></>
   if (failed && !data) return page(<div>{header}<p role="alert" className="text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={load}>Try again</button></p></div>)
   if (!hub) return page(<div>{header}<Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" /></div>)
   if (hub.rows.length === 0) {
@@ -209,7 +209,7 @@ function PhoneQuiz({ hub, rows, failed, reload, query, onQuery, courses, hasLoos
   const s = hub?.stats
   return (
     <div className="pb-24">
-      <PhoneTitle title="Quiz" menuLabel="Quiz options" menu={options} />
+      <PhoneTitle title="Practice" menuLabel="Practice options" menu={options} />
       <StudyTabs current="quiz" />
       {failed && <p role="alert" className="mb-4 text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={reload}>Try again</button></p>}
       {!hub && !failed && <Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" />}

@@ -48,7 +48,7 @@ describe('the rail', () => {
   it('has every place, in order, each a link with its name, and marks the one you are on', async () => {
     await shell()
     expect(rail().getAllByRole('link').map(l => l.getAttribute('aria-label'))).toEqual(
-      ['Home', 'Planner', 'Library', 'Flashcards', 'Tutor', 'Focus', 'Progress', 'Leaderboard', 'Settings', 'Kwadwo'])
+      ['Home', 'Planner', 'Library', 'Practice', 'Tutor', 'Focus', 'Progress', 'Leaderboard', 'Settings', 'Kwadwo'])
     expect(rail().getByRole('link', { name: 'Planner' }).getAttribute('aria-current')).toBe('page')
     expect(rail().getByRole('link', { name: 'Library' }).getAttribute('aria-current')).toBeNull()
     expect(rail().queryByRole('link', { name: 'Notes' })).toBeNull() // notes and lectures are inside the Library
@@ -75,7 +75,7 @@ describe('the sidebar', () => {
     expect(rail().getByText('Studyhub')).toBeTruthy()
     expect(rail().getByRole('link', { name: 'Library' }).textContent).toContain('Library')
     // the places after the Library are under a heading each
-    expect(rail().getByText('Practice')).toBeTruthy()
+    expect(rail().getByText('Study')).toBeTruthy()
     expect(rail().getByText('Track')).toBeTruthy()
     const courses = within(rail().getByRole('group', { name: 'Courses' }))
     expect(courses.getByRole('link', { name: /Biology/ }).getAttribute('href')).toBe('/courses/k1')
@@ -87,7 +87,7 @@ describe('the sidebar', () => {
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=1')
     expect(rail().queryByRole('group', { name: 'Courses' })).toBeNull()
     const notes = rail().getByRole('link', { name: 'Library' })
-    expect(rail().queryByText('Practice')).toBeNull() // a rail of icons has a thin line, not words
+    expect(rail().queryByText('Study')).toBeNull() // a rail of icons has a thin line, not words
     expect(notes.textContent).toBe('') // an icon; its name shows beside it when pointed at, in one label the scrolling list cannot clip
     fireEvent.mouseEnter(notes)
     expect(rail().getByText('Library').className).toContain('fixed')
@@ -192,12 +192,12 @@ describe('the command palette', () => {
 })
 
 describe('on a phone', () => {
-  it('a dock with Home, Planner and Library, then Create, then Flashcards and the Tutor, and Library lit on a note', async () => {
+  it('a dock with Home, Planner and Library, then Create, then Practice and the Tutor, and Library lit on a note', async () => {
     path = '/notes'
     await shell()
     const nav = screen.getByRole('navigation', { name: 'Main' })
     const dock = within(nav)
-    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Flashcards', 'Tutor'])
+    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Practice', 'Tutor'])
     expect(dock.getByRole('link', { name: 'Library' }).getAttribute('aria-current')).toBe('page') // /notes is inside the Library
     fireEvent.click(dock.getByRole('button', { name: 'Create new' }))
     expect(screen.getByRole('menu', { name: 'Create' })).toBeTruthy()

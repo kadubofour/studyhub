@@ -2,15 +2,15 @@ import { BarChart3, CalendarDays, FolderOpen, Home, Layers, ListChecks, Messages
 
 // The places in the app, in the order the rail shows them. The palette lists them too, with words they can also be found by.
 // Home and Planner stand alone; Library is where everything the student has (notes, notebooks, decks, lectures, quizzes, files) lives,
-// and the places that follow are what they do with it, under a heading each.
-export interface Place { href: string; label: string; icon: LucideIcon; keywords?: string; group?: 'Practice' | 'Track' }
+// and the places that follow are what they do with it (Study, Track), under a heading each. Practice is the page of flashcards and quizzes, at /flashcards.
+export interface Place { href: string; label: string; icon: LucideIcon; keywords?: string; alias?: string; group?: 'Study' | 'Track' }
 export const PLACES: Place[] = [
   { href: '/home', label: 'Home', icon: Home, keywords: 'today dashboard start' },
   { href: '/planner', label: 'Planner', icon: CalendarDays, keywords: 'tasks calendar exams timetable classes week reminders' },
   { href: '/library', label: 'Library', icon: FolderOpen, keywords: 'everything notes notebooks lectures recordings files material uploads write record' },
-  { href: '/flashcards', label: 'Flashcards', icon: Layers, group: 'Practice', keywords: 'cards decks review quiz quizzes test questions' },
-  { href: '/tutor', label: 'Tutor', icon: MessagesSquare, group: 'Practice', keywords: 'ai chat ask help' },
-  { href: '/focus', label: 'Focus', icon: Timer, group: 'Practice', keywords: 'timer pomodoro study session sounds' },
+  { href: '/flashcards', label: 'Practice', icon: Layers, group: 'Study', alias: 'Flashcards Quizzes', keywords: 'cards decks review quiz test questions' },
+  { href: '/tutor', label: 'Tutor', icon: MessagesSquare, group: 'Study', keywords: 'ai chat ask help' },
+  { href: '/focus', label: 'Focus', icon: Timer, group: 'Study', keywords: 'timer pomodoro study session sounds' },
   { href: '/progress', label: 'Progress', icon: BarChart3, group: 'Track', keywords: 'stats streak xp level topics' },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, group: 'Track', keywords: 'friends groups rank xp' },
 ]
