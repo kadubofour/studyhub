@@ -127,6 +127,7 @@ function Review() {
 
   return (
     <div className="mx-auto max-w-lg">
+      <h1 className="sr-only">Review cards</h1>
       {practice && <p className="mb-3 rounded-lg bg-accent-soft px-3 py-2 text-center text-xs text-accent">Practice: your schedule won&apos;t change.</p>}
       <ChoiceChips label="Answer by" size="sm" className="mb-3" value={mode} onChange={v => reviewMode.set(v === 'type' ? 'type' : 'flip')}
         options={[{ value: 'flip', label: 'Flip' }, { value: 'type', label: 'Type answer' }]} />

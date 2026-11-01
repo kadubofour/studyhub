@@ -48,13 +48,13 @@ export async function noteFileAction(page: Page, item: 'Export as Word' | 'Expor
 // A note with enough text for the AI study tools (they need at least 40 words)
 export async function noteWithText(page: Page, title = 'Krebs cycle') {
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await noteSaved(page)
 }
 
 // Pays for a month of Premium through the fake Paystack (E2E only)
@@ -111,4 +111,23 @@ export async function rpcAs<T = unknown>(email: string, fn: string, args: Record
   expect(res.ok, await res.clone().text()).toBe(true)
   const text = await res.text()
   return (text ? JSON.parse(text) : null) as T
+}
+
+// Puts the open note in Biology, and waits for that to be saved, unless it is there already (a note made from another note starts in its course)
+export async function inBiology(page: Page) {
+  const course = page.getByRole('button', { name: 'Course', exact: true })
+  await expect(course).toBeVisible()
+  if ((await course.innerText()).includes('Biology')) return
+  await Promise.all([
+    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
+    choose(page, 'Course', 'Biology'),
+  ])
+}
+
+// Waits until the note is saved. A computer says "Saved"; a phone shows a tick labelled Saved only once writing is done (the keyboard hides it,
+// to leave room for Undo and Redo), so there it taps Done first, as a person would
+export async function noteSaved(page: Page) {
+  const done = page.getByRole('button', { name: 'Done', exact: true })
+  if (await done.isVisible()) await done.click()
+  await expect(page.getByText('Saved').or(page.getByRole('status', { name: 'Saved' })).first()).toBeVisible()
 }

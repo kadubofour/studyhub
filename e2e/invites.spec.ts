@@ -36,7 +36,7 @@ test.describe('invite links', () => {
     await visitor.getByRole('button', { name: 'Continue' }).click()
     await expect(visitor).toHaveURL(new RegExp(`/add/${code}$`))
 
-    await expect(visitor.getByText('Ama')).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: 'Ama' })).toBeVisible()
     await visitor.getByRole('button', { name: 'Send friend request' }).click()
     await expect(visitor.getByText(/Request sent/)).toBeVisible()
     await visitor.getByRole('link', { name: 'Open the leaderboard' }).click()

@@ -74,3 +74,23 @@ describe('ItemTile: what is inside', () => {
     expect(screen.getByText('The cycle runs in the matrix.').closest('.sr-only')).not.toBeNull()
   })
 })
+
+describe('ItemTile: its controls do not sit on each other', () => {
+  it('puts the menu button beside the tick box, never on it, in a tile and in a row', () => {
+    for (const layout of ['grid', 'list'] as const) {
+      show(layout, { corner: <input type="checkbox" aria-label="Select Krebs cycle" />, onMenu: () => {} })
+      const menu = screen.getByRole('button', { name: 'More actions for Krebs cycle' })
+      expect(menu.className, layout).toContain('right-9')
+      expect(menu.className, layout).not.toContain('right-2 ')
+      cleanup()
+    }
+  })
+  it('keeps the menu at the edge when there is no tick box', () => {
+    show('grid', { onMenu: () => {} })
+    expect(screen.getByRole('button', { name: 'More actions for Krebs cycle' }).className).toContain('right-2')
+  })
+  it('lets the bottom row of a tile wrap, so the course and the date cannot overlap', () => {
+    const { container } = show('grid', { aside: '14 cards · 14 due · 1 Nov' })
+    expect(container.querySelector('.mt-auto')!.className).toContain('flex-wrap')
+  })
+})

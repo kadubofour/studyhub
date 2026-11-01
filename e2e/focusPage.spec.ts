@@ -54,7 +54,7 @@ test('a focus session on a task: pick a length and a task, time runs out with an
 
   // Coming back clears the title; the task can be marked done from the message
   await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); document.dispatchEvent(new Event('visibilitychange')) })
-  await expect(page).toHaveTitle('Studyhub')
+  await expect(page).toHaveTitle('Focus · Studyhub')
   await page.getByRole('button', { name: /Mark “Read chapter 7” done/ }).click()
   await expect(page.getByText('Marked “Read chapter 7” done.')).toBeVisible()
   await page.getByRole('tab', { name: 'Focus', exact: true }).click()

@@ -1,27 +1,28 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Flame, Layers, MessagesSquare, Timer } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { QuizScores } from '@/components/progress/QuizScores'
 import { TopicsSection } from '@/components/progress/TopicsSection'
-import { ProgressSummary } from '@/components/progress/ProgressSummary'
+import { ProgressHero } from '@/components/progress/ProgressHero'
+import { StatTiles } from '@/components/progress/StatTiles'
+import { MiniBars } from '@/components/progress/MiniBars'
 import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { QuickActions } from '@/components/quick/QuickActions'
 import { ShareProgressButton } from '@/components/share/ShareProgress'
-import { Layers, MessagesSquare, Timer } from 'lucide-react'
 import { useXp } from '@/components/xp/useXp'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listSessionsSince } from '@/lib/data/focus'
 import { listReviewsSince } from '@/lib/data/reviews'
-import { computeStreak, dailyMinutes } from '@/lib/streak'
+import { dailyMinutes } from '@/lib/streak'
 import { countByDay, retention } from '@/lib/stats'
 import { addDaysToKey, localDayKey, startOfLocalDay, weekKeysFor } from '@/lib/dates'
+import { compareWeeks, fmtCompact, fmtMinutes, headline, weekDots, weekTotals } from '@/lib/progress/summary'
 import type { FocusSession, Review } from '@/lib/types'
 
-// Heatmap shades in the student's accent colour
-const LEVELS = ['var(--surface)', 'color-mix(in srgb, var(--accent-solid) 30%, transparent)', 'color-mix(in srgb, var(--accent-solid) 62%, transparent)', 'var(--accent-solid)']
-const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
-
+// How the student is doing, said kindly: a sentence about today, this week day by day, three numbers in plain words, and two
+// quiet charts. The streak is the same one the top bar and the Profile show. Topics and quiz scores follow.
 export default function ProgressPage() {
   const { profile } = useProfile()
   const tz = profile.timezone
@@ -32,9 +33,9 @@ export default function ProgressPage() {
   useEffect(() => {
     const sb = supabase()
     const today = localDayKey(new Date(), tz)
-    // A year back so "best streak" is meaningful; the heatmap shows the last 12 weeks
+    // eight weeks of focus (a little more) for the weekly totals, and a month of reviews
     Promise.all([
-      listSessionsSince(sb, startOfLocalDay(addDaysToKey(today, -365), tz)),
+      listSessionsSince(sb, startOfLocalDay(addDaysToKey(today, -63), tz)),
       listReviewsSince(sb, startOfLocalDay(addDaysToKey(today, -30), tz)),
     ]).then(([s, r]) => { setSessions(s); setReviews(r) })
   }, [tz])
@@ -43,73 +44,62 @@ export default function ProgressPage() {
 
   const now = new Date()
   const today = localDayKey(now, tz)
+  const goal = profile.daily_goal_minutes
   const minutes = dailyMinutes(sessions, tz)
-  const streak = computeStreak(sessions, profile.daily_goal_minutes, tz, now)
+  const todayMinutes = minutes.get(today) ?? 0
   const thisWeek = weekKeysFor(today).reduce((n, k) => n + (minutes.get(k) ?? 0), 0)
+  const weeks = weekTotals(today, minutes, 8)
+  const lastWeek = weeks[weeks.length - 2]?.minutes ?? 0
   const ret = retention(reviews)
   const reviewsByDay = countByDay(reviews.map(r => r.reviewed_at), tz)
-
-  const firstMonday = addDaysToKey(weekKeysFor(today)[0], -7 * 11)
-  const weeks = Array.from({ length: 12 }, (_, w) => Array.from({ length: 7 }, (_, d) => addDaysToKey(firstMonday, w * 7 + d)))
-  const level = (m: number) => (m <= 0 ? 0 : m < profile.daily_goal_minutes / 2 ? 1 : m < profile.daily_goal_minutes ? 2 : 3)
   const last14 = Array.from({ length: 14 }, (_, i) => addDaysToKey(today, i - 13))
-  const maxReviews = Math.max(1, ...last14.map(k => reviewsByDay.get(k) ?? 0))
-
-  const focusTotal = weeks.flat().reduce((n, k) => n + (k > today ? 0 : minutes.get(k) ?? 0), 0)
   const reviewTotal = last14.reduce((n, k) => n + (reviewsByDay.get(k) ?? 0), 0)
+  const reviewsThisWeek = weekKeysFor(today).reduce((n, k) => n + (reviewsByDay.get(k) ?? 0), 0)
+  const bestWeek = Math.max(0, ...weeks.map(w => w.minutes))
+  const streak = xp?.streak ?? 0
+  const text = headline({ streak, goalMinutes: goal, todayMinutes, weekMinutes: thisWeek, totalXp: xp?.total ?? 0 })
+  const dayLetter = (k: string) => ['S', 'M', 'T', 'W', 'T', 'F', 'S'][new Date(`${k}T12:00:00Z`).getUTCDay()]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader title="Progress" actions={<QuickActions label="Quick actions" actions={[
-        { label: 'Start focus', icon: Timer, href: '/focus' },
         { label: 'Review cards', icon: Layers, href: '/review' },
         { label: 'Ask the tutor', icon: MessagesSquare, href: '/tutor' },
         { node: <NewNoteButton /> },
         { node: <ShareProgressButton /> },
       ]} />} />
-      <ProgressSummary xp={xp} stats={[
-        { label: 'Current streak', value: `${streak.current} ${streak.current === 1 ? 'day' : 'days'}` },
-        { label: 'Best streak', value: `${streak.best} ${streak.best === 1 ? 'day' : 'days'}` },
-        { label: 'Focus this week', value: fmtMin(thisWeek) },
-        { label: 'Retention (30 days)', value: ret === null ? '—' : `${Math.round(ret * 100)}%` },
+
+      <ProgressHero xp={xp} headline={text} dots={weekDots(today, minutes, goal)} todayMinutes={todayMinutes} goalMinutes={goal} />
+
+      <StatTiles stats={[
+        { label: 'Streak', value: `${streak} ${streak === 1 ? 'day' : 'days'}`, icon: Flame, tone: 'a',
+          sub: streak > 0 ? `Your best is ${xp?.best ?? streak}` : 'Study today to start one' },
+        { label: 'Focus this week', value: fmtMinutes(thisWeek), icon: Timer, tone: 'b', sub: compareWeeks(thisWeek, lastWeek) },
+        { label: 'Cards reviewed this week', value: String(reviewsThisWeek), icon: Layers, tone: 'c',
+          sub: ret === null ? 'Review a few to see how much sticks' : `${Math.round(ret * 100)}% remembered this month` },
       ]} />
-      {/* phones have no sidebar, so the shortcuts stay there */}
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <section className="card">
-          <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-medium">Focus, last 12 weeks</h2>
-            <span className="text-xs text-muted">{fmtMin(focusTotal)} in all</span>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className="card" aria-label="Focus by week">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3">
+            <h2 className="text-sm font-medium">Focus, week by week</h2>
+            <span className="text-xs text-muted">{bestWeek > 0 ? `Your best week: ${fmtMinutes(bestWeek)}` : 'Your weeks will fill in here'}</span>
           </div>
-          <div className="grid grid-cols-12 gap-1" role="img" aria-label="Daily focus time heatmap for the last 12 weeks">
-            {weeks.map((days, i) => (
-              <div key={i} className="grid gap-1">
-                {days.map(k => (
-                  <div key={k} title={`${k}: ${fmtMin(minutes.get(k) ?? 0)}`} className="h-6 w-full rounded-md"
-                    style={{ background: k > today ? 'transparent' : LEVELS[level(minutes.get(k) ?? 0)] }} />
-                ))}
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted">Darkest = daily goal reached</p>
+          <MiniBars aria={`Focus time for each of the last 8 weeks, oldest first: ${weeks.map(w => `${w.label} ${fmtMinutes(w.minutes)}`).join(', ')}`} values format={fmtCompact}
+            bars={weeks.map(w => ({ key: w.start, value: w.minutes, label: w.label, tip: `Week of ${w.label}: ${fmtMinutes(w.minutes)}`, now: w.current }))} />
+          <p className="mt-3 text-xs text-muted">Each bar is a week, Monday to Sunday. The last is this week so far.</p>
         </section>
-        <section className="card">
-          <div className="mb-3 flex items-baseline justify-between gap-2">
+        <section className="card" aria-label="Cards reviewed by day">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3">
             <h2 className="text-sm font-medium">Cards reviewed, last 14 days</h2>
-            <span className="text-xs text-muted">{reviewTotal} in all</span>
+            <span className="text-xs text-muted">{reviewTotal > 0 ? `${reviewTotal} in all` : 'Review a deck to see this fill in'}</span>
           </div>
-          <div className="flex h-36 items-end gap-1.5">
-            {last14.map(k => {
-              const n = reviewsByDay.get(k) ?? 0
-              return (
-                <div key={k} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${k}: ${n}`}>
-                  <div className="w-full rounded-md bg-accent-solid" style={{ height: `${(n / maxReviews) * 100}%`, minHeight: n ? 2 : 0 }} />
-                  <span className="text-[10px] text-muted">{Number(k.slice(8))}</span>
-                </div>
-              )
-            })}
-          </div>
+          <MiniBars aria={`Cards reviewed each day for the last 14 days: ${last14.map(k => `${k}: ${reviewsByDay.get(k) ?? 0}`).join('; ')}`}
+            bars={last14.map(k => ({ key: k, value: reviewsByDay.get(k) ?? 0, label: dayLetter(k), tip: `${k}: ${reviewsByDay.get(k) ?? 0}`, now: k === today }))} />
+          <p className="mt-3 text-xs text-muted">Each bar is a day; the last is today.</p>
         </section>
       </div>
+
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:[&>section:only-child]:col-span-2 [&>section]:!mt-0">
         <TopicsSection />
         <QuizScores />

@@ -72,13 +72,21 @@ export function Dropdown<T extends string>({ label, value, options, onChange, pl
     const el = panel.current as (HTMLUListElement & { showPopover?: () => void }) | null
     if (open && el?.showPopover && !el.matches(':popover-open')) el.showPopover()
   }, [open, place])
-  useEffect(() => { if (open) panel.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView?.({ block: 'nearest' }) }, [open, active])
+  // Keeps the highlighted option in view inside the list, moving the list only: scrolling the page would close the dropdown
+  useEffect(() => {
+    const list = panel.current, el = list?.querySelector<HTMLElement>(`[data-index="${active}"]`)
+    if (!open || !list || !el) return
+    if (el.offsetTop < list.scrollTop) list.scrollTop = el.offsetTop
+    else if (el.offsetTop + el.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = el.offsetTop + el.offsetHeight - list.clientHeight
+  }, [open, active])
 
   // A press anywhere else, the window resizing or the page scrolling (not the list itself) closes it
   useEffect(() => {
     if (!open) return
     const away = (e: Event) => { const t = e.target as Node; if (!panel.current?.contains(t) && !button.current?.contains(t)) close(false) }
-    const scrolled = (e: Event) => { if (!panel.current?.contains(e.target as Node)) close(false) }
+    const openedAt = Date.now()
+    // a scroll in the first moments is the page settling as the list opens (focus, layout), not the student leaving: it does not close it
+    const scrolled = (e: Event) => { if (Date.now() - openedAt > 250 && !panel.current?.contains(e.target as Node)) close(false) }
     const resized = () => close(false)
     document.addEventListener('pointerdown', away, true)
     window.addEventListener('scroll', scrolled, true)

@@ -1,5 +1,7 @@
 'use client'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { pageTitle } from '@/lib/shell/titles'
 import { useProfile } from './ProfileProvider'
 import { useToast } from './ToastProvider'
 import { supabase } from '@/lib/supabase/client'
@@ -171,9 +173,16 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('pointerdown', unlock)
   }, [running])
 
+  // The tab shows the clock while it runs, or the alert; otherwise the page's own title is left alone (and put back after)
+  const path = usePathname()
+  const pageOwn = useRef<string | null>(null)
   useEffect(() => {
-    document.title = alertTitle ?? (running ? `${fmtClock(remaining)} · ${MODE_LABEL[timer.mode]}` : 'Studyhub')
+    const mine = alertTitle ?? (running ? `${fmtClock(remaining)} · ${MODE_LABEL[timer.mode]}` : null)
+    if (mine) { pageOwn.current ??= document.title; document.title = mine }
+    else if (pageOwn.current !== null) { document.title = pageOwn.current; pageOwn.current = null }
   }, [running, remaining, timer.mode, alertTitle])
+  // going to another page while the clock has the tab: that page's title is what comes back
+  useEffect(() => { if (pageOwn.current !== null) pageOwn.current = pageTitle(path ?? '') }, [path])
 
   return (
     <Ctx.Provider value={{ timer, now, completedFocus, todayMinutes, toggle, restart, setDuration, task, skip, pickMode }}>

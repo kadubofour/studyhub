@@ -83,3 +83,26 @@ describe('the dropdown', () => {
     expect(courseOptions([{ id: 'c1', name: 'Biology' }]).map(o => o.label)).toEqual(['No course', 'Biology'])
   })
 })
+
+describe('the dropdown and page scrolling', () => {
+  it('keeping the highlighted option in view moves the list, never the page, because a scrolling page closes the dropdown', () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    render(<Pick />)
+    fireEvent.click(button())
+    fireEvent.keyDown(button(), { key: 'ArrowDown' })
+    expect(list()).toBeTruthy() // still open
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+  it('a scroll of the page closes it once it has settled, but not a scroll of the list itself or the page settling as it opens', async () => {
+    render(<Pick />)
+    fireEvent.click(button())
+    fireEvent.scroll(list()!)
+    expect(list()).toBeTruthy()
+    fireEvent.scroll(document) // the page settling as the list opens does not close it
+    expect(list()).toBeTruthy()
+    await new Promise(r => setTimeout(r, 300))
+    fireEvent.scroll(document) // the student scrolling on does
+    expect(list()).toBeNull()
+  })
+})

@@ -12,6 +12,9 @@ const CANNED: Record<string, unknown> = {
     { type: 'short', prompt: 'What molecule enters the cycle?', options: null, answer: 'Acetyl-CoA', explanation: 'Acetyl-CoA joins oxaloacetate.' },
   ] },
   mark: { correct: true, feedback: 'Yes, that means acetyl-CoA.' },
+  // Setup: the courses suggested for a programme, and a starter set of topics with a note each
+  courses: { courses: [{ name: 'Cell Biology' }, { name: 'Genetics' }, { name: 'Biochemistry' }] },
+  starter: { topics: ['Cell structure', 'Membranes', 'Energy and ATP', 'Cell division'].map(name => ({ name, note_md: `${name} is a core idea in this course. It is explained here in plain words, with the key terms to remember and one example to work through.` })) },
   scan_cards: { cards: [{ front: 'What is the powerhouse of the cell?', back: 'The mitochondrion' }, { front: 'What do ribosomes make?', back: 'Proteins' }] },
   scan_planner: {
     tasks: [

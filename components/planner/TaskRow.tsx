@@ -21,7 +21,7 @@ export function TaskRow({ task, course, tz, now, done, onToggle, onDelete, onEdi
       style={{ borderLeftColor: course?.color ?? 'var(--line)' }}>
       <input type="checkbox" checked={!!done} onChange={onToggle} aria-label={`Mark ${task.title} done`}
         disabled={saving} title={saving ? 'Saving…' : undefined}
-        className="size-4 shrink-0 accent-[var(--accent-solid)] disabled:opacity-50" />
+        className="size-4 shrink-0 accent-[var(--accent-solid)] disabled:opacity-50 pointer-coarse:box-content pointer-coarse:-m-2 pointer-coarse:p-2" />
       <div className="min-w-0 flex-1">
         <div className={`flex items-center gap-1.5 ${done ? 'text-muted line-through' : ''}`}>
           {onEdit

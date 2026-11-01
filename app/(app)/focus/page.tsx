@@ -48,6 +48,7 @@ export default function FocusPage() {
 
   return (
     <div className={`mx-auto max-w-md text-center ${modeClass(timer.mode)}`}>
+      <h1 className="sr-only">Focus</h1>
       <div role="tablist" className="flex justify-center gap-1">
         {(['focus', 'short', 'long'] as Mode[]).map(m => (
           <button key={m} role="tab" aria-selected={timer.mode === m} onClick={() => pickMode(m)}

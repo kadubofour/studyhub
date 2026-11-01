@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type Locator, type Page, type TestInfo } from '@playwright/test'
 import path from 'node:path'
-import { rpcAs, signUp } from './helpers'
+import { rpcAs, signUp, noteSaved } from './helpers'
 
 const CELL = path.join(__dirname, 'fixtures', 'cell.png')
 
@@ -19,14 +19,14 @@ test('a signed-out visitor opens a shared note, signs up, copies it, and the cop
   test.setTimeout(180_000)
   const email = await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   const original = page.url().split('/').pop()!
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill('Cell notes')
   await page.getByLabel('Choose pictures').setInputFiles(CELL)
   await expect(page.locator('.ProseMirror img[alt="cell"]')).toBeVisible()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await noteSaved(page)
   const token = await rpcAs<string>(email, 'share_item', { p_kind: 'note', p_item: original })
 
   const visitor = await second(browser, info)
@@ -73,7 +73,7 @@ test('a signed-out visitor opens a shared note, signs up, copies it, and the cop
 test('the Share dialog opens from a deck, shows the link and does not scroll sideways', async ({ page }) => {
   await signUp(page)
   await page.goto('/flashcards')
-  await page.getByRole('button', { name: 'Create a deck' }).click()
+  await page.getByRole('button', { name: /Create a deck|^New deck$/ }).first().click() // a computer's empty list has its own button; a phone has the round New deck
   await page.getByLabel('Name').fill('Cells')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   await page.getByText('Cells').click()

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { noteFileAction, signUp, switchToMarkdown } from './helpers'
+import { noteFileAction, signUp, switchToMarkdown, noteSaved, create } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -21,7 +21,7 @@ test('accent colour and font apply instantly and survive a reload', async ({ pag
 test('writing a note is full screen, and Esc goes back to the list', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page.getByLabel('Title')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Planner' })).toHaveCount(0) // no app sidebar / tab bar
   await page.getByLabel('Title').fill('Fullscreen')
@@ -34,8 +34,9 @@ test('import a Word document with equations, then export it back to Word', async
 
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Upload' }).first().click()
+  await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles(fixture('quadratics.docx'))
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByLabel('Title')).toHaveValue('Quadratics')
   const preview = page.getByLabel('Preview')
   await expect(preview.getByRole('heading', { name: 'Formula' })).toBeVisible()
@@ -52,8 +53,9 @@ test('import a Word document with equations, then export it back to Word', async
 test('a PDF is structured by AI', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Upload' }).first().click()
+  await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles(fixture('cells.pdf'))
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByText('Structured by AI — check it before saving.')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByLabel('Preview').getByText('Converted by the fake AI.')).toBeVisible()
 })
@@ -61,9 +63,10 @@ test('a PDF is structured by AI', async ({ page }) => {
 test('a PDF falls back to plain text when the AI cannot convert it', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Upload' }).first().click()
+  await create(page, 'Upload') // the Create menu has it on a computer and a phone
   // The E2E fake AI refuses files named "…fallback…"
   await page.getByLabel('File to upload').setInputFiles({ name: 'cells-fallback.pdf', mimeType: 'application/pdf', buffer: fs.readFileSync(fixture('cells.pdf')) })
+  await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
   await expect(page.getByText(/only the plain text was kept/)).toBeVisible({ timeout: 20_000 })
   await expect(page.getByLabel('Preview').getByText('The Krebs cycle makes ATP.')).toBeVisible()
   await page.getByRole('button', { name: 'Save note' }).click()
@@ -74,11 +77,11 @@ test('printing from dark mode gives dark text on white paper', async ({ page }) 
 
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await page.getByLabel('Title').fill('Printable')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('> a quoted line')
-  await expect(page.getByText('Saved')).toBeVisible()
+  await noteSaved(page)
   const id = page.url().split('/').pop()
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.goto(`/print/notes?ids=${id}`)
@@ -102,7 +105,7 @@ test('select notes and export just those as a PDF', async ({ page, context }) =>
     await page.goto('/notes')
     await page.getByRole('button', { name: /Write your first note|^Note$/ }).first().click()
     await page.getByLabel('Title').fill(title)
-    await expect(page.getByText('Saved')).toBeVisible()
+    await noteSaved(page)
   }
   await page.goto('/notes')
   await page.getByRole('button', { name: 'Select' }).click()

@@ -1,12 +1,6 @@
-import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, choose } from './helpers'
+import { test, expect } from '@playwright/test'
+import { newNoteFromNote, noteWithText, signUp, inBiology, noteSaved } from './helpers'
 
-async function inBiology(page: Page) {
-  await Promise.all([
-    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    choose(page, 'Course', 'Biology'),
-  ])
-}
 
 test('find resources for a topic, keep them across a reload, and remove one', async ({ page }) => {
   await signUp(page)
@@ -17,7 +11,7 @@ test('find resources for a topic, keep them across a reload, and remove one', as
   await page.getByLabel('Title').fill('Glycolysis notes')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. '.repeat(4))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await noteSaved(page)
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })

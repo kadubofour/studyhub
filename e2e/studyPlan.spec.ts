@@ -1,12 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, choose } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, choose, inBiology, noteSaved } from './helpers'
 
-async function inBiology(page: Page) {
-  await Promise.all([
-    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    choose(page, 'Course', 'Biology'),
-  ])
-}
 // Two Biology notes, topics drafted and saved, then (unless asked not to) an exam next week: ready for a plan
 async function readyForPlan(page: Page, { exam = true } = {}) {
   await signUp(page)
@@ -17,7 +11,7 @@ async function readyForPlan(page: Page, { exam = true } = {}) {
   await page.getByLabel('Title').fill('Glycolysis notes')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. '.repeat(4))
-  await expect(page.getByText('Saved')).toBeVisible()
+  await noteSaved(page)
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
@@ -29,7 +23,7 @@ async function readyForPlan(page: Page, { exam = true } = {}) {
   await page.getByLabel('Add a task').fill('Midterm next fri')
   await page.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('radiogroup', { name: 'Type' }).getByRole('radio', { name: 'Exam' }).click()
-  await page.getByLabel('Add a task').press('Enter')
+  await Promise.all([page.waitForResponse(r => r.url().includes('/rest/v1/tasks') && r.request().method() === 'POST'), page.getByLabel('Add a task').press('Enter')]) // saved, so the plan can work towards it
   await expect(page.getByRole('checkbox', { name: 'Mark Midterm done' })).toBeVisible()
 }
 
@@ -40,7 +34,9 @@ test('make a study plan from an exam, see today\'s sessions on Planner and Home,
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('radio', { name: /Deep dive/ }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Deep dive · 45 min a day · Midterm in/)).toBeVisible()
+  await expect(panel.getByText('Deep dive', { exact: true })).toBeVisible()
+  await expect(panel.getByText('45 min a day', { exact: true })).toBeVisible()
+  await expect(panel.getByText(/Midterm in/)).toBeVisible()
   await expect(panel.getByRole('heading', { name: 'Today' })).toBeVisible()
   const row = panel.getByRole('checkbox', { name: /^Mark (Learn|Warm-up|Revise): .* done$/ }).first()
   await expect(row).toBeVisible()
@@ -58,20 +54,24 @@ test('a course with no exam gets a plan that keeps going, and can later work tow
   await readyForPlan(page, { exam: false })
   const panel = page.getByRole('region', { name: 'Study plan' })
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
-  await expect(panel.getByLabel('Working towards')).toHaveValue('')
+  await expect(panel.getByRole('button', { name: 'Working towards', exact: true })).toContainText('No exam') // no exam to work towards yet
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Balanced · 45 min a day · Ongoing, no exam/)).toBeVisible()
+  await expect(panel.getByText('Balanced', { exact: true })).toBeVisible()
+  await expect(panel.getByText('45 min a day', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Ongoing, no exam', { exact: true })).toBeVisible()
   await expect(panel.getByRole('checkbox', { name: /^Mark (Learn|Warm-up|Revise): .* done$/ }).first()).toBeVisible()
   // An exam added later can become its target
   await page.getByLabel('Add a task').fill('Midterm next fri')
   await page.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('radiogroup', { name: 'Type' }).getByRole('radio', { name: 'Exam' }).click()
-  await page.getByLabel('Add a task').press('Enter')
+  await Promise.all([page.waitForResponse(r => r.url().includes('/rest/v1/tasks') && r.request().method() === 'POST'), page.getByLabel('Add a task').press('Enter')]) // saved, so the plan can work towards it
   await expect(page.getByRole('checkbox', { name: 'Mark Midterm done' })).toBeVisible()
   await panel.getByRole('button', { name: 'Edit plan' }).click()
   await choose(panel, 'Working towards', 'Midterm')
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Balanced · 45 min a day · Midterm in/)).toBeVisible()
+  await expect(panel.getByText('Balanced', { exact: true })).toBeVisible()
+  await expect(panel.getByText('45 min a day', { exact: true })).toBeVisible()
+  await expect(panel.getByText(/Midterm in/)).toBeVisible()
 })
 
 test('a Warm-up makes a quiz and opens it', async ({ page }) => {
@@ -90,12 +90,14 @@ test('edit the plan, then delete it', async ({ page }) => {
   const panel = page.getByRole('region', { name: 'Study plan' })
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Balanced · 45 min a day/)).toBeVisible()
+  await expect(panel.getByText('Balanced', { exact: true })).toBeVisible()
+  await expect(panel.getByText('45 min a day', { exact: true })).toBeVisible()
   await panel.getByRole('button', { name: 'Edit plan' }).click()
   await panel.getByRole('radio', { name: /Sprint/ }).click()
   await panel.getByLabel('Minutes a day').fill('30')
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Sprint · 30 min a day/)).toBeVisible()
+  await expect(panel.getByText('Sprint', { exact: true })).toBeVisible()
+  await expect(panel.getByText('30 min a day', { exact: true })).toBeVisible()
   await panel.getByRole('button', { name: 'Delete plan' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(panel.getByRole('button', { name: 'Make a study plan for Biology' })).toBeVisible()
@@ -107,7 +109,7 @@ test('a course with no topics is sent to Progress first', async ({ page }) => {
   await page.getByLabel('Add a task').fill('Midterm next fri')
   await page.getByRole('radiogroup', { name: 'Course' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('radiogroup', { name: 'Type' }).getByRole('radio', { name: 'Exam' }).click()
-  await page.getByLabel('Add a task').press('Enter')
+  await Promise.all([page.waitForResponse(r => r.url().includes('/rest/v1/tasks') && r.request().method() === 'POST'), page.getByLabel('Add a task').press('Enter')]) // saved, so the plan can work towards it
   const panel = page.getByRole('region', { name: 'Study plan' })
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()

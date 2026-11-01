@@ -49,8 +49,8 @@ export function PlanForm({ title, exams, initial, saving, error, onSave, onCance
         <legend className={heading}>Mode</legend>
         <div className="grid gap-2 sm:grid-cols-3">
           {MODES.map(m => (
-            <label key={m.value} className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3 transition has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 sm:flex-col sm:gap-2">
-              <input type="radio" name="mode" className="sr-only" checked={mode === m.value} onChange={() => setMode(m.value)} />
+            <label key={m.value} className="relative flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3 transition has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 sm:flex-col sm:gap-2">
+              <input type="radio" name="mode" className="absolute inset-0 !size-full cursor-pointer opacity-0" checked={mode === m.value} onChange={() => setMode(m.value)} />
               <span aria-hidden className={`grid size-8 shrink-0 place-items-center rounded-lg ${mode === m.value ? 'bg-accent-solid text-white' : 'bg-surface text-muted'}`}><m.icon size={16} /></span>
               <span className="min-w-0"><span className="block text-[15px] font-semibold">{m.label}</span> <span className="mt-0.5 block text-[13px] leading-snug text-muted">{m.blurb}</span></span>
             </label>
@@ -73,8 +73,8 @@ export function PlanForm({ title, exams, initial, saving, error, onSave, onCance
         <legend className={heading}>Days off <span className="font-normal normal-case tracking-normal">· studying {studyDays} {studyDays === 1 ? 'day' : 'days'} a week</span></legend>
         <div className="flex flex-wrap gap-2">
           {DAYS.map(([n, label]) => (
-            <label key={n} className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${off.includes(n) ? 'bg-surface text-muted line-through' : 'bg-accent-soft text-accent'}`}>
-              <input type="checkbox" className="sr-only" checked={off.includes(n)}
+            <label key={n} className={`relative cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${off.includes(n) ? 'bg-surface text-muted line-through' : 'bg-accent-soft text-accent'}`}>
+              <input type="checkbox" className="absolute inset-0 !size-full cursor-pointer opacity-0" checked={off.includes(n)}
                 onChange={e => setOff(o => (e.target.checked ? [...o, n] : o.filter(x => x !== n)))} />{label}
             </label>
           ))}
