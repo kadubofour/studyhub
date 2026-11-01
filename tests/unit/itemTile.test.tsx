@@ -60,3 +60,17 @@ describe('the Icons layout is a choice on every page', () => {
     expect(parseView('lectures', { layout: 'icons' }).layout).toBe('icons')
   })
 })
+
+describe('ItemTile: what is inside', () => {
+  const tile = (layout: 'grid' | 'list' | 'icons') => render(<ItemTile layout={layout} icon={FileText} title="Krebs" href="/notes/n1" blurb="The cycle runs in the matrix." />)
+  it('shows the first words under the title in a tile, and after it in a row', () => {
+    tile('grid')
+    expect(screen.getByText('The cycle runs in the matrix.')).toBeTruthy()
+    cleanup(); tile('list')
+    expect(screen.getByText('The cycle runs in the matrix.')).toBeTruthy()
+  })
+  it('keeps it for screen readers in the icon layout, where it is not drawn', () => {
+    tile('icons')
+    expect(screen.getByText('The cycle runs in the matrix.').closest('.sr-only')).not.toBeNull()
+  })
+})

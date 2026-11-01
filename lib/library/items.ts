@@ -1,7 +1,7 @@
 import type { Notebook } from '@/lib/types'
 
 export type Kind = 'note' | 'deck' | 'lecture' | 'quiz' | 'chat' | 'file'
-export type LibraryItem = { kind: Kind; id: string; title: string; course_id: string | null; at: string; meta: string; href: string; due?: number; notebook_id?: string | null }
+export type LibraryItem = { kind: Kind; id: string; title: string; course_id: string | null; at: string; meta: string; href: string; due?: number; notebook_id?: string | null; /** What is inside, in a line: a note's first words, the note a quiz is from */ blurb?: string }
 // course: 'all', 'none' (not in any course) or a course id; folder: the notebook open, if one is
 export type View = { course: 'all' | 'none' | string; kind: Kind | null; q: string; sort: 'recent' | 'name'; folder?: string | null }
 

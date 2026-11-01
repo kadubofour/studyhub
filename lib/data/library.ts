@@ -7,6 +7,8 @@ import { listChats } from './tutor'
 import { fileSize, listMaterials, MATERIAL_LABEL } from './materials'
 import { isMovable, type Kind, type LibraryItem } from '@/lib/library/items'
 
+// A note's first words as one tidy line, or nothing for an empty note
+export const blurbOf = (preview: string | null | undefined) => (preview ?? '').replace(/\s+/g, ' ').trim().slice(0, 160) || undefined
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 type QuizRow = { id: string; note_id: string; title: string; created_at: string }
@@ -19,15 +21,16 @@ export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<Librar
     listMaterials(sb),
   ])
   const noteCourse = new Map(notes.map(n => [n.id, n.course_id]))
+  const noteTitle = new Map(notes.map(n => [n.id, n.title]))
   return [
-    ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, notebook_id: n.notebook_id ?? null, at: n.updated_at, meta: '', href: `/notes/${n.id}` })),
+    ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, notebook_id: n.notebook_id ?? null, at: n.updated_at, meta: '', blurb: blurbOf(n.preview), href: `/notes/${n.id}` })),
     ...decks.map(d => ({
       kind: 'deck' as const, id: d.id, title: d.name, course_id: d.course_id, at: d.created_at ?? '',
       due: d.due, meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,
     })),
     ...lectures.map(l => ({ kind: 'lecture' as const, id: l.id, title: l.title, course_id: l.course_id, at: l.recorded_at, meta: `${Math.round(l.duration_seconds / 60)} min`, href: `/lectures/${l.id}` })),
     // A quiz follows its note; one whose note is gone has nowhere to belong and is left out
-    ...quizzes.filter(q => noteCourse.has(q.note_id)).map(q => ({ kind: 'quiz' as const, id: q.id, title: q.title, course_id: noteCourse.get(q.note_id) ?? null, at: q.created_at, meta: '', href: `/quiz/${q.id}` })),
+    ...quizzes.filter(q => noteCourse.has(q.note_id)).map(q => ({ kind: 'quiz' as const, id: q.id, title: q.title, course_id: noteCourse.get(q.note_id) ?? null, at: q.created_at, meta: '', blurb: `From ${noteTitle.get(q.note_id) || 'Untitled'}`, href: `/quiz/${q.id}` })),
     ...chats.map(c => ({ kind: 'chat' as const, id: c.id, title: c.title, course_id: c.course_id, at: c.updated_at, meta: '', href: `/tutor/${c.id}` })),
     ...files.map(f => ({ kind: 'file' as const, id: f.id, title: f.name, course_id: f.course_id, at: f.created_at, meta: `${MATERIAL_LABEL[f.mime] ?? 'File'} · ${fileSize(f.bytes)}`, href: `/files/${f.id}` })),
   ]

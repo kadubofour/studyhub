@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FilePlus, FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon, CheckSquare } from 'lucide-react'
+import { ArrowUpRight, FilePlus, FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon, CheckSquare } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary, moveItems } from '@/lib/data/library'
 import { createNote } from '@/lib/data/notes'
+import { createChat, findChat } from '@/lib/data/tutor'
 import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { createNotebook, listNotebooks, moveNotes } from '@/lib/data/notebooks'
 import { requestUpload } from '@/lib/scan/events'
@@ -28,7 +29,7 @@ import { countsByKind, folders, isMovable, visible, withKnownNotebooks, type Kin
 import type { Course, Notebook } from '@/lib/types'
 import { Working } from '@/components/ui/Working'
 import { CardsMark, ChatMark, ChecklistMark, ComposeButton, FileMark, PhoneCount, PhoneEmpty, PhoneGroup, PhoneHeading, PhoneRow, PhoneSearch, PhoneTitle, SheetMark, StripMark, tick } from '@/components/ui/PhoneList'
-import type { MenuEntry } from '@/components/ui/ContextMenu'
+import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { rowDate } from '@/lib/notes/noteRows'
 import { useScreen } from '@/lib/ui/useScreen'
 
@@ -65,6 +66,7 @@ export default function LibraryPage() {
   const [target, setTarget] = useState('')
   const [moving, setMoving] = useState(false)
   const [dialog, setDialog] = useState<null | 'new' | 'file' | 'upload'>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number; item: LibraryItem } | null>(null) // an item's ⋯ menu
   // On a phone: the list notes apps have, and ticking things only after choosing Select
   const phone = useScreen() === 'phone'
   const [selecting, setSelecting] = useState(false)
@@ -122,6 +124,30 @@ export default function LibraryPage() {
   // A new note in the course the Library is showing (or none), opened to write in
   async function newNote() {
     try { router.push(`/notes/${(await createNote(supabase(), { course_id: courseName ? course : null })).id}`) } catch { toast('Couldn\'t create a note.') }
+  }
+  // An item's ⋯ menu, from its button or a right click: open it, and for a note or lecture, what the student can do with it
+  function openMenu(e: React.MouseEvent, item: LibraryItem) {
+    e.preventDefault()
+    if (e.type === 'contextmenu') setMenu({ x: e.clientX, y: e.clientY, item })
+    else { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right, y: r.bottom + 4, item }) }
+  }
+  async function askTutor(i: LibraryItem) {
+    try {
+      const sb = supabase()
+      const target = i.kind === 'lecture' ? { lecture_id: i.id } : { note_id: i.id }
+      const chat = await findChat(sb, target) ?? await createChat(sb, { title: i.title.slice(0, 200) || 'New chat', ...target, course_id: i.course_id })
+      router.push(`/tutor/${chat.id}`)
+    } catch { toast('Couldn\'t open the tutor.') }
+  }
+  function menuFor(i: LibraryItem): MenuEntry[] {
+    const open: MenuEntry = { label: i.kind === 'quiz' ? 'Take' : 'Open', icon: ArrowUpRight, onSelect: () => router.push(i.href) }
+    const ask: MenuEntry = { label: 'Ask the tutor', icon: MessagesSquare, onSelect: () => { void askTutor(i) } }
+    if (i.kind === 'note') return [open, 'sep', ask,
+      { label: 'Make flashcards', icon: Layers, onSelect: () => router.push(`${i.href}?study=cards`) },
+      { label: 'Quiz me', icon: ListChecks, onSelect: () => router.push(`${i.href}?study=quiz`) },
+      { label: 'Summarise', icon: FileText, onSelect: () => router.push(`${i.href}?study=summary`) }]
+    if (i.kind === 'lecture') return [open, 'sep', ask]
+    return [open]
   }
   async function move() {
     if (!picked.length || !target || moving) return
@@ -216,17 +242,8 @@ export default function LibraryPage() {
               unsorted={{ active: course === 'none', onClick: () => chooseCourse('none') }} />
           </div>
 
-          {phone ? <PhoneSearch label="Search the library" value={view.q} onChange={q => setView(v => ({ ...v, q }))} className="mb-3" /> : <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="relative min-w-48 flex-1 max-sm:basis-full">
-              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
-              <input className="input w-full pl-9" placeholder="Search the library" aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
-            </div>
-            <div data-filter-row className="no-scrollbar flex items-center gap-2 overflow-x-auto max-sm:w-full max-sm:justify-between [&>*]:shrink-0">
-            <ChoiceChips className="flex-nowrap" label="Sort" value={view.sort} options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} onChange={v => setView(prev => ({ ...prev, sort: v as View['sort'] }))} />
-            <ViewOptions page="library" sort={false} />
-            </div>
-          </div>}
-          {(
+          {phone && <PhoneSearch label="Search the library" value={view.q} onChange={q => setView(v => ({ ...v, q }))} className="mb-3" />}
+          {phone && (
             <div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
               {KINDS.map(k => (
                 <button key={k} type="button" aria-pressed={view.kind === k} onClick={() => setView(v => ({ ...v, kind: v.kind === k ? null : k }))}
@@ -237,6 +254,34 @@ export default function LibraryPage() {
             </div>
           )}
 
+          {/* On a computer the search, the kinds and the order sit in a column that stays in view while the items scroll */}
+          <div className={phone ? undefined : 'lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-8'}>
+          {!phone && (
+            <aside aria-label="Find and filter" className="mb-5 space-y-5 lg:sticky lg:top-6 lg:mb-0 lg:self-start">
+              <div className="relative">
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
+                <input className="input w-full pl-9" placeholder="Search the library" aria-label="Search the library" value={view.q} onChange={e => setView(v => ({ ...v, q: e.target.value }))} />
+              </div>
+              <div role="group" aria-label="Kinds" className="flex flex-wrap gap-1.5 lg:flex-col lg:gap-0.5">
+                <button type="button" aria-pressed={view.kind === null} onClick={() => setView(v => ({ ...v, kind: null }))}
+                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[15px] transition ${view.kind === null ? 'bg-accent-soft font-medium text-accent' : 'hover:bg-surface'}`}>
+                  <FolderOpen size={16} aria-hidden className="shrink-0" />Everything <span className="ml-auto text-sm text-muted">{Object.values(counts!).reduce((n, c) => n + c, 0)}</span>
+                </button>
+                {KINDS.map(k => (
+                  <button key={k} type="button" aria-pressed={view.kind === k} onClick={() => setView(v => ({ ...v, kind: v.kind === k ? null : k }))}
+                    className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[15px] transition ${view.kind === k ? 'bg-accent-soft font-medium text-accent' : 'hover:bg-surface'}`}>
+                    {(() => { const Icon = KIND[k].icon; return <Icon size={16} aria-hidden className="shrink-0" /> })()}
+                    {KIND[k].heading} <span className="ml-auto text-sm text-muted">{counts![k]}</span>
+                  </button>
+                ))}
+              </div>
+              <div data-filter-row className="flex flex-wrap items-center gap-2">
+                <ChoiceChips className="flex-nowrap" label="Sort" value={view.sort} options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} onChange={v => setView(prev => ({ ...prev, sort: v as View['sort'] }))} />
+                <ViewOptions page="library" sort={false} />
+              </div>
+            </aside>
+          )}
+          <div className="min-w-0">
           {shelf.length > 0 && (
             <section aria-labelledby="lib-notebooks" className="mb-7">
               {phone ? <PhoneHeading id="lib-notebooks">Notebooks</PhoneHeading> : <h2 id="lib-notebooks" className="section-label">Notebooks</h2>}
@@ -291,8 +336,9 @@ export default function LibraryPage() {
                       const book = i.kind === 'note' ? bookOf(i.notebook_id) : null
                       return (
                         <PhoneRow key={key(i)} href={i.href} title={i.title} mark={<Mark color={c?.color} />} date={rowDate(i.at, now)}
-                          line={[book ? `In ${book.name}` : i.meta, c?.name].filter(Boolean).join(' · ')}
-                          select={selecting && isMovable(i) ? { on: selected.has(key(i)), onToggle: () => toggle(i) } : undefined} />
+                          line={[book ? `In ${book.name}` : i.blurb || i.meta, c?.name].filter(Boolean).join(' · ')}
+                          select={selecting && isMovable(i) ? { on: selected.has(key(i)), onToggle: () => toggle(i) } : undefined}
+                          onContextMenu={selecting ? undefined : e => openMenu(e, i)} />
                       )
                     })}
                   </PhoneGroup>
@@ -317,7 +363,8 @@ export default function LibraryPage() {
                         const book = i.kind === 'note' ? bookOf(i.notebook_id) : null
                         return (
                           <ItemTile key={key(i)} layout={layout} icon={k.icon} color={c?.color} title={i.title} href={i.href}
-                            subtitle={book ? `In ${book.name}` : undefined}
+                            subtitle={book ? `In ${book.name}` : undefined} blurb={i.blurb}
+                            onMenu={e => openMenu(e, i)} onContextMenu={e => openMenu(e, i)}
                             meta={<CourseTag course={c} />}
                             aside={[i.meta, day(i.at)].filter(Boolean).join(' · ')}
                             corner={
@@ -333,10 +380,13 @@ export default function LibraryPage() {
             </section>
           )}
           {items.some(i => !isMovable(i)) && <p className="mt-3 text-xs text-muted">Quizzes stay with their note. Move the note to move its quiz.</p>}
+          </div>
+          </div>
         </>
       )}
 
       {phone && !selecting && <ComposeButton label="New note" icon={FilePlus} onClick={() => { void newNote() }} />}
+      {menu && <ContextMenu x={menu.x} y={menu.y} label={menu.item.title || 'Item'} items={menuFor(menu.item)} onClose={() => setMenu(null)} />}
       <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create"
         courses={courses} initialCourse={course !== 'all' && course !== 'none' ? course : null} onSubmit={(n, cid) => { void create(n, cid) }} />
       {/* a fresh dialog each time it opens, so nothing from the last upload is left in it */}
