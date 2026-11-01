@@ -27,6 +27,17 @@ async function inSheet(page: Page) {
   return page.getByRole('dialog', { name: 'Note options' })
 }
 
+// The note's own buttons: a computer's top bar has them; a phone keeps Study and Ask the tutor in the Note options sheet
+export async function openStudy(page: Page) {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('button', { name: '✦ Study' }).click(); return }
+  await page.getByRole('button', { name: '✦ Study' }).click()
+}
+
+export async function askTutorAboutNote(page: Page) {
+  if (await onPhone(page)) { await (await inSheet(page)).getByRole('button', { name: 'Ask the tutor' }).click(); return }
+  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+}
+
 export async function switchToMarkdown(page: Page) {
   if (await onPhone(page)) { await (await inSheet(page)).getByRole('radio', { name: 'Markdown' }).click(); await page.keyboard.press('Escape'); return }
   await page.getByRole('menuitem', { name: 'View' }).click()
@@ -79,7 +90,7 @@ export async function newNoteFromNote(page: Page) {
     await page.getByRole('menu', { name: 'File' }).locator('[role^="menuitem"]', { hasText: 'New note' }).click()
   } else {
     await page.goto('/notes')
-    await page.getByRole('button', { name: 'Note', exact: true }).click()
+    await page.getByRole('button', { name: /^(New note|Note)$/ }).click()
     await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
     await page.waitForLoadState('networkidle')
   }
@@ -115,13 +126,17 @@ export async function rpcAs<T = unknown>(email: string, fn: string, args: Record
 
 // Puts the open note in Biology, and waits for that to be saved, unless it is there already (a note made from another note starts in its course)
 export async function inBiology(page: Page) {
-  const course = page.getByRole('button', { name: 'Course', exact: true })
+  const phone = await onPhone(page)
+  const scope = phone ? await inSheet(page) : page
+  const course = scope.getByRole('button', { name: 'Course', exact: true })
   await expect(course).toBeVisible()
-  if ((await course.innerText()).includes('Biology')) return
-  await Promise.all([
-    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
-    choose(page, 'Course', 'Biology'),
-  ])
+  if (!(await course.innerText()).includes('Biology')) {
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
+      choose(scope, 'Course', 'Biology'),
+    ])
+  }
+  if (phone) await page.keyboard.press('Escape')
 }
 
 // Waits until the note is saved. A computer says "Saved"; a phone shows a tick labelled Saved only once writing is done (the keyboard hides it,
@@ -130,4 +145,50 @@ export async function noteSaved(page: Page) {
   const done = page.getByRole('button', { name: 'Done', exact: true })
   if (await done.isVisible()) await done.click()
   await expect(page.getByText('Saved').or(page.getByRole('status', { name: 'Saved' })).first()).toBeVisible()
+}
+
+// Something in a tutor chat's options: a button on a computer; a phone has one ⋯ Chat options menu, where it can be worded differently
+export async function chatOption(page: Page, computerName: string, phoneName = computerName) {
+  if (await onPhone(page)) {
+    // the menu closes if the page is still scrolling to a new reply, so open it again until it stays
+    await expect(async () => {
+      await page.getByRole('button', { name: 'Chat options' }).click()
+      await page.getByRole('menu', { name: 'Chat options' }).getByRole('menuitem', { name: phoneName }).click({ timeout: 3000 })
+    }).toPass({ timeout: 20_000 })
+  } else await page.getByRole('button', { name: computerName }).click()
+}
+
+// An action on a list page: a button on a computer; a phone keeps it in the page's ⋯ menu (Notes options, Library options…),
+// where it can be worded differently
+export async function listAction(page: Page, menuLabel: string, computerName: string, phoneName = computerName) {
+  if (await onPhone(page)) {
+    await page.getByRole('button', { name: menuLabel }).click()
+    await page.getByRole('menu', { name: menuLabel }).getByRole('menuitem', { name: phoneName }).click()
+  } else await page.getByRole('button', { name: computerName, exact: true }).click()
+}
+
+// The Library's items are tickable at once on a computer; a phone ticks only after Select in its menu
+export async function startLibrarySelect(page: Page) {
+  if (await onPhone(page)) await listAction(page, 'Library options', 'Select')
+}
+
+// The tick for a list item: "Select <title>" on a computer; on a phone the whole row is the checkbox, named by its title
+export const tickOf = (page: Page, title: string) => page.getByRole('checkbox', { name: new RegExp(`^(Select )?${title}$`) })
+
+// A note's own menu in a list: its ⋯ button on a computer; a phone opens it by pressing and holding the row (a right click)
+export async function noteMenuInList(page: Page, title: string) {
+  if (await onPhone(page)) await page.getByRole('link', { name: new RegExp(title) }).first().click({ button: 'right' })
+  else await page.getByRole('button', { name: new RegExp(`More actions for ${title}`) }).click()
+}
+
+// Library, with a course picked: its course page is a link on a computer and an item in the ⋯ menu on a phone
+export async function openCoursePageFromLibrary(page: Page) {
+  if (await onPhone(page)) await listAction(page, 'Library options', 'Open course page')
+  else await page.getByRole('link', { name: 'Open course page' }).click()
+}
+
+// The Quiz button on the Flashcards page: in the page on a computer, in its ⋯ menu on a phone
+export async function quizFromFlashcards(page: Page) {
+  if (await onPhone(page)) await listAction(page, 'Practice options', 'Quiz')
+  else await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
 }

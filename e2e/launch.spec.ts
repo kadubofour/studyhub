@@ -66,6 +66,6 @@ test('Delete my account signs the student out and the sign-in stops working', as
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill('local-e2e-pass-123')
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: /don't match/ })).toBeVisible()
   await expect(page).toHaveURL(/\/login/)
 })

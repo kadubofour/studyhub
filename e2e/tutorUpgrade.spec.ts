@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { create, noteWithText, signUp, noteSaved } from './helpers'
+import { create, noteWithText, signUp, noteSaved, askTutorAboutNote, chatOption } from './helpers'
 
 test('the Tutor page: ways to start, a starter that asks what it is about, and a chat that opens with its message ready', async ({ page }) => {
   test.setTimeout(120_000)
@@ -35,7 +35,7 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
   await noteSaved(page)
-  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+  await askTutorAboutNote(page)
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   await page.getByLabel('Message').fill('Where does it happen?')
   await page.getByRole('button', { name: 'Send' }).click()
@@ -52,7 +52,7 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible() // the reply has finished
 
   // rename in place (no browser prompt)
-  await page.getByRole('button', { name: 'Rename' }).click()
+  await chatOption(page, 'Rename')
   const box = page.getByLabel('Chat name')
   await box.fill('Krebs revision')
   await box.press('Enter')
@@ -61,13 +61,13 @@ test('in a chat: follow-ups, copy, regenerate, rename in place, and changing wha
   await expect(page.getByRole('heading', { name: 'Krebs revision' })).toBeVisible()
 
   // what it is about can be changed, and removed
-  await page.getByRole('button', { name: 'Change' }).click()
+  await chatOption(page, 'Change', 'Change what it is about')
   const picker = page.getByRole('dialog', { name: 'What is this chat about?' })
   await picker.getByRole('button', { name: /Glycolysis/ }).click()
   await expect(page.getByRole('link', { name: 'Glycolysis' }).first()).toBeVisible()
   await page.reload()
   await expect(page.getByRole('link', { name: 'Glycolysis' }).first()).toBeVisible()
-  await page.getByRole('button', { name: 'Remove' }).click()
+  await chatOption(page, 'Remove', 'Remove what it is about')
   await expect(page.getByText('Not about a note or lecture')).toBeVisible()
 })
 
@@ -78,7 +78,7 @@ test('in a chat: ideas to start with, times, copying, and a message box that gro
   await page.getByRole('button', { name: 'New chat' }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   const message = page.getByLabel('Message')
-  await page.getByRole('group', { name: 'Ideas to start with' }).getByRole('button', { name: 'Quiz me' }).click()
+  await page.getByLabel('Ideas to start with').getByRole('button', { name: 'Quiz me' }).click()
   await expect(message).toHaveValue('Quiz me on ')
   const one = (await message.boundingBox())!.height
   await message.fill('line one\nline two\nline three\nline four\nline five')
@@ -96,7 +96,7 @@ test('in a chat: ideas to start with, times, copying, and a message box that gro
 test('the Tutor page lists chats with what they are about', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.getByRole('button', { name: 'Ask the tutor' }).click()
+  await askTutorAboutNote(page)
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   await page.goto('/tutor')
   const link = page.getByRole('link', { name: /Krebs cycle/ })
@@ -110,7 +110,7 @@ test('on a phone the message box is above the bottom bar', async ({ page, isMobi
   await page.getByRole('button', { name: 'New chat' }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   const form = await page.getByLabel('Message').locator('xpath=ancestor::form').boundingBox()
-  const bar = await page.locator('nav[aria-label], nav').filter({ hasText: 'Home' }).last().boundingBox()
+  const bar = await page.getByRole('navigation', { name: 'Main' }).boundingBox()
   expect(bar).not.toBeNull()
   expect(form!.y + form!.height).toBeLessThanOrEqual(bar!.y + 1)
 })

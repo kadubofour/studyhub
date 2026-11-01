@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { signUp, noteWithText } from './helpers'
 
-test('the Quiz page keeps every quiz and how it went: make one, take it, see the scores, retake and delete it', async ({ page }) => {
+test('the Quiz page keeps every quiz and how it went: make one, take it, see the scores, retake and delete it', async ({ page, isMobile }) => {
   test.setTimeout(150_000)
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
@@ -10,8 +10,8 @@ test('the Quiz page keeps every quiz and how it went: make one, take it, see the
   // Nothing yet: an empty page that starts the first quiz
   await page.goto('/quiz')
   await expect(page.getByRole('heading', { name: 'Practice', level: 1 })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
-  await page.getByRole('button', { name: 'Make your first quiz' }).click()
+  await expect(page.getByText(/No quizzes yet/).first()).toBeVisible()
+  await page.getByRole('button', { name: /Make your first quiz|^New quiz$/ }).first().click() // a phone has the round New quiz
   const dialog = page.getByRole('dialog', { name: 'Quiz yourself' })
   await dialog.getByRole('radio', { name: /Krebs cycle/ }).click()
   await dialog.getByRole('button', { name: /Start quiz/ }).click()
@@ -32,6 +32,19 @@ test('the Quiz page keeps every quiz and how it went: make one, take it, see the
 
   // The page now holds it: numbers, scores, a course-less group, and the quiz in the list
   await page.goto('/quiz')
+  if (isMobile) {
+    // A phone shows three numbers and compact rows; a row's menu comes from pressing and holding it
+    await expect(page.getByRole('region', { name: 'Your quiz numbers' })).toContainText('75%')
+    await expect(page.getByRole('link', { name: /Krebs cycle/ })).toContainText('75%')
+    await page.getByLabel('Search quizzes').fill('zzzz')
+    await expect(page.getByText('No quizzes match.')).toBeVisible()
+    await page.getByLabel('Search quizzes').fill('krebs')
+    await page.getByRole('link', { name: /Krebs cycle/ }).click({ button: 'right' })
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Delete' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(page.getByText(/No quizzes yet/).first()).toBeVisible()
+    return
+  }
   const numbers = page.getByRole('region', { name: 'Your quiz numbers' })
   await expect(numbers.getByText('Quizzes taken').locator('..')).toContainText('1')
   await expect(numbers.getByText('Average score').locator('..')).toContainText('75%')

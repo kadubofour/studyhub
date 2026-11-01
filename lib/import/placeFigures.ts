@@ -28,14 +28,33 @@ export function parseBox(text: string | undefined): Box | null {
   return x1 - x0 >= 4 && y1 - y0 >= 4 ? { x0, y0, x1, y1 } : null
 }
 
+const TOGETHER = 6 // figures cut out at once, so those that are redrawn go to the server in one request
+
 export async function placeFigures(md: string, source: PagePictures): Promise<string> {
   const out: string[] = []
+  const lines = md.split('\n')
+
+  // Every figure is cut out first, a few at a time, then the note is put together in order
+  const jobs: { line: number; page: number; box: Box; caption: string }[] = []
+  let at = 0
+  for (const [i, line] of lines.entries()) {
+    const p = PAGE.exec(line)
+    if (p) { at = Number(p[1]); continue }
+    const f = FIGURE.exec(line)
+    const box = f ? parseBox(f[2]) : null
+    if (f && box && at) jobs.push({ line: i, page: at, box, caption: f[1].trim() })
+  }
+  const shots = new Map<number, string | null>()
+  for (let i = 0; i < jobs.length; i += TOGETHER) {
+    await Promise.all(jobs.slice(i, i + TOGETHER).map(async j => { shots.set(j.line, await source.crop(j.page, j.box, j.caption).catch(() => null)) }))
+  }
+
   let page = 0
   let queue: string[] = []
   let snapped = false
   const endPage = () => { queue = []; snapped = false }
 
-  for (const line of md.split('\n')) {
+  for (const [i, line] of lines.entries()) {
     const p = PAGE.exec(line)
     if (p) {
       endPage()
@@ -46,13 +65,11 @@ export async function placeFigures(md: string, source: PagePictures): Promise<st
     }
     const f = FIGURE.exec(line)
     if (!f) { out.push(line); continue }
-    const caption = f[1].trim(), box = parseBox(f[2])
+    const caption = f[1].trim()
     // a picture is a paragraph of its own, or it would join the text around it
     const put = (md: string | null | undefined) => { if (md) out.push('', md, '') }
-    if (box && page) {
-      const shot = await source.crop(page, box, caption).catch(() => null)
-      if (shot) { put(shot); continue }
-    }
+    const shot = shots.get(i)
+    if (shot) { put(shot); continue }
     const next = queue.shift()
     if (next) put(next)
     else if (page && !snapped) {

@@ -1,20 +1,20 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect, noteMenuInList, tickOf } from './helpers'
 
 test('notebooks: make one, move a note into it, open its page, rename it, delete it (the note is kept)', async ({ page }) => {
   test.setTimeout(120_000)
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'New notebook' }).click()
+  await listAction(page, 'Notes options', 'New notebook')
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Cell biology')
   await dialog.getByRole('button', { name: 'Create' }).click()
   const shelf = page.getByRole('list', { name: 'Notebooks' })
   await expect(shelf.getByRole('link', { name: 'Open Cell biology, 0 notes' })).toBeVisible()
 
-  await page.getByRole('button', { name: /More actions for Krebs cycle/ }).click()
+  await noteMenuInList(page, 'Krebs cycle')
   await page.getByRole('menuitem', { name: /Move to notebook/ }).click()
   await page.getByRole('dialog', { name: 'Move to notebook' }).getByRole('button', { name: 'Cell biology' }).click()
   await expect(shelf.getByRole('link', { name: 'Open Cell biology, 1 note' })).toBeVisible()
@@ -45,14 +45,15 @@ test('Library: a note filed in a notebook lives inside it, and the notebook open
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/library')
-  await page.getByRole('button', { name: 'New notebook' }).click()
+  await listAction(page, 'Library options', 'New notebook')
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Cell biology')
   await dialog.getByRole('button', { name: 'Create' }).click()
   const shelf = page.getByRole('list', { name: 'Notebooks' })
   await expect(shelf.getByRole('link', { name: 'Open Cell biology, 0 notes' })).toBeVisible()
 
-  await page.getByRole('checkbox', { name: 'Select Krebs cycle' }).check()
+  await startLibrarySelect(page)
+  await tickOf(page, 'Krebs cycle').check()
   await page.getByRole('button', { name: 'Move to notebook' }).click()
   await page.getByRole('dialog', { name: 'Move to notebook' }).getByRole('button', { name: 'Cell biology' }).click()
   await expect(page.getByText('Moved 1 note to Cell biology.')).toBeVisible()

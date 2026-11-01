@@ -96,7 +96,7 @@ describe('UploadDialog', () => {
     await upload(file('week3.pptx'))
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Deck week3.pptx')
     expect(screen.getByLabelText('Preview').textContent).toContain('Slide 1: Intro')
-    expect(screen.queryByText(/Structured by AI/)).toBeNull()
+    expect(screen.queryByText('Check it before saving.')).toBeNull()
   })
   it('reads a text file and uses its heading as the title', async () => {
     await upload(new File(['# Enzymes' + String.fromCharCode(10, 10) + 'They speed things up.'], 'e.md'))

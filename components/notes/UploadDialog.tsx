@@ -107,7 +107,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
         const { textToNote } = await import('@/lib/import/textToNote')
         result = textToNote(await file.arrayBuffer(), file.name)
       } else {
-        setWorking({ label: 'Reading your PDF with AI', steps: ['Finding the headings', 'Laying out lists and tables', 'Writing out the equations', 'Taking out the pictures', 'Putting your note together'] })
+        setWorking({ label: 'Reading your PDF', steps: ['Finding the headings', 'Laying out lists and tables', 'Writing out the equations', 'Taking out the pictures', 'Putting your note together'] })
         const { importPdf } = await import('@/lib/import/pdfImport')
         result = await importPdf(file, profile.id, controller.signal, keep)
       }
@@ -177,7 +177,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
   const SUBTITLE = {
     pick: keepOnly ? 'Keep a file in your Library as it is.' : 'Keep a file in your Library, or turn it into a note you can study from.',
     choose: 'What should happen to it?',
-    keep: 'It goes to your Library as it is. Nothing is read by AI.',
+    keep: 'It goes to your Library as it is.',
     working: 'Reading it…',
     review: fromMaterial ? 'Check it over, then save it as a note.' : 'Check it over, then save it as a note. The original file is kept in your Library.',
     recording: 'Audio and video go through Lectures.',
@@ -199,14 +199,14 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
           <button type="button" className={option} onClick={makeNote}>
             <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span>
             <span><span className="block text-sm font-medium">{fromMaterial ? 'Make a note from it' : 'Make a note'}</span>
-              <span className="block text-xs text-muted">{picked.kind === 'image' ? 'Scan reads the photo with AI, which uses an AI action.'
-                : picked.kind === 'pdf' ? 'AI reads the PDF into headings, lists and tables, and its pictures go in where they were. It uses AI actions; you check it before saving.'
-                : 'It is read here for free, pictures and all. You check it before saving.'}{fromMaterial || picked.kind === 'image' ? '' : ' The file is kept too.'}</span></span>
+              <span className="block text-xs text-muted">{picked.kind === 'image' ? 'The text in the photo becomes a note you check before saving.'
+                : picked.kind === 'pdf' ? 'The PDF becomes a note with its headings, lists and tables, and its diagrams are redrawn where they were. You check it before saving.'
+                : 'Its text and pictures become a note. You check it before saving.'}{fromMaterial || picked.kind === 'image' ? '' : ' The file is kept too.'}</span></span>
           </button>
           {!fromMaterial && (
             <button type="button" className={option} onClick={() => setStage('keep')}>
               <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-muted"><FolderOpen size={17} /></span>
-              <span><span className="block text-sm font-medium">Just keep the file</span><span className="block text-xs text-muted">Save it to your Library as it is. No AI. You can make a note from it later.</span></span>
+              <span><span className="block text-sm font-medium">Just keep the file</span><span className="block text-xs text-muted">Save it to your Library as it is. You can make a note from it later.</span></span>
             </button>
           )}
           {!fromMaterial && <DialogFooter><button type="button" className={BTN_OUTLINE} onClick={reset}>Choose another</button></DialogFooter>}
@@ -241,7 +241,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
             className="sr-only" aria-label="File to upload" onChange={e => { const f = e.target.files?.[0]; if (f) void pick(f) }} />
           {error && <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
           {!keepOnly && <p className="flex items-start gap-2 text-xs text-muted"><Sparkles size={13} className="mt-0.5 shrink-0 text-accent" aria-hidden />
-            <span>After choosing, you can keep the file as it is, or make a note from it. PDFs are read by AI (OpenAI), which uses AI actions, up to 24 MB and 100 pages. Word, PowerPoint and text files are read here for free.</span></p>}
+            <span>After choosing, you can keep the file as it is, or make a note from it. PDFs can be up to 24 MB and 100 pages.</span></p>}
           {!keepOnly && <div>
             <p className="section-label !mb-2">Something else?</p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -280,7 +280,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
       )}
       {stage === 'review' && draft && (
         <div className="space-y-4">
-          {draft.via === 'ai' && <p className="flex items-center gap-1.5 text-xs text-accent"><Sparkles size={13} aria-hidden />Structured by AI — check it before saving.</p>}
+          {draft.via === 'ai' && <p className="flex items-center gap-1.5 text-xs text-accent"><Sparkles size={13} aria-hidden />Check it before saving.</p>}
           {draft.limit
             ? <LimitPrompt kind={draft.limit} title={draft.notice} />
             : draft.notice && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs">{draft.notice}</p>}

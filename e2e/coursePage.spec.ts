@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect, openCoursePageFromLibrary } from './helpers'
 
 test('Course page: gathers a course material, and opens from Library', async ({ page }) => {
   await signUp(page)
@@ -12,13 +12,14 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
 
   await page.goto('/library')
   await page.getByRole('button', { name: 'Unsorted' }).click()
+  await startLibrarySelect(page)
   await page.getByRole('checkbox', { name: 'Select all shown' }).check()
   await page.getByRole('radiogroup', { name: 'Move to' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('button', { name: 'Move', exact: true }).click()
   await expect(page.getByText('Moved 2 items.')).toBeVisible()
 
   await page.getByRole('button', { name: 'Biology', exact: true }).click()
-  await page.getByRole('link', { name: 'Open course page' }).click()
+  await openCoursePageFromLibrary(page)
   await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 }) // the first visit compiles the page in the dev server
   await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()
   await expect(page.getByText('1 note · 1 deck')).toBeVisible()

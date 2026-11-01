@@ -10,6 +10,11 @@ import { NoteImage } from './noteImage'
 import { NoteImageView } from './NoteImageView'
 import { Highlight, NoteUnderline } from './markupMarks'
 
+// An imported equation can end in \tag{1.1}. KaTeX only allows \tag in a displayed equation, and the editor draws "$$…$$" on a line of
+// its own as inline maths, where \tag would show as red source. The editor writes the number after the equation instead (the reading view
+// and shared links, which draw it as a displayed equation, put it at the right).
+export const MATH_OPTIONS = { throwOnError: false, macros: { '\\tag': '\\qquad(#1)' } }
+
 // The Mathematics extension's typing shortcut is $$x$$, but notes store inline math as $x$.
 // This lets $x$ typed in Rich mode render immediately, matching the Markdown syntax.
 // The body must not start or end with a space, and must not end with an operator or
@@ -102,7 +107,7 @@ export function noteExtensions(opts: {
     TableKit.configure({ table: { resizable: false } }),
     DoubleDollarBlockMath,
     Mathematics.configure({
-      katexOptions: { throwOnError: false },
+      katexOptions: MATH_OPTIONS,
       // Clicking a rendered equation opens it for editing
       inlineOptions: { onClick: (node, pos) => opts.onEditMath?.('inline', node.attrs.latex, pos) },
       blockOptions: { onClick: (node, pos) => opts.onEditMath?.('block', node.attrs.latex, pos) },

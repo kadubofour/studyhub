@@ -2,6 +2,7 @@
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { svgToPng, type DrawSvg, type KeepPicture } from './pictures'
 import { redrawFigure } from './pdfRedraw'
+import type { RedrawFigure } from './figureRedraw'
 import type { Box, PagePictures } from './placeFigures'
 
 // What a PDF page shows besides text, taken out of the PDF itself: the picture files it embeds (photos, scanned diagrams), and any area of
@@ -56,7 +57,7 @@ async function toBlob(img: PdfImage): Promise<Blob | null> {
 }
 
 /** Reads a loaded PDF's pictures, page by page, for placeFigures. Each page is read once, whatever asks for it. */
-export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: Record<string, number>, draw: DrawSvg = svgToPng): PagePictures {
+export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: Record<string, number>, draw: DrawSvg = svgToPng, aiRedraw?: RedrawFigure): PagePictures {
   const ops = new Map<number, Promise<{ names: string[]; shapes: number }>>()
   const read = new Map<number, Promise<string[]>>()
   const inRange = (n: number) => n >= 1 && n <= doc.numPages
@@ -151,6 +152,17 @@ export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: R
       const ctx = out.getContext('2d')
       if (!ctx) return null
       ctx.drawImage(c, sx, sy, sw, sh, 0, 0, sw, sh)
+      // the cut-out figure is drawn again, as a clean drawing with its labels as text, when that works; when it does not, the cut-out stays
+      if (aiRedraw) {
+        const cut = await new Promise<Blob | null>(resolve => out.toBlob(resolve, 'image/png'))
+        const drawing = cut ? await aiRedraw(cut, caption).catch(() => null) : null
+        if (drawing) {
+          const width = Math.round(Math.min(1800, Math.max(900, drawing.width * 2)))
+          const png = await draw(drawing.svg, width, Math.round((width * drawing.height) / drawing.width)).catch(() => null)
+          const md = png ? await keep(png, caption, true).catch(() => null) : null
+          if (md) return md
+        }
+      }
       return save(out, caption)
     },
     snapshot: async (n: number, caption: string) => {
