@@ -14,11 +14,11 @@ vi.mock('@/lib/data/tutor', () => ({
 }))
 vi.mock('@/lib/tutor/apply', () => ({ applyProposal: vi.fn() }))
 vi.mock('@/components/billing/usePlan', async orig => ({ ...(await orig<object>()), usePlan: () => ({ billing: false, isPremium: false, loading: false, tutorToday: 0 }) }))
-let send: (chatId: string, message: string, signal?: AbortSignal) => Promise<unknown>
+const send: (chatId: string, message: string, signal?: AbortSignal) => Promise<unknown> = async () => ({ ok: true })
 vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string, s?: AbortSignal) => send(c, m, s) }))
 const router = { push: vi.fn(), replace: vi.fn() }
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams('') }))
-let profileName: string | null = 'Kwadwo'
+const profileName: string | null = 'Kwadwo'
 vi.mock('@/components/providers/ProfileProvider', () => ({ useProfile: () => ({ profile: { display_name: profileName } }) }))
 import { ChatView } from '@/components/tutor/ChatView'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
