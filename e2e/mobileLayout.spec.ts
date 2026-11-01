@@ -96,12 +96,12 @@ test('the planner on a phone: tasks start as one line, and the calendar fits wit
   await expect(group.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the page names itself, and the floating dock is a pill of four places and Create, centred, with room around it', async ({ page }) => {
+test('the page names itself, and the floating dock is a pill of five places and Create, centred, with room around it', async ({ page }) => {
   await signUp(page)
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await expect(page.getByRole('banner')).not.toContainText('Home')
   const bar = page.getByRole('navigation', { name: 'Main' })
-  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Create new', 'Notes', 'Flashcards'])
+  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Flashcards', 'Tutor'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
   expect(box.width).toBeLessThanOrEqual(300) // a pill that hugs its icons

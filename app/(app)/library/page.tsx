@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon, CheckSquare } from 'lucide-react'
+import { FilePlus, FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon, CheckSquare } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -18,6 +18,8 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary, moveItems } from '@/lib/data/library'
+import { createNote } from '@/lib/data/notes'
+import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { createNotebook, listNotebooks, moveNotes } from '@/lib/data/notebooks'
 import { requestUpload } from '@/lib/scan/events'
 import { requestQuiz } from '@/lib/quiz/events'
@@ -117,6 +119,10 @@ export default function LibraryPage() {
     remember('course', id === 'all' ? null : id)
   }
 
+  // A new note in the course the Library is showing (or none), opened to write in
+  async function newNote() {
+    try { router.push(`/notes/${(await createNote(supabase(), { course_id: courseName ? course : null })).id}`) } catch { toast('Couldn\'t create a note.') }
+  }
   async function move() {
     if (!picked.length || !target || moving) return
     setMoving(true)
@@ -164,6 +170,8 @@ export default function LibraryPage() {
 
   const empty = items.length === 0 && notebooks.length === 0
   const phoneMenu: MenuEntry[] = [
+    { label: 'New note', icon: FilePlus, onSelect: () => { void newNote() } },
+    { label: 'Record lecture', icon: Mic, onSelect: () => router.push('/lectures/record') },
     { label: 'Upload file', icon: Upload, onSelect: () => setDialog('upload') },
     { label: 'New notebook', icon: FolderPlus, onSelect: () => setDialog('new') },
     { label: 'Quiz', icon: ListChecks, onSelect: requestQuiz },
@@ -176,22 +184,29 @@ export default function LibraryPage() {
   return (
     <div className={phone ? 'pb-24' : undefined}>
       {phone ? <PhoneTitle title="Library" menuLabel="Library options" menu={phoneMenu} selecting={selecting} onDone={() => { setSelecting(false); setSelected(new Set()) }} />
-      : <PageHeader title="Library" actions={!empty && (
+      : <PageHeader title="Library" actions={
         <>
-          {courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
-          <button type="button" className="btn" onClick={() => setDialog('upload')}><Upload size={14} aria-hidden />Upload file</button>
-          <button type="button" className="btn" onClick={() => setDialog('new')}><FolderPlus size={14} aria-hidden />New notebook</button>
-          {/* notes, decks and uploads are made from the Create button; a quiz is started here on a phone */}
-          <button type="button" className="btn md:hidden" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
+          {!empty && courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
+          {/* Notes and Lectures live in the Library now: a note is written and a lecture recorded from here */}
+          <NewNoteButton courseId={courseName ? course : null} className="btn" />
+          <Link href="/lectures/record" className="btn"><Mic size={14} aria-hidden />Record lecture</Link>
+          {!empty && (
+            <>
+              <button type="button" className="btn" onClick={() => setDialog('upload')}><Upload size={14} aria-hidden />Upload file</button>
+              <button type="button" className="btn" onClick={() => setDialog('new')}><FolderPlus size={14} aria-hidden />New notebook</button>
+              {/* decks and uploads are also made from the Create button; a quiz is started here on a phone */}
+              <button type="button" className="btn md:hidden" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
+            </>
+          )}
         </>
-      )} />}
+      } />}
       {empty && phone ? (
-        <PhoneEmpty>Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Tap the button below to upload your first file.</PhoneEmpty>
+        <PhoneEmpty>Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Tap the button below to write your first note, or upload a file from the menu.</PhoneEmpty>
       ) : empty ? (
         <EmptyState icon={FolderOpen} tone="b" title="Your library starts here" body="Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here, sorted by course. Bring your first material in.">
           <button type="button" className="btn-primary" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
           <button type="button" className="btn" onClick={() => setDialog('upload')}>Just keep a file</button>
-          <Link href="/notes" className="btn">Write a note</Link>
+          <Link href="/lectures/record" className="btn">Record a lecture</Link>
         </EmptyState>
       ) : (
         <>
@@ -321,7 +336,7 @@ export default function LibraryPage() {
         </>
       )}
 
-      {phone && !selecting && <ComposeButton label="Upload a file" icon={Upload} onClick={() => setDialog('upload')} />}
+      {phone && !selecting && <ComposeButton label="New note" icon={FilePlus} onClick={() => { void newNote() }} />}
       <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create"
         courses={courses} initialCourse={course !== 'all' && course !== 'none' ? course : null} onSubmit={(n, cid) => { void create(n, cid) }} />
       {/* a fresh dialog each time it opens, so nothing from the last upload is left in it */}

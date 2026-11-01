@@ -48,9 +48,10 @@ describe('the rail', () => {
   it('has every place, in order, each a link with its name, and marks the one you are on', async () => {
     await shell()
     expect(rail().getAllByRole('link').map(l => l.getAttribute('aria-label'))).toEqual(
-      ['Home', 'Planner', 'Focus', 'Notes', 'Library', 'Flashcards', 'Lectures', 'Tutor', 'Progress', 'Leaderboard', 'Settings', 'Kwadwo'])
+      ['Home', 'Planner', 'Library', 'Flashcards', 'Tutor', 'Focus', 'Progress', 'Leaderboard', 'Settings', 'Kwadwo'])
     expect(rail().getByRole('link', { name: 'Planner' }).getAttribute('aria-current')).toBe('page')
-    expect(rail().getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBeNull()
+    expect(rail().getByRole('link', { name: 'Library' }).getAttribute('aria-current')).toBeNull()
+    expect(rail().queryByRole('link', { name: 'Notes' })).toBeNull() // notes and lectures are inside the Library
     expect(rail().getByRole('link', { name: 'Kwadwo' }).getAttribute('href')).toBe('/profile')
   })
   it('switches between light and dark', async () => {
@@ -61,7 +62,7 @@ describe('the rail', () => {
   it('asks first when leaving would stop a recording', async () => {
     await shell()
     setRecording(true)
-    await act(async () => { fireEvent.click(rail().getByRole('link', { name: 'Notes' })) })
+    await act(async () => { fireEvent.click(rail().getByRole('link', { name: 'Library' })) })
     expect(screen.getByText('Stop recording?')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
   })
@@ -72,7 +73,10 @@ describe('the sidebar', () => {
     courseList = [{ id: 'k1', name: 'Biology', color: '#1D9E75' }]
     await shell()
     expect(rail().getByText('Studyhub')).toBeTruthy()
-    expect(rail().getByRole('link', { name: 'Notes' }).textContent).toContain('Notes')
+    expect(rail().getByRole('link', { name: 'Library' }).textContent).toContain('Library')
+    // the places after the Library are under a heading each
+    expect(rail().getByText('Practice')).toBeTruthy()
+    expect(rail().getByText('Track')).toBeTruthy()
     const courses = within(rail().getByRole('group', { name: 'Courses' }))
     expect(courses.getByRole('link', { name: /Biology/ }).getAttribute('href')).toBe('/courses/k1')
   })
@@ -82,12 +86,13 @@ describe('the sidebar', () => {
     fireEvent.click(rail().getByRole('button', { name: 'Shrink sidebar' }))
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=1')
     expect(rail().queryByRole('group', { name: 'Courses' })).toBeNull()
-    const notes = rail().getByRole('link', { name: 'Notes' })
+    const notes = rail().getByRole('link', { name: 'Library' })
+    expect(rail().queryByText('Practice')).toBeNull() // a rail of icons has a thin line, not words
     expect(notes.textContent).toBe('') // an icon; its name shows beside it when pointed at, in one label the scrolling list cannot clip
     fireEvent.mouseEnter(notes)
-    expect(rail().getByText('Notes').className).toContain('fixed')
+    expect(rail().getByText('Library').className).toContain('fixed')
     fireEvent.mouseLeave(notes)
-    expect(rail().queryByText('Notes')).toBeNull()
+    expect(rail().queryByText('Library')).toBeNull()
     expect(rail().getAllByRole('button').at(-2)!.getAttribute('aria-label')).toBe('Expand sidebar') // at the bottom, above the theme
     fireEvent.click(rail().getByRole('button', { name: 'Expand sidebar' }))
     expect(document.cookie).toContain('studyhub_sidebar_collapsed=0')
@@ -187,13 +192,13 @@ describe('the command palette', () => {
 })
 
 describe('on a phone', () => {
-  it('a dock with Home, Planner and Notes, then Create, then Flashcards and the Tutor', async () => {
+  it('a dock with Home, Planner and Library, then Create, then Flashcards and the Tutor, and Library lit on a note', async () => {
     path = '/notes'
     await shell()
     const nav = screen.getByRole('navigation', { name: 'Main' })
     const dock = within(nav)
-    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Notes', 'Create new', 'Flashcards', 'Tutor'])
-    expect(dock.getByRole('link', { name: 'Notes' }).getAttribute('aria-current')).toBe('page')
+    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Flashcards', 'Tutor'])
+    expect(dock.getByRole('link', { name: 'Library' }).getAttribute('aria-current')).toBe('page') // /notes is inside the Library
     fireEvent.click(dock.getByRole('button', { name: 'Create new' }))
     expect(screen.getByRole('menu', { name: 'Create' })).toBeTruthy()
   })

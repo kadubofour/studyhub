@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { GraduationCap, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Sun } from 'lucide-react'
@@ -228,12 +228,18 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
           {/* the places scroll when the window is short (they never squash), and the bottom edge fades while there are more below */}
           <div ref={placesRef} onScroll={e => setMoreBelow(hasMoreBelow(e.currentTarget))}
             className={`no-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto [@media(max-height:800px)]:gap-0.5 ${moreBelow ? '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)]' : ''} ${wide ? '' : 'items-center'}`}>
-            {PLACES.map(({ href, label, icon: Icon }) => {
+            {PLACES.map(({ href, label, icon: Icon, group }, i) => {
               const on = isActive(path, href)
+              const starts = !!group && group !== PLACES[i - 1]?.group // the first place of a group gets its heading, or a thin line on the narrow rail
               return (
-                <Link key={href} href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined} className={railItem(on)} {...hint(label)}>
-                  <Icon size={19} aria-hidden />{tip(label)}
-                </Link>
+                <Fragment key={href}>
+                  {starts && (wide
+                    ? <span className="rail-fade mt-3 px-3 pb-0.5 text-[12px] font-semibold uppercase tracking-wide text-muted">{group}</span>
+                    : <span aria-hidden className="my-1.5 h-px w-6 shrink-0 bg-line" />)}
+                  <Link href={href} onClick={e => guard(e, href)} aria-label={label} aria-current={on ? 'page' : undefined} className={railItem(on)} {...hint(label)}>
+                    <Icon size={19} aria-hidden />{tip(label)}
+                  </Link>
+                </Fragment>
               )
             })}
             {wide && courses.length > 0 && (
