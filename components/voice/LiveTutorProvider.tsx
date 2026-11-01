@@ -55,8 +55,8 @@ function FullScreen({ session }: { session: Session }) {
   const board = state.visual && state.script
   return (
     <div role="dialog" aria-modal="true" aria-label="Live session with the tutor" data-testid="live-full"
-      className="fixed inset-0 z-[80] flex flex-col bg-bg pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      className="fixed inset-0 z-[80] flex flex-col bg-bg pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1.25rem)] md:pt-[env(safe-area-inset-top)]">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 md:px-4">
         <div className="mr-auto min-w-0">
           <h2 className="text-base font-semibold">Live session</h2>
           <p role="status" className="text-xs text-muted">{state.muted ? 'Microphone off' : STATUS[state.phase]}</p>
@@ -90,7 +90,7 @@ function FullScreen({ session }: { session: Session }) {
         </div>
       </main>
 
-      <footer className="space-y-3 px-4 pb-4 pt-2">
+      <footer className="space-y-3 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 max-md:pb-6 md:px-4">
         <Controls state={state} session={session} />
         <form className="mx-auto flex max-w-xl gap-2" onSubmit={e => { e.preventDefault(); const t = typed.trim(); if (t) { setTyped(''); session.type(t) } }}>
           <input aria-label="Type a question" className="input min-w-0 flex-1" placeholder="Or type a question" maxLength={1000} value={typed} onChange={e => setTyped(e.target.value)} />
