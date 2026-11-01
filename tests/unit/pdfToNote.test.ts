@@ -52,3 +52,13 @@ describe('parseNoteMarkdown', () => {
     expect(parseNoteMarkdown('```markdown\n# T\n\nBody\n```', 'f.pdf')).toEqual({ title: 'T', content_md: 'Body' })
   })
 })
+
+describe('the instructions about pictures', () => {
+  it('ask for visual aids only, and say what is never marked', async () => {
+    const { client, create } = fakeClient({ text: '# Cell biology\n\nText.' })
+    await pdfToNote(client as never, 'JVBERi0x', 'cells.pdf')
+    const { instructions } = create.mock.calls[0][0] as { instructions: string }
+    expect(instructions).toContain('Mark only a visual aid that is needed to follow the content')
+    for (const never of ['logos, crests and letterheads', 'photographs of people', 'screenshots of software', 'When in doubt, leave it out']) expect(instructions, never).toContain(never)
+  })
+})

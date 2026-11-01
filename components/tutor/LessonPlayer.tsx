@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
 import { BOARD_H, BOARD_W, arrowHead, readingMs, revealedAt, wrapText, type LessonColor, type LessonElement, type LessonScript } from '@/lib/lesson/script'
 
 // A visual lesson: a whiteboard that builds up one step at a time while the voice explains it, with the words as captions.
@@ -71,6 +71,25 @@ export function LessonPlayer({ script, voices, onDelete }: { script: LessonScrip
   const audio = useRef<HTMLAudioElement>(null)
   const last = script.steps.length - 1
 
+  // Full screen: the browser's own where it has one (the lesson then fills the screen), else the lesson fills the window. It is the same
+  // player either way, so the voice carries on without a break. Esc leaves.
+  const [wide, setWide] = useState(false)
+  const root = useRef<HTMLElement>(null)
+  const exit = useRef<HTMLButtonElement>(null)
+  function expand(on: boolean) {
+    setWide(on)
+    if (on) root.current?.requestFullscreen?.().catch(() => {}) // a browser that cannot (an iPhone) keeps the window-filling view
+    else if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+  }
+  useEffect(() => {
+    if (!wide) return
+    exit.current?.focus()
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setWide(false) }
+    const change = () => { if (!document.fullscreenElement) setWide(false) } // left by the browser's own Esc
+    window.addEventListener('keydown', key); document.addEventListener('fullscreenchange', change)
+    return () => { window.removeEventListener('keydown', key); document.removeEventListener('fullscreenchange', change) }
+  }, [wide])
+
   const next = useCallback(() => { if (step < last) setStep(s => s + 1); else setPlaying(false) }, [step, last])
 
   // While playing, each step speaks its voice and moves on when it ends; with no voice, after the time it takes to read
@@ -92,16 +111,22 @@ export function LessonPlayer({ script, voices, onDelete }: { script: LessonScrip
   const finished = step === last && !playing
 
   return (
-    <section aria-label={`Lesson: ${script.title}`} className="overflow-hidden rounded-2xl border border-line bg-raised">
+    <section ref={root} aria-label={`Lesson: ${script.title}`} role={wide ? 'dialog' : undefined} aria-modal={wide ? true : undefined} data-wide={wide || undefined}
+      className={wide ? 'fixed inset-0 z-[85] flex flex-col bg-bg pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]' : 'overflow-hidden rounded-2xl border border-line bg-raised'}>
       <audio ref={audio} onEnded={next} preload="auto" />
-      <div className="flex items-center justify-between gap-2 px-4 pt-3">
-        <h3 className="min-w-0 truncate text-sm font-semibold">{script.title}</h3>
-        {onDelete && <button type="button" className="btn-ghost !px-2 !py-1 text-muted hover:!text-danger" aria-label="Delete lesson" title="Delete lesson" onClick={onDelete}><Trash2 size={14} aria-hidden /></button>}
+      <div className={`flex items-center justify-between gap-2 ${wide ? 'px-5 pt-4' : 'px-4 pt-3'}`}>
+        <h3 className={`min-w-0 truncate font-semibold ${wide ? 'text-lg' : 'text-sm'}`}>{script.title}</h3>
+        <span className="flex shrink-0 items-center gap-1">
+          <button ref={exit} type="button" className="btn-ghost !px-2 text-muted" aria-label={wide ? 'Exit full screen' : 'Full screen'} title={wide ? 'Exit full screen (Esc)' : 'Full screen'} aria-pressed={wide} onClick={() => expand(!wide)}>
+            {wide ? <Minimize2 size={wide ? 18 : 14} aria-hidden /> : <Maximize2 size={14} aria-hidden />}
+          </button>
+        {onDelete && !wide && <button type="button" className="btn-ghost !px-2 !py-1 text-muted hover:!text-danger" aria-label="Delete lesson" title="Delete lesson" onClick={onDelete}><Trash2 size={14} aria-hidden /></button>}
+        </span>
       </div>
-      <div className="px-3 pb-1 pt-2">
-        <LessonBoard script={script} step={step} />
+      <div className={wide ? 'flex min-h-0 flex-1 items-center justify-center px-4 py-2' : 'px-3 pb-1 pt-2'}>
+        <LessonBoard script={script} step={step} className={wide ? 'block h-full max-h-full w-full rounded-xl bg-raised' : undefined} />
       </div>
-      <p aria-live="polite" className="min-h-[3.25rem] px-4 py-2 text-[15px] leading-relaxed">{script.steps[step].narration}</p>
+      <p aria-live="polite" className={wide ? 'mx-auto min-h-[4.5rem] w-full max-w-4xl px-5 py-3 text-lg leading-relaxed md:text-xl' : 'min-h-[3.25rem] px-4 py-2 text-[15px] leading-relaxed'}>{script.steps[step].narration}</p>
       <div className="flex items-center gap-1.5 border-t border-line px-3 py-2">
         <button type="button" className="btn-ghost !px-2" aria-label="Previous step" disabled={step === 0} onClick={() => go(step - 1)}><ChevronLeft size={18} aria-hidden /></button>
         {finished

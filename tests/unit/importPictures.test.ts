@@ -3,7 +3,7 @@ import { MAX_PICTURES, mediaType, pictureKeeper } from '@/lib/import/pictures'
 
 // A stand-in for the browser: each picture's size is written in it as "WxH"
 const io = {
-  size: async (b: Blob) => { const [w, h] = (await b.text()).split('x').map(Number); return { width: w, height: h } },
+  size: async (b: Blob) => { const [w, h] = (await b.text()).match(/^(\d+)x(\d+)/)!.slice(1).map(Number); return { width: w, height: h } },
   redraw: async (b: Blob) => new Blob([await b.text()], { type: 'image/png' }),
   decode: async (b: Blob) => ({ width: 100, height: 100, source: b }),
   encode: async (_s: unknown, _w: number, _h: number, type: string) => new Blob(['out'], { type }),
@@ -28,13 +28,37 @@ describe('keeping an uploaded file\'s pictures', () => {
     expect(await keep(pic(900, 4), '')).toBeNull()
     expect(upload).not.toHaveBeenCalled()
   })
-  it('stores the same picture once, however often it appears (a logo on every slide)', async () => {
+  it('stores the same picture once, however often it appears', async () => {
     const { sb, upload } = storage()
     const keep = pictureKeeper(sb, 'u1', io)
-    const a = await keep(pic(300, 100, 'image/png', 'logo'), 'Logo')
-    const b = await keep(pic(300, 100, 'image/png', 'logo'), 'Logo')
+    const a = await keep(pic(300, 200, 'image/png', 'figure'), 'Figure 2')
+    const b = await keep(pic(300, 200, 'image/png', 'figure'), 'Figure 2')
     expect(a).toBe(b)
     expect(upload).toHaveBeenCalledTimes(1)
+  })
+  it('keeps only visual aids: a picture described as a logo, a background or the like is left out, whatever its size', async () => {
+    const { sb, upload } = storage()
+    const keep = pictureKeeper(sb, 'u1', io)
+    for (const alt of ['University logo', 'Slide background', 'Decorative swirl', 'Company watermark', 'Lecturer signature', 'Header image', 'Clip art of a book']) expect(await keep(pic(600, 400, 'image/png', alt), alt), alt).toBeNull()
+    expect(await keep(pic(600, 400, 'image/png', 'ok'), 'Graph of rate against temperature')).not.toBeNull()
+    expect(await keep(pic(600, 401, 'image/png', 'plain'), '')).not.toBeNull() // no description: judged by its shape alone
+    expect(upload).toHaveBeenCalledTimes(2)
+  })
+  it('leaves out a banner or a rule, and a picture too small to read, but keeps one just big enough', async () => {
+    const { sb } = storage()
+    const keep = pictureKeeper(sb, 'u1', io)
+    expect(await keep(pic(900, 120), '')).toBeNull() // 7.5 times longer than tall
+    expect(await keep(pic(79, 200), '')).toBeNull()
+    expect(await keep(pic(200, 79), '')).toBeNull()
+    expect(await keep(pic(500, 100), '')).not.toBeNull() // exactly 5 to 1
+    expect(await keep(pic(80, 80), '')).not.toBeNull()
+  })
+  it('lets a figure drawn from the file be long and thin (a timeline), as long as it is big enough, but not described as decoration', async () => {
+    const { sb } = storage()
+    const keep = pictureKeeper(sb, 'u1', io)
+    expect(await keep(pic(1200, 150, 'image/png', 'timeline'), 'Timeline of the war', true)).not.toBeNull()
+    expect(await keep(pic(1200, 150, 'image/png', 'bar'), 'Decorative bar', true)).toBeNull()
+    expect(await keep(pic(1200, 40, 'image/png', 'strip'), 'Strip', true)).toBeNull()
   })
   it('redraws a type a note cannot hold (GIF, TIFF…) as PNG', async () => {
     const { sb, upload } = storage()

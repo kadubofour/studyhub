@@ -8,12 +8,22 @@ import { ACCEPTED, prepareImage, uploadNoteImage, type ImageIo } from '@/lib/not
 export type KeepPicture = (picture: Blob, alt: string, diagram?: boolean) => Promise<string | null>
 
 export const MAX_PICTURES = 40 // a deck of slides full of photos must not fill the student's storage in one go
-export const MIN_SIDE = 48 // smaller than this is a bullet, an icon or a rule, not a picture worth keeping
+export const MIN_SIDE = 80 // smaller than this is a bullet, an icon or a rule, not a picture worth keeping
+export const MAX_STRETCH = 5 // a picture more than this many times longer than it is tall (or the other way) is a banner or a rule, not a figure
+// What a picture's own description or name says it is for: not teaching, so not kept (a logo, a background, a signature, a bullet)
+const DECORATION = /\b(logo|icon|decorat\w*|background|banner|watermark|signature|crest|emblem|letterhead|header|footer|bullet|avatar|profile (?:photo|picture)|clip ?art|divider|border)\b/i
+
+/** Whether a picture's description says it is only there to look nice; a picture with no description is judged by its shape alone */
+export const isDecorationAlt = (alt: string) => DECORATION.test(alt)
+/** Whether a picture's shape says it is no figure: too small to read, or a strip */
+export const isDecorationShape = (width: number, height: number) =>
+  width < MIN_SIDE || height < MIN_SIDE || Math.max(width, height) / Math.min(width, height) > MAX_STRETCH
 
 const altText = (alt: string) => alt.replace(/[[\]\n]+/g, ' ').trim().slice(0, 120)
 
 /**
- * A keeper for one import: pictures smaller than MIN_SIDE are left out (decoration), the same picture twice is stored once,
+ * A keeper for one import: only visual aids are kept. A picture too small or too strip-shaped to be a figure, or described as a logo, a
+ * background or the like, is left out (a figure drawn from the file's own shapes, charts and SmartArt only has to be big enough); the same picture twice is stored once,
  * at most MAX_PICTURES are kept, and a type a note cannot hold (GIF, BMP, TIFF…) is redrawn as PNG when the browser can read it.
  * A picture that cannot be read or stored is left out: the note is what matters.
  */
@@ -23,6 +33,7 @@ export function pictureKeeper(sb: SupabaseClient, userId: string, io?: ImageIo &
   const size = io?.size ?? browserSize
   const redraw = io?.redraw ?? browserRedraw
   return async (picture, alt, diagram = false) => {
+    if (isDecorationAlt(alt)) return null // described as a logo, a background... : not a visual aid
     const key = (diagram ? 'fig:' : '') + await fingerprint(picture)
     if (!seen.has(key)) {
       seen.set(key, (async () => {
@@ -30,7 +41,8 @@ export function pictureKeeper(sb: SupabaseClient, userId: string, io?: ImageIo &
         if (kept >= MAX_PICTURES) return null
         kept++
         const dims = await size(picture).catch(() => null)
-        if (!dims || dims.width < MIN_SIDE || dims.height < MIN_SIDE) { kept--; return null }
+        // a drawn figure only has to be big enough; any other picture must also not be a strip (a banner, a rule)
+        if (!dims || (diagram ? dims.width < MIN_SIDE || dims.height < MIN_SIDE : isDecorationShape(dims.width, dims.height))) { kept--; return null }
         try {
           const usable = ACCEPTED.includes(picture.type) ? picture : await redraw(picture)
           if (!usable) { kept--; return null }

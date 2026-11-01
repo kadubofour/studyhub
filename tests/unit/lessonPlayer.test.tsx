@@ -88,3 +88,52 @@ describe('the lesson player', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('the lesson player on the whole screen', () => {
+  const open = () => render(<LessonPlayer script={script} voices={voices} />)
+  it('can be taken full screen, and asks the browser to do it where it can', () => {
+    const requestFullscreen = vi.fn(() => Promise.resolve())
+    HTMLElement.prototype.requestFullscreen = requestFullscreen
+    open()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+    const full = screen.getByRole('dialog', { name: 'Lesson: The Krebs cycle' })
+    expect(full.className).toContain('fixed inset-0')
+    expect(screen.getByRole('button', { name: 'Exit full screen' }).getAttribute('aria-pressed')).toBe('true')
+    delete (HTMLElement.prototype as { requestFullscreen?: unknown }).requestFullscreen
+  })
+  it('fills the window all the same when the browser has no full screen of its own', () => {
+    delete (HTMLElement.prototype as { requestFullscreen?: unknown }).requestFullscreen
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    expect(screen.getByRole('dialog').className).toContain('fixed inset-0')
+  })
+  it('keeps playing through the change: the same voice element, the same step, the same controls', async () => {
+    const { container } = open()
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    await act(async () => {})
+    const audio = container.querySelector('audio')
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    expect(container.querySelector('audio')).toBe(audio) // not made again, so the voice is not cut off
+    expect(screen.getByText('It joins oxaloacetate to make citrate.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Previous step' })).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Steps' })).toBeTruthy()
+  })
+  it('leaves on Esc, and with the button', () => {
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Exit full screen' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('does not offer to delete the lesson from the full screen, where a slip would lose it', () => {
+    render(<LessonPlayer script={script} voices={voices} onDelete={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Delete lesson' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    expect(screen.queryByRole('button', { name: 'Delete lesson' })).toBeNull()
+  })
+})

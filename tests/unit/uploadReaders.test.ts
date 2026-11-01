@@ -91,6 +91,15 @@ describe('pptxToNote: visual aids', () => {
     const out = await pptxToNote(await pptx([{ xml }], { 'ppt/slides/_rels/slide1.xml.rels': rels, 'ppt/media/image1.png': 'png' }), 'c.pptx', async (_b, alt) => `![${alt}](studyhub-image:c.webp)`, async () => null)
     expect(out.content_md).toContain('![The cell](studyhub-image:c.webp)')
   })
+  it('leaves out a picture named or described as a logo or a background, even on a single slide, and keeps the figure beside it', async () => {
+    const rels = `<?xml version="1.0"?><Relationships><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/a.png"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/b.png"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/c.png"/></Relationships>`
+    const pic = (rid: string, name: string, descr: string) => `<p:pic><p:nvPicPr><p:cNvPr id="4" name="${name}" descr="${descr}"/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"/></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr></p:pic>`
+    const xml = `<?xml version="1.0"?><p:sld ${A} ${P} ${R}><p:cSld><p:spTree>${shapes(['Cells'])}${pic('rId2', 'University crest', '')}${pic('rId3', 'Picture 3', 'Slide background')}${pic('rId4', 'Picture 4', 'Diagram of a cell')}</p:spTree></p:cSld></p:sld>`
+    const kept: string[] = []
+    const out = await pptxToNote(await pptx([{ xml }], { 'ppt/slides/_rels/slide1.xml.rels': rels, 'ppt/media/a.png': 'a', 'ppt/media/b.png': 'b', 'ppt/media/c.png': 'c' }), 'c.pptx', async (_b, alt) => { kept.push(alt); return `![${alt}](x)` }, async () => null)
+    expect(kept).toEqual(['Diagram of a cell'])
+    expect(out.content_md).toContain('![Diagram of a cell](x)')
+  })
   it('leaves out a picture that is on most slides (a logo), and draws no slide for it alone', async () => {
     const rels = `<?xml version="1.0"?><Relationships><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/logo.png"/></Relationships>`
     const logo = `<p:pic><p:nvPicPr><p:cNvPr id="4" name="Logo"/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr></p:pic>`

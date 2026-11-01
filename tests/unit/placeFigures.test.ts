@@ -46,9 +46,9 @@ describe('putting a PDF\'s figures where they were', () => {
   it('keeps the figure\'s words in italics when nothing can be drawn', async () => {
     expect(await placeFigures('<!-- page 1 -->\n[[figure: a graph of rate against temperature]]', source())).toBe('*a graph of rate against temperature*')
   })
-  it('puts the pictures of a page the AI marked nothing on at its end, so nothing is lost', async () => {
+  it('adds nothing to a page the AI marked no figure on: it looked, and a logo or decoration there is not a visual aid', async () => {
     const out = await placeFigures('<!-- page 1 -->\nPage one.\n<!-- page 2 -->\nPage two.', source({ pictures: pics({ 1: ['![x](studyhub-image:x.webp)'] }) }))
-    expect(out).toBe('Page one.\n\n![x](studyhub-image:x.webp)\n\nPage two.')
+    expect(out).toBe('Page one.\n\nPage two.')
   })
   it('leaves a note with no marks as it is', async () => {
     expect(await placeFigures('## Just text\n\nHello.', source())).toBe('## Just text\n\nHello.')
@@ -58,6 +58,12 @@ describe('putting a PDF\'s figures where they were', () => {
 describe('a PDF read without the AI', () => {
   it('shows each page\'s text, then its pictures, pages ruled apart', async () => {
     expect(await textWithPictures(['One', 'Two'], source({ pictures: pics({ 2: ['![p](studyhub-image:p.webp)'] }) }))).toBe('One\n\n---\n\nTwo\n\n![p](studyhub-image:p.webp)')
+  })
+  it('does not turn a page of reading into a picture of itself, even when it draws a rule or a box', async () => {
+    const out = await textWithPictures(['Plain', 'Long text. '.repeat(60)], source({
+      hasGraphics: async () => true, snapshot: async p => `![page ${p}](studyhub-image:p${p}.webp)`,
+    }))
+    expect(out).toBe(`Plain\n\n![page 1](studyhub-image:p1.webp)\n\n---\n\n${'Long text. '.repeat(60)}`)
   })
   it('shows a page that draws shapes or lines, with no picture files, as a picture of the page', async () => {
     const out = await textWithPictures(['Plain', 'A flowchart'], source({

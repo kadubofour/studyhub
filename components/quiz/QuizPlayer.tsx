@@ -9,6 +9,7 @@ import { answerText, optionLetter } from '@/lib/quiz/summary'
 import { BTN_SOLID } from '@/components/ui/buttonStyles'
 import type { AnswerRecord, Question, Quiz, QuizAttempt } from '@/lib/quiz/types'
 import { MarkdownView } from '@/components/notes/MarkdownView'
+import { MathText } from '@/components/ui/MathText'
 import { Working } from '@/components/ui/Working'
 
 const choicesOf = (q: Question) => (q.type === 'true_false' ? ['True', 'False'] : q.options ?? [])
@@ -144,7 +145,7 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
                 <span aria-hidden className={`grid size-8 shrink-0 place-items-center rounded-lg text-sm font-semibold ${right ? 'bg-success text-white' : wrong ? 'bg-danger text-white' : 'bg-surface text-muted group-hover:bg-raised'}`}>
                   {right ? <Check size={16} /> : wrong ? <X size={16} /> : optionLetter(i)}
                 </span>
-                <span className="min-w-0 flex-1">{c}</span>
+                <span className="min-w-0 flex-1"><MathText>{c}</MathText></span>
                 {right && <span className="sr-only">Correct answer</span>}
                 {wrong && <span className="sr-only">Your answer, not correct</span>}
               </button>
@@ -167,7 +168,7 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
 
       {selfMark && (
         <div className="mt-4 rounded-xl bg-surface p-4 text-sm">
-          <p>Couldn&apos;t mark this automatically. Expected: {q.answer}</p>
+          <p>Couldn&apos;t mark this automatically. Expected: <MathText>{q.answer}</MathText></p>
           <div className="mt-3 flex gap-2">
             <button type="button" className="btn" onClick={() => record({ given: selfMark, correct: true, feedback: null })}>I was right</button>
             <button type="button" className="btn" onClick={() => record({ given: selfMark, correct: false, feedback: null })}>I was wrong</button>
@@ -179,10 +180,10 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
         <div className={`mt-4 rounded-2xl border p-4 text-sm md:p-5 ${done.correct ? 'border-success/40 bg-success/10' : 'border-danger/40 bg-danger-soft'}`}>
           <p className="flex items-center gap-2 text-base font-semibold">
             {done.correct ? <Check size={18} className="text-success" aria-hidden /> : <X size={18} className="text-danger" aria-hidden />}
-            {done.correct ? 'Correct.' : `Not quite. The answer is ${answerText(q, q.answer)}.`}
+            {done.correct ? 'Correct.' : <span>Not quite. The answer is <MathText>{answerText(q, q.answer)}</MathText>.</span>}
           </p>
-          {done.feedback && <p className="mt-2">{done.feedback}</p>}
-          {q.explanation && <p className="mt-2 text-muted">{q.explanation}</p>}
+          {done.feedback && <p className="mt-2"><MathText>{done.feedback}</MathText></p>}
+          {q.explanation && <p className="mt-2 text-muted"><MathText>{q.explanation}</MathText></p>}
           <div className="mt-4 flex items-center justify-end gap-3">
             {q.type === 'short' && !done.correct && (
               <button type="button" className="btn mr-auto" onClick={() => record({ ...done, correct: true })}>I was right</button>
