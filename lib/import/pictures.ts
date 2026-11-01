@@ -5,7 +5,7 @@ import { ACCEPTED, prepareImage, uploadNoteImage, type ImageIo } from '@/lib/not
 // being dropped or described in words. Each is stored in the student's note-images folder, as a picture pasted into a note is.
 
 /** Keeps one picture, giving back the Markdown that shows it (![alt](studyhub-image:…)), or null when it is left out */
-export type KeepPicture = (picture: Blob, alt: string) => Promise<string | null>
+export type KeepPicture = (picture: Blob, alt: string, diagram?: boolean) => Promise<string | null>
 
 export const MAX_PICTURES = 40 // a deck of slides full of photos must not fill the student's storage in one go
 export const MIN_SIDE = 48 // smaller than this is a bullet, an icon or a rule, not a picture worth keeping
@@ -22,8 +22,8 @@ export function pictureKeeper(sb: SupabaseClient, userId: string, io?: ImageIo &
   let kept = 0
   const size = io?.size ?? browserSize
   const redraw = io?.redraw ?? browserRedraw
-  return async (picture, alt) => {
-    const key = await fingerprint(picture)
+  return async (picture, alt, diagram = false) => {
+    const key = (diagram ? 'fig:' : '') + await fingerprint(picture)
     if (!seen.has(key)) {
       seen.set(key, (async () => {
         // the place is taken before anything is awaited, so pictures arriving together cannot all slip in
@@ -34,7 +34,7 @@ export function pictureKeeper(sb: SupabaseClient, userId: string, io?: ImageIo &
         try {
           const usable = ACCEPTED.includes(picture.type) ? picture : await redraw(picture)
           if (!usable) { kept--; return null }
-          return await uploadNoteImage(sb, userId, await prepareImage(usable, io))
+          return await uploadNoteImage(sb, userId, await prepareImage(usable, io), diagram)
         } catch { kept--; return null }
       })())
     }

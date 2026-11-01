@@ -115,7 +115,7 @@ export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: R
     return canvas
   }
   const save = (canvas: HTMLCanvasElement, caption: string) => new Promise<string | null>(resolve =>
-    canvas.toBlob(async blob => resolve(blob ? await keep(blob, caption).catch(() => null) : null), canvas.width * canvas.height > 2_500_000 ? 'image/jpeg' : 'image/png', 0.9))
+    canvas.toBlob(async blob => resolve(blob ? await keep(blob, caption, true).catch(() => null) : null), canvas.width * canvas.height > 2_500_000 ? 'image/jpeg' : 'image/png', 0.9))
 
   // Each page is drawn once, however many figures it has
   const pages = new Map<number, Promise<HTMLCanvasElement | null>>()
@@ -131,7 +131,7 @@ export function pdfPagePictures(doc: PDFDocumentProxy, keep: KeepPicture, OPS: R
       if (fig) {
         const width = Math.round(Math.min(1800, Math.max(700, fig.width * 3)))
         const png = await draw(fig.svg, width, Math.round((width * fig.height) / fig.width)).catch(() => null)
-        const md = png ? await keep(png, caption).catch(() => null) : null
+        const md = png ? await keep(png, caption, true).catch(() => null) : null
         if (md) return md
       }
       const c = await page(n)

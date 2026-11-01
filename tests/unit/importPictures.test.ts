@@ -57,3 +57,22 @@ describe('keeping an uploaded file\'s pictures', () => {
     expect(mediaType('image2.emf')).toBe('image/emf')
   })
 })
+
+describe('diagram pictures', () => {
+  it('are told apart by their file name, so dark mode can light their lines', async () => {
+    const { isDiagramToken } = await import('@/lib/notes/images')
+    expect(isDiagramToken('studyhub-image:fig-abc123.webp')).toBe(true)
+    expect(isDiagramToken('studyhub-image:abc123.webp')).toBe(false)
+    expect(isDiagramToken('https://x.test/fig-1.png')).toBe(false)
+  })
+})
+
+describe('older pictures that look like diagrams', () => {
+  const px = (n: number, f: (i: number) => [number, number, number]) => { const a = new Uint8ClampedArray(n * 4); for (let i = 0; i < n; i++) { const [r, g, b] = f(i); a.set([r, g, b, 255], i * 4) } return a }
+  it('black lines on white paper count; a photo does not', async () => {
+    const { looksLikeDiagram } = await import('@/lib/notes/diagramLook')
+    expect(looksLikeDiagram(px(4096, i => (i % 20 === 0 ? [0, 0, 0] : [255, 255, 255])))).toBe(true)
+    expect(looksLikeDiagram(px(4096, i => [(i * 7) % 256, (i * 13) % 256, (i * 29) % 256]))).toBe(false)
+    expect(looksLikeDiagram(px(4096, () => [90, 120, 60]))).toBe(false)
+  })
+})
