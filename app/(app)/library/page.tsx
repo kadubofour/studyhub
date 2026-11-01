@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowUpRight, FilePlus, FileText, FolderInput, FolderOpen, FolderPlus, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Search, Upload, type LucideIcon, CheckSquare } from 'lucide-react'
 import { CourseBar } from '@/components/planner/CourseBar'
+import { LibraryOverview } from '@/components/library/LibraryOverview'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -17,6 +18,10 @@ import { notebookColor } from '@/lib/notes/notebooks'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { listPlans, type PlanRow } from '@/lib/plan/service'
+import { listTopicStats } from '@/lib/data/topics'
+import { studySets, type SetSort } from '@/lib/library/studySets'
+import type { TopicStat } from '@/lib/topics/types'
 import { loadLibrary, moveItems } from '@/lib/data/library'
 import { createNote } from '@/lib/data/notes'
 import { createChat, findChat } from '@/lib/data/tutor'
@@ -70,6 +75,12 @@ export default function LibraryPage() {
   // On a phone: the list notes apps have, and ticking things only after choosing Select
   const phone = useScreen() === 'phone'
   const [selecting, setSelecting] = useState(false)
+  // The Library opens on its courses, as cards; Materials is everything in one list (a course named in the address opens there)
+  const [mode, setMode] = useState<'sets' | 'materials'>(() => (address.get('view') === 'materials' || fromAddress ? 'materials' : 'sets'))
+  const [setQuery, setSetQuery] = useState('')
+  const [setSort, setSetSort] = useState<SetSort>('recent')
+  const [plans, setPlans] = useState<PlanRow[]>([])
+  const [topics, setTopics] = useState<Record<string, TopicStat[]>>({})
   const [now] = useState(() => new Date())
   const router = useRouter()
 
@@ -84,6 +95,17 @@ export default function LibraryPage() {
     read().then(([l, b]) => { if (live) { setItems(l); setNotebooks(b); setFailed(false) } }).catch(() => { if (live) setFailed(true) })
     return () => { live = false }
   }, [])
+
+  // What the course cards show beyond the items: study plans, and how far through its topics each course is
+  useEffect(() => {
+    if (!coursesLoaded) return
+    let live = true
+    const sb = supabase()
+    listPlans(sb).then(p => { if (live) setPlans(p) }).catch(() => {})
+    Promise.all(courses.map(c => listTopicStats(sb, c.id).then(t => [c.id, t] as const).catch(() => [c.id, [] as TopicStat[]] as const)))
+      .then(e => { if (live) setTopics(Object.fromEntries(e)) })
+    return () => { live = false }
+  }, [coursesLoaded, courses])
 
   const courseOf = (id: string | null) => courses.find(c => c.id === id) ?? null
   const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id) ?? null
@@ -202,16 +224,58 @@ export default function LibraryPage() {
     { label: 'New notebook', icon: FolderPlus, onSelect: () => setDialog('new') },
     { label: 'Quiz', icon: ListChecks, onSelect: requestQuiz },
     ...(courseName ? [{ label: 'Open course page', icon: FolderOpen, onSelect: () => router.push(`/courses/${course}`) }] : []),
+    { label: 'Courses', icon: FolderOpen, onSelect: () => setMode('sets') },
     { label: 'Select', icon: CheckSquare, onSelect: () => setSelecting(true), disabled: empty },
     'sep',
     tick('Newest first', view.sort === 'recent', () => setView(v => ({ ...v, sort: 'recent' }))),
     tick('Name', view.sort === 'name', () => setView(v => ({ ...v, sort: 'name' }))),
   ]
+  // The notebooks, drawn as notebooks, in both views
+  const shelfSection = shelf.length > 0 ? (
+            <section aria-labelledby="lib-notebooks" className="mb-7">
+              {phone ? <PhoneHeading id="lib-notebooks">Notebooks</PhoneHeading> : <h2 id="lib-notebooks" className="section-label">Notebooks</h2>}
+              <ul aria-label="Notebooks" className={phone ? 'no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1' : 'flex flex-wrap gap-4'}>
+                {shelf.map(({ notebook, count }) => (
+                  <li key={notebook.id} className={phone ? 'w-24 shrink-0' : 'w-32'}>
+                    <Link href={`/notebooks/${notebook.id}`} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
+                      className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent">
+                      <NotebookCover name={notebook.name} count={count} color={notebookColor(notebook, known ?? [], courses)} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+  ) : null
+  const showSets = mode === 'sets' && (courses.length > 0 || !empty)
+  const toMaterials = (courseId?: string) => { if (courseId) chooseCourse(courseId); setMode('materials') }
+  if (showSets) {
+    const now0 = now
+    return (
+      <div>
+        <PageHeader title="Library" />
+        <LibraryOverview cards={studySets({ courses, items: known ?? items, plans, topics, now: now0, q: setQuery, sort: setSort })} now={now0}
+          q={setQuery} onQ={setSetQuery} sort={setSort} onSort={setSetSort}
+          onMaterials={() => toMaterials()} onOpenMaterials={toMaterials} onNewNotebook={() => setDialog('new')}
+          create={[
+            { label: 'New note', icon: FilePlus, onSelect: () => { void newNote() } },
+            { label: 'Record lecture', icon: Mic, onSelect: () => router.push('/lectures/record') },
+            { label: 'Upload file', icon: Upload, onSelect: () => setDialog('upload') },
+            { label: 'Quiz', icon: ListChecks, onSelect: requestQuiz },
+          ]}
+          courses={courses} onCourses={c => { setCourses(c); void load() }} />
+        {shelfSection && <div className="mt-8">{shelfSection}</div>}
+        <NotebookNameDialog open={dialog === 'new'} onClose={() => setDialog(null)} title="New notebook" submitLabel="Create"
+          courses={courses} onSubmit={(name, courseId) => { void create(name, courseId) }} />
+        {dialog === 'upload' && <UploadDialog open keepOnly courses={courses} onClose={() => setDialog(null)} onKept={() => { void load() }} />}
+      </div>
+    )
+  }
   return (
     <div className={phone ? 'pb-24' : undefined}>
       {phone ? <PhoneTitle title="Library" menuLabel="Library options" menu={phoneMenu} selecting={selecting} onDone={() => { setSelecting(false); setSelected(new Set()) }} />
       : <PageHeader title="Library" actions={
         <>
+          <button type="button" className="btn" onClick={() => setMode('sets')}><FolderOpen size={14} aria-hidden />Courses</button>
           {!empty && courseName && <Link href={`/courses/${course}`} className="btn-ghost text-accent">Open course page</Link>}
           {/* Notes and Lectures live in the Library now: a note is written and a lecture recorded from here */}
           <NewNoteButton courseId={courseName ? course : null} className="btn" />
@@ -282,21 +346,7 @@ export default function LibraryPage() {
             </aside>
           )}
           <div className="min-w-0">
-          {shelf.length > 0 && (
-            <section aria-labelledby="lib-notebooks" className="mb-7">
-              {phone ? <PhoneHeading id="lib-notebooks">Notebooks</PhoneHeading> : <h2 id="lib-notebooks" className="section-label">Notebooks</h2>}
-              <ul aria-label="Notebooks" className={phone ? 'no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1' : 'flex flex-wrap gap-4'}>
-                {shelf.map(({ notebook, count }) => (
-                  <li key={notebook.id} className={phone ? 'w-24 shrink-0' : 'w-32'}>
-                    <Link href={`/notebooks/${notebook.id}`} aria-label={`Open ${notebook.name}, ${plural(count, 'note')}`}
-                      className="block w-full rounded-xl outline-none transition hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent">
-                      <NotebookCover name={notebook.name} count={count} color={notebookColor(notebook, known ?? [], courses)} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          {shelfSection}
 
           {(!phone || selecting) && <div className="mb-2 flex min-h-9 flex-wrap items-center justify-between gap-2 text-sm">
             <label className="flex items-center gap-2 text-muted">
