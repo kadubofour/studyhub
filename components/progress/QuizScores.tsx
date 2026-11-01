@@ -19,7 +19,7 @@ export function QuizScores() {
   if (!groups || !groups.length) return null
   return (
     <section className="card">
-      <h2 className="mb-3 font-semibold">Quiz scores</h2>
+      <h2 className="mb-3 text-sm font-medium">Quiz scores</h2>
       <ul className="space-y-3">
         {groups.map(g => {
           const course = courses.find(c => c.id === g.course_id)
@@ -29,9 +29,10 @@ export function QuizScores() {
               <div className="mb-1 text-sm">{name}</div>
               <div className="flex h-14 items-end gap-1" role="img" aria-label={`${name} quiz scores: ${g.scores.map(s => `${s.percent}%`).join(', ')}`}>
                 {g.scores.map((s, i) => (
-                  <div key={i} title={`${s.title}: ${s.percent}%`} className="w-5 rounded-t" style={{ height: `${Math.max(6, s.percent)}%`, background: course?.color ?? 'var(--accent-solid)' }} />
+                  <div key={i} title={`${s.title}: ${s.percent}%`} className="w-5 rounded-t-md" style={{ height: `${Math.max(6, s.percent)}%`, background: `color-mix(in srgb, ${course?.color ?? 'var(--accent-solid)'} ${i === g.scores.length - 1 ? 80 : 45}%, transparent)` }} />
                 ))}
               </div>
+              <p className="mt-1 text-xs text-muted">Latest: {g.scores[g.scores.length - 1].percent}%</p>
             </li>
           )
         })}

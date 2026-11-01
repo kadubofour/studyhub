@@ -37,8 +37,8 @@ test('Progress has its quick actions by the title on every screen, and no lines 
   await signUp(page)
   await page.goto('/progress')
   const actions = page.getByRole('group', { name: 'Quick actions' })
-  await expect(actions.getByRole('link', { name: 'Start focus' })).toBeVisible()
   await expect(actions.getByRole('link', { name: 'Review cards' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Your progress' }).getByRole('link', { name: 'Start focus' })).toBeVisible() // the one Start focus is in the top panel
   const border = await page.getByRole('list', { name: 'Study stats' }).evaluate(el => getComputedStyle(el).borderTopWidth)
   expect(border).toBe('0px')
 })
