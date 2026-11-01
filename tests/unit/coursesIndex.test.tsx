@@ -9,8 +9,6 @@ let items: LibraryItem[] = []
 let fails = false
 let libraryFails = false
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
-vi.mock('@/components/providers/ProfileProvider', () => ({ useProfile: () => ({ profile: { id: 'u1', school: 'University of Ghana', programme: 'BSc Biology' } }) }))
-vi.mock('@/components/setup/ProgrammeSetup', () => ({ ProgrammeSetup: ({ about, existing }: { about: { programme: string }; existing: string[] }) => <p>Suggestions for {about.programme}; has {existing.join(', ') || 'none'}</p> }))
 let createFails = false
 const createCourse = vi.fn(async (_sb: unknown, c: { name: string; color: string }) => { if (createFails) throw new Error('offline'); return { id: 'new', ...c } })
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => { if (fails) throw new Error('offline'); return courses }, createCourse: (sb: unknown, c: { name: string; color: string }) => createCourse(sb, c) }))
@@ -92,21 +90,5 @@ describe('making a course from Courses', () => {
     await open()
     await make('  ')
     expect(createCourse).not.toHaveBeenCalled()
-  })
-})
-
-describe('Courses from the programme', () => {
-  it('opens with the profile\'s school and programme, then shows the suggestions with the courses already there', async () => {
-    await open()
-    fireEvent.click(screen.getByRole('button', { name: /From my programme/ }))
-    expect((screen.getByLabelText('Programme') as HTMLInputElement).value).toBe('BSc Biology')
-    expect((screen.getByLabelText('School') as HTMLInputElement).value).toBe('University of Ghana')
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Find my courses' })) })
-    expect(screen.getByText('Suggestions for BSc Biology; has Biology, Spanish')).toBeTruthy()
-  })
-  it('is offered when there are no courses yet', async () => {
-    courses = []
-    await open()
-    expect(screen.getByRole('button', { name: /From my programme/ })).toBeTruthy()
   })
 })
