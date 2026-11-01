@@ -54,7 +54,7 @@ export async function noteWithText(page: Page, title = 'Krebs cycle') {
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('The Krebs cycle happens in the mitochondrial matrix. '.repeat(6))
-  await expect(saved(page)).toBeVisible()
+  await noteSaved(page)
 }
 
 // Pays for a month of Premium through the fake Paystack (E2E only)
@@ -124,5 +124,10 @@ export async function inBiology(page: Page) {
   ])
 }
 
-// The note's "Saved" sign: the word on a computer, a small tick labelled Saved on a phone
-export const saved = (page: Page) => page.getByText('Saved').or(page.getByRole('status', { name: 'Saved' })).first()
+// Waits until the note is saved. A computer says "Saved"; a phone shows a tick labelled Saved only once writing is done (the keyboard hides it,
+// to leave room for Undo and Redo), so there it taps Done first, as a person would
+export async function noteSaved(page: Page) {
+  const done = page.getByRole('button', { name: 'Done', exact: true })
+  if (await done.isVisible()) await done.click()
+  await expect(page.getByText('Saved').or(page.getByRole('status', { name: 'Saved' })).first()).toBeVisible()
+}

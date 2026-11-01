@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, choose, inBiology, saved } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, choose, inBiology, noteSaved } from './helpers'
 
 // Two Biology notes, topics drafted and saved, then (unless asked not to) an exam next week: ready for a plan
 async function readyForPlan(page: Page, { exam = true } = {}) {
@@ -11,7 +11,7 @@ async function readyForPlan(page: Page, { exam = true } = {}) {
   await page.getByLabel('Title').fill('Glycolysis notes')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. '.repeat(4))
-  await expect(saved(page)).toBeVisible()
+  await noteSaved(page)
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })

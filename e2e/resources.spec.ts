@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { newNoteFromNote, noteWithText, signUp, inBiology, saved } from './helpers'
+import { newNoteFromNote, noteWithText, signUp, inBiology, noteSaved } from './helpers'
 
 
 test('find resources for a topic, keep them across a reload, and remove one', async ({ page }) => {
@@ -11,7 +11,7 @@ test('find resources for a topic, keep them across a reload, and remove one', as
   await page.getByLabel('Title').fill('Glycolysis notes')
   await page.getByLabel('Note', { exact: true }).click()
   await page.keyboard.type('Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. '.repeat(4))
-  await expect(saved(page)).toBeVisible()
+  await noteSaved(page)
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
