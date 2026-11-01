@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, openLibraryMaterials } from './helpers'
 
 test('Progress welcomes a new student in words, not a row of zeros, and the tab names the page', async ({ page }) => {
   await signUp(page)
@@ -28,7 +28,7 @@ test('every page names itself in the tab: Library, Practice, Tutor, Planner, Pro
 test('the Library shows a note\'s words and offers study actions from its menu', async ({ page, isMobile }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.goto('/library')
+  await openLibraryMaterials(page)
   const row = page.getByRole('link', { name: /Krebs cycle/ })
   await expect(row).toBeVisible()
   await expect(row).toContainText('The Krebs cycle happens in the mitochondrial matrix') // what is inside, as plain words

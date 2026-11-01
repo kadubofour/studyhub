@@ -192,3 +192,9 @@ export async function quizFromFlashcards(page: Page) {
   if (await onPhone(page)) await listAction(page, 'Practice options', 'Quiz')
   else await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
 }
+
+// The Library opens on its courses as cards; Materials is every note, deck, lecture and file in one list
+export async function openLibraryMaterials(page: Page) {
+  await page.goto('/library')
+  await page.getByRole('button', { name: 'Materials', exact: true }).click()
+}

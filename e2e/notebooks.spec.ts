@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { noteWithText, signUp, listAction, startLibrarySelect, noteMenuInList, tickOf } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect, noteMenuInList, tickOf, openLibraryMaterials } from './helpers'
 
 test('notebooks: make one, move a note into it, open its page, rename it, delete it (the note is kept)', async ({ page }) => {
   test.setTimeout(120_000)
@@ -44,7 +44,7 @@ test('notebooks: make one, move a note into it, open its page, rename it, delete
 test('Library: a note filed in a notebook lives inside it, and the notebook opens on its own page', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
-  await page.goto('/library')
+  await openLibraryMaterials(page)
   await listAction(page, 'Library options', 'New notebook')
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Cell biology')

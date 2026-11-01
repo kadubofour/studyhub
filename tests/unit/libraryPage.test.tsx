@@ -23,7 +23,7 @@ const requestUpload = vi.fn()
 let movedCount: number | null = null
 const moveItems = vi.fn(async (_sb: unknown, picked: unknown[], _course: unknown) => movedCount ?? picked.length)
 const loadLibrary = vi.fn(async () => { if (loadFails) throw new Error('offline'); return items })
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search), useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search || 'view=materials'), useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses, createCourse: vi.fn(), updateCourse: vi.fn(), deleteCourse: vi.fn() }))
 vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (sb: unknown, p: unknown[], c: unknown) => moveItems(sb, p, c) }))

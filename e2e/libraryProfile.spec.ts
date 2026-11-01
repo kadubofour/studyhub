@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp, listAction, startLibrarySelect } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect, openLibraryMaterials } from './helpers'
 
 test('Library: find loose material under Unsorted, move it into a course, and see it there', async ({ page }) => {
   await signUp(page)
@@ -10,7 +10,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(page.getByText('Cells')).toBeVisible()
 
-  await page.goto('/library')
+  await openLibraryMaterials(page)
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible()
   const list = page.getByRole('region', { name: 'Library items' }) // each kind in its own section
   await expect(list.getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
@@ -38,7 +38,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
 test('Library opens on a course named in the address, and a new student sees an invitation', async ({ page }) => {
   await signUp(page)
   await page.goto('/library')
-  await expect(page.getByText(/Your library starts here|Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here/).first()).toBeVisible() // a phone says it in a line, a computer with a heading
+  await expect(page.getByRole('button', { name: /New course/ })).toBeVisible() // a new student has their first course as a card, and a card to make another
   await noteWithText(page, 'Enzymes')
   await page.goto('/library?course=none')
   await expect(page.getByRole('link', { name: /Enzymes/ })).toBeVisible()
