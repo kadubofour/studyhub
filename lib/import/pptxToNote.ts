@@ -152,7 +152,7 @@ export async function pptxToNote(buf: ArrayBuffer, fileName: string, keep?: Keep
       if (keep && tree && hasVisualAid(tree, env.skipMedia, await readRels(zip, path))) {
         try {
           const png = await draw(await treeToSvg(tree, path, env, slideW, slideH), 1600, Math.round((1600 * slideH) / slideW))
-          drawn = png ? await keep(png, `Slide ${sections.length + 1}${c.title ? `: ${c.title}` : ''}`).catch(() => null) : null
+          drawn = png ? await keep(png, `Slide ${sections.length + 1}${c.title ? `: ${c.title}` : ''}`, true).catch(() => null) : null
         } catch { drawn = null }
       }
       for (let k = 0; k < c.items.length; k++) {

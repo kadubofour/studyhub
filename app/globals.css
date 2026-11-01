@@ -548,3 +548,7 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .orb[data-phase="thinking"] .orb-arc, .orb[data-phase="drawing"] .orb-arc { animation: orb-turn 1.1s linear infinite; }
 .orb[data-muted="true"] .orb-core { filter: grayscale(.8); opacity: .6; animation: none; }
 @media (prefers-reduced-motion: reduce) { .orb .orb-core, .orb .orb-ring, .orb .orb-arc { animation: none !important; } }
+
+/* A diagram, chart or figure drawn from an uploaded file is black lines on white paper. In dark mode the lines turn light and the paper
+   drops out (screen blend on the page behind it), instead of a white box. Photos are not marked, so they stay as they are. */
+.dark img[data-diagram] { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; background: #fff; }

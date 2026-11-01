@@ -71,7 +71,7 @@ async function swapEquations(buf: ArrayBuffer, visuals?: { keep: KeepPicture; dr
       try {
         const png = await visuals.draw(await treeToSvg(d, 'word/document.xml', { ...env, box: { w: cx, h: cy } }, cx, cy), 1200, Math.max(1, Math.round((1200 * cy) / cx)))
         const alt = d.getElementsByTagNameNS('*', 'docPr')[0]
-        md = (png && await visuals.keep(png, alt?.getAttribute('descr') || alt?.getAttribute('title') || 'Figure').catch(() => null)) || ''
+        md = (png && await visuals.keep(png, alt?.getAttribute('descr') || alt?.getAttribute('title') || 'Figure', true).catch(() => null)) || ''
       } catch { md = '' }
       // the whole run goes, so Word's picture-less fallback for the drawing is not left behind
       let run: Element | null = d

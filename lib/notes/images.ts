@@ -15,6 +15,9 @@ export function tokenFile(src: unknown): string | null {
   const file = src.slice(IMAGE_SCHEME.length)
   return FILE.test(file) ? file : null
 }
+// A picture drawn from a file's diagram, chart or figure (not a photo) is stored with a "fig-" name, so dark mode can turn its dark lines light
+export const DIAGRAM_PREFIX = 'fig-'
+export const isDiagramToken = (src: unknown): boolean => tokenFile(src)?.startsWith(DIAGRAM_PREFIX) ?? false
 export const imagePath = (userId: string, file: string) => `${userId}/${file}`
 
 const IMAGE = /!\[([^\]]*)\]\((studyhub-image:[^)\s]*)\)/g

@@ -57,3 +57,12 @@ describe('keeping an uploaded file\'s pictures', () => {
     expect(mediaType('image2.emf')).toBe('image/emf')
   })
 })
+
+describe('diagram pictures', () => {
+  it('are told apart by their file name, so dark mode can light their lines', async () => {
+    const { isDiagramToken } = await import('@/lib/notes/images')
+    expect(isDiagramToken('studyhub-image:fig-abc123.webp')).toBe(true)
+    expect(isDiagramToken('studyhub-image:abc123.webp')).toBe(false)
+    expect(isDiagramToken('https://x.test/fig-1.png')).toBe(false)
+  })
+})

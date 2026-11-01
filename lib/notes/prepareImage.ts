@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { IMAGE_BUCKET, imagePath, toToken } from './images'
+import { DIAGRAM_PREFIX, IMAGE_BUCKET, imagePath, toToken } from './images'
 
 export const MAX_SIDE = 1600
 export const MAX_BYTES = 5 * 1024 * 1024
@@ -43,8 +43,8 @@ export async function prepareImage(file: Blob, io: ImageIo = browserImageIo): Pr
 }
 
 // Stores a picture in the student's own folder and gives back the token to write in the note
-export async function uploadNoteImage(sb: SupabaseClient, userId: string, blob: Blob): Promise<string> {
-  const file = `${crypto.randomUUID()}.${EXT[blob.type] ?? 'png'}`
+export async function uploadNoteImage(sb: SupabaseClient, userId: string, blob: Blob, diagram = false): Promise<string> {
+  const file = `${diagram ? DIAGRAM_PREFIX : ''}${crypto.randomUUID()}.${EXT[blob.type] ?? 'png'}`
   const { error } = await sb.storage.from(IMAGE_BUCKET).upload(imagePath(userId, file), blob, { contentType: blob.type })
   if (error) throw error
   return toToken(file)
