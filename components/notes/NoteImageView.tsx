@@ -3,7 +3,8 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { Trash2 } from 'lucide-react'
 import { NoteImagesContext } from './NoteImagesContext'
-import { isDiagramToken, isImageToken } from '@/lib/notes/images'
+import { isImageToken } from '@/lib/notes/images'
+import { useIsDiagram } from '@/lib/notes/diagramLook'
 
 /* eslint-disable @next/next/no-img-element -- signed links, not optimisable by next/image */
 const isWeb = (src: string) => /^https?:\/\//i.test(src)
@@ -24,6 +25,7 @@ export function NoteImageView({ node, selected, deleteNode }: NodeViewProps) {
     return () => { live = false }
   }, [src, ctx, safe])
   const url = safe && got?.src === src ? got.url : null
+  const diagram = useIsDiagram(src, url)
   const box = useRef<HTMLDivElement>(null)
   const [focused, setFocused] = useState(false)
   const shown = selected || focused
@@ -38,7 +40,7 @@ export function NoteImageView({ node, selected, deleteNode }: NodeViewProps) {
           if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteNode() }
         }}>
         {url
-          ? <img src={url} alt={alt} draggable={false} data-diagram={isDiagramToken(src) || undefined} className={`max-w-full rounded-lg ${shown ? 'ring-2 ring-[var(--accent-solid)]' : ''}`} />
+          ? <img src={url} alt={alt} draggable={false} data-diagram={diagram || undefined} className={`max-w-full rounded-lg ${shown ? 'ring-2 ring-[var(--accent-solid)]' : ''}`} />
           : <div className="rounded-lg bg-surface px-4 py-8 text-sm text-muted">{alt || 'Picture'}</div>}
         {shown && (
           <div contentEditable={false} className="absolute right-2 top-2 flex gap-1 rounded-xl border border-line bg-raised p-1 shadow-md">

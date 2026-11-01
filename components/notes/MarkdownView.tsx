@@ -6,7 +6,8 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import { remarkMarkup } from '@/lib/notes/markup'
 import { supabase } from '@/lib/supabase/client'
-import { isDiagramToken, isImageToken, makeImageResolver } from '@/lib/notes/images'
+import { isImageToken, makeImageResolver } from '@/lib/notes/images'
+import { useIsDiagram } from '@/lib/notes/diagramLook'
 import { NoteImagesContext } from './NoteImagesContext'
 
 // react-markdown drops addresses it does not know, so a studyhub-image: token is let through here and drawn from its signed link
@@ -38,9 +39,10 @@ function NotePicture({ src, alt }: { src: string; alt: string }) {
       .catch(() => { if (live) setGot({ src, url: null }) })
     return () => { live = false }
   }, [src, ctx])
-  if (!isImageToken(src)) return /^https?:\/\//i.test(src) ? <img src={src} alt={alt} className="max-w-full rounded-lg" /> : <span>{alt}</span>
   const url = got?.src === src ? got.url : null
-  return url ? <img src={url} alt={alt} data-diagram={isDiagramToken(src) || undefined} className="max-w-full rounded-lg" /> : <span className="text-muted" data-pending-image={got?.src === src ? undefined : 'true'}>{alt || 'Picture'}</span>
+  const diagram = useIsDiagram(src, url)
+  if (!isImageToken(src)) return /^https?:\/\//i.test(src) ? <img src={src} alt={alt} className="max-w-full rounded-lg" /> : <span>{alt}</span>
+  return url ? <img src={url} alt={alt} data-diagram={diagram || undefined} className="max-w-full rounded-lg" /> : <span className="text-muted" data-pending-image={got?.src === src ? undefined : 'true'}>{alt || 'Picture'}</span>
 }
 
 // Defined once: a new components object each render would make every picture start over
