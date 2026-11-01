@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronRight, Flame, FolderOpen, Layers, Mic, NotebookPen, Pencil, ListChecks, Settings, Star, Timer, Trophy, Zap, type LucideIcon } from 'lucide-react'
+import { BarChart3, Check, ChevronRight, FolderOpen, Layers, Mic, NotebookPen, Pencil, ListChecks, Settings, Star, Trophy, type LucideIcon } from 'lucide-react'
 import { Avatar } from '@/components/profile/Avatar'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { ShareProgressButton } from '@/components/share/ShareProgress'
@@ -16,9 +16,7 @@ import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 import type { Stats } from '@/lib/profile/stats'
 import type { Course } from '@/lib/types'
 
-const TILE_ICON: Record<string, LucideIcon> = { Level: Trophy, Streak: Flame, 'Best streak': Flame, 'Focus time': Timer, Notes: NotebookPen, Flashcards: Layers, Lectures: Mic, 'Quizzes finished': ListChecks }
-const fmtMinutes = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
-const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
+const TILE_ICON: Record<string, LucideIcon> = { Notes: NotebookPen, Flashcards: Layers, Lectures: Mic, 'Quizzes finished': ListChecks }
 const longDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 
 // Who the student is and what they have done
@@ -67,10 +65,10 @@ export default function ProfilePage() {
   }
 
   const sub = [profile.programme, profile.school].filter(Boolean).join(' · ')
-  const tiles: [string, string, 'a' | 'b' | 'c'][] = [
-    ...(xp ? [['Streak', days(xp.streak), 'a'], ['Best streak', days(xp.best), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
-    ...(stats ? [['Focus time', fmtMinutes(stats.focus_minutes), 'c'], ['Notes', String(stats.notes), 'b'], ['Flashcards', String(stats.cards), 'a'], ['Lectures', String(stats.lectures), 'c'], ['Quizzes finished', String(stats.quizzes_done), 'b']] as [string, string, 'a' | 'b' | 'c'][] : []),
-  ]
+  // What the student has made. How they are doing (level, streaks, focus, retention) is on Progress, which the card above links to.
+  const tiles: [string, string, 'a' | 'b' | 'c'][] = stats
+    ? [['Notes', String(stats.notes), 'b'], ['Flashcards', String(stats.cards), 'a'], ['Lectures', String(stats.lectures), 'c'], ['Quizzes finished', String(stats.quizzes_done), 'a']]
+    : []
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -85,6 +83,7 @@ export default function ProfilePage() {
             {email && <p className="text-sm text-muted max-md:text-white/80">{email}</p>}
             <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted max-md:justify-center max-md:text-white/80">
               {joined && <span>Member since {joined.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}</span>}
+              {xp && <Link href="/progress" className="inline-flex items-center gap-0.5 font-medium text-accent max-md:text-white">Level {xp.level.level} · {xp.streak}-day streak<ChevronRight size={13} aria-hidden /></Link>}
               {plan.billing && !plan.loading && <span className="font-medium text-accent max-md:text-white">{plan.isPremium && plan.premiumUntil ? `Premium until ${longDate(plan.premiumUntil)}` : 'Free plan'}</span>}
             </p>
           </div>
@@ -128,31 +127,12 @@ export default function ProfilePage() {
       )}
 
       <section aria-labelledby="totals-title" className="space-y-3">
-        <h2 id="totals-title" className="section-label !mb-0">Your study so far</h2>
+        <h2 id="totals-title" className="section-label !mb-0">What you&apos;ve made</h2>
         {statsFailed && <p role="alert" className="text-sm text-danger">Could not load your study totals. Check your connection.</p>}
-        {(tiles.length > 0 || xp) && (
-        <div className="card space-y-5">
-        {xp && (
-          <div className="flex items-center gap-4">
-            <div data-testid="level-ring" aria-hidden="true" className="relative flex size-20 shrink-0 items-center justify-center text-3xl font-semibold">
-              <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0 -rotate-90">
-                <circle cx="40" cy="40" r="35" fill="none" stroke="var(--surface)" strokeWidth="7" />
-                <circle cx="40" cy="40" r="35" fill="none" stroke="var(--accent-solid)" strokeWidth="7" strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 35} strokeDashoffset={2 * Math.PI * 35 * (1 - xp.level.into / xp.level.span)} />
-              </svg>
-              {xp.level.level}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2"><span className="flex items-center gap-1.5 text-lg font-semibold"><Zap size={16} className="text-accent" aria-hidden="true" />Level {xp.level.level}</span><span className="text-sm text-muted">{xp.total} XP in all</span></div>
-              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`}>
-                <div className="h-2.5 rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
-              </div>
-              <p className="mt-1 text-xs text-muted">{xp.level.toNext} XP to level {xp.level.level + 1}</p>
-            </div>
-          </div>
-        )}
         {tiles.length > 0 && (
-          <ul aria-label="Study totals" className={`grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4 ${xp ? 'border-t border-line pt-5' : ''}`}>
+        <div className="card space-y-5">
+        {tiles.length > 0 && (
+          <ul aria-label="Study totals" className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4">
             {tiles.map(([label, value, tone]) => (
               <li key={label} className="flex items-center gap-3">
                 {(() => { const Icon = TILE_ICON[label] ?? Star; return <span aria-hidden="true" className={`tile-${tone} flex size-11 shrink-0 items-center justify-center rounded-2xl border border-line`}><Icon size={22} className="text-accent" aria-hidden="true" /></span> })()}
@@ -191,7 +171,7 @@ export default function ProfilePage() {
       </p>
       {/* on a phone, the Leaderboard and the same two places as a list of rows */}
       <nav aria-label="More" className="card !p-2 md:hidden">
-        {([['/leaderboard', 'Leaderboard', Trophy], ['/settings', 'Settings', Settings], ['/library', 'Library', FolderOpen]] as const).map(([href, label, Icon]) => (
+        {([['/progress', 'Progress', BarChart3], ['/leaderboard', 'Leaderboard', Trophy], ['/settings', 'Settings', Settings], ['/library', 'Library', FolderOpen]] as const).map(([href, label, Icon]) => (
           <Link key={href} href={href} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-[15px] font-medium transition active:bg-surface">
             <span aria-hidden className="grid size-9 place-items-center rounded-full bg-surface text-muted"><Icon size={18} /></span>{label}
             <ChevronRight size={18} className="ml-auto text-muted" aria-hidden />
