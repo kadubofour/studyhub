@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { signUp, noteWithText } from './helpers'
+import { signUp, noteWithText, quizFromFlashcards } from './helpers'
 
 test('start a quiz from Home, answer with the keyboard, review the results and retake the ones missed', async ({ page, isMobile }) => {
   test.setTimeout(150_000)
@@ -57,11 +57,11 @@ test('start a quiz from Home, answer with the keyboard, review the results and r
 test('the Quiz dialog opens from the Quiz page, Flashcards and Library too', async ({ page }) => {
   await signUp(page)
   await page.goto('/quiz')
-  await page.getByRole('button', { name: 'Make your first quiz' }).click()
+  await page.getByRole('button', { name: /Make your first quiz|^New quiz$/ }).click()
   await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.goto('/flashcards')
-  await page.getByRole('main').getByRole('button', { name: 'Quiz' }).click()
+  await quizFromFlashcards(page)
   await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()
   await expect(page.getByText(/You have no notes yet/)).toBeVisible()
 })
@@ -75,7 +75,7 @@ test('the Quiz dialog, the player and the results have no serious accessibility 
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/flashcards')
-  await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
+  await quizFromFlashcards(page)
   const dialog = page.getByRole('dialog', { name: 'Quiz yourself' })
   await dialog.getByRole('radio', { name: /Krebs cycle/ }).click()
   expect(await problems('dialog')).toEqual([])

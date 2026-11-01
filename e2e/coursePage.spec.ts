@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp, listAction, startLibrarySelect } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect, openCoursePageFromLibrary } from './helpers'
 
 test('Course page: gathers a course material, and opens from Library', async ({ page }) => {
   await signUp(page)
@@ -19,7 +19,7 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
   await expect(page.getByText('Moved 2 items.')).toBeVisible()
 
   await page.getByRole('button', { name: 'Biology', exact: true }).click()
-  await page.getByRole('link', { name: 'Open course page' }).click()
+  await openCoursePageFromLibrary(page)
   await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 }) // the first visit compiles the page in the dev server
   await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()
   await expect(page.getByText('1 note · 1 deck')).toBeVisible()

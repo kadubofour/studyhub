@@ -130,19 +130,20 @@ test('the drawing can be undone, and its tools have no serious accessibility pro
   const box = (await page.locator('canvas[data-ink]').boundingBox())!
   await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 100, { steps: 8 }); await page.mouse.up()
   await expect.poll(() => inkPixels(page)).toBeGreaterThan(100)
-  await bar.getByRole('button', { name: 'Undo' }).click()
+  await bar.getByRole('button', { name: 'Undo' }).dispatchEvent('click') // the dev-only Next.js badge can sit over it on a phone
   await expect.poll(() => inkPixels(page)).toBe(0)
 })
 
-test('draw with another brush and a custom thickness, and rub out part of a stroke without taking the whole stroke', async ({ page }) => {
+test('draw with another brush and a custom thickness, and rub out part of a stroke without taking the whole stroke', async ({ page, isMobile }) => {
   await signUp(page)
   await newNote(page, 'Brushes')
   // Draw sits among the other tools in the editor's toolbar
-  await expect(page.getByRole('button', { name: 'Image' })).toBeVisible()
+  if (!isMobile) await expect(page.getByRole('button', { name: 'Image' })).toBeVisible() // a phone has Draw in the top bar
   await page.getByRole('button', { name: 'Draw', exact: true }).click()
+  // the dev-only Next.js badge can sit over the bar on a phone, so its buttons are pressed directly
   const bar = page.getByRole('group', { name: 'Draw on the note' })
   await expect(bar).toBeVisible()
-  await bar.getByRole('button', { name: 'Marker' }).click()
+  await bar.getByRole('button', { name: 'Marker' }).dispatchEvent('click')
   await bar.getByRole('slider', { name: 'Thickness' }).fill('18')
   const box = (await page.locator('canvas[data-ink]').boundingBox())!
   await page.mouse.move(box.x + 40, box.y + 320); await page.mouse.down(); await page.mouse.move(box.x + 300, box.y + 320, { steps: 12 }); await page.mouse.up()
@@ -150,22 +151,23 @@ test('draw with another brush and a custom thickness, and rub out part of a stro
   const whole = await inkPixels(page)
 
   // The rubber takes a bite out of the middle: less ink, but not none
-  await bar.getByRole('button', { name: 'Rub out' }).click()
+  await bar.getByRole('button', { name: 'Rub out' }).dispatchEvent('click')
   await page.mouse.move(box.x + 170, box.y + 320); await page.mouse.down(); await page.mouse.move(box.x + 190, box.y + 320, { steps: 4 }); await page.mouse.up()
   await expect.poll(() => inkPixels(page)).toBeLessThan(whole * 0.9)
   expect(await inkPixels(page)).toBeGreaterThan(whole * 0.4)
 
   // One Undo puts the whole rub-out back
-  await bar.getByRole('button', { name: 'Undo' }).click()
+  await bar.getByRole('button', { name: 'Undo' }).dispatchEvent('click')
   await expect.poll(() => inkPixels(page)).toBeGreaterThan(whole * 0.97)
 
   // The other eraser takes the stroke away completely
-  await bar.getByRole('button', { name: 'Erase whole stroke' }).click()
+  await bar.getByRole('button', { name: 'Erase whole stroke' }).dispatchEvent('click')
   await page.mouse.click(box.x + 100, box.y + 320)
   await expect.poll(() => inkPixels(page)).toBe(0)
 })
 
-test('right-click the Highlight button to change its colour', async ({ page }) => {
+test('right-click the Highlight button to change its colour', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the colour menu is on the computer toolbar; a phone highlights in the current colour')
   await signUp(page)
   await newNote(page, 'Colours')
   await page.getByLabel('Note', { exact: true }).click()

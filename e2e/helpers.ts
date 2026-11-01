@@ -180,3 +180,15 @@ export async function noteMenuInList(page: Page, title: string) {
   if (await onPhone(page)) await page.getByRole('link', { name: new RegExp(title) }).first().click({ button: 'right' })
   else await page.getByRole('button', { name: new RegExp(`More actions for ${title}`) }).click()
 }
+
+// Library, with a course picked: its course page is a link on a computer and an item in the ⋯ menu on a phone
+export async function openCoursePageFromLibrary(page: Page) {
+  if (await onPhone(page)) await listAction(page, 'Library options', 'Open course page')
+  else await page.getByRole('link', { name: 'Open course page' }).click()
+}
+
+// The Quiz button on the Flashcards page: in the page on a computer, in its ⋯ menu on a phone
+export async function quizFromFlashcards(page: Page) {
+  if (await onPhone(page)) await listAction(page, 'Practice options', 'Quiz')
+  else await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
+}
