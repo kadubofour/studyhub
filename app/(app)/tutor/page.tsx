@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AudioLines, BookOpenCheck, ClipboardList, FileText, HelpCircle, MessageSquarePlus, MessagesSquare } from 'lucide-react'
+import { AudioLines, MessageSquarePlus, MessagesSquare } from 'lucide-react'
+import { STARTER_ICONS } from '@/components/tutor/starterIcons'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -20,7 +21,6 @@ import { groupByDate, rowDate } from '@/lib/notes/noteRows'
 import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-const ICONS = { explain: HelpCircle, quiz: ClipboardList, revise: BookOpenCheck, summarise: FileText } as const
 
 export default function TutorPage() {
   const router = useRouter()
@@ -80,7 +80,7 @@ export default function TutorPage() {
           <PhoneHeading>Start with</PhoneHeading>
           <ul className="no-scrollbar -mx-5 flex gap-2.5 overflow-x-auto px-5 pb-1">
             {STARTERS.map(s => {
-              const Icon = ICONS[s.id as keyof typeof ICONS]
+              const Icon = STARTER_ICONS[s.id as keyof typeof STARTER_ICONS]
               return (
                 <li key={s.id} className="w-36 shrink-0">
                   <button type="button" onClick={() => setPicking({ starter: s.id })} className="flex h-full w-full flex-col items-start gap-1 rounded-2xl bg-raised p-3 text-left active:bg-surface">
@@ -115,7 +115,7 @@ export default function TutorPage() {
 
       <section aria-label="Ways to start" className="mb-5 grid grid-cols-2 gap-2 lg:grid-cols-4">
         {STARTERS.map(s => {
-          const Icon = ICONS[s.id as keyof typeof ICONS]
+          const Icon = STARTER_ICONS[s.id as keyof typeof STARTER_ICONS]
           return (
             <button key={s.id} type="button" onClick={() => setPicking({ starter: s.id })}
               className="card flex flex-col items-start gap-1 !p-3.5 text-left transition hover:border-accent">

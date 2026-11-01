@@ -146,3 +146,28 @@ describe('Study plan panel', () => {
     expect(reload).toHaveBeenCalled()
   })
 })
+
+describe('Study plan panel look', () => {
+  it('shows today as a count and a progress bar, and the days ahead each with its date and length', async () => {
+    views = [view({ today: [
+      { id: 's1', topic_id: 't1', kind: 'learn', minutes: 25, done_at: '2026-10-12T08:00:00Z', topicName: 'Krebs cycle', noteId: 'n1' },
+      { id: 's2', topic_id: 't2', kind: 'revise', minutes: 15, done_at: null, topicName: 'Glycolysis', noteId: 'n2' },
+    ] })]
+    await open()
+    const panel = within(screen.getByRole('region', { name: 'Study plan' }))
+    expect(panel.getByText('1 of 2 done')).toBeTruthy()
+    const bar = panel.getByRole('progressbar', { name: "Today's progress" })
+    expect(bar.getAttribute('aria-valuenow')).toBe('1')
+    expect(bar.getAttribute('aria-valuemax')).toBe('2')
+    const day = panel.getByRole('listitem', { name: 'Tue 13 Oct' })
+    expect(day.textContent).toMatch(/Learn: Glycolysis \(25 min\)/)
+    expect(day.textContent).toMatch(/25 min$/)
+  })
+  it('does not repeat the course on its own plan, and offers a course without a plan as a tile', async () => {
+    views = [view()]
+    await open()
+    const panel = within(screen.getByRole('region', { name: 'Study plan' }))
+    expect(panel.getAllByText('Biology')).toHaveLength(1) // the card's heading, not again on each session
+    expect(panel.getByRole('button', { name: 'Make a study plan for Chemistry' }).textContent).toContain('Chemistry')
+  })
+})
