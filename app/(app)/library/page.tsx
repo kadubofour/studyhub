@@ -156,7 +156,7 @@ export default function LibraryPage() {
     try {
       const n = await moveItems(supabase(), picked.map(i => ({ kind: i.kind, id: i.id })), target === 'none' ? null : target)
       toast(n === wanted ? `Moved ${plural(n, 'item')}.` : n === 0 ? 'Nothing was moved. Those items had changed.' : `Moved ${n} of ${plural(wanted, 'item')}. The others had changed.`)
-      setSelected(new Set()); setTarget('')
+      setSelected(new Set()); setTarget(''); setSelecting(false) // a phone leaves Select once the move is done
     } catch { toast('Could not move those items.') }
     await load()
     setMoving(false)
@@ -169,7 +169,7 @@ export default function LibraryPage() {
     try {
       await moveNotes(supabase(), ids, book?.id ?? null)
       toast(book ? `Moved ${plural(ids.length, 'note')} to ${book.name}.` : `Took ${plural(ids.length, 'note')} out of their notebook.`)
-      setSelected(new Set())
+      setSelected(new Set()); setSelecting(false)
     } catch { toast('Could not move those notes.') }
     await load()
   }

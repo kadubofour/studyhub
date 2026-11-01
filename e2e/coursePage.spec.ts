@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect } from './helpers'
 
 test('Course page: gathers a course material, and opens from Library', async ({ page }) => {
   await signUp(page)
@@ -12,6 +12,7 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
 
   await page.goto('/library')
   await page.getByRole('button', { name: 'Unsorted' }).click()
+  await startLibrarySelect(page)
   await page.getByRole('checkbox', { name: 'Select all shown' }).check()
   await page.getByRole('radiogroup', { name: 'Move to' }).getByRole('radio', { name: 'Biology' }).click()
   await page.getByRole('button', { name: 'Move', exact: true }).click()

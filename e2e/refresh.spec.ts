@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { noteFileAction, signUp, switchToMarkdown, noteSaved, create } from './helpers'
+import { noteFileAction, signUp, switchToMarkdown, noteSaved, create, listAction, tickOf } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -103,13 +103,13 @@ test('select notes and export just those as a PDF', async ({ page, context }) =>
   await signUp(page)
   for (const title of ['Alpha note', 'Beta note']) {
     await page.goto('/notes')
-    await page.getByRole('button', { name: /Write your first note|^Note$/ }).first().click()
+    await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click()
     await page.getByLabel('Title').fill(title)
     await noteSaved(page)
   }
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Select' }).click()
-  await page.getByRole('checkbox', { name: 'Select Beta note' }).click()
+  await listAction(page, 'Notes options', 'Select', 'Select notes')
+  await tickOf(page, 'Beta note').click()
   await page.getByRole('button', { name: 'Export selected' }).click()
   const popup = context.waitForEvent('page')
   await page.getByRole('menuitem', { name: 'PDF' }).click()

@@ -157,3 +157,26 @@ export async function chatOption(page: Page, computerName: string, phoneName = c
     }).toPass({ timeout: 20_000 })
   } else await page.getByRole('button', { name: computerName }).click()
 }
+
+// An action on a list page: a button on a computer; a phone keeps it in the page's ⋯ menu (Notes options, Library options…),
+// where it can be worded differently
+export async function listAction(page: Page, menuLabel: string, computerName: string, phoneName = computerName) {
+  if (await onPhone(page)) {
+    await page.getByRole('button', { name: menuLabel }).click()
+    await page.getByRole('menu', { name: menuLabel }).getByRole('menuitem', { name: phoneName }).click()
+  } else await page.getByRole('button', { name: computerName, exact: true }).click()
+}
+
+// The Library's items are tickable at once on a computer; a phone ticks only after Select in its menu
+export async function startLibrarySelect(page: Page) {
+  if (await onPhone(page)) await listAction(page, 'Library options', 'Select')
+}
+
+// The tick for a list item: "Select <title>" on a computer; on a phone the whole row is the checkbox, named by its title
+export const tickOf = (page: Page, title: string) => page.getByRole('checkbox', { name: new RegExp(`^(Select )?${title}$`) })
+
+// A note's own menu in a list: its ⋯ button on a computer; a phone opens it by pressing and holding the row (a right click)
+export async function noteMenuInList(page: Page, title: string) {
+  if (await onPhone(page)) await page.getByRole('link', { name: new RegExp(title) }).first().click({ button: 'right' })
+  else await page.getByRole('button', { name: new RegExp(`More actions for ${title}`) }).click()
+}

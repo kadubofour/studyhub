@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { noteWithText, signUp } from './helpers'
+import { noteWithText, signUp, listAction, startLibrarySelect } from './helpers'
 
 test('Library: find loose material under Unsorted, move it into a course, and see it there', async ({ page }) => {
   await signUp(page)
@@ -18,6 +18,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
 
   await page.getByRole('button', { name: 'Unsorted' }).click()
   await expect(page.getByText('2 items')).toBeVisible()
+  await startLibrarySelect(page)
   await page.getByRole('checkbox', { name: 'Select all shown' }).check()
   await expect(page.getByText('2 selected')).toBeVisible()
   await page.getByRole('radiogroup', { name: 'Move to' }).getByRole('radio', { name: 'Biology' }).click()
