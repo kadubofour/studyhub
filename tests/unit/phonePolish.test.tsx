@@ -125,9 +125,10 @@ describe('Notes filters on a phone', () => {
 
 describe('Library filters on a phone', () => {
   const src = () => fs.readFileSync('app/(app)/library/page.tsx', 'utf8')
-  it('sort and layout share one row under the search', () => {
-    expect(src()).toContain('<div className="relative min-w-48 flex-1 max-sm:basis-full">')
-    expect(src()).toContain('<div data-filter-row className="no-scrollbar flex items-center gap-2 overflow-x-auto max-sm:w-full max-sm:justify-between [&>*]:shrink-0">')
+  it('a phone has its own search, and a computer a column of search, kinds and order that stays in view', () => {
+    expect(src()).toContain('{phone && <PhoneSearch label="Search the library"')
+    expect(src()).toContain('<aside aria-label="Find and filter" className="mb-5 space-y-5 lg:sticky lg:top-6 lg:mb-0 lg:self-start">')
+    expect(src()).toContain('<div data-filter-row className="flex flex-wrap items-center gap-2">')
   })
   it('the kinds are one row that scrolls sideways, not two', () => {
     expect(src()).toContain('<div role="group" aria-label="Kinds" className="no-scrollbar -mx-5 mb-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">')

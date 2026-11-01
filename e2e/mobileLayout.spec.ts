@@ -101,7 +101,7 @@ test('the page names itself, and the floating dock is a pill of five places and 
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await expect(page.getByRole('banner')).not.toContainText('Home')
   const bar = page.getByRole('navigation', { name: 'Main' })
-  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Flashcards', 'Tutor'])
+  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Practice', 'Tutor'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
   expect(box.width).toBeLessThanOrEqual(300) // a pill that hugs its icons
@@ -109,10 +109,10 @@ test('the page names itself, and the floating dock is a pill of five places and 
   // Each place is at least 44 px across (a comfortable tap)
   const items = await bar.locator('a, button').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, w: r.width, scroll: (e as HTMLElement).scrollWidth, label: e.textContent } }))
   for (const i of items) { expect(i.w, i.label ?? '').toBeGreaterThanOrEqual(44); expect(i.x).toBeGreaterThanOrEqual(0); expect(i.right).toBeLessThanOrEqual(375.5); expect(i.scroll, i.label ?? '').toBeLessThanOrEqual(Math.ceil(i.w)) }
-  await bar.getByRole('link', { name: 'Flashcards' }).dispatchEvent('click')
+  await bar.getByRole('link', { name: 'Practice' }).dispatchEvent('click')
   await expect(page).toHaveURL(/\/flashcards/)
-  await expect(page.getByRole('heading', { name: 'Flashcards', level: 1 })).toBeVisible()
-  await expect(bar.getByRole('link', { name: 'Flashcards' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { name: 'Practice', level: 1 })).toBeVisible()
+  await expect(bar.getByRole('link', { name: 'Practice' })).toHaveAttribute('aria-current', 'page')
   expect(await sideways(page)).toBeLessThanOrEqual(0)
   // What the dock leaves out is in Search or jump
   await page.goto('/home')

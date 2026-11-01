@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AudioLines, MessageSquarePlus, MessagesSquare } from 'lucide-react'
-import { STARTER_ICONS } from '@/components/tutor/starterIcons'
+import { StarterChips } from '@/components/tutor/StarterChips'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -16,7 +16,7 @@ import { createChat, listChatContexts, listChats, type TutorChat } from '@/lib/d
 import { aboutLine, filterChats, type ChatContext } from '@/lib/tutor/chatList'
 import { STARTERS, starterMessage } from '@/lib/tutor/starters'
 import type { Course } from '@/lib/types'
-import { ChatMark, ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneHeading, PhoneRow, PhoneSearch, PhoneTitle, tick } from '@/components/ui/PhoneList'
+import { ChatMark, ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneRow, PhoneSearch, PhoneTitle, tick } from '@/components/ui/PhoneList'
 import { groupByDate, rowDate } from '@/lib/notes/noteRows'
 import { showsComputer, showsPhone, useScreen } from '@/lib/ui/useScreen'
 
@@ -76,22 +76,8 @@ export default function TutorPage() {
         ]} />
         {failed && <p role="alert" className="mb-3 text-sm text-danger">Couldn&apos;t start a chat. Check your connection and try again.</p>}
         <PhoneSearch label="Search chats" value={q} onChange={setQ} />
-        <section aria-label="Ways to start" className="mb-6">
-          <PhoneHeading>Start with</PhoneHeading>
-          <ul className="no-scrollbar -mx-5 flex gap-2.5 overflow-x-auto px-5 pb-1">
-            {STARTERS.map(s => {
-              const Icon = STARTER_ICONS[s.id as keyof typeof STARTER_ICONS]
-              return (
-                <li key={s.id} className="w-36 shrink-0">
-                  <button type="button" onClick={() => setPicking({ starter: s.id })} className="flex h-full w-full flex-col items-start gap-1 rounded-2xl bg-raised p-3 text-left active:bg-surface">
-                    <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon size={16} /></span>
-                    <span className="text-[15px] font-semibold leading-snug">{s.title}</span>
-                    <span className="text-[13px] leading-snug text-muted">{s.hint}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+        <section aria-label="Ways to start" className="mb-5">
+          <StarterChips label="Start with" onPick={st => setPicking({ starter: st.id })} />
         </section>
         {chats?.length === 0 && <PhoneEmpty>No chats yet. Pick a way to start above, or tap the button below.</PhoneEmpty>}
         {chats && chats.length > 0 && phoneShown.length === 0 && <PhoneEmpty>No chats match.</PhoneEmpty>}
@@ -113,20 +99,10 @@ export default function TutorPage() {
       </>} />
       {failed && <p role="alert" className="mb-3 text-sm text-danger">Couldn&apos;t start a chat. Check your connection and try again.</p>}
 
-      <section aria-label="Ways to start" className="mb-5 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {STARTERS.map(s => {
-          const Icon = STARTER_ICONS[s.id as keyof typeof STARTER_ICONS]
-          return (
-            <button key={s.id} type="button" onClick={() => setPicking({ starter: s.id })}
-              className="card flex flex-col items-start gap-1 !p-3.5 text-left transition hover:border-accent">
-              <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Icon size={16} /></span>
-              <span className="text-sm font-medium">{s.title}</span>
-              <span className="text-xs text-muted">{s.hint}</span>
-            </button>
-          )
-        })}
+      <section aria-label="Ways to start" className="mb-5 space-y-1.5">
+        <StarterChips label="Start with" onPick={st => setPicking({ starter: st.id })} />
+        <p className="text-xs text-muted">Pick one, then what it is about. The message is ready for you to change and send.</p>
       </section>
-      <p className="-mt-3 mb-5 text-xs text-muted">Pick one, then what it is about. The message is ready for you to change and send.</p>
 
       {chats !== null && chats.length > 0 && withChats.length > 1 && (
         <ChoiceChips label="Course" size="sm" className="mb-3" value={courseId} options={[{ value: '', label: 'All courses' }, ...withChats.map(c => ({ value: c.id, label: c.name, color: c.color }))]} onChange={setCourseId} />

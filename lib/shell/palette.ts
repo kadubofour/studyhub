@@ -7,6 +7,8 @@ export interface PaletteItem {
   hint?: string
   /** Other words it can be found by */
   keywords?: string
+  /** What it used to be called, or another name for it: typed, it ranks like the label does (Practice, once Flashcards) */
+  alias?: string
   run: { href: string } | { action: string }
 }
 
@@ -20,9 +22,10 @@ export function filterPalette(items: PaletteItem[], query: string): PaletteItem[
   if (!words.length) return [...items].sort(byGroup)
   const scored = items.flatMap((item, i) => {
     const label = plain(item.label)
-    const all = `${label} ${plain(item.keywords ?? '')}`
+    const all = `${label} ${plain(item.alias ?? '')} ${plain(item.keywords ?? '')}`
     if (!words.every(w => all.includes(w))) return []
-    const rank = label.startsWith(words[0]) ? 0 : label.split(/\s+/).some(w => w.startsWith(words[0])) ? 1 : 2
+    const named = plain(item.alias ?? '').split(/\s+/).some(w => w && w.startsWith(words[0]))
+    const rank = label.startsWith(words[0]) || named ? 0 : label.split(/\s+/).some(w => w.startsWith(words[0])) ? 1 : 2
     return [{ item, rank, i }]
   })
   // the best matches first, whatever their group; ties keep the usual order of groups and items

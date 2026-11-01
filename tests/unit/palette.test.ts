@@ -36,3 +36,14 @@ describe('filterPalette', () => {
     expect(labels('zzzz')).toEqual([])
   })
 })
+
+describe('an alias', () => {
+  it('ranks a page by its old name as it would by its label, ahead of a keyword match in another group', () => {
+    const list: PaletteItem[] = [
+      { id: 'do:deck', group: 'Do', label: 'New deck', keywords: 'flashcards cards', run: { action: 'deck' } },
+      { id: 'go:practice', group: 'Go to', label: 'Practice', alias: 'Flashcards Quizzes', run: { href: '/flashcards' } },
+    ]
+    expect(filterPalette(list, 'flash').map(i => i.label)).toEqual(['Practice', 'New deck'])
+    expect(filterPalette(list, 'quizz').map(i => i.label)).toEqual(['Practice'])
+  })
+})

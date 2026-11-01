@@ -130,3 +130,27 @@ describe('loadLibrary reads past one page', () => {
     expect(items.filter(i => i.kind === 'chat')).toHaveLength(1100)
   })
 })
+
+describe('what is inside, in a line', () => {
+  const rows = {
+    notes: [
+      { id: 'n1', course_id: 'bio', title: 'Krebs', updated_at: '2026-10-10T10:00:00Z', preview: '  The Krebs cycle\n runs in the   matrix.  ' },
+      { id: 'n2', course_id: null, title: 'Empty', updated_at: '2026-10-09T10:00:00Z', preview: '' },
+      { id: 'n3', course_id: null, title: '', updated_at: '2026-10-08T10:00:00Z', preview: null },
+    ],
+    decks: [], cards: [], lectures: [], chats: [], tutor_chats: [], materials: [],
+    quizzes: [{ id: 'q1', note_id: 'n1', title: 'Krebs quiz', created_at: '2026-10-10T12:00:00Z' }, { id: 'q3', note_id: 'n3', title: 'Quiz', created_at: '2026-10-10T13:00:00Z' }],
+  }
+  it('gives a note its first words on one line, and nothing when it has none', async () => {
+    const items = await loadLibrary(client(rows).sb, NOW)
+    const note = (id: string) => items.find(i => i.kind === 'note' && i.id === id)!
+    expect(note('n1').blurb).toBe('The Krebs cycle runs in the matrix.')
+    expect(note('n2').blurb).toBeUndefined()
+    expect(note('n3').blurb).toBeUndefined()
+  })
+  it('says which note a quiz is from', async () => {
+    const items = await loadLibrary(client(rows).sb, NOW)
+    expect(items.find(i => i.id === 'q1')!.blurb).toBe('From Krebs')
+    expect(items.find(i => i.id === 'q3')!.blurb).toBe('From Untitled')
+  })
+})

@@ -37,8 +37,8 @@ describe('empty states', () => {
 })
 
 describe('Library filters on a phone', () => {
-  it('sort and layout stay on one row, scrolling sideways if they must', () => {
-    expect(src('app/(app)/library/page.tsx')).toContain('<div data-filter-row className="no-scrollbar flex items-center gap-2 overflow-x-auto max-sm:w-full max-sm:justify-between [&>*]:shrink-0">')
+  it('sort and layout stay together in the column beside the items, wrapping rather than scrolling', () => {
+    expect(src('app/(app)/library/page.tsx')).toContain('<div data-filter-row className="flex flex-wrap items-center gap-2">')
     expect(src('app/(app)/library/page.tsx')).toContain('className="flex-nowrap"')
   })
 })

@@ -65,7 +65,7 @@ export default function FlashcardsPage() {
     <div>
       {phone && <div className="md:hidden">{phone}</div>}
       {showsComputer(screen) && <div className="max-md:hidden">
-      <PageHeader title="Flashcards" actions={<>
+      <PageHeader title="Practice" actions={<>
         {totalDue > 0 && <Link href="/review" className="btn-primary">Review all ({totalDue})</Link>}
         <button className="btn" onClick={requestQuiz}><ListChecks size={14} aria-hidden />Quiz</button>
         {/* one ink button per header, as on every page: Review all when cards are due, otherwise making a deck */}
@@ -125,7 +125,7 @@ function PhoneDecks({ decks, courses, sort, onSort, onNew }: { decks: DeckWithDu
   ]
   return (
     <div className="pb-24">
-      <PhoneTitle title="Flashcards" menuLabel="Flashcards options" menu={menu} />
+      <PhoneTitle title="Practice" menuLabel="Practice options" menu={menu} />
       <StudyTabs current="cards" />
       <PhoneSearch label="Search decks" value={q} onChange={setQ} />
       {totalDue > 0 && !term && (

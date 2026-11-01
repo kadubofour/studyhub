@@ -165,7 +165,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const paletteItems: PaletteItem[] = [
     ...DO,
     { id: 'do:theme', group: 'Do', label: dark ? 'Light mode' : 'Dark mode', keywords: 'theme appearance', run: { action: 'theme' } },
-    ...[...PLACES, ...MORE_PLACES].map(p => ({ id: `go:${p.href}`, group: 'Go to' as const, label: p.label, keywords: p.keywords, run: { href: p.href } })),
+    ...[...PLACES, ...MORE_PLACES].map(p => ({ id: `go:${p.href}`, group: 'Go to' as const, label: p.label, keywords: p.keywords, alias: p.alias, run: { href: p.href } })),
     ...courses.map(c => ({ id: `course:${c.id}`, group: 'Courses' as const, label: c.name, hint: 'Course', run: { href: `/courses/${c.id}` } })),
     ...material,
   ]

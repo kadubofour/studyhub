@@ -9,7 +9,7 @@ test('the Quiz page keeps every quiz and how it went: make one, take it, see the
 
   // Nothing yet: an empty page that starts the first quiz
   await page.goto('/quiz')
-  await expect(page.getByRole('heading', { name: 'Quiz', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Practice', level: 1 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
   await page.getByRole('button', { name: 'Make your first quiz' }).click()
   const dialog = page.getByRole('dialog', { name: 'Quiz yourself' })
@@ -60,13 +60,13 @@ test('the Quiz page keeps every quiz and how it went: make one, take it, see the
   await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
 })
 
-test('Quiz is a tab beside Flashcards, which stays lit in the sidebar', async ({ page, isMobile }) => {
+test('Quizzes are a tab beside Flashcards on the Practice page, which stays lit in the sidebar', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the sidebar is for a computer')
   await signUp(page)
   const rail = page.getByRole('navigation').first()
-  await rail.getByRole('link', { name: 'Flashcards', exact: true }).click()
+  await rail.getByRole('link', { name: 'Practice', exact: true }).click()
   await page.getByRole('navigation', { name: 'Practice' }).getByRole('link', { name: 'Quizzes' }).click()
   await expect(page).toHaveURL(/\/quiz$/)
-  await expect(rail.getByRole('link', { name: 'Flashcards', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(rail.getByRole('link', { name: 'Practice', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(rail.getByRole('link', { name: 'Quiz', exact: true })).toHaveCount(0)
 })

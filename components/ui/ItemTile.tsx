@@ -29,13 +29,15 @@ function IconBox({ icon: Icon, color, size, badge }: { icon: LucideIcon; color: 
   )
 }
 
-export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, href, subtitle, meta, aside, badge, select, onMenu, onContextMenu, corner }: {
+export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, href, subtitle, blurb, meta, aside, badge, select, onMenu, onContextMenu, corner }: {
   layout: Layout; icon: LucideIcon
   /** The course's colour, for the icon */
   color?: string
   title: string; href: string
   /** A short second line: the notebook, the course */
   subtitle?: React.ReactNode
+  /** What is inside, in a line or two (a note's first words): shown under the title in a tile and after it in a row */
+  blurb?: string
   /** Tags at the bottom left (course), and a detail at the right (when, how many) */
   meta?: React.ReactNode; aside?: React.ReactNode
   /** A count shown on the icon, such as cards due */
@@ -61,7 +63,7 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
       {titleEl}
       {/* the details are not shown in this layout, but they are still read out */}
       <span className="sr-only">
-        {[subtitle, meta, aside].filter(Boolean).map((part, i) => <span key={i}>{i > 0 && <span>, </span>}<span>{part}</span></span>)}
+        {[subtitle, blurb, meta, aside].filter(Boolean).map((part, i) => <span key={i}>{i > 0 && <span>, </span>}<span>{part}</span></span>)}
       </span>
     </>
   ) : layout === 'list' ? (
@@ -70,6 +72,7 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
       <IconBox icon={icon} color={color} size="sm" badge={badge} />
       {titleEl}
       {subtitle && <span className="min-w-0 truncate text-xs text-muted max-sm:hidden">{subtitle}</span>}
+      {blurb && <span className="min-w-0 flex-1 truncate text-xs text-muted max-md:hidden">{blurb}</span>}
       {meta}
       {aside && <span className="shrink-0 text-xs text-muted">{aside}</span>}
     </>
@@ -83,6 +86,7 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
         </span>
         {tick}
       </span>
+      {blurb && <span className="line-clamp-2 text-[13px] leading-snug text-muted">{blurb}</span>}
       {(meta || aside) && (
         <span className="mt-auto flex items-center justify-between gap-2 pt-1">
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">{meta}</span>

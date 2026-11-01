@@ -55,3 +55,15 @@ describe('a chat on a phone', () => {
     expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value.length).toBeGreaterThan(0)
   })
 })
+
+describe('the suggestions take little room', () => {
+  it('are one slim row of chips that scrolls sideways on a phone, not tiles with a line of explanation each', async () => {
+    await open()
+    const row = screen.getByRole('list', { name: 'Ideas to start with' })
+    expect(row.className).toContain('overflow-x-auto')
+    for (const b of within(row).getAllByRole('button')) {
+      expect(b.className).toContain('rounded-full')
+      expect(b.querySelectorAll('span').length).toBe(0) // an icon and a name, no hint text inside
+    }
+  })
+})
