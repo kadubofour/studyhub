@@ -90,7 +90,7 @@ export async function newNoteFromNote(page: Page) {
     await page.getByRole('menu', { name: 'File' }).locator('[role^="menuitem"]', { hasText: 'New note' }).click()
   } else {
     await page.goto('/notes')
-    await page.getByRole('button', { name: 'New note', exact: true }).click()
+    await page.getByRole('button', { name: /^(New note|Note)$/ }).click()
     await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
     await page.waitForLoadState('networkidle')
   }

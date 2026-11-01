@@ -11,7 +11,7 @@ test('the Quiz page keeps every quiz and how it went: make one, take it, see the
   await page.goto('/quiz')
   await expect(page.getByRole('heading', { name: 'Practice', level: 1 })).toBeVisible()
   await expect(page.getByText(/No quizzes yet/).first()).toBeVisible()
-  await page.getByRole('button', { name: /Make your first quiz|^New quiz$/ }).click() // a phone has the round New quiz
+  await page.getByRole('button', { name: /Make your first quiz|^New quiz$/ }).first().click() // a phone has the round New quiz
   const dialog = page.getByRole('dialog', { name: 'Quiz yourself' })
   await dialog.getByRole('radio', { name: /Krebs cycle/ }).click()
   await dialog.getByRole('button', { name: /Start quiz/ }).click()

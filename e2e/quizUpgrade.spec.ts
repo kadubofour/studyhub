@@ -57,7 +57,7 @@ test('start a quiz from Home, answer with the keyboard, review the results and r
 test('the Quiz dialog opens from the Quiz page, Flashcards and Library too', async ({ page }) => {
   await signUp(page)
   await page.goto('/quiz')
-  await page.getByRole('button', { name: /Make your first quiz|^New quiz$/ }).click()
+  await page.getByRole('button', { name: /Make your first quiz|^New quiz$/ }).first().click()
   await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.goto('/flashcards')
