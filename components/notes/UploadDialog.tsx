@@ -200,7 +200,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
             <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span>
             <span><span className="block text-sm font-medium">{fromMaterial ? 'Make a note from it' : 'Make a note'}</span>
               <span className="block text-xs text-muted">{picked.kind === 'image' ? 'The text in the photo becomes a note you check before saving.'
-                : picked.kind === 'pdf' ? 'The PDF becomes a note with its headings, lists and tables, and its diagrams go in where they were. You check it before saving.'
+                : picked.kind === 'pdf' ? 'The PDF becomes a note with its headings, lists and tables, and its diagrams are redrawn where they were. You check it before saving.'
                 : 'Its text and pictures become a note. You check it before saving.'}{fromMaterial || picked.kind === 'image' ? '' : ' The file is kept too.'}</span></span>
           </button>
           {!fromMaterial && (

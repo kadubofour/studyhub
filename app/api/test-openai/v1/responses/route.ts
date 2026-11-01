@@ -12,6 +12,7 @@ const CANNED: Record<string, unknown> = {
     { type: 'short', prompt: 'What molecule enters the cycle?', options: null, answer: 'Acetyl-CoA', explanation: 'Acetyl-CoA joins oxaloacetate.' },
   ] },
   mark: { correct: true, feedback: 'Yes, that means acetyl-CoA.' },
+  redraw_figures: { drawings: [{ svg: '<svg viewBox="0 0 400 120"><line x1="20" y1="70" x2="380" y2="70" stroke="#111" stroke-width="2"/><text x="20" y="100">a</text><text x="370" y="100">b</text></svg>' }] },
   scan_cards: { cards: [{ front: 'What is the powerhouse of the cell?', back: 'The mitochondrion' }, { front: 'What do ribosomes make?', back: 'Proteins' }] },
   scan_planner: {
     tasks: [
