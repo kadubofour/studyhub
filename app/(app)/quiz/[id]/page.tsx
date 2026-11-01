@@ -51,7 +51,7 @@ export default function QuizPage() {
     <div className="min-h-dvh">
       <header className="flex items-center gap-2 border-b border-line px-4 py-2">
         <Link href={`/notes/${quiz.note_id}`} className="btn-ghost" aria-label="Back to note"><ArrowLeft size={17} aria-hidden /></Link>
-        <span className="font-medium">{quiz.title}</span>
+        <h1 className="font-medium">{quiz.title}</h1>
       </header>
       {attempt.finished_at
         ? <QuizResults quiz={quiz} attempt={attempt} previous={previous} onRetake={retake} onRetryMissed={retryMissed} />

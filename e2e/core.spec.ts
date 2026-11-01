@@ -77,7 +77,7 @@ test('task added on home shows under Today', async ({ page }) => {
 test('create a deck, add cards, and review them', async ({ page }) => {
   await signUp(page)
   await page.goto('/flashcards')
-  await page.getByRole('button', { name: 'Create a deck' }).click()
+  await page.getByRole('button', { name: /Create a deck|^New deck$/ }).first().click() // a computer's empty list has its own button; a phone has the round New deck
   await page.getByLabel('Name').fill('Cells')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   await page.getByText('Cells').click()
@@ -102,7 +102,7 @@ test('a note persists after reload, including math', async ({ page, isMobile }) 
   test.skip(isMobile, 'Markdown is switched on from the View menu, which is for wider screens')
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await page.getByLabel('Title').fill('Quadratics')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('## Formula\n\n$x^2$')
@@ -118,7 +118,7 @@ test('notes: search finds words inside a note', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Markdown is switched on from the View menu, which is for wider screens')
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await page.getByLabel('Title').fill('Week 3')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')

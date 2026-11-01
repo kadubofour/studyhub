@@ -21,7 +21,7 @@ test('accent colour and font apply instantly and survive a reload', async ({ pag
 test('writing a note is full screen, and Esc goes back to the list', async ({ page }) => {
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page.getByLabel('Title')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Planner' })).toHaveCount(0) // no app sidebar / tab bar
   await page.getByLabel('Title').fill('Fullscreen')
@@ -74,7 +74,7 @@ test('printing from dark mode gives dark text on white paper', async ({ page }) 
 
   await signUp(page)
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await page.getByLabel('Title').fill('Printable')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('> a quoted line')

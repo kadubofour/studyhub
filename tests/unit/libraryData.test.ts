@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { loadLibrary, moveItems } from '@/lib/data/library'
+import { blurbOf, loadLibrary, moveItems } from '@/lib/data/library'
 
 type Call = { table: string; op: string; arg?: unknown; col?: string; ids?: unknown[] }
 // A stand-in client: reads give the rows for the table; writes are recorded
@@ -152,5 +152,19 @@ describe('what is inside, in a line', () => {
     const items = await loadLibrary(client(rows).sb, NOW)
     expect(items.find(i => i.id === 'q1')!.blurb).toBe('From Krebs')
     expect(items.find(i => i.id === 'q3')!.blurb).toBe('From Untitled')
+  })
+})
+
+describe('blurbOf', () => {
+  it('is plain words: the marks are gone, and so is a first heading that only repeats the title', () => {
+    expect(blurbOf('# Krebs cycle\n\nRuns in the **mitochondrial matrix** and makes `NADH`.\n- one\n- two', 'Krebs cycle')).toBe('Runs in the mitochondrial matrix and makes NADH. one two')
+    expect(blurbOf('# A different heading\nBody [with a link](http://x.test) and ![pic](a.png) after', 'Krebs cycle')).toBe('A different heading Body with a link and after')
+    expect(blurbOf('> quoted\n1. first\n2. second')).toBe('quoted first second')
+  })
+  it('is nothing for an empty note, one line, and cut to 160 characters', () => {
+    expect(blurbOf('# Krebs cycle', 'Krebs cycle')).toBeUndefined()
+    expect(blurbOf('   \n ')).toBeUndefined()
+    expect(blurbOf(null)).toBeUndefined()
+    expect(blurbOf('word '.repeat(100))!.length).toBeLessThanOrEqual(160)
   })
 })

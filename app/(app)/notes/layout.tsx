@@ -1,9 +1,5 @@
-'use client'
-import { usePathname } from 'next/navigation'
-import { NotesSidebar } from '@/components/notes/NotesSidebar'
+import { NotesLayoutShell } from '@/components/notes/NotesLayoutShell'
 
-// /notes shows the notes list; /notes/[id] is the full-screen editor (AppShell hides the app chrome too)
-export default function NotesLayout({ children }: { children: React.ReactNode }) {
-  const editing = usePathname() !== '/notes'
-  return editing ? <>{children}</> : <NotesSidebar />
-}
+// "Notes · Studyhub" in the browser tab; the list or the editor is drawn by the shell
+export const metadata = { title: 'Notes' }
+export default function NotesLayout({ children }: { children: React.ReactNode }) { return <NotesLayoutShell>{children}</NotesLayoutShell> }

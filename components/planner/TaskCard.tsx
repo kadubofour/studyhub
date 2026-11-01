@@ -35,7 +35,7 @@ export function TaskCard({ task, course, tz, now, onToggle, onEdit, onMove, onDe
   return (
     <div className="group flex items-start gap-3 px-4 py-3 transition hover:bg-surface/60">
       <input type="checkbox" checked={false} onChange={onToggle} aria-label={`Mark ${task.title} done`} disabled={saving} title={saving ? 'Saving…' : undefined}
-        className="mt-0.5 size-[18px] shrink-0 cursor-pointer rounded-full accent-[var(--accent-solid)] disabled:opacity-50" />
+        className="mt-0.5 size-[18px] shrink-0 cursor-pointer rounded-full accent-[var(--accent-solid)] disabled:opacity-50 pointer-coarse:box-content pointer-coarse:-m-2 pointer-coarse:p-2" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-1.5">
           <button type="button" onClick={onEdit} disabled={saving} aria-label={`Edit ${task.title}`} className="min-w-0 text-left leading-snug hover:text-accent disabled:hover:text-fg">{task.title}</button>

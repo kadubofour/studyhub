@@ -178,7 +178,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const appearance = appearanceVars(profile.accent, profile.font) as React.CSSProperties
   const lit = 'bg-accent-soft text-accent'
   const railItem = (on: boolean) => wide
-    ? `group relative flex w-full shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
+    ? `group relative flex w-full shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition [@media(max-height:860px)]:py-1.5 ${on ? `${lit} font-semibold` : 'text-muted hover:bg-surface hover:text-fg'}`
     : `group relative grid size-11 shrink-0 place-items-center rounded-xl transition [@media(max-height:800px)]:size-10 ${on ? lit : 'text-muted hover:bg-surface hover:text-fg'}`
   // the name beside the icon when wide
   const tip = (label: string) => wide ? <span aria-hidden className="rail-fade truncate">{label}</span> : null

@@ -5,7 +5,7 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/flashcards')
-  await page.getByRole('button', { name: 'Create a deck' }).click()
+  await page.getByRole('button', { name: /Create a deck|^New deck$/ }).first().click() // a computer's empty list has its own button; a phone has the round New deck
   await page.getByLabel('Name').fill('Cells')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(page.getByText('Cells')).toBeVisible()

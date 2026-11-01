@@ -16,7 +16,7 @@ export function SessionRow({ s, course, done, onToggle, onWarmup, warmingUp, sho
   const color = course?.color ?? 'var(--accent-solid)'
   return (
     <div className="flex items-center gap-3 px-3 py-2.5">
-      <input type="checkbox" checked={done} onChange={onToggle} aria-label={`Mark ${label} done`} className="size-5 shrink-0 rounded-full accent-[var(--accent-solid)]" />
+      <input type="checkbox" checked={done} onChange={onToggle} aria-label={`Mark ${label} done`} className="size-5 shrink-0 rounded-full accent-[var(--accent-solid)] pointer-coarse:box-content pointer-coarse:-m-2 pointer-coarse:p-2" />
       <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color }}><Icon size={17} /></span>
       <div className="min-w-0 flex-1">
         <div className={`truncate text-[15px] font-medium ${done ? 'text-muted line-through' : ''}`}>{label}</div>

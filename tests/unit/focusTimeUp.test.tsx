@@ -66,20 +66,22 @@ describe('when time is up', () => {
     expect(notify).toHaveBeenCalledWith('Focus session done', 'Time for a break.')
   })
 
-  it('puts "Focus session done" in the tab title while the student is away, and takes it off when they are back', async () => {
+  it('puts "Focus session done" in the tab title while the student is away, and gives the page\'s own title back when they are back', async () => {
+    document.title = 'Focus · Studyhub'
     mount()
     hidden('hidden')
     await runOut()
     expect(document.title).toBe('⏰ Focus session done')
     hidden('visible')
     await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
-    expect(document.title).toBe('Studyhub')
+    expect(document.title).toBe('Focus · Studyhub')
   })
 
   it('does not touch the tab title when the student is looking at the page', async () => {
+    document.title = 'Focus · Studyhub'
     mount()
     await runOut()
-    expect(document.title).toBe('Studyhub')
+    expect(document.title).toBe('Focus · Studyhub')
   })
 
   it('says "Break over" when a break ends', async () => {

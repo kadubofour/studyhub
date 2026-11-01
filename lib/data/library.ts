@@ -7,8 +7,22 @@ import { listChats } from './tutor'
 import { fileSize, listMaterials, MATERIAL_LABEL } from './materials'
 import { isMovable, type Kind, type LibraryItem } from '@/lib/library/items'
 
-// A note's first words as one tidy line, or nothing for an empty note
-export const blurbOf = (preview: string | null | undefined) => (preview ?? '').replace(/\s+/g, ' ').trim().slice(0, 160) || undefined
+// A note's first words as one tidy line of plain text, or nothing for an empty note: the markdown marks are taken out, and so is a
+// first heading that only repeats the title
+export function blurbOf(preview: string | null | undefined, title = ''): string | undefined {
+  const lines = (preview ?? '').split('\n')
+  const first = lines[0]?.replace(/^#{1,6}\s+/, '').trim().toLowerCase()
+  const body = (first && first === title.trim().toLowerCase() ? lines.slice(1) : lines).join(' ')
+  const plain = body
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ') // pictures
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links keep their words
+    .replace(/(^|\s)#{1,6}\s+/g, '$1') // headings
+    .replace(/(^|\s)(?:[-*+]|\d+\.)\s+/g, '$1') // list marks
+    .replace(/(^|\s)>\s?/g, '$1') // quotes
+    .replace(/[*_`~]+/g, '') // bold, italic, code
+    .replace(/\s+/g, ' ').trim()
+  return plain.slice(0, 160) || undefined
+}
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 type QuizRow = { id: string; note_id: string; title: string; created_at: string }
@@ -23,7 +37,7 @@ export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<Librar
   const noteCourse = new Map(notes.map(n => [n.id, n.course_id]))
   const noteTitle = new Map(notes.map(n => [n.id, n.title]))
   return [
-    ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, notebook_id: n.notebook_id ?? null, at: n.updated_at, meta: '', blurb: blurbOf(n.preview), href: `/notes/${n.id}` })),
+    ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, notebook_id: n.notebook_id ?? null, at: n.updated_at, meta: '', blurb: blurbOf(n.preview, n.title), href: `/notes/${n.id}` })),
     ...decks.map(d => ({
       kind: 'deck' as const, id: d.id, title: d.name, course_id: d.course_id, at: d.created_at ?? '',
       due: d.due, meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,

@@ -10,7 +10,7 @@ let tasks: unknown[] = []
 let mine: unknown[] = []
 let mineReads = 0
 vi.mock('@/lib/data/reminders', () => ({ listReminders: async () => { mineReads++; return mine }, REMINDERS_CHANGED: 'studyhub:reminders-changed' }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams(), usePathname: () => '/home' }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/tasks', () => ({ listOpenTasks: async () => tasks, setTaskDone: async () => {} }))
 vi.mock('@/lib/data/classes', () => ({ listClasses: async () => [] }))

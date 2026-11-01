@@ -5,7 +5,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/flashcards')
-  await page.getByRole('button', { name: 'Create a deck' }).click()
+  await page.getByRole('button', { name: /Create a deck|^New deck$/ }).first().click() // a computer's empty list has its own button; a phone has the round New deck
   await page.getByLabel('Name').fill('Cells')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(page.getByText('Cells')).toBeVisible()
@@ -37,7 +37,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
 test('Library opens on a course named in the address, and a new student sees an invitation', async ({ page }) => {
   await signUp(page)
   await page.goto('/library')
-  await expect(page.getByRole('heading', { name: 'Your library starts here' })).toBeVisible()
+  await expect(page.getByText(/Your library starts here|Every note, deck, lecture, quiz, tutor chat and uploaded file shows up here/).first()).toBeVisible() // a phone says it in a line, a computer with a heading
   await noteWithText(page, 'Enzymes')
   await page.goto('/library?course=none')
   await expect(page.getByRole('link', { name: /Enzymes/ })).toBeVisible()

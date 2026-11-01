@@ -6,7 +6,7 @@ test.beforeEach(({}, info) => { test.skip(info.project.name === 'mobile', 'the m
 
 async function newNote(page: Page, title: string) {
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill(title)

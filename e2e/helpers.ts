@@ -48,7 +48,7 @@ export async function noteFileAction(page: Page, item: 'Export as Word' | 'Expor
 // A note with enough text for the AI study tools (they need at least 40 words)
 export async function noteWithText(page: Page, title = 'Krebs cycle') {
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill(title)

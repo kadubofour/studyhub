@@ -88,7 +88,7 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
       </span>
       {blurb && <span className="line-clamp-2 text-[13px] leading-snug text-muted">{blurb}</span>}
       {(meta || aside) && (
-        <span className="mt-auto flex items-center justify-between gap-2 pt-1">
+        <span className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 pt-1">
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">{meta}</span>
           {aside && <span className="ml-auto shrink-0 text-xs text-muted">{aside}</span>}
         </span>
@@ -100,8 +100,8 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
   const cls = layout === 'icons'
     ? `relative flex h-full w-full flex-col items-center gap-2 rounded-xl p-2 pt-3 text-center transition hover:bg-surface ${ring}`
     : layout === 'list'
-      ? `tile flex w-full items-center gap-3 !py-2.5 text-left transition hover:border-accent ${onMenu || corner ? 'pr-11' : ''} ${ring}`
-      : `tile flex h-full w-full flex-col gap-3 text-left transition hover:-translate-y-0.5 hover:border-accent ${onMenu || corner ? 'pr-10' : ''} ${ring}`
+      ? `tile flex w-full items-center gap-3 !py-2.5 text-left transition hover:border-accent ${onMenu && corner ? 'pr-[4.5rem]' : onMenu || corner ? 'pr-11' : ''} ${ring}`
+      : `tile flex h-full w-full flex-col gap-3 text-left transition hover:-translate-y-0.5 hover:border-accent ${onMenu && corner ? 'pr-[3.75rem]' : onMenu || corner ? 'pr-10' : ''} ${ring}`
 
   return (
     <div role="listitem" className="group relative">
@@ -111,7 +111,7 @@ export function ItemTile({ layout, icon, color = 'var(--accent-solid)', title, h
       {corner && <span className={`absolute flex ${layout === 'list' ? 'right-3.5 top-1/2 -translate-y-1/2' : layout === 'icons' ? 'left-1.5 top-1.5' : 'right-3.5 top-4'}`}>{corner}</span>}
       {onMenu && !select && (
         <button type="button" aria-label={`More actions for ${name}`} aria-haspopup="menu" onClick={onMenu}
-          className={`absolute rounded-lg p-1 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:p-2.5 [@media(pointer:coarse)]:opacity-100 ${layout === 'list' ? 'right-2 top-1/2 -translate-y-1/2' : layout === 'icons' ? 'right-0.5 top-0.5' : 'right-2 top-3'}`}>
+          className={`absolute rounded-lg p-1 text-muted opacity-0 transition hover:bg-surface hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:p-2.5 [@media(pointer:coarse)]:opacity-100 ${layout === 'list' ? `${corner ? 'right-9' : 'right-2'} top-1/2 -translate-y-1/2` : layout === 'icons' ? 'right-0.5 top-0.5' : `${corner ? 'right-9' : 'right-2'} top-3`}`}>
           <MoreHorizontal size={16} aria-hidden />
         </button>
       )}

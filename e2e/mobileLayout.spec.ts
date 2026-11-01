@@ -32,7 +32,7 @@ test('the top bar, the note toolbar and the drawing tools can be tapped', async 
   await signUp(page)
   expect(await tooSmall(page, 'header[aria-label="Today at a glance"]')).toEqual([])
   await page.goto('/notes')
-  await page.getByRole('button', { name: 'Write your first note' }).click()
+  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Choose pictures').setInputFiles(path.join(__dirname, 'fixtures', 'cell.png'))
@@ -104,7 +104,7 @@ test('the page names itself, and the floating dock is a pill of five places and 
   expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Practice', 'Tutor'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
-  expect(box.width).toBeLessThanOrEqual(300) // a pill that hugs its icons
+  expect(box.width).toBeLessThanOrEqual(352) // a pill that hugs its six icons (Create among them), with room left on each side of a 375 px screen
   expect(Math.abs(box.x + box.width / 2 - 375 / 2)).toBeLessThanOrEqual(1) // centred
   // Each place is at least 44 px across (a comfortable tap)
   const items = await bar.locator('a, button').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, w: r.width, scroll: (e as HTMLElement).scrollWidth, label: e.textContent } }))
