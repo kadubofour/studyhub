@@ -286,12 +286,12 @@ describe('Library', () => {
       expect(cell).toBe('rgb(29, 158, 117)')
       expect(archive).toBe('var(--accent-solid)')
     })
-    it('shows each notebook as a folder with its note count, and keeps filed notes inside it', async () => {
+    it('shows each notebook as a folder with its note count, and every note in the list too', async () => {
       await open()
       expect(shelf().getAllByRole('link').map(b => b.getAttribute('aria-label'))).toEqual(['Open Archive, 0 notes', 'Open Cell biology, 2 notes'])
       expect(shelf().getAllByRole('link').every(b => b.querySelector('[data-notebook-cover]'))).toBe(true) // drawn as notebooks, not folders
-      expect(listed().some(t => t.includes('Glycolysis'))).toBe(false)
-      expect(listed()).toHaveLength(7)
+      expect(listed().some(t => t.includes('Glycolysis'))).toBe(true)
+      expect(listed()).toHaveLength(9)
     })
     it('finds notes inside folders when searching, and says which notebook each is in', async () => {
       await open()

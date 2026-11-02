@@ -53,7 +53,7 @@ export async function readingMode(page: Page) {
 export async function noteFileAction(page: Page, item: 'Export as Word' | 'Export as PDF') {
   if (await onPhone(page)) { await (await inSheet(page)).getByRole('button', { name: item }).click(); return }
   await page.getByRole('menuitem', { name: 'File', exact: true }).click()
-  await page.getByRole('menuitem', { name: item }).click()
+  await page.getByRole('menuitem', { name: item, exact: true }).click()
 }
 
 // A note with enough text for the AI study tools (they need at least 40 words)
@@ -79,7 +79,7 @@ export async function becomePremium(page: Page) {
 // The + that makes things: in the rail on a computer, in the dock on a phone. Picks an item from its menu.
 export async function create(page: Page, item: 'New note' | 'New deck' | 'Record lecture' | 'New task' | 'New reminder' | 'Upload' | 'Scan') {
   await page.locator('button[aria-label="Create new"]:visible').click()
-  await page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: item }).click()
+  await page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: item, exact: true }).click()
 }
 
 // A new note from inside a note: File > New note on a computer; a phone has no File menu, so from the Notes list

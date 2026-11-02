@@ -21,7 +21,7 @@ import { listCourses } from '@/lib/data/courses'
 import { notebookCards, type NotebookSort } from '@/lib/library/notebookCards'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { loadLibrary, moveItems } from '@/lib/data/library'
-import { createNote } from '@/lib/data/notes'
+import { createNote, searchNotes } from '@/lib/data/notes'
 import { createChat, findChat } from '@/lib/data/tutor'
 import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { createNotebook, deleteNotebook, listNotebooks, moveNotes, renameNotebook } from '@/lib/data/notebooks'
@@ -79,6 +79,15 @@ export default function LibraryPage() {
   const [bookSort, setBookSort] = useState<NotebookSort>('recent')
   const [renamingBook, setRenamingBook] = useState<Notebook | null>(null)
   const confirm = useConfirm()
+  // a search also reads inside notes (their words), not only titles
+  const [inNotes, setInNotes] = useState<{ q: string; ids: Set<string> }>({ q: '', ids: new Set() })
+  useEffect(() => {
+    const q = bookQuery.trim()
+    if (q.length < 2) return
+    let live = true
+    const t = setTimeout(() => { searchNotes(supabase(), q).then(r => { if (live) setInNotes({ q, ids: new Set(r.map(n => n.id)) }) }).catch(() => {}) }, 250)
+    return () => { live = false; clearTimeout(t) }
+  }, [bookQuery])
   const [now] = useState(() => new Date())
   const router = useRouter()
 
@@ -245,7 +254,9 @@ export default function LibraryPage() {
   }
   if (mode === 'books') {
     const q = bookQuery.trim()
-    const found = q ? visible(known ?? items, { course: 'all', kind: null, q, sort: 'recent' }).filter(i => !!i.notebook_id) : []
+    const byTitle = q ? visible(known ?? items, { course: 'all', kind: null, q, sort: 'recent' }) : []
+    const byWords = q && inNotes.q === q ? (known ?? items).filter(i => i.kind === 'note' && inNotes.ids.has(i.id)) : []
+    const found = [...new Map([...byTitle, ...byWords].map(i => [`${i.kind}:${i.id}`, i])).values()].filter(i => !!i.notebook_id)
     return (
       <div>
         <PageHeader title="Library" />

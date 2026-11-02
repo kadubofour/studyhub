@@ -18,7 +18,7 @@ test('accent colour and font apply instantly and survive a reload', async ({ pag
   await expect(page.getByRole('radio', { name: 'Teal accent' })).toHaveAttribute('aria-checked', 'true')
 })
 
-test('writing a note is full screen, and Esc goes back to the list', async ({ page }) => {
+test('writing a note is full screen, and Esc goes back to its notebook', async ({ page }) => {
   await signUp(page)
   await page.goto('/library')
   await create(page, 'New note')
@@ -26,7 +26,7 @@ test('writing a note is full screen, and Esc goes back to the list', async ({ pa
   await expect(page.getByRole('link', { name: 'Planner' })).toHaveCount(0) // no app sidebar / tab bar
   await page.getByLabel('Title').fill('Fullscreen')
   await page.getByLabel('Title').press('Escape')
-  await expect(page).toHaveURL(/\/notes$/)
+  await expect(page).toHaveURL(/\/notebooks\/[0-9a-f-]{36}$/) // a note made without choosing is in General
   await expect(page.getByRole('link', { name: /Fullscreen/ })).toBeVisible()
 })
 

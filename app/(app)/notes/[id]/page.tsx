@@ -167,7 +167,7 @@ function NoteEditor({ id }: { id: string }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [router])
+  }, [router, backHref])
 
   // Ctrl/⌘+F finds in this note rather than the whole page
   useEffect(() => {

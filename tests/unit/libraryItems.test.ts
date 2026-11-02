@@ -73,8 +73,8 @@ describe('notebooks are folders', () => {
     item('deck', 'd1', 'Cells', 'bio', '2026-10-09T10:00:00Z'),
   ]
   const BOOKS = [{ id: 'span', name: 'Spanish', created_at: '' }, { id: 'cell', name: 'Cell biology', created_at: '' }, { id: 'empty', name: 'Empty one', created_at: '' }]
-  it('while browsing, a note in a notebook is inside its folder, not loose', () => {
-    expect(ids(visible(FILED, view()))).toEqual(['n3', 'd1'])
+  it('every note is in a notebook, so the list shows them all, with where each belongs', () => {
+    expect(ids(visible(FILED, view())).sort()).toEqual(['d1', 'n1', 'n2', 'n3', 'n4'])
   })
   it('an open folder shows its notes, and only those, in the chosen order and course', () => {
     expect(ids(visible(FILED, view({ folder: 'cell' })))).toEqual(['n2', 'n1'])

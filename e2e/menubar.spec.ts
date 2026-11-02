@@ -139,7 +139,7 @@ test('File > New note and Delete note', async ({ page }) => {
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/) // kept
   await menu(page, 'File', 'Delete note')
   await ask.getByRole('button', { name: 'Delete note' }).click()
-  await expect(page).toHaveURL(/\/notes$/)
+  await expect(page).toHaveURL(/\/notebooks\/[0-9a-f-]{36}$/) // back in its notebook
   await expect(page.getByRole('link', { name: /First/ })).toBeVisible() // the other note is untouched
   await expect(page.getByRole('link', { name: /Untitled/ })).toHaveCount(0)
 })
@@ -174,7 +174,7 @@ test('right-click in a note opens quick actions', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0)
 
   await page.keyboard.press('Escape') // Esc with no menu open leaves the note
-  await expect(page).toHaveURL(/\/notes$/)
+  await expect(page).toHaveURL(/\/notebooks\/[0-9a-f-]{36}$/)
 })
 
 test('automatic maths can be switched off from the View menu', async ({ page }) => {

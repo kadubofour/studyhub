@@ -10,16 +10,11 @@ const KINDS: Kind[] = ['note', 'deck', 'lecture', 'quiz', 'chat', 'file']
 const inCourse = (i: LibraryItem, course: View['course']) => course === 'all' || (course === 'none' ? i.course_id === null : i.course_id === course)
 const matches = (i: LibraryItem, q: string) => !q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase())
 
-// Browsing is looking around with no search and no kind chosen: then notebooks are folders, and a note in one is inside it.
-// Searching or choosing a kind finds things wherever they are.
-const browsing = (v: View) => v.kind === null && !v.q.trim()
-const filed = (i: LibraryItem) => i.kind === 'note' && !!i.notebook_id
-
 // What the list shows: the open folder's notes, or the chosen course, kind and search, in the chosen order
 export function visible(items: LibraryItem[], v: View): LibraryItem[] {
   const out = items.filter(i => inCourse(i, v.course) && matches(i, v.q) && (v.folder
     ? i.kind === 'note' && i.notebook_id === v.folder
-    : (v.kind === null || i.kind === v.kind) && !(browsing(v) && filed(i))))
+    : (v.kind === null || i.kind === v.kind)))
   return v.sort === 'name'
     ? out.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
     : out.sort((a, b) => b.at.localeCompare(a.at))
@@ -41,6 +36,10 @@ export function countsByCourse(items: LibraryItem[]) {
 
 // A quiz belongs to its note, so it moves with it
 export const isMovable = (i: Pick<LibraryItem, 'kind'>) => i.kind !== 'quiz'
+
+// Browsing is looking around with no search and no kind chosen
+const browsing = (v: View) => v.kind === null && !v.q.trim()
+const filed = (i: LibraryItem) => i.kind === 'note' && !!i.notebook_id
 
 // The folders shown while browsing, by name, with how many notes each holds in the course shown.
 // An empty notebook shows under All (so a new one can be found), not under a course it has nothing in.
