@@ -6,6 +6,8 @@ import { ArrowUpRight, FileText, MoreVertical, Pencil, Plus, Search, Trash2, Upl
 import { Dropdown } from '@/components/ui/Dropdown'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { NotebookCover } from '@/components/notes/NotebookCover'
+import { NotebookMark, PhoneGroup, PhoneRow } from '@/components/ui/PhoneList'
+import { useScreen } from '@/lib/ui/useScreen'
 import { ago } from '@/lib/library/ago'
 import { CARD_KINDS, contents, type NotebookCard, type NotebookSort } from '@/lib/library/notebookCards'
 import type { LibraryItem } from '@/lib/library/items'
@@ -30,6 +32,10 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
   onRename: (c: NotebookCard) => void; onDelete: (c: NotebookCard) => void
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const router = useRouter()
+  const phone = useScreen() === 'phone'
+  // on a phone a notebook is a row in a rounded group, as in the Tutor and Practice lists; pressing and holding it opens its menu
+  const [rowMenu, setRowMenu] = useState<{ x: number; y: number; card: NotebookCard } | null>(null)
   return (
     <div>
       <div role="search" className="mb-5 flex flex-wrap items-center gap-2">
@@ -40,14 +46,47 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
             className="h-11 w-full rounded-xl border border-line bg-raised pl-10 pr-3 text-[15px] outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-accent" />
         </label>
         <Dropdown label="Sort notebooks" value={sort} onChange={s => onSort(s as NotebookSort)} options={SORTS.map(s => ({ value: s.value, label: s.label }))} className="w-44" />
-        <button type="button" className={BAR} onClick={onMaterials}><UploadCloud size={16} aria-hidden />Materials</button>
-        <button type="button" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-fg px-4 text-sm font-semibold text-bg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-          aria-haspopup="menu" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right - 200, y: r.bottom + 6 }) }}>
-          <Plus size={16} aria-hidden />Create
-        </button>
+        {phone ? (
+          // a phone: only the icons, no borders or padding
+          <>
+            <button type="button" aria-label="Materials" title="Materials" className="grid size-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg" onClick={onMaterials}><UploadCloud size={20} aria-hidden /></button>
+            <button type="button" aria-label="Create" title="Create" aria-haspopup="menu" className="grid size-10 place-items-center rounded-full bg-fg text-bg"
+              onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right - 200, y: r.bottom + 6 }) }}><Plus size={19} aria-hidden /></button>
+          </>
+        ) : (
+          <>
+            <button type="button" className={BAR} onClick={onMaterials}><UploadCloud size={16} aria-hidden />Materials</button>
+            <button type="button" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-fg px-4 text-sm font-semibold text-bg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              aria-haspopup="menu" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right - 200, y: r.bottom + 6 }) }}>
+              <Plus size={16} aria-hidden />Create
+            </button>
+          </>
+        )}
         {menu && <ContextMenu x={Math.max(8, menu.x)} y={menu.y} label="Create" items={create} onClose={() => setMenu(null)} />}
       </div>
 
+      {phone ? (
+        <>
+          <button type="button" onClick={onNewNotebook}
+            className="mb-5 flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line bg-surface/60 px-4 text-left text-[16px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            <Plus size={20} aria-hidden className="text-muted" />Create new notebook
+          </button>
+          {cards.length > 0 && (
+            <PhoneGroup name="Notebooks">
+              {cards.map(c => (
+                <PhoneRow key={c.notebook.id} href={`/notebooks/${c.notebook.id}`} mark={<NotebookMark color={c.color} />} title={c.notebook.name}
+                  date={c.lastAt ? ago(c.lastAt, now) : undefined} line={contents(c)}
+                  onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, card: c }) }} />
+              ))}
+            </PhoneGroup>
+          )}
+          {rowMenu && <ContextMenu x={rowMenu.x} y={rowMenu.y} label={`${rowMenu.card.notebook.name} options`} onClose={() => setRowMenu(null)} items={[
+            { label: 'Open', icon: ArrowUpRight, onSelect: () => router.push(`/notebooks/${rowMenu.card.notebook.id}`) },
+            { label: 'Rename', icon: Pencil, onSelect: () => onRename(rowMenu.card) },
+            ...(rowMenu.card.notebook.is_default ? [] : [{ label: 'Delete', icon: Trash2, danger: true, onSelect: () => onDelete(rowMenu.card) } as MenuEntry]),
+          ]} />}
+        </>
+      ) : (
       <ul aria-label="Notebooks" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <li className="self-start">
           <button type="button" onClick={onNewNotebook}
@@ -58,6 +97,7 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
         </li>
         {cards.map(c => <Card key={c.notebook.id} card={c} now={now} onRename={onRename} onDelete={onDelete} />)}
       </ul>
+      )}
       {cards.length === 0 && q.trim() && found.length === 0 && <p className="mt-6 text-center text-sm text-muted">Nothing matches “{q.trim()}”.</p>}
 
       {q.trim() && found.length > 0 && (

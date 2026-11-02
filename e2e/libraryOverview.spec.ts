@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { create, noteWithText, signUp } from './helpers'
 
-test('the Library opens on a card for each notebook; a small card makes another; search looks inside notebooks', async ({ page }) => {
+test('the Library opens on a card for each notebook; a small card makes another; search looks inside notebooks', async ({ page, isMobile }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle') // made without choosing a notebook: General
   await page.goto('/library')
   const shelf = page.getByRole('list', { name: 'Notebooks' })
   const general = shelf.getByRole('listitem').filter({ hasText: 'General' })
   await expect(general).toContainText('1 note')
-  await expect(general).toContainText('Last updated')
+  if (!isMobile) await expect(general).toContainText('Last updated') // a phone has a row, with its date
   await expect(shelf.getByRole('progressbar')).toHaveCount(0) // no course cards, no progress bars
   await expect(page.getByRole('button', { name: 'Create new notebook' })).toBeVisible()
 
@@ -27,7 +27,7 @@ test('the Library opens on a card for each notebook; a small card makes another;
   await expect(page.getByText(/Nothing matches/)).toBeVisible()
 })
 
-test('the toolbar and a notebook card\'s menu: Materials, Create, rename and delete', async ({ page }) => {
+test('the toolbar and a notebook card\'s menu: Materials, Create, rename and delete', async ({ page, isMobile }) => {
   await signUp(page)
   await create(page, 'New note')
   await page.goto('/library')
@@ -43,15 +43,17 @@ test('the toolbar and a notebook card\'s menu: Materials, Create, rename and del
   await page.getByRole('button', { name: 'Create new notebook' }).click()
   await page.getByRole('dialog', { name: 'New notebook' }).getByLabel('Name').fill('Temp')
   await page.getByRole('dialog', { name: 'New notebook' }).getByRole('button', { name: 'Create' }).click()
-  await page.getByRole('button', { name: 'Options for Temp' }).click()
+  // a card has its ⋮ button; a phone's row opens the same menu when pressed and held (a right click)
+  const options = async (name: string) => { if (isMobile) await page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: new RegExp(name) }).click({ button: 'right' }); else await page.getByRole('button', { name: `Options for ${name}` }).click() }
+  await options('Temp')
   await page.getByRole('menuitem', { name: 'Rename' }).click()
   await page.getByRole('dialog', { name: 'Rename notebook' }).getByLabel('Name').fill('Spare')
   await page.getByRole('dialog', { name: 'Rename notebook' }).getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: 'Spare' })).toBeVisible()
-  await page.getByRole('button', { name: 'Options for Spare' }).click()
+  await options('Spare')
   await page.getByRole('menuitem', { name: 'Delete' }).click()
   await page.getByRole('button', { name: 'Delete', exact: true }).click()
   await expect(page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: 'Spare' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Options for General' }).click()
+  await options('General')
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toHaveCount(0) // General stays
 })

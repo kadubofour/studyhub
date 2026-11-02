@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { FileText, Layers, ListChecks, Mic, Paperclip, Pencil, Plus, Search, Share2, Trash2, UploadCloud, type LucideIcon } from 'lucide-react'
+import { FileText, Layers, ListChecks, Mic, Paperclip, Pencil, Plus, Search, Share2, SquarePen, Trash2, UploadCloud, type LucideIcon } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { NotebookCover } from '@/components/notes/NotebookCover'
 import { ShareDialog } from '@/components/share/ShareDialog'
@@ -24,7 +24,14 @@ import type { Course, Notebook } from '@/lib/types'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
 import { BackLink } from '@/components/ui/BackLink'
 import { Working } from '@/components/ui/Working'
+import { CardsMark, ChecklistMark, ComposeButton, FileMark, NotebookMark, PhoneGroup, PhoneRow, SheetMark, StripMark } from '@/components/ui/PhoneList'
+import { useScreen } from '@/lib/ui/useScreen'
+import { rowDate } from '@/lib/notes/noteRows'
 
+// a small action on a phone is only its icon: no border, no padding
+const ICON_BTN = 'grid size-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg'
+// A phone draws each as a row in a rounded group, as the Tutor, Practice and Library lists do
+const MARK = { note: SheetMark, deck: CardsMark, lecture: StripMark, file: FileMark, quiz: ChecklistMark } as const
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
 // What a notebook holds, in this order: each kind has its own section
 const KINDS: { kind: Kind; heading: string; one: string; icon: LucideIcon }[] = [
@@ -49,6 +56,7 @@ export default function NotebookPage() {
   const [q, setQ] = useState('')
   const [dialog, setDialog] = useState<null | 'rename' | 'share' | 'deck' | 'material'>(null)
   const [now] = useState(() => new Date())
+  const phone = useScreen() === 'phone'
 
   const [again, setAgain] = useState(0)
   const load = () => setAgain(n => n + 1) // read it all again (after something is added)
@@ -73,6 +81,7 @@ export default function NotebookPage() {
   const inside = items.filter(i => i.notebook_id === book.id)
   const color = notebookColor(book, items.filter(i => i.kind === 'note').map(i => ({ notebook_id: i.notebook_id, course_id: i.course_id })), courses)
   const needle = q.trim().toLowerCase()
+  const summary = KINDS.map(k => ({ k, n: inside.filter(i => i.kind === k.kind).length })).filter(x => x.n > 0).map(x => plural(x.n, x.k.one)).join(' · ') || 'Nothing in it yet'
   const shown = inside.filter(i => !needle || (i.title || 'Untitled').toLowerCase().includes(needle))
   const isGeneral = !!book.is_default
 
@@ -97,22 +106,44 @@ export default function NotebookPage() {
   return (
     <div>
       <BackLink href="/library">Library</BackLink>
-      <div className="mb-8 flex flex-wrap items-end gap-6">
-        <div data-testid="notebook-cover" className="w-28 shrink-0 sm:w-32"><NotebookCover name={book.name} count={inside.length} color={color} /></div>
+      {/* a computer: the cover beside the title and labelled buttons; a phone: a small mark beside the title, and a row of plain icons */}
+      <div className={phone ? 'mb-6' : 'mb-8 flex flex-wrap items-end gap-6'}>
+        {phone ? (
+          <div className="flex items-center gap-3">
+            <NotebookMark color={color} />
+            <div className="min-w-0 flex-1">
+              <h1 className={`${PAGE_TITLE} truncate`}>{book.name}</h1>
+              <p className="mt-0.5 text-[14px] text-muted">{summary}</p>
+            </div>
+          </div>
+        ) : (
+          <div data-testid="notebook-cover" className="w-28 shrink-0 sm:w-32"><NotebookCover name={book.name} count={inside.length} color={color} /></div>
+        )}
         <div className="min-w-0 flex-1">
-          <h1 className={PAGE_TITLE}>{book.name}</h1>
-          <p className="mt-1.5 text-[15px] text-muted">
-            {KINDS.map(k => ({ k, n: inside.filter(i => i.kind === k.kind).length })).filter(x => x.n > 0).map(x => plural(x.n, x.k.one)).join(' · ') || 'Nothing in it yet'}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className="btn-primary" onClick={() => { void newNote() }}><Plus size={15} aria-hidden />New note</button>
-            <Link href={`/lectures/record?notebook=${book.id}`} className="btn"><Mic size={14} aria-hidden />Record lecture</Link>
-            <button type="button" className="btn" onClick={() => setDialog('deck')}><Layers size={14} aria-hidden />New deck</button>
-            <button type="button" className="btn" onClick={() => setDialog('material')}><UploadCloud size={14} aria-hidden />Materials</button>
-            <button type="button" className="btn" onClick={() => setDialog('rename')}><Pencil size={14} aria-hidden />Rename</button>
-            <ExportMenu ids={inside.filter(i => i.kind === 'note').map(i => i.id)} label="Export notes" disabled={!inside.some(i => i.kind === 'note')} />
-            <button type="button" className="btn" onClick={() => setDialog('share')}><Share2 size={14} aria-hidden />Share</button>
-            {!isGeneral && <button type="button" className="btn-ghost hover:!text-danger" onClick={() => { void remove() }}><Trash2 size={14} aria-hidden />Delete notebook</button>}
+          {!phone && <><h1 className={PAGE_TITLE}>{book.name}</h1><p className="mt-1.5 text-[15px] text-muted">{summary}</p></>}
+          <div className={phone ? 'mt-4 flex items-center gap-1' : 'mt-4 flex flex-wrap gap-2'}>
+            {phone ? (
+              <>
+                <Link href={`/lectures/record?notebook=${book.id}`} aria-label="Record lecture" title="Record lecture" className={ICON_BTN}><Mic size={19} aria-hidden /></Link>
+                <button type="button" aria-label="New deck" title="New deck" className={ICON_BTN} onClick={() => setDialog('deck')}><Layers size={19} aria-hidden /></button>
+                <button type="button" aria-label="Materials" title="Materials" className={ICON_BTN} onClick={() => setDialog('material')}><UploadCloud size={19} aria-hidden /></button>
+                <button type="button" aria-label="Rename" title="Rename" className={ICON_BTN} onClick={() => setDialog('rename')}><Pencil size={18} aria-hidden /></button>
+                <ExportMenu iconOnly ids={inside.filter(i => i.kind === 'note').map(i => i.id)} label="Export notes" disabled={!inside.some(i => i.kind === 'note')} />
+                <button type="button" aria-label="Share" title="Share" className={ICON_BTN} onClick={() => setDialog('share')}><Share2 size={18} aria-hidden /></button>
+                {!isGeneral && <button type="button" aria-label="Delete notebook" title="Delete notebook" className={`${ICON_BTN} hover:!text-danger`} onClick={() => { void remove() }}><Trash2 size={18} aria-hidden /></button>}
+              </>
+            ) : (
+              <>
+                <button type="button" className="btn-primary" onClick={() => { void newNote() }}><Plus size={15} aria-hidden />New note</button>
+                <Link href={`/lectures/record?notebook=${book.id}`} className="btn"><Mic size={14} aria-hidden />Record lecture</Link>
+                <button type="button" className="btn" onClick={() => setDialog('deck')}><Layers size={14} aria-hidden />New deck</button>
+                <button type="button" className="btn" onClick={() => setDialog('material')}><UploadCloud size={14} aria-hidden />Materials</button>
+                <button type="button" className="btn" onClick={() => setDialog('rename')}><Pencil size={14} aria-hidden />Rename</button>
+                <ExportMenu ids={inside.filter(i => i.kind === 'note').map(i => i.id)} label="Export notes" disabled={!inside.some(i => i.kind === 'note')} />
+                <button type="button" className="btn" onClick={() => setDialog('share')}><Share2 size={14} aria-hidden />Share</button>
+                {!isGeneral && <button type="button" className="btn-ghost hover:!text-danger" onClick={() => { void remove() }}><Trash2 size={14} aria-hidden />Delete notebook</button>}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -133,6 +164,15 @@ export default function NotebookPage() {
             {KINDS.filter(k => shown.some(i => i.kind === k.kind)).map(k => {
               const group = shown.filter(i => i.kind === k.kind).sort((a, b) => b.at.localeCompare(a.at))
               return (
+                phone ? (
+                  <PhoneGroup key={k.kind} label={`${k.heading} in ${book.name}`}>
+                    {group.map(i => {
+                      const Mark = MARK[k.kind as keyof typeof MARK]
+                      return <PhoneRow key={`${i.kind}:${i.id}`} href={i.href} mark={<Mark color={courses.find(c => c.id === i.course_id)?.color} />} title={i.title}
+                        date={i.at ? rowDate(i.at, now) : undefined} line={i.blurb || i.meta} />
+                    })}
+                  </PhoneGroup>
+                ) : (
                 <section key={k.kind} aria-labelledby={`nb-${k.kind}`}>
                   <h2 id={`nb-${k.kind}`} className="section-label flex items-center gap-2"><k.icon size={17} className="text-accent" aria-hidden />{k.heading}<span className="text-[15px] font-normal text-muted">{group.length}</span></h2>
                   <ItemList label={`${k.heading} in ${book.name}`} layout="list">
@@ -142,12 +182,15 @@ export default function NotebookPage() {
                     ))}
                   </ItemList>
                 </section>
+                )
               )
             })}
           </div>
         </>
       )}
 
+      {/* a phone writes a note from the round button in the corner, as in its other lists */}
+      {phone && <ComposeButton label="New note" icon={SquarePen} onClick={() => { void newNote() }} />}
       {dialog === 'share' && <ShareDialog kind="notebook" id={book.id} title={book.name} onClose={() => setDialog(null)} />}
       <NotebookNameDialog open={dialog === 'rename'} onClose={() => setDialog(null)} title="Rename notebook" submitLabel="Save" initial={book.name}
         courses={courses} initialCourse={book.course_id ?? null} onSubmit={(name, cid) => { void rename(name, cid) }} />

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import type { Course } from '@/lib/types'
 
 // Adds a course from wherever courses are listed: a name and a colour, then it joins the list (onAdded)
-export function NewCourseButton({ count, onAdded, className = 'btn-primary' }: { count: number; onAdded: (c: Course) => void; className?: string }) {
+export function NewCourseButton({ count, onAdded, className = 'btn-primary', iconOnly = false }: { count: number; onAdded: (c: Course) => void; className?: string; /** Only the icon, in a round dark button: a small action on a phone */ iconOnly?: boolean }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [color, setColor] = useState(COURSE_COLORS[0])
@@ -28,7 +28,9 @@ export function NewCourseButton({ count, onAdded, className = 'btn-primary' }: {
 
   return (
     <>
-      <button type="button" className={className} onClick={start}><Plus size={15} aria-hidden />New course</button>
+      {iconOnly
+        ? <button type="button" aria-label="New course" title="New course" className="grid size-10 place-items-center rounded-full bg-fg text-bg" onClick={start}><Plus size={19} aria-hidden /></button>
+        : <button type="button" className={className} onClick={start}><Plus size={15} aria-hidden />New course</button>}
       <Dialog open={open} onClose={() => setOpen(false)} title="New course">
         <form onSubmit={save} className="space-y-3">
           <label className="field"><span>Name</span><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Biology" /></label>

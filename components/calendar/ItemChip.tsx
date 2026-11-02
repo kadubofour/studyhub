@@ -9,7 +9,7 @@ export function ItemChip({ item, course, onClick, compact = false }: { item: Day
   const exam = item.kind === 'task' && item.type === 'exam'
   const color = course?.color ?? '#888780'
   const cls = `flex w-full items-center gap-1 overflow-hidden truncate rounded-md border-l-[3px] px-1.5 text-left text-fg ${compact ? 'py-px text-[11px] leading-4' : 'h-6 text-xs'} ${exam ? 'font-semibold' : ''} ${item.kind === 'session' ? 'italic' : ''}`
-  const style = { borderLeftColor: color, background: tint(color, 22) }
+  const style = { borderLeftColor: color, background: tint(color, 30) }
   const Icon = exam ? GraduationCap : item.kind === 'session' ? BookOpen : Flag
   const inner = (
     <>

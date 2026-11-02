@@ -8,8 +8,10 @@ import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
  * Export one note, a selection, or everything (ids omitted) as a Word document or PDF.
  * PDF opens a print-ready page where the browser's "Save as PDF" keeps math crisp and text selectable.
  */
-export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
+export function ExportMenu({ ids, label = 'Export', fileName, disabled, iconOnly = false }: {
   ids?: string[]; label?: string; fileName?: string; disabled?: boolean
+  /** Only the icon (no border, no padding), named by its label for screen readers: a small action on a phone */
+  iconOnly?: boolean
 }) {
   const toast = useToast()
   const [open, setOpen] = useState(false)
@@ -57,8 +59,9 @@ export function ExportMenu({ ids, label = 'Export', fileName, disabled }: {
 
   return (
     <div ref={ref} className="relative">
-      <button ref={buttonRef} type="button" className="btn" onClick={() => setOpen(o => !o)} disabled={disabled || busy} aria-haspopup="menu" aria-expanded={open}>
-        <Download size={14} aria-hidden />{busy ? 'Preparing…' : label}
+      <button ref={buttonRef} type="button" className={iconOnly ? 'grid size-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg disabled:opacity-40' : 'btn'} onClick={() => setOpen(o => !o)} disabled={disabled || busy} aria-haspopup="menu" aria-expanded={open}
+        aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined}>
+        {iconOnly ? <Download size={18} aria-hidden /> : <><Download size={14} aria-hidden />{busy ? 'Preparing…' : label}</>}
       </button>
       {open && (
         <div role="menu" onKeyDown={onMenuKey} className="menu-panel right-0 origin-top-right">

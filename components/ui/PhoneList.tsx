@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, Circle, CircleCheck, MoreHorizontal, Search, type LucideIcon } from 'lucide-react'
+import { BookOpen, Check, Circle, CircleCheck, MoreHorizontal, Search, type LucideIcon } from 'lucide-react'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 
 // The parts of a list page on a phone, as notes apps have it (the Notes list first, then Flashcards, Lectures, the Library, Quiz and
@@ -157,6 +157,24 @@ export function FileMark({ color = 'var(--accent-solid)' }: MarkProps) {
   return (
     <span aria-hidden data-motif="file" className="relative h-10 w-8 shrink-0 rounded-[5px] [clip-path:polygon(0_0,70%_0,100%_26%,100%_100%,0_100%)]" style={{ background: tint(color, 22) }}>
       <span className="absolute right-0 top-0 size-[30%] rounded-bl-[3px]" style={{ background: tint(color, 50) }} />
+    </span>
+  )
+}
+
+/** A course: a book in its colour */
+export function CourseMark({ color = 'var(--accent-solid)' }: { color?: string }) {
+  return (
+    <span aria-hidden data-motif="course" className="grid h-10 w-9 shrink-0 place-items-center rounded-[8px]" style={{ background: tint(color, 16) }}>
+      <BookOpen size={18} style={{ color }} />
+    </span>
+  )
+}
+/** A notebook: a cover with its spine */
+export function NotebookMark({ color = 'var(--accent-solid)' }: { color?: string }) {
+  return (
+    <span aria-hidden data-motif="notebook" className="relative h-10 w-8 shrink-0 overflow-hidden rounded-[5px]" style={{ background: color }}>
+      <span className="absolute inset-y-0 left-0 w-1.5 bg-black/20" />
+      <span className="absolute left-2.5 right-1.5 top-2 h-2 rounded-[2px] bg-white/80" />
     </span>
   )
 }

@@ -93,10 +93,10 @@ export function TimeGrid({ keys, todayKey, now, tz, classes, courses, itemsByDay
                   const { lane, lanes: count } = lanes.get(c.id) ?? { lane: 0, lanes: 1 }
                   return (
                     <button key={c.id} type="button" onClick={() => onClassClick(c)}
-                      className="absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left text-[11px] leading-tight text-fg"
-                      style={{ top: `${top}%`, height: `${h}%`, minHeight: 18, left: `calc(${(lane / count) * 100}% + 2px)`, width: `calc(${100 / count}% - 4px)`, borderLeftColor: color, background: tint(color, 20) }}>
-                      <span className="block font-semibold">{course?.name ?? 'Class'}</span>
-                      <span className="block">{c.start_time.slice(0, 5)}–{c.end_time.slice(0, 5)}{c.location ? ` · ${c.location}` : ''}</span>
+                      className="absolute overflow-hidden rounded-md border-l-[4px] px-1.5 py-1 text-left text-xs leading-tight text-fg shadow-sm"
+                      style={{ top: `${top}%`, height: `${h}%`, minHeight: 22, left: `calc(${(lane / count) * 100}% + 2px)`, width: `calc(${100 / count}% - 4px)`, borderLeftColor: color, background: tint(color, 42), outline: `1px solid ${tint(color, 60)}` }}>
+                      <span className="block truncate font-semibold">{course?.name ?? 'Class'}{c.kind && c.kind !== 'lecture' ? ` · ${c.kind}` : ''}</span>
+                      <span className="block truncate">{c.start_time.slice(0, 5)}–{c.end_time.slice(0, 5)}{c.location ? ` · ${c.location}` : ''}</span>
                     </button>
                   )
                 })}
