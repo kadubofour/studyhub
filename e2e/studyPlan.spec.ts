@@ -15,9 +15,7 @@ async function readyForPlan(page: Page, { exam = true } = {}) {
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
-  await topics.getByRole('button', { name: 'Draft topics' }).click()
-  await topics.getByRole('button', { name: 'Save topics' }).click()
-  await expect(page.getByText('Topics saved.')).toBeVisible()
+  await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own
   await page.goto('/planner')
   if (!exam) return
   await page.getByLabel('Add a task').fill('Midterm next fri')
@@ -113,5 +111,5 @@ test('a course with no topics is sent to Progress first', async ({ page }) => {
   const panel = page.getByRole('region', { name: 'Study plan' })
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Draft topics for Biology on Progress first/)).toBeVisible()
+  await expect(panel.getByText(/Find topics for Biology on Progress first/)).toBeVisible()
 })

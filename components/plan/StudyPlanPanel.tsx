@@ -124,7 +124,7 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
                     <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent">{v.plan.exam && v.daysToExam !== null ? `${v.plan.exam.title} in ${plural(v.daysToExam, 'day')}` : 'Ongoing, no exam'}</span>
                   </p>
                 </div>
-                {v.status === 'no_topics' && <p className="text-sm text-muted">Draft topics for {course?.name} on Progress first. <Link className="text-accent" href="/progress">Open Progress</Link></p>}
+                {v.status === 'no_topics' && <p className="text-sm text-muted">Find topics for {course?.name} on Progress first. <Link className="text-accent" href="/progress">Open Progress</Link></p>}
                 {v.status === 'no_days' && <p className="text-sm text-muted">{v.examDay ? 'Your exam is too close for a plan.' : 'There are no study days in the next two weeks.'}</p>}
                 {v.status === 'ok' && (
                   <>

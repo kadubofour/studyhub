@@ -15,9 +15,7 @@ test('find resources for a topic, keep them across a reload, and remove one', as
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
-  await topics.getByRole('button', { name: 'Draft topics' }).click()
-  await topics.getByRole('button', { name: 'Save topics' }).click()
-  await expect(page.getByText('Topics saved.')).toBeVisible()
+  await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own
 
   await topics.getByRole('button', { name: 'Resources for Krebs cycle' }).click()
   await expect(topics.getByText('No links yet.')).toBeVisible()

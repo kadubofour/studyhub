@@ -28,6 +28,7 @@ beforeEach(() => {
   courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name: 'Chemistry', color: '#BA7517' }]
   stats = []; links = []; material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] }
   loadFails = false; saveCourseTopics.mockClear(); postAi.mockReset()
+  postAi.mockResolvedValue({ ok: false, error: 'too_little', message: 'Not enough to go on yet.' })
 })
 afterEach(cleanup)
 
@@ -36,9 +37,11 @@ describe('Topics section', () => {
     await open()
     expect(screen.getByRole('link', { name: 'Open course page' }).getAttribute('href')).toBe('/courses/c1')
   })
-  it('a course with no topics offers to draft them', async () => {
+  it('a course with too little material offers to find topics by hand, and does not ask on its own', async () => {
+    material = { notes: [{ id: 'n1', title: 'Krebs notes' }], lectures: [], decks: [] }
     await open()
-    expect(screen.getByRole('button', { name: 'Draft topics' })).toBeTruthy()
+    expect(postAi).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Find topics' })).toBeTruthy()
     expect(screen.queryByText('Weak spots')).toBeNull()
   })
   it('shows each topic with its status, the numbers behind it, and what is linked', async () => {
@@ -64,36 +67,29 @@ describe('Topics section', () => {
     await open()
     expect(screen.getByText('Nothing weak right now')).toBeTruthy()
   })
-  it('Draft topics asks the AI, shows the draft as unsaved, and saves only when told', async () => {
+  it('topics are found on their own and saved straight away, with no draft to confirm', async () => {
     postAi.mockResolvedValue({ ok: true, value: { topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }, { name: 'Glycolysis', notes: ['n2'], lectures: [] }] } })
+    saveCourseTopics.mockImplementationOnce(async () => { stats = [stat({ name: 'Krebs cycle' }), stat({ topic_id: 't2', name: 'Glycolysis', position: 2 })] })
     await open()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Draft topics' })) })
     expect(postAi).toHaveBeenCalledWith('/api/ai/topics', { courseId: 'c1', mode: 'draft' })
-    expect(screen.getByRole('status').textContent).toMatch(/Nothing is saved until you press Save/)
-    expect(saveCourseTopics).not.toHaveBeenCalled()
-    stats = [stat({ name: 'Krebs cycle' }), stat({ topic_id: 't2', name: 'Glycolysis', position: 2 })]
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save topics' })) })
     expect(saveCourseTopics).toHaveBeenCalledWith(expect.anything(), 'c1', [
       { name: 'Krebs cycle', links: [{ kind: 'note', id: 'n1' }] }, { name: 'Glycolysis', links: [{ kind: 'note', id: 'n2' }] },
     ])
-    expect(screen.getByText('Topics saved.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Save topics' })).toBeNull()
     expect(screen.getByRole('listitem', { name: 'Glycolysis' })).toBeTruthy()
   })
   it('shows the AI\'s refusals in plain words, with no editor', async () => {
     postAi.mockResolvedValue({ ok: false, error: 'too_little', message: 'Add a few more notes or record a lecture in this course first.' })
     await open()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Draft topics' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/Add a few more notes/)
     expect(screen.queryByRole('button', { name: 'Save topics' })).toBeNull()
+    expect(saveCourseTopics).not.toHaveBeenCalled()
   })
-  it('keeps the editor and says so when saving fails', async () => {
+  it('says so when saving the found topics fails', async () => {
     postAi.mockResolvedValue({ ok: true, value: { topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }] } })
     saveCourseTopics.mockRejectedValueOnce(new Error('rls'))
     await open()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Draft topics' })) })
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save topics' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/Couldn't save/)
-    expect(screen.getByLabelText('Topic 1 name')).toBeTruthy()
   })
   it('Update topics appears only when some material is not linked, and adds to the list without losing edits', async () => {
     stats = [stat({ name: 'Krebs cycle' })]
@@ -106,8 +102,8 @@ describe('Topics section', () => {
     await open()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Update topics' })) })
     expect(postAi).toHaveBeenCalledWith('/api/ai/topics', { courseId: 'c1', mode: 'update' })
-    expect((screen.getByLabelText('Topic 1 name') as HTMLInputElement).value).toBe('Krebs cycle')
-    expect((screen.getByLabelText('Topic 2 name') as HTMLInputElement).value).toBe('Pyruvate')
+    const saved = saveCourseTopics.mock.calls[0][2] as { name: string }[]
+    expect(saved.map(t => t.name)).toEqual(['Krebs cycle', 'Pyruvate'])
   })
   it('Edit topics opens the saved list; Cancel leaves it as it was', async () => {
     stats = [stat({ name: 'Krebs cycle' })]
@@ -136,21 +132,18 @@ describe('Topics section', () => {
     loadFails = true
     await open()
     expect(screen.getByRole('alert').textContent).toMatch(/Couldn't load your topics/)
-    expect(screen.queryByRole('button', { name: 'Draft topics' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Find topics' })).toBeNull()
     loadFails = false
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Try again' })) })
     expect(screen.getByRole('listitem', { name: 'Krebs cycle' })).toBeTruthy()
   })
-  it('the course cannot be switched while the AI is drafting, or while there are edits to save', async () => {
+  it('the course cannot be switched while topics are being found', async () => {
     let finish: (v: unknown) => void = () => {}
     postAi.mockReturnValue(new Promise(res => { finish = res }))
     await open()
-    fireEvent.click(screen.getByRole('button', { name: 'Draft topics' }))
-    expect((within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement).disabled).toBe(true)
+    const radio = () => within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement
+    expect(radio().disabled).toBe(true)
     await act(async () => { finish({ ok: true, value: { topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }] } }) })
-    expect(screen.getByLabelText('Topic 1 name')).toBeTruthy()
-    expect((within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement).disabled).toBe(true) // still editing
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect((within(screen.getByRole('radiogroup', { name: 'Topics course' })).getAllByRole('radio')[0] as HTMLButtonElement).disabled).toBe(false)
+    expect(radio().disabled).toBe(false)
   })
 })

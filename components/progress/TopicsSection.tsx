@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Circle, CircleCheck, CircleDot } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
@@ -61,15 +61,29 @@ export function TopicsSection() {
   // A failed load is not an empty course: drafting then would replace the topics that are really there
   function retry() { setLoadFailed(false); setData(null); setAttempt(a => a + 1) }
 
+  // Topics are found and saved in one step: there is nothing to fix before they count (Edit topics is there for the student who wants to)
   async function ask(mode: 'draft' | 'update') {
     if (!courseId || !data) return
     setBusy(true); setProblem(null)
     const r = await postAi<{ topics: DraftTopic[] }>('/api/ai/topics', { courseId, mode })
-    setBusy(false)
-    if (!r.ok) { setProblem({ code: r.error, message: r.message }); return }
+    if (!r.ok) { setBusy(false); setProblem({ code: r.error, message: r.message }); return }
     const list = mode === 'draft' ? fromAi(r.value.topics) : applyUpdate(toDrafts(data.stats, data.links), r.value.topics)
-    setSaveError(null); setEditing(e => ({ list, fresh: true, n: (e?.n ?? 0) + 1 }))
+    try {
+      await saveCourseTopics(supabase(), courseId, tidy(list))
+      setData(await load(courseId)); toast(mode === 'draft' ? 'Topics found.' : 'Topics updated.')
+    } catch { setProblem({ code: 'save_failed', message: 'Couldn\'t save the topics. Try again.' }) }
+    setBusy(false)
   }
+  // A course with enough notes and no topics gets them on its own, once per visit (a failure leaves the button to try again)
+  const tried = useRef(new Set<string>())
+  useEffect(() => {
+    if (!courseId || !data || busy || editing || data.stats.length > 0 || tried.current.has(courseId)) return
+    if (data.material.notes.length + data.material.lectures.length < 2) return
+    tried.current.add(courseId)
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+    void ask('draft')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, data, busy, editing])
 
   async function save(list: TopicDraft[]) {
     if (!courseId) return
@@ -109,10 +123,10 @@ export function TopicsSection() {
           onSave={list => { void save(list) }} onCancel={() => { setEditing(null); setSaveError(null) }} />
       ) : data.stats.length === 0 ? (
         <div className="space-y-2">
-          <p className="text-sm text-muted">Topics split a course into things you can revise one by one, and show which ones are strong or weak. The AI drafts them from this course&apos;s notes and lectures, and you fix them before they are saved.</p>
+          <p className="text-sm text-muted">Topics split a course into things you can revise one by one, and show which ones are strong or weak. They are found from this course&apos;s notes and lectures once it has two or more.</p>
           {busy
-            ? <Working kind="write" label="Drafting topics" steps={['Reading the notes and lectures', 'Grouping them by idea', 'Naming each topic']} className="rounded-2xl bg-surface py-5" />
-            : <button type="button" className="btn-primary" onClick={() => { void ask('draft') }}>Draft topics</button>}
+            ? <Working kind="write" label="Finding topics" steps={['Reading the notes and lectures', 'Grouping them by idea', 'Naming each topic']} className="rounded-2xl bg-surface py-5" />
+            : <button type="button" className="btn-primary" onClick={() => { void ask('draft') }}>Find topics</button>}
           <p className="text-xs text-muted">Uses 1 AI action. Needs at least two notes or lectures in this course.</p>
         </div>
       ) : (
