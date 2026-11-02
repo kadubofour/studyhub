@@ -1,10 +1,9 @@
 'use client'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { Hand, Maximize2, Mic, MicOff, Minimize2, SendHorizontal, X } from 'lucide-react'
+import { Hand, Maximize2, Mic, MicOff, Minimize2, Presentation, SendHorizontal, X } from 'lucide-react'
 import { Orb } from '@/components/voice/Orb'
 import { useLiveSession, type Phase } from '@/components/voice/useLiveSession'
 import { LessonBoard } from '@/components/tutor/LessonPlayer'
-import { Switch } from '@/components/ui/Switch'
 import { Working } from '@/components/ui/Working'
 
 // The live tutor lives in the app's layout, so a session carries on while the student goes to another page: full screen, or shrunk to a small bar.
@@ -53,20 +52,18 @@ function FullScreen({ session }: { session: Session }) {
         <span className="chill-blob chill-c" style={{ width: '30vmax', height: '30vmax', left: '30%', top: '40%', background: 'var(--accent-glow)' }} />
       </div>
 
-      <header className="relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-        <div className="live-glass mr-auto flex items-center gap-2.5 rounded-full py-1.5 pl-3 pr-4">
-          <span aria-hidden className={`size-2 rounded-full ${state.muted ? 'bg-muted' : 'bg-[var(--accent-glow)]'}`} />
-          <div className="min-w-0 leading-tight">
-            <h2 className="text-sm font-semibold">Live session</h2>
-            <p role="status" className="text-xs text-muted">{state.muted ? 'Microphone off' : STATUS[state.phase]}</p>
-          </div>
+      <header className="relative flex items-center gap-2 px-4 py-3">
+        {/* only a dot says a session is on, and what it is doing */}
+        <div role="status" aria-label={`Live session: ${state.muted ? 'microphone off' : STATUS[state.phase]}`} title={state.muted ? 'Microphone off' : STATUS[state.phase]}
+          className="live-glass mr-auto grid size-9 place-items-center rounded-full">
+          <span aria-hidden className={`size-2.5 rounded-full ${state.muted ? 'bg-muted' : 'bg-[var(--accent-glow)]'} ${!state.muted && (state.phase === 'listening' || state.phase === 'speaking') ? 'animate-pulse' : ''}`} />
         </div>
-        <span className="live-glass flex items-center gap-2 rounded-full py-1.5 pl-4 pr-3 text-sm">
-          <span id="live-visual-label">Visual explanation</span>
-          <Switch checked={state.visual} onChange={session.setVisual} labelledBy="live-visual-label" />
-        </span>
-        <button type="button" className="live-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium" onClick={() => setFullscreen(false)} title="Keep going while you use the rest of the app"><Minimize2 size={15} aria-hidden />Use the app</button>
-        <button type="button" className="live-glass inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-danger" onClick={session.end}><X size={15} aria-hidden />End</button>
+        <button type="button" role="switch" aria-checked={state.visual} aria-label="Visual explanation" title={state.visual ? 'Visual explanations on' : 'Visual explanations off'}
+          className={`live-glass grid size-9 place-items-center rounded-full ${state.visual ? 'text-[var(--accent-glow)]' : 'text-muted'}`} onClick={() => session.setVisual(!state.visual)}>
+          <Presentation size={16} aria-hidden />
+        </button>
+        <button type="button" aria-label="Use the app" title="Keep going while you use the rest of the app" className="live-glass grid size-9 place-items-center rounded-full text-muted" onClick={() => setFullscreen(false)}><Minimize2 size={16} aria-hidden /></button>
+        <button type="button" aria-label="End the session" title="End" className="live-glass grid size-9 place-items-center rounded-full text-danger" onClick={session.end}><X size={16} aria-hidden /></button>
       </header>
 
       <main className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 py-2">
@@ -94,17 +91,18 @@ function FullScreen({ session }: { session: Session }) {
       </main>
 
       <footer className="relative px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 max-md:pb-6">
-        <div className="live-glass mx-auto flex max-w-2xl flex-wrap items-center gap-2 rounded-[1.75rem] p-2">
+        <div className="live-glass mx-auto flex max-w-xl items-center gap-2 rounded-full p-2">
           <button type="button" aria-label={state.muted ? 'Turn the microphone on' : 'Mute the microphone'} aria-pressed={state.muted} title={state.muted ? 'Unmute' : 'Mute'}
-            className={`grid size-12 shrink-0 place-items-center rounded-full border border-line bg-raised ${state.muted ? '!bg-danger-soft text-danger' : ''}`} onClick={() => session.mute(!state.muted)}>
-            {state.muted ? <MicOff size={20} aria-hidden /> : <Mic size={20} aria-hidden />}
+            className={`grid size-11 shrink-0 place-items-center rounded-full border border-line bg-raised ${state.muted ? '!bg-danger-soft text-danger' : ''}`} onClick={() => session.mute(!state.muted)}>
+            {state.muted ? <MicOff size={19} aria-hidden /> : <Mic size={19} aria-hidden />}
           </button>
-          <form className="flex min-w-0 flex-1 gap-2" onSubmit={e => { e.preventDefault(); const t = typed.trim(); if (t) { setTyped(''); session.type(t) } }}>
+          <form className="flex min-w-0 flex-1 items-center gap-1" onSubmit={e => { e.preventDefault(); const t = typed.trim(); if (t) { setTyped(''); session.type(t) } }}>
             <input aria-label="Type a question" className="input min-w-0 flex-1 !rounded-full !border-transparent !bg-transparent" placeholder="Or type a question" maxLength={1000} value={typed} onChange={e => setTyped(e.target.value)} />
-            <button className="btn !rounded-full" disabled={!typed.trim()}>Send</button>
+            <button aria-label="Send" title="Send" className="grid size-9 shrink-0 place-items-center rounded-full text-muted disabled:opacity-40" disabled={!typed.trim()}><SendHorizontal size={17} aria-hidden /></button>
           </form>
-          <button type="button" className="btn-primary !rounded-full !px-6 !py-3 text-base max-sm:w-full" onClick={session.ask} autoFocus>
-            {sending ? <SendHorizontal size={18} aria-hidden /> : <Hand size={18} aria-hidden />}{sending ? 'Send' : 'Ask a question'}
+          <button type="button" aria-label={sending ? 'Send what you said' : 'Ask a question'} title={sending ? 'Send' : 'Ask a question'} autoFocus
+            className="btn-primary grid size-11 shrink-0 place-items-center !rounded-full !p-0" onClick={session.ask}>
+            {sending ? <SendHorizontal size={19} aria-hidden /> : <Hand size={19} aria-hidden />}
           </button>
         </div>
       </footer>
