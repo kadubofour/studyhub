@@ -542,21 +542,28 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .lesson-focus rect, .lesson-focus ellipse { stroke-width: 1.3; }
 @media (prefers-reduced-motion: reduce) { .lesson-in, .lesson-in .lesson-line, .lesson-in .lesson-head, .lesson-in .lesson-label { animation: none; } }
 
-/* the live tutor's voice orb: it breathes while listening, ripples while speaking, turns while thinking */
-@keyframes orb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-@keyframes orb-speak { 0%, 100% { transform: scale(1); } 25% { transform: scale(1.12); } 50% { transform: scale(.97); } 75% { transform: scale(1.08); } }
-@keyframes orb-ring { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.7); opacity: 0; } }
-@keyframes orb-turn { to { transform: rotate(360deg); } }
-.orb-core { background: var(--accent-solid); box-shadow: inset 0 0 0 5px color-mix(in srgb, white 22%, transparent), 0 10px 30px -10px rgb(21 22 40 / 0.35); }
-.orb[data-phase="listening"] .orb-core { animation: orb-breathe 3.2s ease-in-out infinite; }
-.orb[data-phase="speaking"] .orb-core { animation: orb-speak 1.1s ease-in-out infinite; }
-.orb[data-phase="thinking"] .orb-core, .orb[data-phase="drawing"] .orb-core { animation: orb-breathe 1.4s ease-in-out infinite; }
-.orb[data-phase="speaking"] .orb-ring, .orb[data-phase="listening"] .orb-ring { animation: orb-ring 2.4s ease-out infinite; }
-.orb[data-phase="speaking"] .orb-ring:nth-child(2) { animation-delay: .8s; }
-.orb[data-phase="listening"] .orb-ring:nth-child(2) { animation-delay: 1.2s; }
-.orb[data-phase="thinking"] .orb-arc, .orb[data-phase="drawing"] .orb-arc { animation: orb-turn 1.1s linear infinite; }
-.orb[data-muted="true"] .orb-core { filter: grayscale(.8); opacity: .6; animation: none; }
-@media (prefers-reduced-motion: reduce) { .orb .orb-core, .orb .orb-ring, .orb .orb-arc { animation: none !important; } }
+/* The live tutor's voice, drawn as something alive: soft translucent layers that change shape slowly while the student speaks (it breathes), faster
+   while the tutor does (it swells), with a thin light sweeping round it while it thinks. No flat sphere, no rings. */
+@keyframes orb-drift-a { 0%, 100% { transform: translate(-7%, -5%) rotate(0deg) scale(1); border-radius: 58% 42% 55% 45% / 50% 58% 42% 50%; } 50% { transform: translate(6%, 6%) rotate(180deg) scale(1.08); border-radius: 44% 56% 48% 52% / 58% 44% 56% 42%; } }
+@keyframes orb-drift-b { 0%, 100% { transform: translate(8%, 4%) rotate(0deg) scale(1.02); border-radius: 46% 54% 42% 58% / 56% 46% 54% 44%; } 50% { transform: translate(-7%, -6%) rotate(-160deg) scale(.94); border-radius: 60% 40% 54% 46% / 42% 58% 44% 56%; } }
+@keyframes orb-drift-c { 0%, 100% { transform: translate(-3%, 7%) scale(.9); } 50% { transform: translate(5%, -6%) scale(1.12); } }
+@keyframes orb-aura { 0%, 100% { transform: scale(.94); opacity: .32; } 50% { transform: scale(1.1); opacity: .55; } }
+@keyframes orb-sweep { to { transform: rotate(360deg); } }
+.orb { --o1: var(--accent-solid); --o2: var(--accent-glow); }
+.orb-aura { position: absolute; inset: -22%; border-radius: 9999px; background: linear-gradient(135deg, var(--o1), var(--o2)); filter: blur(38px); opacity: .4; animation: orb-aura 6s ease-in-out infinite; }
+.orb-blob { position: absolute; will-change: transform; }
+.orb-blob-a { inset: 6%; background: var(--o1); filter: blur(5px); animation: orb-drift-a 9s ease-in-out infinite; }
+.orb-blob-b { inset: 10%; background: var(--o2); opacity: .9; filter: blur(9px); animation: orb-drift-b 7s ease-in-out infinite; }
+.orb-blob-c { inset: 24%; border-radius: 9999px; background: color-mix(in srgb, white 72%, var(--o2)); opacity: .6; filter: blur(14px); animation: orb-drift-c 11s ease-in-out infinite; }
+.orb-sweep { position: absolute; inset: -4%; border-radius: 9999px; border: 2px solid transparent; border-top-color: var(--o2); border-right-color: color-mix(in srgb, var(--o2) 35%, transparent); animation: orb-sweep 1.3s linear infinite; }
+.orb[data-phase="speaking"] .orb-blob-a { animation-duration: 3.2s; }
+.orb[data-phase="speaking"] .orb-blob-b { animation-duration: 2.4s; }
+.orb[data-phase="speaking"] .orb-blob-c { animation-duration: 3.6s; }
+.orb[data-phase="speaking"] .orb-aura { animation-duration: 1.4s; opacity: .7; }
+.orb[data-phase="thinking"] .orb-blob-a, .orb[data-phase="drawing"] .orb-blob-a { animation-duration: 4.5s; }
+.orb[data-muted="true"] { filter: grayscale(.85); opacity: .55; }
+.orb[data-muted="true"] .orb-blob, .orb[data-muted="true"] .orb-aura { animation: none; }
+@media (prefers-reduced-motion: reduce) { .orb .orb-blob, .orb .orb-aura, .orb .orb-sweep { animation: none !important; } }
 
 /* A diagram, chart or figure drawn from an uploaded file is black lines on white paper. In dark mode the lines turn light and the paper
    drops out (screen blend on the page behind it), instead of a white box. Photos are not marked, so they stay as they are. */
@@ -567,14 +574,9 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .live-stage .chill-blob { opacity: .22; }
 .live-glass { background: color-mix(in srgb, var(--raised) 62%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.2); backdrop-filter: blur(22px) saturate(1.2); border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 18px 50px -24px rgb(21 22 40 / .45); }
 .live-orb { position: relative; display: grid; place-items: center; }
-.live-orb::before { content: ''; position: absolute; inset: -12%; border-radius: 9999px; background: var(--accent-glow); filter: blur(34px); opacity: .5; animation: live-halo 5s ease-in-out infinite; }
-.live-orb[data-phase="speaking"]::before { animation-duration: 1.6s; opacity: .8; }
-.live-orb[data-muted="true"]::before { opacity: .15; animation: none; }
-@keyframes live-halo { 0%, 100% { transform: scale(.94); } 50% { transform: scale(1.08); } }
-.live-orb .orb-core { background: linear-gradient(150deg, color-mix(in srgb, white 45%, var(--accent-glow)), var(--accent-solid) 70%); }
 .live-bars { display: flex; align-items: center; justify-content: center; gap: 4px; height: 22px; }
 .live-bars i { width: 4px; border-radius: 9999px; background: var(--accent-solid); height: 30%; opacity: .55; }
 [data-phase="speaking"] .live-bars i { animation: working-wave 0.9s ease-in-out infinite; opacity: .9; }
 [data-phase="speaking"] .live-bars i:nth-child(2) { animation-delay: .12s; } [data-phase="speaking"] .live-bars i:nth-child(3) { animation-delay: .24s; }
 [data-phase="speaking"] .live-bars i:nth-child(4) { animation-delay: .36s; } [data-phase="speaking"] .live-bars i:nth-child(5) { animation-delay: .48s; }
-@media (prefers-reduced-motion: reduce) { .live-orb::before, [data-phase="speaking"] .live-bars i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { [data-phase="speaking"] .live-bars i { animation: none; } }
