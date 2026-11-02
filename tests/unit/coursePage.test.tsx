@@ -114,7 +114,7 @@ describe('Course page', () => {
   it('a course with no topics points to Progress', async () => {
     page!.topics = []
     await open()
-    expect(screen.getByRole('link', { name: /Set up topics/ }).getAttribute('href')).toBe('/progress')
+    expect(screen.getByRole('link', { name: /See them on Progress/ }).getAttribute('href')).toBe('/progress')
   })
   it('says there is no such course', async () => {
     page = null

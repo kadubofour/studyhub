@@ -39,9 +39,7 @@ async function topicsSaved(page: Page) {
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
-  await topics.getByRole('button', { name: 'Draft topics' }).click()
-  await topics.getByRole('button', { name: 'Save topics' }).click()
-  await expect(page.getByText('Topics saved.')).toBeVisible()
+  await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own
   return first
 }
 

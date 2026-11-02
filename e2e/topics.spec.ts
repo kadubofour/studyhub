@@ -19,8 +19,8 @@ async function topicsSaved(page: Page) {
   await secondNote(page, 'Glycolysis notes', 'Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. ')
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
-  await topics.getByRole('button', { name: 'Draft topics' }).click()
-  await expect(topics.getByText(/Nothing is saved until you press Save/)).toBeVisible()
+  await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own, with nothing to fix first
+  await topics.getByRole('button', { name: 'Edit topics' }).click()
   await expect(topics.getByLabel('Topic 2 name')).toHaveValue('Glycolysis')
   await topics.getByLabel('Topic 2 name').fill('Glycolysis and fermentation')
   await topics.getByRole('button', { name: 'Save topics' }).click()
@@ -74,21 +74,19 @@ test('wrong quiz answers turn a topic weak with its numbers, and Update topics a
   await page.goto(note)
   await secondNote(page, 'Pyruvate notes', 'Pyruvate is converted to acetyl-CoA before it enters the cycle in the matrix. ')
   await page.goto('/progress')
-  await topics.getByRole('button', { name: 'Update topics' }).click()
-  await expect(topics.getByLabel('Topic 3 name')).toHaveValue('Pyruvate')
-  await expect(topics.getByLabel('Topic 2 name')).toHaveValue('Glycolysis and fermentation') // earlier edits kept
-  await topics.getByRole('button', { name: 'Save topics' }).click()
+  await topics.getByRole('button', { name: 'Update topics' }).click() // saved at once
   await expect(topics.getByRole('listitem', { name: 'Pyruvate' })).toBeVisible()
+  await expect(topics.getByRole('listitem', { name: 'Glycolysis and fermentation' })).toBeVisible() // earlier edits kept
   await expect(topics.getByRole('button', { name: 'Update topics' })).toHaveCount(0)
 })
 
-test('a course with too little material is told so, and nothing is drafted', async ({ page }) => {
+test('a course with too little material is told so, and nothing is found', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
   await inBiology(page)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
-  await topics.getByRole('button', { name: 'Draft topics' }).click()
+  await topics.getByRole('button', { name: 'Find topics' }).click()
   await expect(topics.getByRole('alert')).toContainText('Add a few more notes')
   await expect(topics.getByRole('button', { name: 'Save topics' })).toHaveCount(0)
 })

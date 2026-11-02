@@ -111,7 +111,7 @@ describe('Study plan panel', () => {
   it('no topics sends the student to Progress; an exam too close says so', async () => {
     views = [view({ status: 'no_topics', today: [], upcoming: [], schedule: [] })]
     await open()
-    expect(screen.getByText(/Draft topics for Biology on Progress first/)).toBeTruthy()
+    expect(screen.getByText(/Find topics for Biology on Progress first/)).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open Progress' }).getAttribute('href')).toBe('/progress')
     cleanup()
     views = [view({ status: 'no_days', today: [], upcoming: [], schedule: [] })]

@@ -158,7 +158,7 @@ export default function CoursePageRoute() {
           {topics && topics.length > 0 && <Link href="/progress" className="btn-ghost text-accent">Edit topics</Link>}
         </div>
         {topics === null ? <p role="alert" className="text-sm text-danger">Could not load the topics.</p>
-          : topics.length === 0 ? <p className="text-sm text-muted">Topics group this course&apos;s notes so you can see what you know. <Link href="/progress" className="text-accent underline">Set up topics</Link></p>
+          : topics.length === 0 ? <p className="text-sm text-muted">Topics are found on their own once this course has two notes or lectures, and show what you know. <Link href="/progress" className="text-accent underline">See them on Progress</Link></p>
           : (
             <>
               <p className="mb-2 text-xs text-muted">{progressLine(topics)}</p>
