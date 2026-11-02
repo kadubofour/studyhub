@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { FileText, Layers, ListChecks, Mic, Paperclip, Pencil, Plus, Search, Share2, Trash2, UploadCloud, type LucideIcon } from 'lucide-react'
@@ -50,17 +50,16 @@ export default function NotebookPage() {
   const [dialog, setDialog] = useState<null | 'rename' | 'share' | 'deck' | 'material'>(null)
   const [now] = useState(() => new Date())
 
-  const load = useCallback(async () => {
-    const sb = supabase()
-    const [bs, list] = await Promise.all([listNotebooks(sb), loadLibrary(sb, new Date())])
-    setAll(bs); setItems(list); setBook(bs.find(b => b.id === id) ?? null)
-  }, [id])
+  const [again, setAgain] = useState(0)
+  const load = () => setAgain(n => n + 1) // read it all again (after something is added)
   useEffect(() => {
     let live = true
-    listCourses(supabase()).then(c => { if (live) setCourses(c) }).catch(() => {})
-    load().catch(() => { if (live) setBook(null) })
+    const sb = supabase()
+    Promise.all([listNotebooks(sb), loadLibrary(sb, new Date()), listCourses(sb).catch(() => [] as Course[])])
+      .then(([bs, list, cs]) => { if (live) { setAll(bs); setItems(list); setCourses(cs); setBook(bs.find(b => b.id === id) ?? null) } })
+      .catch(() => { if (live) setBook(null) })
     return () => { live = false }
-  }, [load])
+  }, [id, again])
 
   if (book === undefined) return <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
   if (book === null) return (

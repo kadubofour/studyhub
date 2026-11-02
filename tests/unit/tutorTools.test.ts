@@ -10,8 +10,8 @@ const mcq = (p: string) => ({ type: 'mcq', prompt: p, options: ['a', 'b', 'c', '
 describe('tool definitions', () => {
   it('offers the quiz tool only when the chat is attached to a note', () => {
     const names = (n: boolean) => toolDefinitions(n).map(t => (t as { name: string }).name)
-    expect(names(true)).toEqual(['create_note', 'create_flashcards', 'create_quiz', 'create_task'])
-    expect(names(false)).toEqual(['create_note', 'create_flashcards', 'create_task'])
+    expect(names(true)).toEqual(['create_note', 'create_flashcards', 'create_quiz', 'create_task', 'create_class', 'create_notebook'])
+    expect(names(false)).toEqual(['create_note', 'create_flashcards', 'create_task', 'create_class', 'create_notebook'])
   })
 })
 

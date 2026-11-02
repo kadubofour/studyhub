@@ -4,6 +4,8 @@ import { createNote } from '@/lib/data/notes'
 import { createDeck, deleteDeck } from '@/lib/data/decks'
 import { createCards } from '@/lib/data/cards'
 import { createTask } from '@/lib/data/tasks'
+import { createClass } from '@/lib/data/classes'
+import { createNotebook } from '@/lib/data/notebooks'
 import { must } from '@/lib/data/util'
 import { endOfLocalDay } from '@/lib/dates'
 
@@ -11,7 +13,7 @@ import { endOfLocalDay } from '@/lib/dates'
 // (so row-level security applies). Throws if any step fails; the proposal then stays pending.
 export async function applyProposal(
   sb: SupabaseClient, p: Proposal, chat: { course_id: string | null; note_id: string | null },
-): Promise<{ itemId: string; itemKind: 'note' | 'deck' | 'quiz' | 'task' }> {
+): Promise<{ itemId: string; itemKind: 'note' | 'deck' | 'quiz' | 'task' | 'class' | 'notebook' }> {
   switch (p.tool) {
     case 'create_note': {
       const n = await createNote(sb, { title: p.args.title, content_md: p.args.body, course_id: p.args.course_id ?? chat.course_id })
@@ -41,6 +43,14 @@ export async function applyProposal(
       }
       const t = await createTask(sb, { ...p.args, due_at: due, course_id: p.args.course_id ?? chat.course_id })
       return { itemId: t.id, itemKind: 'task' }
+    }
+    case 'create_class': {
+      const c = await createClass(sb, p.args)
+      return { itemId: c.id, itemKind: 'class' }
+    }
+    case 'create_notebook': {
+      const b = await createNotebook(sb, p.args.name, p.args.course_id ?? chat.course_id)
+      return { itemId: b.id, itemKind: 'notebook' }
     }
   }
 }

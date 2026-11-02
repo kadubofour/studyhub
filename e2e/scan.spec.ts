@@ -55,3 +55,17 @@ test('scan a timetable into tasks and classes, matching and creating courses', a
   await expect(page.getByText('Cell biology essay')).toBeVisible()
   await expect(page.getByRole('main').getByText('Chemistry').first()).toBeVisible()
 })
+
+test('Upload timetable is on the Planner and in the Create menu, and opens Scan ready to make classes and tasks', async ({ page }) => {
+  await signUp(page)
+  await page.goto('/planner')
+  await page.getByRole('button', { name: 'Upload timetable' }).click()
+  let dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('radio', { name: /Planner tasks and classes/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(dialog.getByLabel('Images or a PDF to scan')).toBeAttached()
+  await page.keyboard.press('Escape')
+  await page.goto('/library')
+  await create(page, 'Upload timetable')
+  dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('radio', { name: /Planner tasks and classes/ })).toHaveAttribute('aria-checked', 'true')
+})
