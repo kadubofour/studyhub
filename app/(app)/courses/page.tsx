@@ -5,6 +5,8 @@ import { BookOpen } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SplitCard } from '@/components/ui/cards'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { CourseMark, PhoneGroup, PhoneRow } from '@/components/ui/PhoneList'
+import { useScreen } from '@/lib/ui/useScreen'
 import { NewCourseButton } from '@/components/quick/NewCourseButton'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
@@ -16,6 +18,7 @@ import { Working } from '@/components/ui/Working'
 
 // Every course in one place, each opening its own page
 export default function CoursesPage() {
+  const phone = useScreen() === 'phone' // a phone shows the courses as rows in a rounded group, as the Tutor and Practice lists do
   const [courses, setCourses] = useState<Course[] | null>(null)
   const [items, setItems] = useState<LibraryItem[]>([])
   const [failed, setFailed] = useState(false)
@@ -42,7 +45,12 @@ export default function CoursesPage() {
   )
   return (
     <div>
-      <PageHeader title="Courses" actions={<NewCourseButton count={courses.length} onAdded={add} />} />
+      <PageHeader title="Courses" actions={<NewCourseButton count={courses.length} onAdded={add} iconOnly={phone} />} />
+      {phone ? (
+        <PhoneGroup name="Your courses">
+          {courses.map(c => <PhoneRow key={c.id} href={`/courses/${c.id}`} mark={<CourseMark color={c.color} />} title={c.name} line={summaryLine(items.filter(i => i.course_id === c.id)) || 'Nothing here yet'} />)}
+        </PhoneGroup>
+      ) : (
       <ul aria-label="Your courses" className="grid gap-3 sm:grid-cols-2">
         {courses.map(c => (
           <li key={c.id}>
@@ -51,6 +59,7 @@ export default function CoursesPage() {
           </li>
         ))}
       </ul>
+      )}
     </div>
   )
 }
