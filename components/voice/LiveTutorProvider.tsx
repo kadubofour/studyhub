@@ -99,7 +99,7 @@ function FullScreen({ session }: { session: Session }) {
             {state.muted ? <MicOff size={19} aria-hidden /> : <Mic size={19} aria-hidden />}
           </button>
           <form className="flex min-w-0 flex-1 items-center gap-1" onSubmit={e => { e.preventDefault(); const t = typed.trim(); if (t) { setTyped(''); session.type(t) } }}>
-            <input aria-label="Type a question" className="input min-w-0 flex-1 !rounded-full !border-transparent !bg-transparent" placeholder="Or type a question" maxLength={1000} value={typed} onChange={e => setTyped(e.target.value)} />
+            <input aria-label="Type a question" className="input min-w-0 flex-1 !rounded-full !border-transparent !bg-transparent" placeholder="Type a question" maxLength={1000} value={typed} onChange={e => setTyped(e.target.value)} />
             <button aria-label="Send" title="Send" className="grid size-9 shrink-0 place-items-center rounded-full text-muted disabled:opacity-40" disabled={!typed.trim()}><SendHorizontal size={17} aria-hidden /></button>
           </form>
           <button type="button" aria-label={sending ? 'Send what you said' : 'Ask a question'} title={sending ? 'Send' : 'Ask a question'} autoFocus
