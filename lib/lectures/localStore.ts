@@ -5,7 +5,7 @@ export type TranscriptChoice = 'live' | 'accurate' | 'none'
 /** `duration` is null while the part is still recording; `uploaded` is null until it's in storage */
 export type LocalPart = { index: number; start: number; duration: number | null; uploaded: { path: string; bytes: number } | null }
 export type LocalSession = {
-  id: string; userId: string; title: string; courseId: string | null; mime: AudioMime; ext: string
+  id: string; userId: string; title: string; courseId: string | null; /** The notebook it is filed in (General when none) */ notebookId?: string | null; mime: AudioMime; ext: string
   startedAt: string; choice: TranscriptChoice; lines: TranscriptLine[]; parts: LocalPart[]
 }
 

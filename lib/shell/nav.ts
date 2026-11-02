@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, FolderOpen, Home, Layers, ListChecks, MessagesSquare, Mic, NotebookPen, Timer, Trophy, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarDays, FolderOpen, Home, Layers, ListChecks, MessagesSquare, Mic, Timer, Trophy, type LucideIcon } from 'lucide-react'
 
 // The places in the app, in the order the rail shows them. The palette lists them too, with words they can also be found by.
 // Home and Planner stand alone; Library is where everything the student has (notes, notebooks, decks, lectures, quizzes, files) lives,
@@ -16,7 +16,6 @@ export const PLACES: Place[] = [
 ]
 // Places the rail does not show but the palette knows
 export const MORE_PLACES: Place[] = [
-  { href: '/notes', label: 'Notes', icon: NotebookPen, keywords: 'notebooks write' },
   { href: '/lectures', label: 'Lectures', icon: Mic, keywords: 'record recordings transcript audio' },
   { href: '/quiz', label: 'Quiz', icon: ListChecks, keywords: 'test questions quizzes scores' },
   { href: '/courses', label: 'Courses', icon: FolderOpen, keywords: 'subjects modules' },

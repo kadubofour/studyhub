@@ -23,7 +23,8 @@ import { keepTimeOfDay } from '@/lib/exams'
 import { LISTS, listCounts, taskGroups, tasksForList, type ListId } from '@/lib/tasks/lists'
 import { TaskRail, type TypeFilter } from '@/components/planner/TaskRail'
 import type { ClassSlot, Course, Task } from '@/lib/types'
-import { useScanSaved } from '@/lib/scan/events'
+import { requestScan, useScanSaved } from '@/lib/scan/events'
+import { Upload } from 'lucide-react'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
 
 type Tab = 'tasks' | 'week' | 'timetable'
@@ -206,6 +207,8 @@ export default function PlannerPage() {
             </button>
           ))}
         </div>
+        {/* a photo or PDF of the timetable becomes the week's classes (and tasks), for the student to check first */}
+        <button type="button" className="btn" onClick={() => requestScan(undefined, 'planner')}><Upload size={14} aria-hidden />Upload timetable</button>
         <div className="w-full md:ml-auto md:w-auto [&>div]:!mb-0">
           <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
             setCourses(next)

@@ -30,16 +30,17 @@ import { updateProfile } from '@/lib/data/profile'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { createNote, deleteNote, getNote, updateNote } from '@/lib/data/notes'
+import { listNotebooks } from '@/lib/data/notebooks'
 import { listCourses } from '@/lib/data/courses'
 import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 import { useAutosave } from '@/lib/ui/useAutosave'
 import { shouldLeaveOnEscape } from '@/lib/ui/escapeToLeave'
-import { NOTES_CHANGED } from '@/components/notes/NotesSidebar'
-import type { Course, EditorMode, Note } from '@/lib/types'
+import { NOTES_CHANGED } from '@/lib/notes/events'
+import type { Course, EditorMode, Note, Notebook } from '@/lib/types'
 
 const notifyList = () => { window.dispatchEvent(new Event(NOTES_CHANGED)) }
 
-type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id' | 'ink'>>
+type Patch = Partial<Pick<Note, 'title' | 'content_md' | 'course_id' | 'notebook_id' | 'ink'>>
 const STATUS_TEXT = {
   idle: '', pending: '', saving: 'Saving…', saved: 'Saved', error: 'Not saved — will retry',
   failed: 'Couldn\'t save this change. Check the course still exists, then edit again.',
@@ -113,13 +114,19 @@ function NoteEditor({ id }: { id: string }) {
     return () => { editor.off('focus', on); editor.off('blur', off) }
   }, [editor])
   const typing = editorFocused || titleFocused
+  const [books, setBooks] = useState<Notebook[]>([])
+  // every note is in a notebook: the choice is between them (General is where it goes when none is chosen)
+  const bookOptions = books.map(b => ({ value: b.id, label: b.name }))
   const screen = useScreen()
+  // back goes to the notebook the note is in
+  const notebookNow = draft ? draft.notebook_id : note?.notebook_id
+  const backHref = notebookNow ? `/notebooks/${notebookNow}` : '/library'
 
   useEffect(() => {
     const sb = supabase()
-    Promise.all([getNote(sb, id), listCourses(sb)])
-      .then(([n, c]) => { setNote(n); setDraft(n); draftRef.current = n; setCourses(c) })
-      .catch(() => router.replace('/notes'))
+    Promise.all([getNote(sb, id), listCourses(sb), listNotebooks(sb).catch(() => [])])
+      .then(([n, c, b]) => { setNote(n); setDraft(n); draftRef.current = n; setCourses(c); setBooks(b) })
+      .catch(() => router.replace('/library'))
   }, [id, router])
 
   function change(patch: Patch) {
@@ -128,7 +135,7 @@ function NoteEditor({ id }: { id: string }) {
     draftRef.current = next
     setDraft(next)
     // Always save the full editable state so the latest value of every field wins
-    update({ title: next.title, content_md: next.content_md, course_id: next.course_id, ink: next.ink })
+    update({ title: next.title, content_md: next.content_md, course_id: next.course_id, notebook_id: next.notebook_id, ink: next.ink })
   }
 
   // Change the whole note text from outside the editor (e.g. adding a summary). `update` gets the
@@ -148,7 +155,7 @@ function NoteEditor({ id }: { id: string }) {
       confirmLabel: 'Delete note', danger: true,
     })
     if (!ok) return
-    try { await deleteNote(supabase(), id); notifyList(); router.replace('/notes') } catch { toast('Couldn\'t delete the note.') }
+    try { await deleteNote(supabase(), id); notifyList(); router.replace(backHref) } catch { toast('Couldn\'t delete the note.') }
   }
 
   // Esc leaves the full-screen editor (menus, find and dialogs handle their own Esc first)
@@ -156,7 +163,7 @@ function NoteEditor({ id }: { id: string }) {
     const onKey = (e: KeyboardEvent) => {
       const fromEditor = !!(e.target as HTMLElement | null)?.closest?.('.ProseMirror')
       if (!shouldLeaveOnEscape(e, !!document.querySelector('dialog[open]'), fromEditor)) return
-      router.replace('/notes') // replace: Back shouldn't reopen the note we just left
+      router.replace(backHref) // replace: Back shouldn't reopen the note we just left
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -287,7 +294,7 @@ function NoteEditor({ id }: { id: string }) {
       {/* A phone's top bar, as notes apps have it: back to the notes, typing or drawing, then undo, redo, share and ⋯, and Done
           while writing. The course, the tutor and Study are in the ⋯ sheet. */}
       {showsPhone(screen) && <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-0.5 bg-bg/90 px-1.5 py-1 backdrop-blur md:hidden">
-        <Link href="/notes" aria-label="Back to notes" className="flex items-center rounded-lg py-2 pl-0.5 pr-2 text-[17px] text-accent active:opacity-60"><ChevronLeft size={26} aria-hidden />Notes</Link>
+        <Link href={backHref} aria-label="Back to notebook" className="flex items-center rounded-lg py-2 pl-0.5 pr-2 text-[17px] text-accent active:opacity-60"><ChevronLeft size={26} aria-hidden />Notebook</Link>
         {mode === 'rich' && !reading && (
           <div role="radiogroup" aria-label="Type or draw" className="ml-1 flex rounded-full bg-surface p-0.5">
             {([[false, 'Type', Type], [true, 'Draw', PenLine]] as const).map(([pen, label, Icon]) => (
@@ -314,6 +321,10 @@ function NoteEditor({ id }: { id: string }) {
                 <span className="text-[15px] font-medium">Course</span>
                 <Dropdown label="Course" size="sm" className="min-w-0 max-w-48 flex-1" value={draft.course_id ?? ''} onChange={v => change({ course_id: v || null })} options={courseOptions(courses)} />
               </div>
+              <div className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-surface px-4">
+                <span className="text-[15px] font-medium">Notebook</span>
+                <Dropdown label="Notebook" size="sm" className="min-w-0 max-w-48 flex-1" value={draft.notebook_id ?? ''} onChange={v => change({ notebook_id: v || null })} options={bookOptions} />
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <AskTutorButton target={{ note_id: draft.id }} title={draft.title} courseId={draft.course_id} className="btn min-h-12 justify-center" />
                 <button type="button" className="btn min-h-12 justify-center" onClick={() => { close(); setStudyOpen(true) }}>✦ Study</button>
@@ -325,10 +336,11 @@ function NoteEditor({ id }: { id: string }) {
         {findOpen && <div className="basis-full px-1 pb-1"><FindBar search={search} onClose={closeFind} /></div>}
       </header>}
       {showsComputer(screen) && <header ref={headRef} className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur max-md:hidden sm:gap-2 md:px-6">
-        <Link href="/notes" className="btn-ghost" aria-label="Back to notes" title="Back to notes (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
+        <Link href={backHref} className="btn-ghost" aria-label="Back to notebook" title="Back to the notebook (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}
         <div className="hidden md:block"><NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} /></div>
         {/* on a phone the course picker gives up room first, so the buttons stay on one line */}
+        <Dropdown label="Notebook" size="sm" className="w-44 min-w-0" value={draft.notebook_id ?? ''} onChange={v => change({ notebook_id: v || null })} options={bookOptions} />
         <Dropdown label="Course" size="sm" className="w-44 min-w-0" value={draft.course_id ?? ''} onChange={v => change({ course_id: v || null })} options={courseOptions(courses)} />
         {reading && <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-xs text-accent">Reading</span>}
         <span className={`text-xs ${status === 'failed' ? 'text-danger' : 'text-muted'}`} aria-live="polite">{STATUS_TEXT[status]}</span>

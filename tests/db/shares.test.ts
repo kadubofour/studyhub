@@ -148,7 +148,7 @@ describe('shares', () => {
     expect((await a.sb.rpc('copy_shared', { p_token: t })).error?.message).toContain('not_copyable')
   })
 
-  it('a notebook copy brings its notes; a note copy is unfiled; deleting a note revokes its share', async () => {
+  it('a notebook copy brings its notes; a note copy goes in General; deleting a note revokes its share', async () => {
     const [a, b] = await Promise.all([newUser(), newUser()])
     const nb = (await a.sb.from('notebooks').insert({ name: 'Chem' }).select('id').single()).data!.id as string
     await note(a, 'One', 'first', nb)
@@ -172,8 +172,9 @@ describe('shares', () => {
     const tn = await share(a, 'note', n)
     const cn = await b.sb.rpc('copy_shared', { p_token: tn })
     expect(cn.data[0].kind).toBe('note')
+    const general = (await b.sb.from('notebooks').select('id').eq('is_default', true).single()).data!.id
     expect((await b.sb.from('notes').select('title, content_md, notebook_id, course_id').eq('id', cn.data[0].id).single()).data)
-      .toEqual({ title: 'Solo', content_md: 'body', notebook_id: null, course_id: null })
+      .toEqual({ title: 'Solo', content_md: 'body', notebook_id: general, course_id: null })
     await a.sb.from('notes').delete().eq('id', n)
     expect((await anon().rpc('shared_item', { p_token: tn })).data).toBeNull()
   })

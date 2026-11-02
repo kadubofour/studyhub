@@ -9,7 +9,7 @@ const photo = (name: string) => ({
 
 test('scan photos into a note: reorder, read, scan again, save', async ({ page }) => {
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Scan')
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('radio', { name: /A note/ })).toHaveAttribute('aria-checked', 'true')

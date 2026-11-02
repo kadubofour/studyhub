@@ -17,7 +17,8 @@ import { fileKind } from '@/lib/import/fileKind'
 import { requestScan } from '@/lib/scan/events'
 import { isRecording } from '@/lib/lectures/recordingGuard'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
-import type { Course } from '@/lib/types'
+import { Dropdown } from '@/components/ui/Dropdown'
+import type { Course, Notebook } from '@/lib/types'
 import { LimitPrompt } from '@/components/billing/LimitPrompt'
 import { pictureKeeper } from '@/lib/import/pictures'
 
@@ -31,8 +32,8 @@ type Picked = { file: File; kind: MaterialKind }
 // Upload a PDF, Word, PowerPoint or text file or a photo, then either keep it in the Library as it is, or make a note from it
 // (reviewed before saving; the original is kept beside it). Photos become notes through Scan, recordings through Lectures.
 // keepOnly skips the question (the Library's Upload file); fromMaterial makes a note from a file the Library already keeps.
-export function UploadDialog({ open, onClose, courses, onImported, onScan, keepOnly, fromMaterial, onKept }: {
-  open: boolean; onClose: () => void; courses: Course[]; onImported?: (noteId: string) => void; onScan?: (files: File[]) => void
+export function UploadDialog({ open, onClose, courses, notebooks = [], notebookId = null, onImported, onScan, keepOnly, fromMaterial, onKept }: {
+  open: boolean; onClose: () => void; courses: Course[]; notebooks?: Notebook[]; notebookId?: string | null; onImported?: (noteId: string) => void; onScan?: (files: File[]) => void
   keepOnly?: boolean; fromMaterial?: { id: string; file: File } | null; onKept?: () => void
 }) {
   const router = useRouter()
@@ -49,6 +50,9 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
   // the file the draft was read from, kept in the Library when the note is saved
   const [source, setSource] = useState<Picked | null>(null)
   const [courseId, setCourseId] = useState('')
+  // the notebook it goes in: the one asked for, else General
+  const [bookId, setBookId] = useState(notebookId ?? '')
+  const notebookChoices = [{ value: '', label: 'General' }, ...notebooks.filter(b => !b.is_default).map(b => ({ value: b.id, label: b.name }))]
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   // Each pick gets a generation number; results from an earlier (cancelled) pick are ignored
@@ -136,13 +140,13 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
     savingRef.current = true; setSaving(true)
     try {
       if (!await mayLeave()) return
-      const n = await createNote(supabase(), { title: draft.title.trim() || 'Imported note', content_md: draft.content_md, course_id: courseId || null })
+      const n = await createNote(supabase(), { title: draft.title.trim() || 'Imported note', content_md: draft.content_md, course_id: courseId || null, notebook_id: bookId || null })
       // The original goes to the Library beside its note; the note is what matters, so a file that can't be kept only says so.
       // A file the Library already keeps is only pointed at its new note.
       if (fromMaterial && source?.file === fromMaterial.file) {
         await updateMaterial(supabase(), fromMaterial.id, { note_id: n.id }).catch(() => {})
       } else if (source) {
-        await keepMaterial(supabase(), profile.id, source.file, source.kind, { course_id: courseId || null, note_id: n.id })
+        await keepMaterial(supabase(), profile.id, source.file, source.kind, { course_id: courseId || null, note_id: n.id, notebook_id: bookId || null })
           .catch(() => toast('The note is saved, but the original file couldn\'t be kept in your Library.'))
       }
       onImported?.(n.id)
@@ -160,7 +164,7 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
     if (!picked || savingRef.current) return
     savingRef.current = true; setSaving(true)
     try {
-      const m = await keepMaterial(supabase(), profile.id, picked.file, picked.kind, { course_id: courseId || null, note_id: null })
+      const m = await keepMaterial(supabase(), profile.id, picked.file, picked.kind, { course_id: courseId || null, note_id: null, notebook_id: bookId || null })
       toast('Kept in your Library.')
       close()
       if (onKept) onKept()
@@ -215,6 +219,10 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
       {stage === 'keep' && picked && (
         <div className="space-y-4">
           {fileLine}
+          <div className="space-y-1.5">
+            <p className="text-sm">Notebook</p>
+            <Dropdown label="Notebook" value={bookId} onChange={setBookId} options={notebookChoices} />
+          </div>
           <div className="space-y-1.5">
             <p className="text-sm">Course</p>
             <ChoiceChips label="Course" size="sm" value={courseId} onChange={setCourseId} options={[{ value: '', label: 'No course' }, ...courses.map(c => ({ value: c.id, label: c.name }))]} />
@@ -285,6 +293,10 @@ export function UploadDialog({ open, onClose, courses, onImported, onScan, keepO
             ? <LimitPrompt kind={draft.limit} title={draft.notice} />
             : draft.notice && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs">{draft.notice}</p>}
           <label className="field"><span>Title</span><input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label>
+          <div className="space-y-1.5">
+            <p className="text-sm">Notebook</p>
+            <Dropdown label="Notebook" value={bookId} onChange={setBookId} options={notebookChoices} />
+          </div>
           <div className="space-y-1.5">
             <p className="text-sm">Course</p>
             <ChoiceChips label="Course" size="sm" value={courseId} onChange={setCourseId} options={[{ value: '', label: 'No course' }, ...courses.map(c => ({ value: c.id, label: c.name }))]} />

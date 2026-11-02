@@ -44,7 +44,7 @@ describe('finishRecording', () => {
     expect(await finishRecording(sb, store, s)).toEqual({ id: 'L1' })
     expect(uploads).toEqual(['u1/L1-0.webm', 'u1/L1-1.webm'])
     expect(saved).toEqual({
-      id: 'L1', title: 'Cell biology', course_id: 'c1', recorded_at: '2026-10-04T09:00:00.000Z', duration_seconds: 1500, audio_bytes: 5000,
+      id: 'L1', title: 'Cell biology', course_id: 'c1', notebook_id: null, recorded_at: '2026-10-04T09:00:00.000Z', duration_seconds: 1500, audio_bytes: 5000,
       mime: 'audio/webm', transcript: [{ start: 1, end: 3, text: 'Welcome.' }], transcript_status: 'live', transcript_source: 'browser',
       parts: [
         { path: 'u1/L1-0.webm', start: 0, duration: 1200, bytes: 4000, transcribed: false },

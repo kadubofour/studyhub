@@ -8,6 +8,7 @@ import { LimitPrompt } from '@/components/billing/LimitPrompt'
 import { StorageMessage } from '@/components/settings/StorageCard'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { listNotebooks } from '@/lib/data/notebooks'
 import { audioUsed } from '@/lib/data/lectures'
 import { createPartRecorder, pickAudioType, type RecorderCtor } from '@/lib/lectures/recorder'
 import { createLiveTranscriber, type RecognitionCtor } from '@/lib/lectures/liveTranscript'
@@ -16,7 +17,7 @@ import { finishRecording, uploadPartFile, withPart } from '@/lib/lectures/saveRe
 import { setRecording } from '@/lib/lectures/recordingGuard'
 import { LIVE_LANGUAGES, saveLiveLanguage, savedLiveLanguage } from '@/lib/lectures/languages'
 import { MAX_LECTURE_SECONDS, WARN_LECTURE_SECONDS, formatClock, storageState, type TranscriptLine } from '@/lib/lectures/time'
-import type { Course } from '@/lib/types'
+import type { Course, Notebook } from '@/lib/types'
 import { Dropdown, courseOptions } from '@/components/ui/Dropdown'
 import { Working } from '@/components/ui/Working'
 
@@ -49,6 +50,9 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
   const [used, setUsed] = useState(0)
   const [title, setTitle] = useState(() => `Lecture ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`)
   const [courseId, setCourseId] = useState('')
+  // the notebook it goes in: the one the student came from (the address says), else General
+  const [notebooks, setNotebooks] = useState<Notebook[]>([])
+  const [notebookId, setNotebookId] = useState('')
   const [choice, setChoice] = useState<TranscriptChoice>(deps.Recognition ? 'live' : 'none')
   const [language, setLanguage] = useState(savedLiveLanguage)
   const [stage, setStage] = useState<Stage>('setup')
@@ -96,6 +100,11 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
   useEffect(() => {
     const sb = supabase()
     listCourses(sb).then(setCourses).catch(() => {})
+    listNotebooks(sb).then(b => {
+      setNotebooks(b)
+      const from = new URLSearchParams(window.location.search).get('notebook')
+      if (from && b.some(x => x.id === from)) setNotebookId(from)
+    }).catch(() => {})
     audioUsed(sb).then(setUsed).catch(() => {})
   }, [])
   // While recording: closing or reloading the tab warns, and the app's navigation asks first
@@ -146,7 +155,7 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     try {
       startMeter(media)
       const s: LocalSession = {
-        id: crypto.randomUUID(), userId: profile.id, title, courseId: courseId || null, mime: type.mime, ext: type.ext,
+        id: crypto.randomUUID(), userId: profile.id, title, courseId: courseId || null, notebookId: notebookId || null, mime: type.mime, ext: type.ext,
         startedAt: new Date().toISOString(), choice, lines: [], parts: [{ index: 0, start: 0, duration: null, uploaded: null }],
       }
       session.current = s
@@ -262,6 +271,9 @@ export function Recorder({ deps }: { deps: RecorderDeps }) {
     <div className="max-w-lg space-y-4">
       <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm">Ask your lecturer before recording.</p>
       <label className="field"><span>Title</span><input value={title} maxLength={200} onChange={e => setTitle(e.target.value)} /></label>
+      <div className="field"><span>Notebook</span>
+        <Dropdown label="Notebook" value={notebookId} onChange={setNotebookId} options={[{ value: '', label: 'General' }, ...notebooks.filter(b => !b.is_default).map(b => ({ value: b.id, label: b.name }))]} />
+      </div>
       <div className="field"><span>Course</span>
         <Dropdown label="Course" value={courseId} onChange={setCourseId} options={courseOptions(courses)} />
       </div>

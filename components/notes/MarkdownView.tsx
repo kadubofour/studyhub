@@ -1,5 +1,5 @@
 'use client'
-import { useContext, useEffect, useState } from 'react'
+import { Children, useContext, useEffect, useState } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -42,11 +42,26 @@ function NotePicture({ src, alt }: { src: string; alt: string }) {
   const url = got?.src === src ? got.url : null
   const diagram = useIsDiagram(src, url)
   if (!isImageToken(src)) return /^https?:\/\//i.test(src) ? <img src={src} alt={alt} className="max-w-full rounded-lg" /> : <span>{alt}</span>
+  // a drawn figure from an import carries its caption as its alt text; it is shown under it (a picture with a file name for alt is not)
+  if (url && diagram && isCaption(alt)) return <span className="block"><img src={url} alt={alt} data-diagram="true" className="max-w-full rounded-lg" /><span className="figure-caption">{alt}</span></span>
   return url ? <img src={url} alt={alt} data-diagram={diagram || undefined} className="max-w-full rounded-lg" /> : <span className="text-muted" data-pending-image={got?.src === src ? undefined : 'true'}>{alt || 'Picture'}</span>
 }
 
+// A caption is words (at least two, not a file name); "cell" or "IMG_2041.png" is only a name
+export const isCaption = (alt: string) => /\s/.test(alt.trim()) && !/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(alt.trim())
+// The mark that ends a proof, alone in its paragraph
+export const isProofMark = (text: string) => /^[■□∎▪◼]$/.test(text.trim())
+
 // Defined once: a new components object each render would make every picture start over
-const COMPONENTS: Components = { img: ({ src, alt }) => <NotePicture src={typeof src === 'string' ? src : ''} alt={alt ?? ''} /> }
+const COMPONENTS: Components = {
+  img: ({ src, alt }) => <NotePicture src={typeof src === 'string' ? src : ''} alt={alt ?? ''} />,
+  p: ({ children }) => {
+    const parts = Children.toArray(children)
+    return parts.length === 1 && typeof parts[0] === 'string' && isProofMark(parts[0])
+      ? <p className="end-of-proof" aria-label="End of proof">{parts[0]}</p>
+      : <p>{children}</p>
+  },
+}
 
 export function MarkdownView({ source, className = '' }: { source: string; className?: string }) {
   return (

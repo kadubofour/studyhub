@@ -58,8 +58,8 @@ export async function noteFileAction(page: Page, item: 'Export as Word' | 'Expor
 
 // A note with enough text for the AI study tools (they need at least 40 words)
 export async function noteWithText(page: Page, title = 'Krebs cycle') {
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill(title)
@@ -89,8 +89,8 @@ export async function newNoteFromNote(page: Page) {
     await file.click()
     await page.getByRole('menu', { name: 'File' }).locator('[role^="menuitem"]', { hasText: 'New note' }).click()
   } else {
-    await page.goto('/notes')
-    await page.getByRole('button', { name: /^(New note|Note)$/ }).click()
+    await page.goto('/library')
+    await create(page, 'New note')
     await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
     await page.waitForLoadState('networkidle')
   }
@@ -193,8 +193,18 @@ export async function quizFromFlashcards(page: Page) {
   else await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
 }
 
-// The Library opens on its courses as cards; Materials is every note, deck, lecture and file in one list
+// The Library opens on its notebooks as cards; this is every note, deck, lecture and file in one list
 export async function openLibraryMaterials(page: Page) {
-  await page.goto('/library')
-  await page.getByRole('button', { name: 'Materials', exact: true }).click()
+  await page.goto('/library?view=all')
+}
+
+// Puts the open note in a notebook: the Notebook picker in a computer's top bar, or in a phone's Note options sheet
+export async function moveNoteToNotebook(page: Page, notebook: string) {
+  const phone = await onPhone(page)
+  const scope = phone ? await inSheet(page) : page
+  await Promise.all([
+    page.waitForResponse(r => r.url().includes('/rest/v1/notes') && r.request().method() === 'PATCH'),
+    choose(scope, 'Notebook', notebook),
+  ])
+  if (phone) await page.keyboard.press('Escape')
 }

@@ -40,7 +40,7 @@ for (const scheme of ['light', 'dark'] as const) {
 test('the Upload and Delete-account dialogs have no serious accessibility problems', async ({ page }) => {
   test.setTimeout(90_000)
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await settle(page)
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()

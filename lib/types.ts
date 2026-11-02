@@ -47,10 +47,10 @@ export interface ClassSlot {
   id: string; course_id: string; day_of_week: number; start_time: string; end_time: string
   location: string | null; kind: ClassKind
 }
-export interface Notebook { id: string; name: string; created_at?: string; /** the course it belongs to, whose colour it takes */ course_id?: string | null }
+export interface Notebook { id: string; name: string; created_at?: string; /** The student's General notebook, where what was made without choosing one goes; it cannot be deleted */ is_default?: boolean; /** the course it belongs to, whose colour it takes */ course_id?: string | null }
 export interface NoteSummary { id: string; course_id: string | null; title: string; updated_at: string; notebook_id?: string | null; /** The start of the note's text (lists only; not in search results) */ preview?: string | null }
 export interface Note extends NoteSummary { content_md: string; /** Pen and highlighter drawn on the note, in the note's own coordinates (see lib/markup/ink) */ ink?: import('./markup/marks').Mark[] }
-export interface Deck { id: string; course_id: string | null; name: string; created_at?: string }
+export interface Deck { id: string; course_id: string | null; name: string; created_at?: string; notebook_id?: string | null }
 export interface DeckWithDue extends Deck { due: number; total: number }
 export interface Card {
   id: string; deck_id: string; front: string; back: string; due_at: string

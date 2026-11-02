@@ -5,7 +5,7 @@ describe('pageTitle', () => {
   it('names a page by its place, whatever is inside it', () => {
     expect(pageTitle('/library')).toBe('Library · Studyhub')
     expect(pageTitle('/progress')).toBe('Progress · Studyhub')
-    expect(pageTitle('/notes/n1')).toBe('Notes · Studyhub')
+    expect(pageTitle('/notes/n1')).toBe('Studyhub')
     expect(pageTitle('/flashcards/d1')).toBe('Practice · Studyhub')
     expect(pageTitle('/review')).toBe('Review cards · Studyhub')
   })

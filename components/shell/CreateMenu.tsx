@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { BellPlus, FilePlus, Layers, ListPlus, Mic, ScanLine, Upload, type LucideIcon } from 'lucide-react'
+import { BellPlus, CalendarDays, FilePlus, Layers, ListPlus, Mic, ScanLine, Upload, type LucideIcon } from 'lucide-react'
 
-export type CreateAction = 'new-note' | 'new-deck' | 'record' | 'new-task' | 'new-reminder' | 'upload' | 'scan'
+export type CreateAction = 'new-note' | 'new-deck' | 'record' | 'new-task' | 'new-reminder' | 'upload' | 'scan' | 'timetable'
 const ITEMS: { id: CreateAction; label: string; hint: string; icon: LucideIcon }[] = [
   { id: 'new-note', label: 'New note', hint: 'Write it here', icon: FilePlus },
   { id: 'new-deck', label: 'New deck', hint: 'Flashcards', icon: Layers },
@@ -11,6 +11,7 @@ const ITEMS: { id: CreateAction; label: string; hint: string; icon: LucideIcon }
   { id: 'new-reminder', label: 'New reminder', hint: 'At a time you choose', icon: BellPlus },
   { id: 'upload', label: 'Upload', hint: 'A PDF, slides or a document', icon: Upload },
   { id: 'scan', label: 'Scan', hint: 'Photos of pages', icon: ScanLine },
+  { id: 'timetable', label: 'Upload timetable', hint: 'A photo or PDF of your classes', icon: CalendarDays },
 ]
 
 // Everything that makes something, from the + in the rail (opens beside it) or in the phone dock (opens above it).

@@ -3,11 +3,11 @@ import type { Notebook } from '../types'
 import { check, must } from './util'
 
 export async function listNotebooks(sb: SupabaseClient): Promise<Notebook[]> {
-  return must(await sb.from('notebooks').select('id,name,course_id,created_at').order('created_at').order('id'))
+  return must(await sb.from('notebooks').select('id,name,course_id,created_at,is_default').order('created_at').order('id'))
 }
 
 export async function createNotebook(sb: SupabaseClient, name: string, courseId: string | null = null): Promise<Notebook> {
-  return must(await sb.from('notebooks').insert({ name: name.trim(), course_id: courseId }).select('id,name,course_id,created_at').single())
+  return must(await sb.from('notebooks').insert({ name: name.trim(), course_id: courseId }).select('id,name,course_id,created_at,is_default').single())
 }
 
 /** Its name, its course (null for none), or both */
@@ -19,12 +19,12 @@ export async function renameNotebook(sb: SupabaseClient, id: string, name: strin
   check(await sb.from('notebooks').update({ name: name.trim() }).eq('id', id))
 }
 
-/** Its notes are kept: they become unfiled */
+/** What it held is kept: it moves to the General notebook (which itself cannot be deleted) */
 export async function deleteNotebook(sb: SupabaseClient, id: string): Promise<void> {
   check(await sb.from('notebooks').delete().eq('id', id))
 }
 
-/** Puts the notes in a notebook (or in none, with null). All or nothing. */
+/** Puts the notes in a notebook (null: the General notebook). All or nothing. */
 export async function moveNotes(sb: SupabaseClient, noteIds: string[], notebookId: string | null): Promise<void> {
   if (!noteIds.length) return
   check(await sb.from('notes').update({ notebook_id: notebookId }).in('id', noteIds))

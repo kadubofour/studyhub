@@ -118,7 +118,7 @@ describe('Create', () => {
     await shell()
     fireEvent.click(rail().getByRole('button', { name: 'Create new' }))
     const menu = within(screen.getByRole('menu', { name: 'Create' }))
-    expect(menu.getAllByRole('menuitem').map(m => m.getAttribute('aria-label'))).toEqual(['New note', 'New deck', 'Record lecture', 'New task', 'New reminder', 'Upload', 'Scan'])
+    expect(menu.getAllByRole('menuitem').map(m => m.getAttribute('aria-label'))).toEqual(['New note', 'New deck', 'Record lecture', 'New task', 'New reminder', 'Upload', 'Scan', 'Upload timetable'])
   })
   it('makes a note and opens it, and opens Upload and Scan (Scan starting on what the page holds)', async () => {
     await shell()

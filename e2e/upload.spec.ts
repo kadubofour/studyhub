@@ -14,7 +14,7 @@ async function deck(): Promise<Buffer> {
 
 test('upload a text file and open it on the Flashcards tab', async ({ page }) => {
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await expect(page.getByRole('heading', { name: 'Upload material' })).toBeVisible()
   await page.getByLabel('File to upload').setInputFiles({ name: 'enzymes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Enzymes\n\nThey speed up reactions.\n') })
@@ -32,7 +32,7 @@ test('upload a text file and open it on the Flashcards tab', async ({ page }) =>
 
 test('upload a PowerPoint: its slides become sections of a note', async ({ page }) => {
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles({ name: 'week 1.pptx', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', buffer: await deck() })
   await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
@@ -48,7 +48,7 @@ test('upload a PowerPoint: its slides become sections of a note', async ({ page 
 
 test('a photo is handed to Scan and a recording to Lectures', async ({ page, isMobile }) => {
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer: Buffer.from('not really a png') })
   await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it

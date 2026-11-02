@@ -7,17 +7,17 @@ export async function listNotes(sb: SupabaseClient): Promise<NoteSummary[]> {
 }
 
 export async function getNote(sb: SupabaseClient, id: string): Promise<Note> {
-  return must(await sb.from('notes').select('id,course_id,title,content_md,ink,updated_at').eq('id', id).single())
+  return must(await sb.from('notes').select('id,course_id,notebook_id,title,content_md,ink,updated_at').eq('id', id).single())
 }
 
 export async function createNote(
   sb: SupabaseClient, input: { title?: string; content_md?: string; course_id?: string | null; notebook_id?: string | null },
 ): Promise<Note> {
-  return must(await sb.from('notes').insert(input).select('id,course_id,title,content_md,ink,updated_at').single())
+  return must(await sb.from('notes').insert(input).select('id,course_id,notebook_id,title,content_md,ink,updated_at').single())
 }
 
 export async function updateNote(
-  sb: SupabaseClient, id: string, patch: Partial<Pick<Note, 'title' | 'content_md' | 'course_id' | 'ink'>>,
+  sb: SupabaseClient, id: string, patch: Partial<Pick<Note, 'title' | 'content_md' | 'course_id' | 'notebook_id' | 'ink'>>,
 ): Promise<void> {
   check(await sb.from('notes').update(patch).eq('id', id))
 }

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { noteFileAction, signUp, switchToMarkdown, noteSaved, create, listAction, tickOf } from './helpers'
+import { noteFileAction, signUp, switchToMarkdown, noteSaved, create, listAction, tickOf, moveNoteToNotebook } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -20,8 +20,8 @@ test('accent colour and font apply instantly and survive a reload', async ({ pag
 
 test('writing a note is full screen, and Esc goes back to the list', async ({ page }) => {
   await signUp(page)
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^(New note|Note)$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await expect(page.getByLabel('Title')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Planner' })).toHaveCount(0) // no app sidebar / tab bar
   await page.getByLabel('Title').fill('Fullscreen')
@@ -33,7 +33,7 @@ test('writing a note is full screen, and Esc goes back to the list', async ({ pa
 test('import a Word document with equations, then export it back to Word', async ({ page }) => {
 
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles(fixture('quadratics.docx'))
   await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
@@ -52,7 +52,7 @@ test('import a Word document with equations, then export it back to Word', async
 
 test('a PDF is structured by AI', async ({ page }) => {
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   await page.getByLabel('File to upload').setInputFiles(fixture('cells.pdf'))
   await page.getByRole('button', { name: /^Make a note/ }).click() // the file is chosen, then what to do with it
@@ -62,7 +62,7 @@ test('a PDF is structured by AI', async ({ page }) => {
 
 test('a PDF falls back to plain text when the AI cannot convert it', async ({ page }) => {
   await signUp(page)
-  await page.goto('/notes')
+  await page.goto('/library')
   await create(page, 'Upload') // the Create menu has it on a computer and a phone
   // The E2E fake AI refuses files named "…fallback…"
   await page.getByLabel('File to upload').setInputFiles({ name: 'cells-fallback.pdf', mimeType: 'application/pdf', buffer: fs.readFileSync(fixture('cells.pdf')) })
@@ -76,8 +76,8 @@ test('a PDF falls back to plain text when the AI cannot convert it', async ({ pa
 test('printing from dark mode gives dark text on white paper', async ({ page }) => {
 
   await signUp(page)
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^(New note|Note)$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await page.getByLabel('Title').fill('Printable')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('> a quoted line')
@@ -99,18 +99,28 @@ test('printing from dark mode gives dark text on white paper', async ({ page }) 
   expect(colours.quote).toBeLessThan(0.5) // quoted text dark enough to read on paper
 })
 
-test('select notes and export just those as a PDF', async ({ page, context }) => {
+test('export a notebook\'s notes as a PDF', async ({ page, context }) => {
   await signUp(page)
-  for (const title of ['Alpha note', 'Beta note']) {
-    await page.goto('/notes')
-    await page.getByRole('button', { name: /Write your first note|^(New note|Note)$/ }).first().click()
-    await page.getByLabel('Title').fill(title)
-    await noteSaved(page)
-  }
-  await page.goto('/notes')
-  await listAction(page, 'Notes options', 'Select', 'Select notes')
-  await tickOf(page, 'Beta note').click()
-  await page.getByRole('button', { name: 'Export selected' }).click()
+  await page.goto('/library')
+  await create(page, 'New note')
+  await page.getByLabel('Title').fill('Alpha note')
+  await noteSaved(page)
+  await page.goto('/library')
+  await create(page, 'New note')
+  await page.getByLabel('Title').fill('Beta note')
+  await noteSaved(page)
+  // both are in General; a notebook of its own keeps one apart
+  await page.goto('/library')
+  await page.getByRole('button', { name: 'Create new notebook' }).click()
+  const dialog = page.getByRole('dialog', { name: 'New notebook' })
+  await dialog.getByLabel('Name').fill('Only beta')
+  await dialog.getByRole('button', { name: 'Create' }).click()
+  await page.getByRole('link', { name: 'General' }).click()
+  await page.getByRole('link', { name: /Beta note/ }).click()
+  await moveNoteToNotebook(page, 'Only beta')
+  await page.goto('/library')
+  await page.getByRole('link', { name: 'Only beta' }).click()
+  await page.getByRole('button', { name: 'Export notes' }).click()
   const popup = context.waitForEvent('page')
   await page.getByRole('menuitem', { name: 'PDF' }).click()
   const print = await popup

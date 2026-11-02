@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { signUp, switchToMarkdown, noteSaved } from './helpers'
+import { signUp, switchToMarkdown, noteSaved, create } from './helpers'
 
 test('logged-out users are sent to login with a return path', async ({ page }) => {
   await page.goto('/planner')
@@ -101,8 +101,8 @@ test('create a deck, add cards, and review them', async ({ page }) => {
 test('a note persists after reload, including math', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Markdown is switched on from the View menu, which is for wider screens')
   await signUp(page)
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await page.getByLabel('Title').fill('Quadratics')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('## Formula\n\n$x^2$')
@@ -117,16 +117,16 @@ test('a note persists after reload, including math', async ({ page, isMobile }) 
 test('notes: search finds words inside a note', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Markdown is switched on from the View menu, which is for wider screens')
   await signUp(page)
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await page.getByLabel('Title').fill('Week 3')
   await switchToMarkdown(page)
   await page.getByLabel('Markdown').fill('The Krebs cycle makes ATP')
   await noteSaved(page)
-  await page.goto('/notes')
-  await page.getByLabel('Search notes').filter({ visible: true }).fill('krebs')
-  await expect(page.getByRole('link', { name: /Week 3/ })).toBeVisible()
-  await page.getByLabel('Search notes').filter({ visible: true }).fill('photosynthesis')
+  await page.goto('/library')
+  await page.getByLabel('Search notebooks').fill('krebs')
+  await expect(page.getByRole('region', { name: 'Found in your notebooks' }).getByRole('link', { name: /Week 3/ })).toBeVisible() // inside a notebook's notes
+  await page.getByLabel('Search notebooks').fill('photosynthesis')
   await expect(page.getByRole('link', { name: /Week 3/ })).toHaveCount(0)
 })
 

@@ -172,7 +172,7 @@ export default function CoursePageRoute() {
         </div>
       ) : items.length === 0 ? (
         <EmptyState icon={FolderOpen} tone="b" title={`Nothing in ${course.name} yet`} body="Notes, decks, lectures, quizzes and tutor chats you add to this course show up here.">
-          <Link href="/notes" className="btn">Write a note</Link>
+          <Link href="/library" className="btn">Write a note</Link>
         </EmptyState>
       ) : sections.map(s => {
         const k = KIND[s.kind]
