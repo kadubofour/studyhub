@@ -80,7 +80,7 @@ function FullScreen({ session }: { session: Session }) {
         ) : (
           <div className="grid place-items-center gap-5">
             <div className="live-orb" data-phase={state.phase} data-muted={state.muted}><Orb phase={state.phase} muted={state.muted} size={state.visual ? 'min(128px, 18dvh)' : 'min(208px, 28dvh)'} /></div>
-            <Bars />
+            {!state.muted && <Bars />}
           </div>
         )}
 

@@ -551,7 +551,8 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 @keyframes orb-sweep { to { transform: rotate(360deg); } }
 .orb { --o1: var(--accent-solid); --o2: var(--accent-glow); }
 .orb-aura { position: absolute; inset: -22%; border-radius: 9999px; background: linear-gradient(135deg, var(--o1), var(--o2)); filter: blur(38px); opacity: .4; animation: orb-aura 6s ease-in-out infinite; }
-.orb-blob { position: absolute; will-change: transform; }
+/* the shape is the layer's own (the animation only moves it), so a still orb (muted, or with reduced motion) is still round */
+.orb-blob { position: absolute; will-change: transform; border-radius: 55% 45% 52% 48% / 50% 55% 45% 50%; }
 .orb-blob-a { inset: 6%; background: var(--o1); filter: blur(5px); animation: orb-drift-a 9s ease-in-out infinite; }
 .orb-blob-b { inset: 10%; background: var(--o2); opacity: .9; filter: blur(9px); animation: orb-drift-b 7s ease-in-out infinite; }
 .orb-blob-c { inset: 24%; border-radius: 9999px; background: color-mix(in srgb, white 72%, var(--o2)); opacity: .6; filter: blur(14px); animation: orb-drift-c 11s ease-in-out infinite; }
@@ -561,7 +562,9 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .orb[data-phase="speaking"] .orb-blob-c { animation-duration: 3.6s; }
 .orb[data-phase="speaking"] .orb-aura { animation-duration: 1.4s; opacity: .7; }
 .orb[data-phase="thinking"] .orb-blob-a, .orb[data-phase="drawing"] .orb-blob-a { animation-duration: 4.5s; }
-.orb[data-muted="true"] { filter: grayscale(.85); opacity: .55; }
+/* Muted: the same orb in quiet greys, smaller and still. (No filter on the orb itself: it would cut the soft edges off at the orb's box and leave a square.) */
+.orb { transition: transform .5s ease, opacity .5s ease; }
+.orb[data-muted="true"] { --o1: color-mix(in srgb, var(--muted) 70%, var(--bg)); --o2: color-mix(in srgb, var(--muted) 45%, var(--raised)); transform: scale(.78); opacity: .8; }
 .orb[data-muted="true"] .orb-blob, .orb[data-muted="true"] .orb-aura { animation: none; }
 @media (prefers-reduced-motion: reduce) { .orb .orb-blob, .orb .orb-aura, .orb .orb-sweep { animation: none !important; } }
 
