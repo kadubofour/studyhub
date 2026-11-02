@@ -19,6 +19,7 @@ import { STATUS_LABEL, evidence, progressLine, weakSpots } from '@/lib/topics/st
 import type { Kind } from '@/lib/library/items'
 import type { TopicStatus } from '@/lib/topics/types'
 import { Working } from '@/components/ui/Working'
+import { useScreen } from '@/lib/ui/useScreen'
 
 const KIND: Record<Kind, { plural: string; icon: LucideIcon; tone: 'a' | 'b' | 'c' }> = {
   note: { plural: 'Notes', icon: FileText, tone: 'b' },
@@ -34,10 +35,14 @@ const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
 
 // One study space for a course: what is in it, what is due, the next exam, its topics, and ways to start studying
+// a small action on a phone is only its icon: no border, no padding
+const ICON_BTN = 'grid size-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg disabled:opacity-40'
+
 export default function CoursePageRoute() {
   const id = String(useParams<{ id: string }>().id)
   const router = useRouter()
   const toast = useToast()
+  const phone = useScreen() === 'phone'
   const { profile } = useProfile()
   const [now] = useState(() => new Date())
   const [data, setData] = useState<CoursePage | null | undefined>(undefined) // undefined: loading, null: no such course
@@ -97,6 +102,22 @@ export default function CoursePageRoute() {
   return (
     <div className="space-y-4">
       <BackLink href="/courses">Courses</BackLink>
+      {phone ? (
+        // a phone: a small title with the actions as plain icons; no card and no course colour edge
+        <header className="flex items-center justify-between gap-2 px-1">
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-[1.35rem] font-bold leading-tight tracking-tight">{course.name}</h1>
+            <p className="text-[13px] text-muted">{items ? summaryLine(items) : ''}</p>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <NewNoteButton courseId={course.id} iconOnly />
+            <Link href={`/flashcards?new=1&course=${course.id}`} aria-label="New deck" title="New deck" className={ICON_BTN}><Layers size={19} aria-hidden /></Link>
+            <button type="button" aria-label="Upload" title="Upload" className={ICON_BTN} onClick={requestUpload}><Upload size={19} aria-hidden /></button>
+            <button type="button" aria-label="Ask the tutor" title="Ask the tutor" className={ICON_BTN} disabled={busy !== null} onClick={() => { void ask() }}><MessagesSquare size={19} aria-hidden /></button>
+            <Link href={`/library?course=${course.id}`} aria-label="Open in Library" title="Open in Library" className={ICON_BTN}><FolderOpen size={19} aria-hidden /></Link>
+          </div>
+        </header>
+      ) : (
       <header className="card flex flex-wrap items-center justify-between gap-3 border-l-8" style={{ borderLeftColor: course.color }}>
         <div className="min-w-0">
           <h1 className={`${PAGE_TITLE} truncate`}>{course.name}</h1>
@@ -110,6 +131,7 @@ export default function CoursePageRoute() {
           <Link href={`/library?course=${course.id}`} className="btn-ghost text-accent">Open in Library</Link>
         </div>
       </header>
+      )}
 
       {(due > 0 || exam) && (
         <div className="grid gap-3 sm:grid-cols-2">

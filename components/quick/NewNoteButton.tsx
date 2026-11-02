@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { createNote } from '@/lib/data/notes'
 
 // Makes a note (in a course when it has one) and opens it, from anywhere
-export function NewNoteButton({ courseId = null, className = BTN_OUTLINE }: { courseId?: string | null; className?: string }) {
+export function NewNoteButton({ courseId = null, className = BTN_OUTLINE, iconOnly = false }: { courseId?: string | null; className?: string; /** Only the icon, no border or padding: a small action on a phone */ iconOnly?: boolean }) {
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -21,5 +21,6 @@ export function NewNoteButton({ courseId = null, className = BTN_OUTLINE }: { co
       router.push(`/notes/${n.id}`)
     } catch { toast('Couldn\'t create a note.'); busyRef.current = false; setBusy(false) }
   }
+  if (iconOnly) return <button type="button" aria-label="New note" title="New note" className="grid size-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg disabled:opacity-40" disabled={busy} onClick={() => { void make() }}><FilePlus size={19} aria-hidden /></button>
   return <button type="button" className={className} disabled={busy} onClick={() => { void make() }}><FilePlus size={15} aria-hidden />New note</button>
 }
