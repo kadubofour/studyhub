@@ -13,6 +13,9 @@ let links: { topic_id: string; link: { kind: 'note' | 'lecture' | 'deck'; id: st
 let material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] as { id: string; name: string }[] }
 const saveCourseTopics = vi.fn(async (..._a: unknown[]) => {})
 const postAi = vi.fn()
+const push = vi.fn()
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
+vi.mock('@/lib/tutor/revise', () => ({ startRevision: async () => '/tutor/chat1?ask=Quiz%20me' }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses }))
 vi.mock('@/lib/data/topics', () => ({
@@ -27,7 +30,7 @@ const open = async () => { await act(async () => { render(<ToastProvider><Topics
 beforeEach(() => {
   courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name: 'Chemistry', color: '#BA7517' }]
   stats = []; links = []; material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] }
-  loadFails = false; saveCourseTopics.mockClear(); postAi.mockReset()
+  loadFails = false; push.mockClear(); saveCourseTopics.mockClear(); postAi.mockReset()
   postAi.mockResolvedValue({ ok: false, error: 'too_little', message: 'Not enough to go on yet.' })
 })
 afterEach(cleanup)
@@ -37,12 +40,11 @@ describe('Topics section', () => {
     await open()
     expect(screen.getByRole('link', { name: 'Open course page' }).getAttribute('href')).toBe('/courses/c1')
   })
-  it('a course with too little material offers to find topics by hand, and does not ask on its own', async () => {
+  it('shows nothing until some course has real material or topics', async () => {
     material = { notes: [{ id: 'n1', title: 'Krebs notes' }], lectures: [], decks: [] }
     await open()
+    expect(screen.queryByRole('region', { name: 'Topics' })).toBeNull()
     expect(postAi).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Find topics' })).toBeTruthy()
-    expect(screen.queryByText('Weak spots')).toBeNull()
   })
   it('shows each topic with its status, the numbers behind it, and what is linked', async () => {
     stats = [
@@ -58,14 +60,12 @@ describe('Topics section', () => {
     expect(screen.getByRole('listitem', { name: 'ETC' }).textContent).toMatch(/Not started.*Not practised yet/)
     expect(screen.getByText('1 of 3 mastered · 1 weak')).toBeTruthy()
   })
-  it('puts the weak topic in the weak spots box, or says nothing is weak', async () => {
+  it('each topic has a Revise button that opens the tutor, and a strength bar', async () => {
     stats = [stat({ name: 'Krebs cycle', status: 'weak', answers_30d: 10, correct_30d: 3, answers_all: 10, last_practised: new Date().toISOString() })]
     await open()
-    expect(within(screen.getByRole('region', { name: 'Weak spots' })).getByText('Krebs cycle')).toBeTruthy()
-    cleanup()
-    stats = [stat({ status: 'mastered', answers_30d: 10, correct_30d: 10, answers_all: 10 })]
-    await open()
-    expect(screen.getByText('Nothing weak right now')).toBeTruthy()
+    expect(screen.getByRole('img', { name: '30% right' })).toBeTruthy()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Revise Krebs cycle' })) })
+    expect(push).toHaveBeenCalledWith('/tutor/chat1?ask=Quiz%20me')
   })
   it('topics are found on their own and saved straight away, with no draft to confirm', async () => {
     postAi.mockResolvedValue({ ok: true, value: { topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }, { name: 'Glycolysis', notes: ['n2'], lectures: [] }] } })
@@ -95,12 +95,12 @@ describe('Topics section', () => {
     stats = [stat({ name: 'Krebs cycle' })]
     links = [{ topic_id: 't1', link: { kind: 'note', id: 'n1' } }, { topic_id: 't1', link: { kind: 'note', id: 'n2' } }]
     await open()
-    expect(screen.queryByRole('button', { name: 'Update topics' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add new notes to topics' })).toBeNull()
     cleanup()
     links = [{ topic_id: 't1', link: { kind: 'note', id: 'n1' } }]
     postAi.mockResolvedValue({ ok: true, value: { topics: [{ name: 'Pyruvate', notes: ['n2'], lectures: [] }] } })
     await open()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Update topics' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add new notes to topics' })) })
     expect(postAi).toHaveBeenCalledWith('/api/ai/topics', { courseId: 'c1', mode: 'update' })
     const saved = saveCourseTopics.mock.calls[0][2] as { name: string }[]
     expect(saved.map(t => t.name)).toEqual(['Krebs cycle', 'Pyruvate'])
@@ -109,7 +109,7 @@ describe('Topics section', () => {
     stats = [stat({ name: 'Krebs cycle' })]
     links = [{ topic_id: 't1', link: { kind: 'note', id: 'n1' } }]
     await open()
-    fireEvent.click(screen.getByRole('button', { name: 'Edit topics' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename or remove topics' }))
     expect(screen.queryByRole('status')).toBeNull() // not an unsaved AI draft
     fireEvent.change(screen.getByLabelText('Topic 1 name'), { target: { value: 'Changed' } })
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -122,10 +122,10 @@ describe('Topics section', () => {
     await act(async () => { fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Topics course' })).getByRole('radio', { name: 'Chemistry' })) })
     expect(screen.getByRole('listitem', { name: 'Bonding' })).toBeTruthy()
   })
-  it('a student with no courses is pointed at the Planner', async () => {
+  it('a student with no courses sees no Topics section', async () => {
     courses = []
     await open()
-    expect(screen.getByText(/Add a course/)).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Topics' })).toBeNull()
   })
   it('a failed load is an error with Retry, never an empty course that offers to draft (and so wipe) topics', async () => {
     stats = [stat({ name: 'Krebs cycle' })]

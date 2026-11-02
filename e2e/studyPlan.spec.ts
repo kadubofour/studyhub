@@ -111,5 +111,5 @@ test('a course with no topics is sent to Progress first', async ({ page }) => {
   const panel = page.getByRole('region', { name: 'Study plan' })
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
   await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Find topics for Biology on Progress first/)).toBeVisible()
+  await expect(panel.getByText(/Biology needs a few notes or lectures first/)).toBeVisible()
 })
