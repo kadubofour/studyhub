@@ -394,10 +394,10 @@ export default function LibraryPage() {
                   <PhoneGroup key={kind} label={KIND[kind].heading}>
                     {shown.filter(i => i.kind === kind).map(i => {
                       const c = courseOf(i.course_id)
-                      const book = i.kind === 'note' ? bookOf(i.notebook_id) : null
+                      const book = bookOf(i.notebook_id)
                       return (
                         <PhoneRow key={key(i)} href={i.href} title={i.title} mark={<Mark color={c?.color} />} date={rowDate(i.at, now)}
-                          line={[book ? `In ${book.name}` : i.blurb || i.meta, c?.name].filter(Boolean).join(' · ')}
+                          line={[i.blurb || i.meta, book ? `In ${book.name}` : '', c?.name].filter(Boolean).join(' · ')}
                           select={selecting && isMovable(i) ? { on: selected.has(key(i)), onToggle: () => toggle(i) } : undefined}
                           onContextMenu={selecting ? undefined : e => openMenu(e, i)} />
                       )
@@ -421,7 +421,7 @@ export default function LibraryPage() {
                       {group.map(i => {
                         const movable = isMovable(i)
                         const c = courseOf(i.course_id)
-                        const book = i.kind === 'note' ? bookOf(i.notebook_id) : null
+                        const book = bookOf(i.notebook_id)
                         return (
                           <ItemTile key={key(i)} layout={layout} icon={k.icon} color={c?.color} title={i.title} href={i.href}
                             subtitle={book ? `In ${book.name}` : undefined} blurb={i.blurb}
