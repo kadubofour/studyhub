@@ -64,7 +64,7 @@ export async function finishRecording(sb: SupabaseClient, store: RecordingStore,
   const last = parts[parts.length - 1]
   const live = cur.lines.length > 0
   const { error } = await sb.from('lectures').upsert({
-    id: cur.id, title: cur.title.trim().slice(0, 200) || 'Lecture', course_id: cur.courseId, recorded_at: cur.startedAt,
+    id: cur.id, title: cur.title.trim().slice(0, 200) || 'Lecture', course_id: cur.courseId, notebook_id: cur.notebookId ?? null, recorded_at: cur.startedAt,
     duration_seconds: Math.min(MAX_LECTURE_SECONDS, Math.round(last.start + last.duration)),
     audio_bytes: parts.reduce((n, p) => n + p.bytes, 0), mime: cur.mime, parts,
     transcript: cur.lines, transcript_status: live ? 'live' : 'none', transcript_source: live ? 'browser' : null,

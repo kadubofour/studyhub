@@ -1,12 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
-import { signUp, noteSaved } from './helpers'
+import { signUp, noteSaved, create } from './helpers'
 
 // File, Edit and View are for wider screens: a phone has the toolbar (and the note page hides this bar there)
 test.beforeEach(({}, info) => { test.skip(info.project.name === 'mobile', 'the menu bar is not on phones') })
 
 async function newNote(page: Page, title: string) {
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Title').fill(title)
@@ -139,7 +139,7 @@ test('File > New note and Delete note', async ({ page }) => {
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/) // kept
   await menu(page, 'File', 'Delete note')
   await ask.getByRole('button', { name: 'Delete note' }).click()
-  await expect(page).toHaveURL(/\/notes$/)
+  await expect(page).toHaveURL(/\/notebooks\/[0-9a-f-]{36}$/) // back in its notebook
   await expect(page.getByRole('link', { name: /First/ })).toBeVisible() // the other note is untouched
   await expect(page.getByRole('link', { name: /Untitled/ })).toHaveCount(0)
 })
@@ -174,7 +174,7 @@ test('right-click in a note opens quick actions', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0)
 
   await page.keyboard.press('Escape') // Esc with no menu open leaves the note
-  await expect(page).toHaveURL(/\/notes$/)
+  await expect(page).toHaveURL(/\/notebooks\/[0-9a-f-]{36}$/)
 })
 
 test('automatic maths can be switched off from the View menu', async ({ page }) => {
@@ -188,17 +188,4 @@ test('automatic maths can be switched off from the View menu', async ({ page }) 
   // and it is remembered: Profile shows it off
   await page.goto('/profile')
   await expect(page.getByRole('switch', { name: /Turn typed maths into equations/ })).toHaveAttribute('aria-checked', 'false')
-})
-
-test('notes list: right-click a note to delete it', async ({ page }) => {
-  await signUp(page)
-  await newNote(page, 'Throwaway')
-  await noteSaved(page)
-  await page.goto('/notes')
-  await page.getByRole('link', { name: /Throwaway/ }).click({ button: 'right' })
-  await page.getByRole('menu', { name: 'Throwaway' }).getByRole('menuitem', { name: 'Delete' }).click()
-  await page.getByRole('dialog', { name: 'Delete this note?' }).getByRole('button', { name: 'Delete note' }).click()
-  await expect(page.getByRole('link', { name: /Throwaway/ })).toHaveCount(0)
-  await page.reload()
-  await expect(page.getByRole('button', { name: 'Write your first note' })).toBeVisible()
 })

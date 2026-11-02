@@ -115,14 +115,6 @@ describe('the focus timer on Home, on a phone', () => {
   })
 })
 
-describe('Notes filters on a phone', () => {
-  it('search on its own line, then the course, view and sort in one row that scrolls sideways', () => {
-    const src = fs.readFileSync('components/notes/NotesSidebar.tsx', 'utf8')
-    expect(src).toContain('<div className="relative min-w-48 flex-1 max-sm:basis-full">')
-    expect(src).toContain('<div data-filter-row className="no-scrollbar -mx-5 flex min-w-0 gap-2 overflow-x-auto px-5 sm:mx-0 sm:overflow-visible sm:px-0 [&>*]:shrink-0">')
-  })
-})
-
 describe('Library filters on a phone', () => {
   const src = () => fs.readFileSync('app/(app)/library/page.tsx', 'utf8')
   it('a phone has its own search, and a computer a column of search, kinds and order that stays in view', () => {
@@ -152,9 +144,9 @@ describe('a note\'s top bar on a phone', () => {
     const s = src(), desk = s.slice(s.indexOf('<header ref={headRef}'))
     expect(desk.indexOf('<AskTutorButton')).toBeLessThan(desk.indexOf('aria-expanded={studyOpen}'))
   })
-  it('on a phone, is Apple Notes\' bar: back to the notes, type or draw, then undo, redo, share, ⋯ and Done; the course, tutor and Study are in the ⋯ sheet', () => {
+  it('on a phone, is Apple Notes\' bar: back to the notebook, type or draw, then undo, redo, share, ⋯ and Done; the course, tutor and Study are in the ⋯ sheet', () => {
     const s = src(), phone = s.slice(s.indexOf('{showsPhone(screen) && <header'), s.indexOf('{showsComputer(screen) && <header'))
-    const order = ['aria-label="Back to notes"', 'aria-label="Type or draw"', 'aria-label="Undo"', 'aria-label="Redo"', 'aria-label="Share"', '<NoteSheet ', '>Done</button>'].map(x => phone.indexOf(x))
+    const order = ['aria-label="Back to notebook"', 'aria-label="Type or draw"', 'aria-label="Undo"', 'aria-label="Redo"', 'aria-label="Share"', '<NoteSheet ', '>Done</button>'].map(x => phone.indexOf(x))
     expect(order.every(i => i >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
     const sheet = phone.slice(phone.indexOf('<NoteSheet '), phone.indexOf('</NoteSheet>'))

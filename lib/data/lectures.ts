@@ -4,16 +4,16 @@ import { check, fetchAll, must } from './util'
 
 export type TranscriptStatus = 'none' | 'live' | 'processing' | 'done' | 'failed'
 export type Lecture = {
-  id: string; course_id: string | null; title: string; recorded_at: string; duration_seconds: number; audio_bytes: number
+  id: string; course_id: string | null; notebook_id?: string | null; title: string; recorded_at: string; duration_seconds: number; audio_bytes: number
   mime: AudioMime; parts: LecturePart[]; transcript: TranscriptLine[]; transcript_status: TranscriptStatus
   transcript_source: 'browser' | 'openai' | null; note_id: string | null
 }
-export type LectureSummary = Pick<Lecture, 'id' | 'course_id' | 'title' | 'recorded_at' | 'duration_seconds' | 'transcript_status' | 'transcript_source' | 'audio_bytes'>
+export type LectureSummary = Pick<Lecture, 'id' | 'course_id' | 'notebook_id' | 'title' | 'recorded_at' | 'duration_seconds' | 'transcript_status' | 'transcript_source' | 'audio_bytes'>
 
 const COLS = 'id,course_id,title,recorded_at,duration_seconds,audio_bytes,mime,parts,transcript,transcript_status,transcript_source,note_id'
 
 export async function listLectures(sb: SupabaseClient): Promise<LectureSummary[]> {
-  return fetchAll<LectureSummary>((from, to) => sb.from('lectures').select('id,course_id,title,recorded_at,duration_seconds,transcript_status,transcript_source,audio_bytes').order('recorded_at', { ascending: false }).order('id').range(from, to))
+  return fetchAll<LectureSummary>((from, to) => sb.from('lectures').select('id,course_id,notebook_id,title,recorded_at,duration_seconds,transcript_status,transcript_source,audio_bytes').order('recorded_at', { ascending: false }).order('id').range(from, to))
 }
 
 export async function getLecture(sb: SupabaseClient, id: string): Promise<Lecture> {

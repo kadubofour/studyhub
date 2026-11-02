@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import type { Proposal } from '@/lib/ai/tutorTools'
 
-const LINK = { note: (id: string) => `/notes/${id}`, deck: (id: string) => `/flashcards/${id}`, quiz: (id: string) => `/quiz/${id}`, task: () => '/planner' }
+const LINK = { note: (id: string) => `/notes/${id}`, deck: (id: string) => `/flashcards/${id}`, quiz: (id: string) => `/quiz/${id}`, task: () => '/planner', class: () => '/planner', notebook: (id: string) => `/notebooks/${id}` }
 
 // What the tutor wants to save, shown before anything is saved. The student can fix wording first.
 export function ProposalCard({ proposal, onAdd, onDiscard }: { proposal: Proposal; onAdd: (edited: Proposal) => Promise<void>; onDiscard: () => void }) {
@@ -63,6 +63,24 @@ export function ProposalCard({ proposal, onAdd, onDiscard }: { proposal: Proposa
         <ol className="max-h-48 list-decimal space-y-1 overflow-y-auto pl-5 text-sm">
           {d.args.questions.map(q => <li key={q.id}>{q.prompt} <span className="text-muted">→ {q.answer}</span></li>)}
         </ol>
+      </>
+    )
+  } else if (draft.tool === 'create_class') {
+    const d = draft
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    body = (
+      <>
+        <p className="section-label">Class · {d.args.kind}</p>
+        <p className="text-sm">{DAYS[d.args.day_of_week]}, {d.args.start_time} to {d.args.end_time}</p>
+        <input className="input w-full" aria-label="Class location" maxLength={100} placeholder="Where (optional)" value={d.args.location ?? ''} onChange={e => setDraft({ ...d, args: { ...d.args, location: e.target.value || null } })} />
+      </>
+    )
+  } else if (draft.tool === 'create_notebook') {
+    const d = draft
+    body = (
+      <>
+        <p className="section-label">Notebook</p>
+        <input className="input w-full" aria-label="Notebook name" maxLength={80} value={d.args.name} onChange={e => setDraft({ ...d, args: { ...d.args, name: e.target.value } })} />
       </>
     )
   } else {

@@ -31,8 +31,8 @@ test('the top bar, the note toolbar and the drawing tools can be tapped', async 
   test.setTimeout(120_000)
   await signUp(page)
   expect(await tooSmall(page, 'header[aria-label="Today at a glance"]')).toEqual([])
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   await page.waitForLoadState('networkidle')
   await page.getByLabel('Choose pictures').setInputFiles(path.join(__dirname, 'fixtures', 'cell.png'))

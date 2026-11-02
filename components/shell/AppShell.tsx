@@ -52,6 +52,7 @@ const DO: PaletteItem[] = [
   { id: 'do:record', group: 'Do', label: 'Record lecture', keywords: 'audio transcript', run: { action: 'record' } },
   { id: 'do:upload', group: 'Do', label: 'Upload', keywords: 'pdf slides word powerpoint file import', run: { action: 'upload' } },
   { id: 'do:scan', group: 'Do', label: 'Scan', keywords: 'photo camera pages', run: { action: 'scan' } },
+  { id: 'do:timetable', group: 'Do', label: 'Upload timetable', keywords: 'schedule classes lectures week photo pdf', run: { action: 'timetable' } },
   { id: 'do:task', group: 'Do', label: 'New task', keywords: 'todo assignment exam planner', run: { action: 'new-task' } },
   { id: 'do:reminder', group: 'Do', label: 'New reminder', keywords: 'remind me alarm alert', run: { action: 'new-reminder' } },
 ]
@@ -86,6 +87,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [uploading, setUploading] = useState(false)
   const [quizzing, setQuizzing] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
+  const [scanTarget, setScanTarget] = useState<ScanTarget | undefined>(undefined)
   const [creating, setCreating] = useState<null | 'rail' | 'wide' | 'dock'>(null)
   // The sidebar: wide with names and courses, or shrunk to a rail of icons; remembered on this device
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
@@ -109,7 +111,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const look = useLook()
   const [palette, setPalette] = useState(false)
   const [material, setMaterial] = useState<PaletteItem[]>([])
-  useOpenScan(files => { setScanFiles(files); setScanning(true) })
+  useOpenScan((files, target) => { setScanFiles(files); setScanTarget(target); setScanning(true) })
   useOpenUpload(() => setUploading(true))
   useOpenQuiz(() => setQuizzing(true))
   // The server can't know the theme, so the toggle shows its themed icon only after hydration
@@ -158,7 +160,8 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     else if (a === 'new-task') go('/planner')
     else if (a === 'new-reminder') requestReminder()
     else if (a === 'upload') setUploading(true)
-    else if (a === 'scan') { setScanFiles(undefined); setScanning(true) }
+    else if (a === 'scan') { setScanFiles(undefined); setScanTarget(undefined); setScanning(true) }
+    else if (a === 'timetable') { setScanFiles(undefined); setScanTarget('planner'); setScanning(true) }
     else if (a === 'quiz') setQuizzing(true)
     else if (a === 'theme') toggleTheme()
   }
@@ -295,7 +298,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
       <ReminderHost />
       <UploadMaterial open={uploading} onClose={() => setUploading(false)} onScan={files => { setScanFiles(files); setScanning(true) }} />
-      {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined) }} initialTarget={scanTargetFor(path)} onSaved={announceScanSaved} />}
+      {scanning && <ScanDialog open initialFiles={scanFiles} onClose={() => { setScanning(false); setScanFiles(undefined); setScanTarget(undefined) }} initialTarget={scanTarget ?? scanTargetFor(path)} onSaved={announceScanSaved} />}
     </div>
   )
 }

@@ -7,7 +7,7 @@ const push = vi.fn()
 const item = (kind: LibraryItem['kind'], id: string, title: string, over: Partial<LibraryItem> = {}): LibraryItem =>
   ({ kind, id, title, course_id: 'bio', at: '2026-10-10T10:00:00Z', meta: '', href: `/${kind}/${id}`, ...over })
 let items: LibraryItem[]
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams('view=materials'), useRouter: () => ({ push }) }))
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams('view=all'), useRouter: () => ({ push }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => [{ id: 'bio', name: 'Biology', color: '#1D9E75' }], createCourse: vi.fn(), updateCourse: vi.fn(), deleteCourse: vi.fn() }))
 vi.mock('@/lib/data/library', () => ({ loadLibrary: async () => items, moveItems: vi.fn() }))

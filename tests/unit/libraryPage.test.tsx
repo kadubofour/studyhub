@@ -23,7 +23,7 @@ const requestUpload = vi.fn()
 let movedCount: number | null = null
 const moveItems = vi.fn(async (_sb: unknown, picked: unknown[], _course: unknown) => movedCount ?? picked.length)
 const loadLibrary = vi.fn(async () => { if (loadFails) throw new Error('offline'); return items })
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search || 'view=materials'), useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(search || 'view=all'), useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses: async () => courses, createCourse: vi.fn(), updateCourse: vi.fn(), deleteCourse: vi.fn() }))
 vi.mock('@/lib/data/library', () => ({ loadLibrary: () => loadLibrary(), moveItems: (sb: unknown, p: unknown[], c: unknown) => moveItems(sb, p, c) }))
@@ -286,12 +286,12 @@ describe('Library', () => {
       expect(cell).toBe('rgb(29, 158, 117)')
       expect(archive).toBe('var(--accent-solid)')
     })
-    it('shows each notebook as a folder with its note count, and keeps filed notes inside it', async () => {
+    it('shows each notebook as a folder with its note count, and every note in the list too', async () => {
       await open()
       expect(shelf().getAllByRole('link').map(b => b.getAttribute('aria-label'))).toEqual(['Open Archive, 0 notes', 'Open Cell biology, 2 notes'])
       expect(shelf().getAllByRole('link').every(b => b.querySelector('[data-notebook-cover]'))).toBe(true) // drawn as notebooks, not folders
-      expect(listed().some(t => t.includes('Glycolysis'))).toBe(false)
-      expect(listed()).toHaveLength(7)
+      expect(listed().some(t => t.includes('Glycolysis'))).toBe(true)
+      expect(listed()).toHaveLength(9)
     })
     it('finds notes inside folders when searching, and says which notebook each is in', async () => {
       await open()

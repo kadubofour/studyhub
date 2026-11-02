@@ -1,26 +1,26 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { noteWithText, signUp, listAction, startLibrarySelect, noteMenuInList, tickOf, openLibraryMaterials } from './helpers'
+import { create, moveNoteToNotebook, noteWithText, signUp } from './helpers'
 
-test('notebooks: make one, move a note into it, open its page, rename it, delete it (the note is kept)', async ({ page }) => {
+test('notebooks: make one, move a note into it, open its page, rename it, delete it (what is in it goes to General)', async ({ page }) => {
   test.setTimeout(120_000)
   await signUp(page)
-  await noteWithText(page, 'Krebs cycle')
-  await page.goto('/notes')
-  await listAction(page, 'Notes options', 'New notebook')
+  await noteWithText(page, 'Krebs cycle') // a note made without choosing goes in General
+  await page.goto('/library')
+  const shelf = page.getByRole('list', { name: 'Notebooks' })
+  await expect(shelf.getByRole('link', { name: 'General' })).toBeVisible()
+  await page.getByRole('button', { name: 'Create new notebook' }).click()
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Cell biology')
   await dialog.getByRole('button', { name: 'Create' }).click()
-  const shelf = page.getByRole('list', { name: 'Notebooks' })
-  await expect(shelf.getByRole('link', { name: 'Open Cell biology, 0 notes' })).toBeVisible()
+  await expect(shelf.getByRole('link', { name: 'Cell biology' })).toBeVisible()
+  await expect(shelf.getByRole('listitem').filter({ hasText: 'Cell biology' })).toContainText('Empty')
 
-  await noteMenuInList(page, 'Krebs cycle')
-  await page.getByRole('menuitem', { name: /Move to notebook/ }).click()
-  await page.getByRole('dialog', { name: 'Move to notebook' }).getByRole('button', { name: 'Cell biology' }).click()
-  await expect(shelf.getByRole('link', { name: 'Open Cell biology, 1 note' })).toBeVisible()
-
-  await shelf.getByRole('link', { name: /Cell biology/ }).click()
-  await expect(page).toHaveURL(/\/notebooks\/[0-9a-f-]{36}$/)
+  // the note's own page has the notebook it is in
+  await shelf.getByRole('link', { name: 'General' }).click()
+  await page.getByRole('link', { name: /Krebs cycle/ }).click()
+  await moveNoteToNotebook(page, 'Cell biology')
+  await page.getByRole('link', { name: 'Back to notebook' }).click() // back goes to the notebook it is in now
   await expect(page.getByRole('heading', { level: 1, name: 'Cell biology' })).toBeVisible()
   await expect(page.getByRole('list', { name: 'Notes in Cell biology' }).getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
@@ -36,32 +36,50 @@ test('notebooks: make one, move a note into it, open its page, rename it, delete
 
   await page.getByRole('button', { name: 'Delete notebook' }).click()
   await page.getByRole('button', { name: 'Delete', exact: true }).click()
-  await expect(page).toHaveURL(/\/notes$/)
-  await expect(page.getByRole('list', { name: 'Notebooks' })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible() // the note is kept
+  await expect(page).toHaveURL(/\/library$/)
+  await expect(page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: 'Cells' })).toHaveCount(0)
+  await page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: 'General' }).click()
+  await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible() // moved to General, not lost
 })
 
-test('Library: a note filed in a notebook lives inside it, and the notebook opens on its own page', async ({ page }) => {
+test('a notebook is where things are started: a note, a deck, material, and a recording; nothing is left unsorted', async ({ page }) => {
+  test.setTimeout(120_000)
   await signUp(page)
-  await noteWithText(page, 'Krebs cycle')
-  await openLibraryMaterials(page)
-  await listAction(page, 'Library options', 'New notebook')
+  await page.goto('/library')
+  await page.getByRole('button', { name: 'Create new notebook' }).click()
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
-  await dialog.getByLabel('Name').fill('Cell biology')
+  await dialog.getByLabel('Name').fill('Chemistry')
   await dialog.getByRole('button', { name: 'Create' }).click()
-  const shelf = page.getByRole('list', { name: 'Notebooks' })
-  await expect(shelf.getByRole('link', { name: 'Open Cell biology, 0 notes' })).toBeVisible()
+  await page.getByRole('link', { name: 'Chemistry' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Chemistry' })).toBeVisible()
+  await expect(page.getByText('Nothing in this notebook yet')).toBeVisible()
 
-  await startLibrarySelect(page)
-  await tickOf(page, 'Krebs cycle').check()
-  await page.getByRole('button', { name: 'Move to notebook' }).click()
-  await page.getByRole('dialog', { name: 'Move to notebook' }).getByRole('button', { name: 'Cell biology' }).click()
-  await expect(page.getByText('Moved 1 note to Cell biology.')).toBeVisible()
-  await expect(shelf.getByRole('link', { name: 'Open Cell biology, 1 note' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Library items' }).getByRole('link', { name: /Krebs cycle/ })).toHaveCount(0) // inside the notebook now
+  // material: a file kept in this notebook
+  await page.getByRole('button', { name: 'Materials', exact: true }).first().click()
+  await page.getByRole('dialog').getByLabel('File to upload').setInputFiles({ name: 'periodic.md', mimeType: 'text/markdown', buffer: Buffer.from('# Periodic table\n\nElements in rows and columns.\n') })
+  await page.getByRole('button', { name: /Just keep the file/ }).click()
+  await page.getByRole('button', { name: 'Keep file' }).click()
+  await expect(page.getByRole('list', { name: 'Materials in Chemistry' }).getByRole('link', { name: /periodic/ })).toBeVisible()
 
-  await shelf.getByRole('link', { name: /Cell biology/ }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Cell biology' })).toBeVisible()
-  await page.getByRole('link', { name: /Krebs cycle/ }).click()
+  // a deck, made here
+  await page.getByRole('button', { name: /New deck/ }).click()
+  await page.getByRole('dialog', { name: 'New deck' }).getByLabel('Name').fill('Elements')
+  await page.getByRole('dialog', { name: 'New deck' }).getByRole('button', { name: 'Create' }).click()
+  await expect(page).toHaveURL(/\/flashcards\/[0-9a-f-]{36}$/)
+  await page.goBack()
+  await expect(page.getByRole('list', { name: 'Decks in Chemistry' }).getByRole('link', { name: /Elements/ })).toBeVisible()
+
+  // a note, made here, is in it; recording starts in it
+  await page.getByRole('button', { name: 'New note', exact: true }).first().click()
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
+  await page.getByRole('link', { name: 'Back to notebook' }).first().click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Chemistry' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Record lecture/ })).toHaveAttribute('href', /\/lectures\/record\?notebook=[0-9a-f-]{36}$/)
+
+  // and the Library cards say what is in them
+  await page.goto('/library')
+  await expect(page.getByRole('list', { name: 'Notebooks' }).getByRole('listitem').filter({ hasText: 'Chemistry' })).toContainText('1 note · 1 deck · 1 material')
+  await create(page, 'New note') // made from the sidebar without choosing: General
+  await page.goto('/library')
+  await expect(page.getByRole('list', { name: 'Notebooks' }).getByRole('listitem').filter({ hasText: 'General' })).toContainText('1 note')
 })

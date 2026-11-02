@@ -8,12 +8,14 @@ export const announceScanSaved = () => { window.dispatchEvent(new Event(SCAN_SAV
 
 // Any page can ask the app to open Scan (the Upload dialog does, for a photo)
 export const OPEN_SCAN = 'studyhub:open-scan'
-export const requestScan = (files?: File[]) => { window.dispatchEvent(new CustomEvent(OPEN_SCAN, { detail: files })) }
-export function useOpenScan(open: (files?: File[]) => void) {
+// target: what it should make (a timetable is 'planner'); without one it starts on what the current page holds
+export type ScanOpen = { files?: File[]; target?: 'note' | 'cards' | 'planner' }
+export const requestScan = (files?: File[], target?: ScanOpen['target']) => { window.dispatchEvent(new CustomEvent<ScanOpen>(OPEN_SCAN, { detail: { files, target } })) }
+export function useOpenScan(open: (files?: File[], target?: ScanOpen['target']) => void) {
   const latest = useRef(open)
   useEffect(() => { latest.current = open })
   useEffect(() => {
-    const heard = (e: Event) => latest.current((e as CustomEvent<File[] | undefined>).detail)
+    const heard = (e: Event) => { const d = (e as CustomEvent<ScanOpen | undefined>).detail; latest.current(d?.files, d?.target) }
     window.addEventListener(OPEN_SCAN, heard)
     return () => window.removeEventListener(OPEN_SCAN, heard)
   }, [])

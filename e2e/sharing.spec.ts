@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type Locator, type Page, type TestInfo } from '@playwright/test'
 import path from 'node:path'
-import { rpcAs, signUp, noteSaved } from './helpers'
+import { rpcAs, signUp, noteSaved, create } from './helpers'
 
 const CELL = path.join(__dirname, 'fixtures', 'cell.png')
 
@@ -18,8 +18,8 @@ const drawn = async (img: Locator) => {
 test('a signed-out visitor opens a shared note, signs up, copies it, and the copy opens with its picture', async ({ page, browser }, info) => {
   test.setTimeout(180_000)
   const email = await signUp(page)
-  await page.goto('/notes')
-  await page.getByRole('button', { name: /Write your first note|^New note$/ }).first().click() // a computer's empty list has its own button; a phone has the round New note
+  await page.goto('/library')
+  await create(page, 'New note')
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
   const original = page.url().split('/').pop()!
   await page.waitForLoadState('networkidle')

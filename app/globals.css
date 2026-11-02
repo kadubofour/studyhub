@@ -397,6 +397,15 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .prose-note h2 { font-size: 1.15rem; font-weight: 600; margin: .7em 0 .3em; }
 .prose-note h3 { font-weight: 600; margin: .5em 0 .2em; }
 .prose-note p { margin: .45em 0; line-height: 1.7; }
+/* A displayed equation wider than the page scrolls sideways rather than running off it; one with an equation number keeps room for it,
+   so the number is never drawn over the equation */
+.prose-note .katex-display { overflow-x: auto; overflow-y: hidden; padding: .1em 0; }
+.prose-note .katex-display:has(.katex-tag) > .katex > .katex-html { padding-right: 3.4em; }
+.prose-note .katex-display:has(.katex-tag) > .katex > .katex-html > .katex-tag { right: 0; }
+/* the mark that ends a proof sits at the right of the line it ends, not on a line of its own */
+.prose-note .end-of-proof { text-align: right; margin-top: -.9em; color: var(--muted); line-height: 1; user-select: none; }
+/* a figure's caption, under the figure */
+.prose-note .figure-caption { display: block; margin-top: .35em; text-align: center; font-size: .85rem; color: var(--muted); }
 .prose-note ul { list-style: disc; padding-left: 1.4em; }
 .prose-note ol { list-style: decimal; padding-left: 1.4em; }
 .prose-note code { font-family: var(--font-jetbrains), ui-monospace, monospace; background: var(--surface); padding: 0 .25em; border-radius: 4px; }
@@ -552,3 +561,20 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 /* A diagram, chart or figure drawn from an uploaded file is black lines on white paper. In dark mode the lines turn light and the paper
    drops out (screen blend on the page behind it), instead of a white box. Photos are not marked, so they stay as they are. */
 .dark img[data-diagram] { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; background: #fff; }
+
+/* The live tutor's stage: the studio's mist behind a glowing orb, the focus screen's slow drift, frosted panels for what is said and for the controls */
+.live-stage { background: linear-gradient(to bottom, color-mix(in srgb, var(--accent-solid) 24%, transparent), transparent 55%), linear-gradient(to top, color-mix(in srgb, var(--accent-glow) 22%, transparent), transparent 50%), var(--bg); overflow: hidden; }
+.live-stage .chill-blob { opacity: .22; }
+.live-glass { background: color-mix(in srgb, var(--raised) 62%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.2); backdrop-filter: blur(22px) saturate(1.2); border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 18px 50px -24px rgb(21 22 40 / .45); }
+.live-orb { position: relative; display: grid; place-items: center; }
+.live-orb::before { content: ''; position: absolute; inset: -12%; border-radius: 9999px; background: var(--accent-glow); filter: blur(34px); opacity: .5; animation: live-halo 5s ease-in-out infinite; }
+.live-orb[data-phase="speaking"]::before { animation-duration: 1.6s; opacity: .8; }
+.live-orb[data-muted="true"]::before { opacity: .15; animation: none; }
+@keyframes live-halo { 0%, 100% { transform: scale(.94); } 50% { transform: scale(1.08); } }
+.live-orb .orb-core { background: linear-gradient(150deg, color-mix(in srgb, white 45%, var(--accent-glow)), var(--accent-solid) 70%); }
+.live-bars { display: flex; align-items: center; justify-content: center; gap: 4px; height: 22px; }
+.live-bars i { width: 4px; border-radius: 9999px; background: var(--accent-solid); height: 30%; opacity: .55; }
+[data-phase="speaking"] .live-bars i { animation: working-wave 0.9s ease-in-out infinite; opacity: .9; }
+[data-phase="speaking"] .live-bars i:nth-child(2) { animation-delay: .12s; } [data-phase="speaking"] .live-bars i:nth-child(3) { animation-delay: .24s; }
+[data-phase="speaking"] .live-bars i:nth-child(4) { animation-delay: .36s; } [data-phase="speaking"] .live-bars i:nth-child(5) { animation-delay: .48s; }
+@media (prefers-reduced-motion: reduce) { .live-orb::before, [data-phase="speaking"] .live-bars i { animation: none; } }

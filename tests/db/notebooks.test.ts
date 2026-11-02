@@ -33,16 +33,18 @@ describe('notebooks', () => {
     expect(inBook).toEqual(['Glycolysis', 'Krebs cycle'])
     expect((await searchNotes(A.sb, 'krebs'))[0].notebook_id).toBe(book.id)
     await moveNotes(A.sb, [n1.id], null)
-    expect((await listNotes(A.sb)).find(n => n.id === n1.id)!.notebook_id).toBeNull()
+    const general = (await listNotebooks(A.sb)).find(b => b.is_default)!
+    expect((await listNotes(A.sb)).find(n => n.id === n1.id)!.notebook_id).toBe(general.id) // out of a notebook means into General
   })
 
-  it('keep their notes when deleted: the notes become unfiled', async () => {
+  it('keep their notes when deleted: the notes move to the General notebook', async () => {
     const book = await createNotebook(A.sb, 'Temporary')
     const n = await createNote(A.sb, { title: 'Stays', content_md: 'x' })
     await moveNotes(A.sb, [n.id], book.id)
     await deleteNotebook(A.sb, book.id)
     const after = (await listNotes(A.sb)).find(x => x.id === n.id)!
-    expect(after.notebook_id).toBeNull()
+    const general = (await listNotebooks(A.sb)).find(b => b.is_default)!
+    expect(after.notebook_id).toBe(general.id)
     expect((await listNotebooks(A.sb)).some(b => b.id === book.id)).toBe(false)
   })
 

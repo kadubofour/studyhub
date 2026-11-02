@@ -4,15 +4,17 @@ import { validateQuestions } from './quiz'
 import type { Question } from '@/lib/quiz/types'
 
 export const MAX_CARDS = 30
-export type ToolName = 'create_note' | 'create_flashcards' | 'create_quiz' | 'create_task'
+export type ToolName = 'create_note' | 'create_flashcards' | 'create_quiz' | 'create_task' | 'create_class' | 'create_notebook'
 export type ProposalArgs = {
   create_note: { title: string; body: string; course_id: string | null }
   create_flashcards: { deck_id: string | null; deck_name: string | null; cards: { front: string; back: string }[]; course_id: string | null }
   create_quiz: { title: string; questions: Question[] }
   create_task: { title: string; type: 'assignment' | 'exam' | 'reading' | 'other'; due_at: string | null; priority: 'low' | 'normal' | 'high'; course_id: string | null }
+  create_class: { course_id: string; day_of_week: number; start_time: string; end_time: string; location: string | null; kind: 'lecture' | 'lab' | 'tutorial' | 'seminar' | 'other' }
+  create_notebook: { name: string; course_id: string | null }
 }
 export type Proposal = {
-  [K in ToolName]: { id: string; tool: K; args: ProposalArgs[K]; state: 'pending' | 'added' | 'discarded'; itemId?: string; itemKind?: 'note' | 'deck' | 'quiz' | 'task' }
+  [K in ToolName]: { id: string; tool: K; args: ProposalArgs[K]; state: 'pending' | 'added' | 'discarded'; itemId?: string; itemKind?: 'note' | 'deck' | 'quiz' | 'task' | 'class' | 'notebook' }
 }[ToolName]
 export type ToolContext = { noteId: string | null; courseIds: string[]; deckIds: string[] }
 
@@ -37,6 +39,13 @@ const TaskArgs = z.object({
   title: text(300), type: z.enum(['assignment', 'exam', 'reading', 'other']).nullish(), priority: z.enum(['low', 'normal', 'high']).nullish(),
   due_date: dueAt, course_id: id.nullish(),
 })
+
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+const ClassArgs = z.object({
+  course_id: id, day_of_week: z.number().int().min(0).max(6), start_time: hhmm, end_time: hhmm,
+  location: z.string().trim().max(100).nullish(), kind: z.enum(['lecture', 'lab', 'tutorial', 'seminar', 'other']).nullish(),
+}).refine(c => c.end_time > c.start_time)
+const NotebookArgs = z.object({ name: text(80), course_id: id.nullish() })
 
 export function parseToolCall(name: string, argsJson: string, ctx: ToolContext, pid: string): Proposal | null {
   let raw: unknown
@@ -70,6 +79,16 @@ export function parseToolCall(name: string, argsJson: string, ctx: ToolContext, 
     if (!a.success || !ownsCourse(a.data.course_id)) return null
     return { ...base, tool: 'create_task', args: { title: a.data.title, type: a.data.type ?? 'other', due_at: a.data.due_date ?? null, priority: a.data.priority ?? 'normal', course_id: a.data.course_id ?? null } }
   }
+  if (name === 'create_class') {
+    const a = ClassArgs.safeParse(raw)
+    if (!a.success || !ctx.courseIds.includes(a.data.course_id)) return null // a class belongs to one of the student's courses
+    return { ...base, tool: 'create_class', args: { course_id: a.data.course_id, day_of_week: a.data.day_of_week, start_time: a.data.start_time, end_time: a.data.end_time, location: a.data.location || null, kind: a.data.kind ?? 'lecture' } }
+  }
+  if (name === 'create_notebook') {
+    const a = NotebookArgs.safeParse(raw)
+    if (!a.success || !ownsCourse(a.data.course_id)) return null
+    return { ...base, tool: 'create_notebook', args: { name: a.data.name, course_id: a.data.course_id ?? null } }
+  }
   return null
 }
 
@@ -95,5 +114,10 @@ export function toolDefinitions(hasNote: boolean): OpenAI.Responses.Tool[] {
   tools.push(fn('create_task', 'Propose one task or deadline for the student\'s planner, only when they ask.',
     { title: { type: 'string' }, type: { type: 'string', enum: ['assignment', 'exam', 'reading', 'other'] }, due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD or null' },
       priority: { type: 'string', enum: ['low', 'normal', 'high'] }, course_id: course }, ['title']))
+  tools.push(fn('create_class', 'Propose one weekly class for the student\'s timetable, only when they ask (say, from a timetable they describe). It must belong to one of their courses (course_id).',
+    { course_id: { type: 'string' }, day_of_week: { type: 'integer', description: '0 Sunday to 6 Saturday' }, start_time: { type: 'string', description: 'HH:MM, 24-hour' }, end_time: { type: 'string', description: 'HH:MM, 24-hour, after the start' },
+      location: { type: ['string', 'null'] }, kind: { type: 'string', enum: ['lecture', 'lab', 'tutorial', 'seminar', 'other'] } }, ['course_id', 'day_of_week', 'start_time', 'end_time']))
+  tools.push(fn('create_notebook', 'Propose a new notebook (a study set holding a subject\'s notes, decks, recordings and files), only when the student asks.',
+    { name: { type: 'string' }, course_id: course }, ['name']))
   return tools
 }

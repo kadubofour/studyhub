@@ -2,10 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { check, fetchAll, must } from './util'
 
 // An uploaded file kept in the Library: the original a note was made from
-export type Material = { id: string; course_id: string | null; note_id: string | null; name: string; mime: string; bytes: number; path: string; created_at: string }
+export type Material = { id: string; course_id: string | null; notebook_id?: string | null; note_id: string | null; name: string; mime: string; bytes: number; path: string; created_at: string }
 export type MaterialKind = 'pdf' | 'docx' | 'pptx' | 'text' | 'image'
 
-const COLS = 'id,course_id,note_id,name,mime,bytes,path,created_at'
+const COLS = 'id,course_id,notebook_id,note_id,name,mime,bytes,path,created_at'
 export const MATERIAL_MIME: Record<Exclude<MaterialKind, 'image'>, string> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -47,7 +47,7 @@ export async function getMaterial(sb: SupabaseClient, id: string): Promise<Mater
 }
 
 // The file first, into the student's folder, then its row; a row that fails takes its file back out
-export async function keepMaterial(sb: SupabaseClient, userId: string, file: File, kind: MaterialKind, at: { course_id: string | null; note_id: string | null }): Promise<Material> {
+export async function keepMaterial(sb: SupabaseClient, userId: string, file: File, kind: MaterialKind, at: { course_id: string | null; note_id: string | null; notebook_id?: string | null }): Promise<Material> {
   const id = crypto.randomUUID()
   const name = file.name.slice(0, 200) || 'Uploaded file'
   const safe = name.replace(/[^\w .()-]/g, '_').slice(0, 100) || 'file'

@@ -36,17 +36,18 @@ export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<Librar
   ])
   const noteCourse = new Map(notes.map(n => [n.id, n.course_id]))
   const noteTitle = new Map(notes.map(n => [n.id, n.title]))
+  const noteBook = new Map(notes.map(n => [n.id, n.notebook_id ?? null]))
   return [
     ...notes.map(n => ({ kind: 'note' as const, id: n.id, title: n.title, course_id: n.course_id, notebook_id: n.notebook_id ?? null, at: n.updated_at, meta: '', blurb: blurbOf(n.preview, n.title), href: `/notes/${n.id}` })),
     ...decks.map(d => ({
-      kind: 'deck' as const, id: d.id, title: d.name, course_id: d.course_id, at: d.created_at ?? '',
+      kind: 'deck' as const, id: d.id, title: d.name, course_id: d.course_id, notebook_id: d.notebook_id ?? null, at: d.created_at ?? '',
       due: d.due, meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,
     })),
-    ...lectures.map(l => ({ kind: 'lecture' as const, id: l.id, title: l.title, course_id: l.course_id, at: l.recorded_at, meta: `${Math.round(l.duration_seconds / 60)} min`, href: `/lectures/${l.id}` })),
+    ...lectures.map(l => ({ kind: 'lecture' as const, id: l.id, title: l.title, course_id: l.course_id, notebook_id: l.notebook_id ?? null, at: l.recorded_at, meta: `${Math.round(l.duration_seconds / 60)} min`, href: `/lectures/${l.id}` })),
     // A quiz follows its note; one whose note is gone has nowhere to belong and is left out
-    ...quizzes.filter(q => noteCourse.has(q.note_id)).map(q => ({ kind: 'quiz' as const, id: q.id, title: q.title, course_id: noteCourse.get(q.note_id) ?? null, at: q.created_at, meta: '', blurb: `From ${noteTitle.get(q.note_id) || 'Untitled'}`, href: `/quiz/${q.id}` })),
+    ...quizzes.filter(q => noteCourse.has(q.note_id)).map(q => ({ kind: 'quiz' as const, id: q.id, title: q.title, course_id: noteCourse.get(q.note_id) ?? null, notebook_id: noteBook.get(q.note_id) ?? null, at: q.created_at, meta: '', blurb: `From ${noteTitle.get(q.note_id) || 'Untitled'}`, href: `/quiz/${q.id}` })),
     ...chats.map(c => ({ kind: 'chat' as const, id: c.id, title: c.title, course_id: c.course_id, at: c.updated_at, meta: '', href: `/tutor/${c.id}` })),
-    ...files.map(f => ({ kind: 'file' as const, id: f.id, title: f.name, course_id: f.course_id, at: f.created_at, meta: `${MATERIAL_LABEL[f.mime] ?? 'File'} · ${fileSize(f.bytes)}`, href: `/files/${f.id}` })),
+    ...files.map(f => ({ kind: 'file' as const, id: f.id, title: f.name, course_id: f.course_id, notebook_id: f.notebook_id ?? null, at: f.created_at, meta: `${MATERIAL_LABEL[f.mime] ?? 'File'} · ${fileSize(f.bytes)}`, href: `/files/${f.id}` })),
   ]
 }
 

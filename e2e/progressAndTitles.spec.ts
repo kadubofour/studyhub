@@ -19,7 +19,7 @@ test('Progress welcomes a new student in words, not a row of zeros, and the tab 
 
 test('every page names itself in the tab: Library, Practice, Tutor, Planner, Profile', async ({ page }) => {
   await signUp(page)
-  for (const [path, title] of [['/library', 'Library'], ['/flashcards', 'Practice'], ['/quiz', 'Practice'], ['/tutor', 'Tutor'], ['/planner', 'Planner'], ['/profile', 'Profile'], ['/notes', 'Notes'], ['/home', 'Home']] as const) {
+  for (const [path, title] of [['/library', 'Library'], ['/flashcards', 'Practice'], ['/quiz', 'Practice'], ['/tutor', 'Tutor'], ['/planner', 'Planner'], ['/profile', 'Profile'], ['/home', 'Home']] as const) {
     await page.goto(path)
     await expect(page, path).toHaveTitle(`${title} · Studyhub`)
   }

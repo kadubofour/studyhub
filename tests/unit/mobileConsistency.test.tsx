@@ -6,7 +6,7 @@ import fs from 'node:fs'
 const src = (p: string) => fs.readFileSync(p, 'utf8')
 
 describe('one page title everywhere', () => {
-  it.each(['components/notes/NotesSidebar.tsx', 'app/(app)/courses/[id]/page.tsx'])('%s uses the shared page title', f => {
+  it.each(['app/(app)/courses/[id]/page.tsx'])('%s uses the shared page title', f => {
     expect(src(f)).toMatch(/<h1 className=\{`?\$?\{?PAGE_TITLE/)
   })
   it('a Settings section heading is a panel title, not a second page title', () => {
@@ -15,7 +15,7 @@ describe('one page title everywhere', () => {
 })
 
 describe('the way back from a page inside another', () => {
-  it.each([['app/(app)/flashcards/[deck]/page.tsx', '/flashcards', 'Flashcards'], ['app/(app)/courses/[id]/page.tsx', '/courses', 'Courses'], ['app/(app)/notebooks/[id]/page.tsx', '/notes', 'Notes']])('%s links back to %s', (f, href, label) => {
+  it.each([['app/(app)/flashcards/[deck]/page.tsx', '/flashcards', 'Flashcards'], ['app/(app)/courses/[id]/page.tsx', '/courses', 'Courses'], ['app/(app)/notebooks/[id]/page.tsx', '/library', 'Library']])('%s links back to %s', (f, href, label) => {
     expect(src(f)).toContain(`<BackLink href="${href}">${label}</BackLink>`)
   })
 })

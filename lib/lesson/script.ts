@@ -27,6 +27,28 @@ const words = (s: unknown, max: number) => String(s ?? '').replace(/\s+/g, ' ').
 
 export class EmptyLessonError extends Error { constructor() { super('Nothing usable came back.') } }
 
+const SYMBOLS: Record<string, string> = {
+  in: '∈', notin: '∉', subset: '⊂', subseteq: '⊆', supset: '⊃', supseteq: '⊇', cup: '∪', cap: '∩', emptyset: '∅', varnothing: '∅', times: '×', cdot: '·', div: '÷', pm: '±',
+  leq: '≤', le: '≤', geq: '≥', ge: '≥', neq: '≠', ne: '≠', approx: '≈', infty: '∞', pi: 'π', theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', lambda: 'λ', mu: 'μ', sigma: 'σ', omega: 'ω',
+  Delta: 'Δ', Sigma: 'Σ', sum: 'Σ', int: '∫', to: '→', rightarrow: '→', leftarrow: '←', Rightarrow: '⇒', leftrightarrow: '↔', ldots: '…', dots: '…', cdots: '⋯', setminus: '∖', mid: '|', forall: '∀', exists: '∃', circ: '°', degree: '°',
+}
+const SUP: Record<string, string> = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', n: 'ⁿ' }
+const SUB: Record<string, string> = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉', n: 'ₙ', i: 'ᵢ' }
+const raise = (m: string, map: Record<string, string>, mark: string) => (m.length > 0 && [...m].every(c => c in map) ? [...m].map(c => map[c]).join('') : `${mark}${m.length > 1 ? `(${m})` : m}`)
+
+/** Maths a lesson shows is plain text with ordinary symbols, never LaTeX: this turns any that slips through into that */
+export function plainMaths(text: string): string {
+  let s = text.replace(/\\\(|\\\)|\\\[|\\\]/g, '').replace(/\$+/g, '')
+  for (let i = 0; i < 3; i++) s = s.replace(/\\(?:d|t)?frac\{([^{}]*)\}\{([^{}]*)\}/g, (_m, a: string, b: string) => `${a.length > 1 ? `(${a})` : a}/${b.length > 1 ? `(${b})` : b}`)
+  s = s.replace(/\\sqrt\{([^{}]*)\}/g, (_m, a: string) => `√${a.length > 1 ? `(${a})` : a}`)
+    .replace(/\\(?:text|mathrm|mathbf|mathbb|mathcal|operatorname)\{([^{}]*)\}/g, '$1')
+    .replace(/\\([A-Za-z]+)/g, (m, name: string) => SYMBOLS[name] ?? name)
+    .replace(/\^\{([^{}]*)\}/g, (_m, a: string) => raise(a, SUP, '^')).replace(/\^([0-9nA-Za-z+-])/g, (_m, a: string) => raise(a, SUP, '^'))
+    .replace(/_\{([^{}]*)\}/g, (_m, a: string) => raise(a, SUB, '_')).replace(/_([0-9n])/g, (_m, a: string) => raise(a, SUB, '_'))
+    .replace(/[{}]/g, '').replace(/\\,|\\;|\\!|\\ /g, ' ')
+  return s.replace(/ {2,}/g, ' ').trim()
+}
+
 /**
  * What the AI wrote, made safe to draw: places kept on the board, text kept short, duplicate ids and unknown ids dropped, and any
  * element no step reveals shown by the last one, so nothing written is lost. Throws EmptyLessonError when there is no lesson in it.
@@ -43,7 +65,7 @@ export function cleanLesson(raw: { title?: unknown; elements?: unknown; steps?: 
     const x = clamp(num((e as { x?: unknown }).x), 0, BOARD_W), y = clamp(num((e as { y?: unknown }).y), 0, BOARD_H)
     seen.add(id)
     elements.push({
-      id, kind, color, text: words((e as { text?: unknown }).text, MAX_TEXT),
+      id, kind, color, text: plainMaths(words((e as { text?: unknown }).text, MAX_TEXT)),
       // a box or circle that runs off the board is pulled back on; a text's size is kept readable
       w: kind === 'box' || kind === 'circle' ? clamp(w || 30, 8, BOARD_W) : w,
       h: kind === 'box' || kind === 'circle' ? clamp(h || 16, 6, BOARD_H) : clamp(h || 6, 3, 14),
@@ -54,7 +76,7 @@ export function cleanLesson(raw: { title?: unknown; elements?: unknown; steps?: 
   }
   const steps: LessonStep[] = []
   for (const s of Array.isArray(raw.steps) ? raw.steps : []) {
-    const narration = words((s as { narration?: unknown }).narration, MAX_NARRATION)
+    const narration = plainMaths(words((s as { narration?: unknown }).narration, MAX_NARRATION))
     if (!narration || steps.length >= MAX_STEPS) continue
     const known = (list: unknown) => [...new Set((Array.isArray(list) ? list : []).map(i => String(i)).filter(i => seen.has(i)))]
     steps.push({ narration, show: known((s as { show?: unknown }).show), focus: known((s as { focus?: unknown }).focus) })

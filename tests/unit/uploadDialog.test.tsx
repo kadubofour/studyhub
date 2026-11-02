@@ -110,7 +110,7 @@ describe('UploadDialog', () => {
     expect(document.querySelector('dialog')?.hasAttribute('open')).toBe(false)
   })
   it('asks the app to open Scan when no hand-off is given, so a photo works from any page', async () => {
-    const heard = vi.fn((e: Event) => (e as CustomEvent<File[]>).detail)
+    const heard = vi.fn((e: Event) => (e as CustomEvent<{ files?: File[] }>).detail.files)
     window.addEventListener('studyhub:open-scan', heard)
     render(<ProfileProvider initial={profile}><ToastProvider><UploadDialog open onClose={() => {}} courses={[]} /></ToastProvider></ProfileProvider>)
     await act(async () => { fireEvent.change(screen.getByLabelText('File to upload'), { target: { files: [file('board.jpg')] } }) }); await note()
@@ -190,7 +190,7 @@ describe('UploadDialog', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Keep file' })) })
     expect(keepMaterial).toHaveBeenCalledTimes(1)
     expect(keepMaterial.mock.calls[0][3]).toBe('pdf')
-    expect(keepMaterial.mock.calls[0][4]).toEqual({ course_id: null, note_id: null })
+    expect(keepMaterial.mock.calls[0][4]).toEqual({ course_id: null, note_id: null, notebook_id: null })
     expect(lastSignal).toBeUndefined() // nothing was read by AI
     expect(createNote).not.toHaveBeenCalled()
     expect(router.push).toHaveBeenCalledWith('/files/kept')
@@ -206,7 +206,7 @@ describe('UploadDialog', () => {
   it('keeps the original beside a note made from it', async () => {
     await upload(file('b.pptx'))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save note' })) })
-    expect(keepMaterial.mock.calls[0][4]).toEqual({ course_id: null, note_id: 'new' })
+    expect(keepMaterial.mock.calls[0][4]).toEqual({ course_id: null, note_id: 'new', notebook_id: null })
   })
   it('only keeps, with no question, when opened from the Library\'s Upload file', async () => {
     const kept = vi.fn()
