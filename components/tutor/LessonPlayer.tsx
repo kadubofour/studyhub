@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { useLockScroll } from '@/lib/ui/useLockScroll'
 import { BOARD_H, BOARD_W, arrowHead, readingMs, revealedAt, wrapText, type LessonColor, type LessonElement, type LessonScript } from '@/lib/lesson/script'
 
 // A visual lesson: a whiteboard that builds up one step at a time while the voice explains it, with the words as captions.
@@ -74,6 +75,7 @@ export function LessonPlayer({ script, voices, onDelete }: { script: LessonScrip
   // Full screen: the browser's own where it has one (the lesson then fills the screen), else the lesson fills the window. It is the same
   // player either way, so the voice carries on without a break. Esc leaves.
   const [wide, setWide] = useState(false)
+  useLockScroll(wide) // the page behind a full-screen lesson stays where it was
   const root = useRef<HTMLElement>(null)
   const exit = useRef<HTMLButtonElement>(null)
   function expand(on: boolean) {
