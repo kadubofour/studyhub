@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { FileText, Layers, ListChecks, Mic, Paperclip, Pencil, Plus, Search, Share2, Trash2, UploadCloud, type LucideIcon } from 'lucide-react'
+import { FileText, Layers, ListChecks, Mic, Paperclip, Pencil, Plus, Search, Share2, SquarePen, Trash2, UploadCloud, type LucideIcon } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { NotebookCover } from '@/components/notes/NotebookCover'
 import { ShareDialog } from '@/components/share/ShareDialog'
@@ -24,7 +24,7 @@ import type { Course, Notebook } from '@/lib/types'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
 import { BackLink } from '@/components/ui/BackLink'
 import { Working } from '@/components/ui/Working'
-import { CardsMark, ChecklistMark, FileMark, NotebookMark, PhoneGroup, PhoneRow, SheetMark, StripMark } from '@/components/ui/PhoneList'
+import { CardsMark, ChecklistMark, ComposeButton, FileMark, NotebookMark, PhoneGroup, PhoneRow, SheetMark, StripMark } from '@/components/ui/PhoneList'
 import { useScreen } from '@/lib/ui/useScreen'
 import { rowDate } from '@/lib/notes/noteRows'
 
@@ -124,7 +124,6 @@ export default function NotebookPage() {
           <div className={phone ? 'mt-4 flex items-center gap-1' : 'mt-4 flex flex-wrap gap-2'}>
             {phone ? (
               <>
-                <button type="button" aria-label="New note" title="New note" className="grid size-10 place-items-center rounded-full bg-fg text-bg" onClick={() => { void newNote() }}><Plus size={18} aria-hidden /></button>
                 <Link href={`/lectures/record?notebook=${book.id}`} aria-label="Record lecture" title="Record lecture" className={ICON_BTN}><Mic size={19} aria-hidden /></Link>
                 <button type="button" aria-label="New deck" title="New deck" className={ICON_BTN} onClick={() => setDialog('deck')}><Layers size={19} aria-hidden /></button>
                 <button type="button" aria-label="Materials" title="Materials" className={ICON_BTN} onClick={() => setDialog('material')}><UploadCloud size={19} aria-hidden /></button>
@@ -190,6 +189,8 @@ export default function NotebookPage() {
         </>
       )}
 
+      {/* a phone writes a note from the round button in the corner, as in its other lists */}
+      {phone && <ComposeButton label="New note" icon={SquarePen} onClick={() => { void newNote() }} />}
       {dialog === 'share' && <ShareDialog kind="notebook" id={book.id} title={book.name} onClose={() => setDialog(null)} />}
       <NotebookNameDialog open={dialog === 'rename'} onClose={() => setDialog(null)} title="Rename notebook" submitLabel="Save" initial={book.name}
         courses={courses} initialCourse={book.course_id ?? null} onSubmit={(name, cid) => { void rename(name, cid) }} />
