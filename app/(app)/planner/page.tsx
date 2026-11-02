@@ -208,7 +208,9 @@ export default function PlannerPage() {
           ))}
         </div>
         {/* a photo or PDF of the timetable becomes the week's classes (and tasks), for the student to check first */}
-        <button type="button" className="btn max-sm:!px-2.5" title="Upload timetable" aria-label="Upload timetable" onClick={() => requestScan(undefined, 'planner')}><Upload size={14} aria-hidden /><span className="max-sm:sr-only">Upload timetable</span></button>
+        {/* a phone gets only the icon: no border, no padding, just the icon */}
+        <button type="button" className="btn max-sm:hidden" onClick={() => requestScan(undefined, 'planner')}><Upload size={14} aria-hidden />Upload timetable</button>
+        <button type="button" className="text-muted hover:text-fg sm:hidden" title="Upload timetable" aria-label="Upload timetable" onClick={() => requestScan(undefined, 'planner')}><Upload size={18} aria-hidden /></button>
         <div className="w-full md:ml-auto md:w-auto [&>div]:!mb-0">
           <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
             setCourses(next)
