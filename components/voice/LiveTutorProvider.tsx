@@ -44,6 +44,7 @@ function FullScreen({ session }: { session: Session }) {
   }, [setFullscreen])
   const board = state.visual && state.script
   const sending = state.phase === 'listening' && state.you.trim().length > 0
+  const idle = !state.tutor && !state.you && !state.error // only the invitation to ask: a small pill, not a card
   return (
     <div role="dialog" aria-modal="true" aria-label="Live session with the tutor" data-testid="live-full" data-phase={state.phase}
       className="live-stage fixed inset-0 z-[80] flex flex-col overscroll-contain pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)] md:pt-[env(safe-area-inset-top)]">
@@ -83,9 +84,9 @@ function FullScreen({ session }: { session: Session }) {
           </div>
         )}
 
-        <div className="live-glass w-full max-w-2xl rounded-3xl px-6 py-5 text-center" aria-live="polite">
+        <div className={`live-glass text-center ${idle ? 'w-fit max-w-full rounded-full px-4 py-2 text-sm' : 'w-full max-w-2xl rounded-3xl px-5 py-4 sm:px-6 sm:py-5'}`} aria-live="polite">
           {state.tutor
-            ? <p className="no-bar max-h-[22dvh] overflow-y-auto text-lg leading-relaxed sm:text-xl">{state.tutor}</p>
+            ? <p className="no-bar max-h-[22dvh] overflow-y-auto text-base leading-relaxed sm:text-xl">{state.tutor}</p>
             : state.phase === 'listening' && !state.you && !state.error ? <p className="text-muted">{state.supported ? 'Go ahead, ask me anything.' : 'Voice needs Chrome, Edge or Safari. You can type your question below.'}</p> : null}
           {state.you && <p className="mt-2 text-sm italic text-muted">You: {state.you}</p>}
           {state.error && <p role="alert" className="mt-2 text-sm text-danger">{state.error}</p>}
