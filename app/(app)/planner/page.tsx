@@ -202,13 +202,13 @@ export default function PlannerPage() {
         <div role="tablist" className="flex gap-1">
           {(['tasks', 'week', 'timetable'] as Tab[]).map(t => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`choice rounded-xl px-3.5 py-1.5 text-sm pointer-coarse:py-2.5 ${tab === t ? 'bg-surface font-medium' : 'text-muted hover:text-fg'}`}>
+              className={`choice rounded-xl px-3.5 py-1.5 text-sm ${tab === t ? 'bg-surface font-medium' : 'text-muted hover:text-fg'}`}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
         {/* a photo or PDF of the timetable becomes the week's classes (and tasks), for the student to check first */}
-        <button type="button" className="btn" onClick={() => requestScan(undefined, 'planner')}><Upload size={14} aria-hidden />Upload timetable</button>
+        <button type="button" className="btn max-sm:!px-2.5" title="Upload timetable" aria-label="Upload timetable" onClick={() => requestScan(undefined, 'planner')}><Upload size={14} aria-hidden /><span className="max-sm:sr-only">Upload timetable</span></button>
         <div className="w-full md:ml-auto md:w-auto [&>div]:!mb-0">
           <CourseBar courses={courses} selected={filter} onSelect={setFilter} onChange={next => {
             setCourses(next)

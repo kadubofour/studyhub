@@ -163,13 +163,17 @@ describe('the soft button', () => {
   })
 })
 
-describe('one look for every choice on a phone', () => {
-  it('tabs, filters, view switches and sections on every page share the choice pill, chosen in ink', () => {
+describe('one look for every choice, on a phone and on a computer', () => {
+  it('tabs, filters, view switches and sections use the same style at the same size on a phone as on a computer', () => {
     const files = ['app/(app)/planner/page.tsx', 'app/(app)/focus/page.tsx', 'app/(app)/library/page.tsx', 'components/notes/study/StudyPanel.tsx', 'components/calendar/CalendarToolbar.tsx',
       'components/quiz/QuizStartDialog.tsx', 'components/ui/ViewOptions.tsx', 'components/ui/ChoiceChips.tsx', 'components/settings/SettingsRail.tsx', 'components/planner/CourseBar.tsx', 'components/planner/TaskRail.tsx']
     for (const f of files) expect(fs.readFileSync(f, 'utf8'), f).toMatch(/[`"']choice /)
     const css = fs.readFileSync('app/globals.css', 'utf8')
-    expect(css).toContain('.app-root .choice:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="true"], [aria-current="page"]) { border-color: var(--fg) !important; background: var(--fg) !important; color: var(--bg) !important;')
+    // no phone-only restyle of choices (an outlined pill, the chosen one in ink)
+    expect(css).not.toContain('.app-root .choice {')
+    expect(css).not.toContain('.app-root .choice:is(')
+    // and no phone-only extra size on the planner's tabs and chips
+    for (const f of ['components/planner/TaskRail.tsx', 'components/planner/CourseBar.tsx', 'components/settings/SettingsRail.tsx']) expect(fs.readFileSync(f, 'utf8'), f).not.toMatch(/max-md:p[xy]-/)
   })
   it('page header actions are the look\'s buttons, not tinted ones', () => {
     expect(fs.readFileSync('components/quick/QuickActions.tsx', 'utf8')).not.toContain('BTN_SOFT')
