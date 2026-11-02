@@ -108,11 +108,11 @@ describe('Study plan panel', () => {
     expect(screen.getByText('Missed this week: 2')).toBeTruthy()
     expect(screen.getByText(/3 sessions don't fit/)).toBeTruthy()
   })
-  it('no topics sends the student to Progress; an exam too close says so', async () => {
+  it('no topics sends the student to the Library; an exam too close says so', async () => {
     views = [view({ status: 'no_topics', today: [], upcoming: [], schedule: [] })]
     await open()
-    expect(screen.getByText(/Find topics for Biology on Progress first/)).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Open Progress' }).getAttribute('href')).toBe('/progress')
+    expect(screen.getByText(/Biology needs a few notes or lectures first/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Open Library' }).getAttribute('href')).toBe('/library')
     cleanup()
     views = [view({ status: 'no_days', today: [], upcoming: [], schedule: [] })]
     await open()

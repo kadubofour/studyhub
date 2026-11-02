@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AlertTriangle, Circle, CircleCheck, CircleDot } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
@@ -9,10 +10,11 @@ import { TopicEditor } from '@/components/progress/TopicEditor'
 import { TopicResources } from '@/components/progress/TopicResources'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
+import { startRevision } from '@/lib/tutor/revise'
 import { listCourses } from '@/lib/data/courses'
 import { listCourseMaterial, listTopicLinks, listTopicStats, saveCourseTopics } from '@/lib/data/topics'
 import { applyUpdate, fromAi, tidy, toDrafts } from '@/lib/topics/edit'
-import { STATUS_LABEL, evidence, progressLine, weakSpots } from '@/lib/topics/status'
+import { STATUS_LABEL, evidence, progressLine } from '@/lib/topics/status'
 import type { CourseMaterial, DraftTopic, TopicDraft, TopicLink, TopicStat, TopicStatus } from '@/lib/topics/types'
 import type { Course } from '@/lib/types'
 import { Working } from '@/components/ui/Working'
@@ -36,6 +38,8 @@ function StatusChip({ status }: { status: TopicStatus }) {
 // Progress: each course's topics, where the student stands on them, and what to revise first
 export function TopicsSection() {
   const toast = useToast()
+  const router = useRouter()
+  const [opening, setOpening] = useState<string | null>(null)
   const [courses, setCourses] = useState<Course[] | null>(null)
   const [courseId, setCourseId] = useState<string | null>(null)
   const [data, setData] = useState<Loaded | null>(null)
@@ -48,7 +52,18 @@ export function TopicsSection() {
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    listCourses(supabase()).then(cs => { setCourses(cs); setCourseId(cs[0]?.id ?? null) }).catch(() => setCourses([]))
+    // Only courses with something to build topics from (or topics already): a course with no real material has nothing to show here
+    listCourses(supabase()).then(async cs => {
+      const sb = supabase()
+      const ok = await Promise.all(cs.map(async c => {
+        try {
+          const [stats, material] = await Promise.all([listTopicStats(sb, c.id), listCourseMaterial(sb, c.id)])
+          return stats.length > 0 || material.notes.length + material.lectures.length >= 2
+        } catch { return true } // a failed check shows the load error with Retry, not a vanished section
+      }))
+      const shown = cs.filter((_, i) => ok[i])
+      setCourses(shown); setCourseId(shown[0]?.id ?? null)
+    }).catch(() => setCourses([]))
   }, [])
   useEffect(() => {
     if (!courseId) return
@@ -62,6 +77,14 @@ export function TopicsSection() {
   function retry() { setLoadFailed(false); setData(null); setAttempt(a => a + 1) }
 
   // Topics are found and saved in one step: there is nothing to fix before they count (Edit topics is there for the student who wants to)
+  async function revise(t: TopicStat) {
+    if (!courseId) return
+    setOpening(t.topic_id)
+    // Stays busy until the page changes, so a second tap cannot make another chat
+    try { router.push(await startRevision(supabase(), { id: t.topic_id, name: t.name }, courseId)) }
+    catch { toast('Couldn\'t open the tutor. Try again.'); setOpening(null) }
+  }
+
   async function ask(mode: 'draft' | 'update') {
     if (!courseId || !data) return
     setBusy(true); setProblem(null)
@@ -80,7 +103,7 @@ export function TopicsSection() {
     if (!courseId || !data || busy || editing || data.stats.length > 0 || tried.current.has(courseId)) return
     if (data.material.notes.length + data.material.lectures.length < 2) return
     tried.current.add(courseId)
-    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void ask('draft')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId, data, busy, editing])
@@ -95,7 +118,7 @@ export function TopicsSection() {
   }
 
   if (!courses) return null
-  if (!courses.length) return <section aria-label="Topics" className="card mt-4"><h2 className="mb-2 font-semibold">Topics</h2><p className="text-sm text-muted">Add a course in the Planner to organise its notes into topics.</p></section>
+  if (!courses.length) return null
   if (loadFailed) return (
     <section aria-label="Topics" className="card mt-4 space-y-2">
       <h2 className="font-semibold">Topics</h2>
@@ -107,13 +130,15 @@ export function TopicsSection() {
 
   const linked = new Set(data.links.map(l => `${l.link.kind}:${l.link.id}`))
   const unlinked = [...data.material.notes.map(n => `note:${n.id}`), ...data.material.lectures.map(l => `lecture:${l.id}`)].filter(k => !linked.has(k)).length
-  const weak = weakSpots(data.stats, new Date())
 
   return (
     <section aria-label="Topics" className="card mt-4 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
         <h2 className="font-semibold">Topics</h2>
-        {/* Not while drafting, saving or editing: a result for one course must not land in another, and edits must not vanish */}
+        <p className="text-sm text-muted">The ideas in each course and how well you know them. Quizzes on your notes fill in the bars.</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Not while finding, saving or editing: a result for one course must not land in another, and edits must not vanish */}
         <ChoiceChips label="Topics course" value={courseId ?? ''} disabled={busy || saving || !!editing} options={courses.map(c => ({ value: c.id, label: c.name, color: c.color }))} onChange={pickCourse} size="sm" />
         {courseId && <Link href={`/courses/${courseId}`} className="btn-ghost text-accent">Open course page</Link>}
       </div>
@@ -123,39 +148,47 @@ export function TopicsSection() {
           onSave={list => { void save(list) }} onCancel={() => { setEditing(null); setSaveError(null) }} />
       ) : data.stats.length === 0 ? (
         <div className="space-y-2">
-          <p className="text-sm text-muted">Topics split a course into things you can revise one by one, and show which ones are strong or weak. They are found from this course&apos;s notes and lectures once it has two or more.</p>
+          <p className="text-sm text-muted">Topics split this course into ideas you can revise one by one. They are being found from your notes and lectures.</p>
           {busy
             ? <Working kind="write" label="Finding topics" steps={['Reading the notes and lectures', 'Grouping them by idea', 'Naming each topic']} className="rounded-2xl bg-surface py-5" />
             : <button type="button" className="btn-primary" onClick={() => { void ask('draft') }}>Find topics</button>}
-          <p className="text-xs text-muted">Uses 1 AI action. Needs at least two notes or lectures in this course.</p>
+          <p className="text-xs text-muted">Uses 1 AI action.</p>
         </div>
       ) : (
         <>
-          {weak.length > 0 ? (
-            <div role="region" aria-label="Weak spots" className="rounded-xl bg-danger-soft p-3">
-              <h3 className="mb-1 text-sm font-medium">Weak spots</h3>
-              <ul className="space-y-0.5 text-sm">
-                {weak.map(w => <li key={w.topic_id}><span className="font-medium">{w.name}</span> <span className="text-muted">{evidence(w)}</span></li>)}
-              </ul>
-            </div>
-          ) : <p className="text-sm text-muted">Nothing weak right now</p>}
           <p className="text-sm">{progressLine(data.stats)}</p>
           <ul className="divide-y divide-line">
-            {data.stats.map(s => (
-              <li key={s.topic_id} aria-label={s.name} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2">
-                <span className="font-medium">{s.name}</span>
-                <StatusChip status={s.status} />
-                <span className="basis-full text-xs text-muted">{evidence(s)}</span>
-                <span className="basis-full text-xs text-muted">{plural(s.notes, 'note')}, {plural(s.lectures, 'lecture')}, {plural(s.decks, 'deck')}</span>
-                <TopicResources topicId={s.topic_id} topicName={s.name} />
-              </li>
-            ))}
+            {data.stats.map(s => {
+              const pct = s.answers_30d ? Math.round((s.correct_30d / s.answers_30d) * 100) : null
+              return (
+                <li key={s.topic_id} aria-label={s.name} className="py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{s.name}</div>
+                      <StatusChip status={s.status} />
+                    </div>
+                    <button type="button" className="btn shrink-0" aria-label={`Revise ${s.name}`} disabled={opening !== null} onClick={() => { void revise(s) }}>
+                      {opening === s.topic_id ? 'Opening…' : 'Revise'}
+                    </button>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface" role="img" aria-label={pct === null ? 'No quiz answers yet' : `${pct}% right`}>
+                    <div className={`h-full rounded-full ${s.status === 'weak' ? 'bg-danger' : s.status === 'mastered' ? 'bg-success' : 'bg-accent'}`} style={{ width: `${pct ?? 0}%` }} />
+                  </div>
+                  <details className="mt-1 text-xs text-muted">
+                    <summary className="cursor-pointer select-none py-1">Details</summary>
+                    <p>{evidence(s)}</p>
+                    <p>{plural(s.notes, 'note')}, {plural(s.lectures, 'lecture')}, {plural(s.decks, 'deck')}</p>
+                    <TopicResources topicId={s.topic_id} topicName={s.name} />
+                  </details>
+                </li>
+              )
+            })}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn" onClick={() => { setSaveError(null); setEditing(e => ({ list: toDrafts(data.stats, data.links), fresh: false, n: (e?.n ?? 0) + 1 })) }}>Edit topics</button>
+            <button type="button" className="btn-ghost" onClick={() => { setSaveError(null); setEditing(e => ({ list: toDrafts(data.stats, data.links), fresh: false, n: (e?.n ?? 0) + 1 })) }}>Rename or remove topics</button>
             {unlinked > 0 && (busy
               ? <Working kind="read" size="sm" label="Looking at the new material" className="text-sm text-muted" />
-              : <button type="button" className="btn" onClick={() => { void ask('update') }}>Update topics</button>)}
+              : <button type="button" className="btn-ghost" onClick={() => { void ask('update') }}>Add new notes to topics</button>)}
           </div>
         </>
       )}

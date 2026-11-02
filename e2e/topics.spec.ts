@@ -20,7 +20,7 @@ async function topicsSaved(page: Page) {
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
   await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own, with nothing to fix first
-  await topics.getByRole('button', { name: 'Edit topics' }).click()
+  await topics.getByRole('button', { name: 'Rename or remove topics' }).click()
   await expect(topics.getByLabel('Topic 2 name')).toHaveValue('Glycolysis')
   await topics.getByLabel('Topic 2 name').fill('Glycolysis and fermentation')
   await topics.getByRole('button', { name: 'Save topics' }).click()
@@ -67,26 +67,23 @@ test('wrong quiz answers turn a topic weak with its numbers, and Update topics a
   await quizHalfRight(page, note)
   await page.goto('/progress')
   const topics = page.getByRole('region', { name: 'Topics' })
-  await expect(topics.getByRole('region', { name: 'Weak spots' })).toContainText('Krebs cycle')
   await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toContainText('8 answers, 50% right in the last 30 days')
   await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toContainText('Weak')
   // New material in the course
   await page.goto(note)
   await secondNote(page, 'Pyruvate notes', 'Pyruvate is converted to acetyl-CoA before it enters the cycle in the matrix. ')
   await page.goto('/progress')
-  await topics.getByRole('button', { name: 'Update topics' }).click() // saved at once
+  await topics.getByRole('button', { name: 'Add new notes to topics' }).click() // saved at once
   await expect(topics.getByRole('listitem', { name: 'Pyruvate' })).toBeVisible()
   await expect(topics.getByRole('listitem', { name: 'Glycolysis and fermentation' })).toBeVisible() // earlier edits kept
-  await expect(topics.getByRole('button', { name: 'Update topics' })).toHaveCount(0)
+  await expect(topics.getByRole('button', { name: 'Add new notes to topics' })).toHaveCount(0)
 })
 
-test('a course with too little material is told so, and nothing is found', async ({ page }) => {
+test('a course with too little material shows no Topics section at all', async ({ page }) => {
   await signUp(page)
   await noteWithText(page)
   await inBiology(page)
   await page.goto('/progress')
-  const topics = page.getByRole('region', { name: 'Topics' })
-  await topics.getByRole('button', { name: 'Find topics' }).click()
-  await expect(topics.getByRole('alert')).toContainText('Add a few more notes')
-  await expect(topics.getByRole('button', { name: 'Save topics' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Focus, week by week' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Topics' })).toHaveCount(0)
 })
