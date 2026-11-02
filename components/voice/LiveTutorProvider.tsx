@@ -66,24 +66,24 @@ function FullScreen({ session }: { session: Session }) {
         <button type="button" aria-label="End the session" title="End" className="live-glass grid size-9 place-items-center rounded-full text-danger" onClick={session.end}><X size={16} aria-hidden /></button>
       </header>
 
-      <main className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 py-2">
+      <main className="no-bar relative flex min-h-0 flex-1 flex-col items-center justify-center gap-[clamp(.5rem,2.5dvh,1.5rem)] overflow-y-auto px-4 py-2">
         {board ? (
           <div className="relative w-full max-w-4xl">
-            <LessonBoard script={state.script!} step={state.step} className="live-glass block h-auto max-h-[56dvh] w-full rounded-3xl" />
+            <LessonBoard script={state.script!} step={state.step} className="live-glass block h-auto max-h-[48dvh] w-full rounded-3xl" />
             <div className="absolute bottom-3 right-3"><div className="live-orb" data-phase={state.phase} data-muted={state.muted}><Orb phase={state.phase} muted={state.muted} size={56} /></div></div>
           </div>
         ) : state.visual && state.phase === 'drawing' ? (
-          <div className="grid place-items-center gap-4 text-muted"><div className="live-orb" data-phase={state.phase} data-muted={state.muted}><Orb phase={state.phase} muted={state.muted} size={128} /></div><Working kind="think" size="sm" label="Drawing it" className="text-sm" /></div>
+          <div className="grid place-items-center gap-4 text-muted"><div className="live-orb" data-phase={state.phase} data-muted={state.muted}><Orb phase={state.phase} muted={state.muted} size="min(128px, 18dvh)" /></div><Working kind="think" size="sm" label="Drawing it" className="text-sm" /></div>
         ) : (
           <div className="grid place-items-center gap-5">
-            <div className="live-orb" data-phase={state.phase} data-muted={state.muted}><Orb phase={state.phase} muted={state.muted} size={state.visual ? 128 : 208} /></div>
+            <div className="live-orb" data-phase={state.phase} data-muted={state.muted}><Orb phase={state.phase} muted={state.muted} size={state.visual ? 'min(128px, 18dvh)' : 'min(208px, 28dvh)'} /></div>
             <Bars />
           </div>
         )}
 
         <div className="live-glass w-full max-w-2xl rounded-3xl px-6 py-5 text-center" aria-live="polite">
           {state.tutor
-            ? <p className="max-h-[22dvh] overflow-y-auto text-lg leading-relaxed sm:text-xl">{state.tutor}</p>
+            ? <p className="no-bar max-h-[22dvh] overflow-y-auto text-lg leading-relaxed sm:text-xl">{state.tutor}</p>
             : state.phase === 'listening' && !state.you && !state.error ? <p className="text-muted">{state.supported ? 'Go ahead, ask me anything.' : 'Voice needs Chrome, Edge or Safari. You can type your question below.'}</p> : null}
           {state.you && <p className="mt-2 text-sm italic text-muted">You: {state.you}</p>}
           {state.error && <p role="alert" className="mt-2 text-sm text-danger">{state.error}</p>}

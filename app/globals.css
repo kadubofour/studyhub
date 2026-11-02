@@ -580,3 +580,6 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 [data-phase="speaking"] .live-bars i:nth-child(2) { animation-delay: .12s; } [data-phase="speaking"] .live-bars i:nth-child(3) { animation-delay: .24s; }
 [data-phase="speaking"] .live-bars i:nth-child(4) { animation-delay: .36s; } [data-phase="speaking"] .live-bars i:nth-child(5) { animation-delay: .48s; }
 @media (prefers-reduced-motion: reduce) { [data-phase="speaking"] .live-bars i { animation: none; } }
+/* Something that scrolls inside a panel without drawing a scrollbar (the live tutor's stage: a bar there is noise; the content still scrolls by touch, wheel and keys) */
+.no-bar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-bar::-webkit-scrollbar { display: none; }
