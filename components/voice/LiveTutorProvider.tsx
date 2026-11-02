@@ -5,6 +5,7 @@ import { Orb } from '@/components/voice/Orb'
 import { useLiveSession, type Phase } from '@/components/voice/useLiveSession'
 import { LessonBoard } from '@/components/tutor/LessonPlayer'
 import { Working } from '@/components/ui/Working'
+import { useLockScroll } from '@/lib/ui/useLockScroll'
 
 // The live tutor lives in the app's layout, so a session carries on while the student goes to another page: full screen, or shrunk to a small bar.
 
@@ -35,6 +36,7 @@ function Bars() {
 function FullScreen({ session }: { session: Session }) {
   const { state, setFullscreen } = session
   const [typed, setTyped] = useState('')
+  useLockScroll() // the Tutor page behind the screen stays where it was
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false) }
     window.addEventListener('keydown', onKey)
@@ -44,7 +46,7 @@ function FullScreen({ session }: { session: Session }) {
   const sending = state.phase === 'listening' && state.you.trim().length > 0
   return (
     <div role="dialog" aria-modal="true" aria-label="Live session with the tutor" data-testid="live-full" data-phase={state.phase}
-      className="live-stage fixed inset-0 z-[80] flex flex-col pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)] md:pt-[env(safe-area-inset-top)]">
+      className="live-stage fixed inset-0 z-[80] flex flex-col overscroll-contain pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)] md:pt-[env(safe-area-inset-top)]">
       {/* the focus screen's slow drift, in the student's two colours */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <span className="chill-blob chill-a" style={{ width: '46vmax', height: '46vmax', left: '-12vmax', top: '-14vmax', background: 'var(--accent-solid)' }} />
