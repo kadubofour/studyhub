@@ -25,7 +25,7 @@ export function blurbOf(preview: string | null | undefined, title = ''): string 
 }
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-type QuizRow = { id: string; note_id: string; title: string; created_at: string }
+type QuizRow = { id: string; note_id: string | null; title: string; created_at: string }
 
 // Everything the student has made, as one list: notes, decks, lectures, quizzes, tutor chats and uploaded files
 export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<LibraryItem[]> {
@@ -44,8 +44,11 @@ export async function loadLibrary(sb: SupabaseClient, now: Date): Promise<Librar
       due: d.due, meta: `${plural(d.total, 'card')}${d.due > 0 ? ` · ${d.due} due` : ''}`, href: `/flashcards/${d.id}`,
     })),
     ...lectures.map(l => ({ kind: 'lecture' as const, id: l.id, title: l.title, course_id: l.course_id, notebook_id: l.notebook_id ?? null, at: l.recorded_at, meta: `${Math.round(l.duration_seconds / 60)} min`, href: `/lectures/${l.id}` })),
-    // A quiz follows its note; one whose note is gone has nowhere to belong and is left out
-    ...quizzes.filter(q => noteCourse.has(q.note_id)).map(q => ({ kind: 'quiz' as const, id: q.id, title: q.title, course_id: noteCourse.get(q.note_id) ?? null, notebook_id: noteBook.get(q.note_id) ?? null, at: q.created_at, meta: '', blurb: `From ${noteTitle.get(q.note_id) || 'Untitled'}`, href: `/quiz/${q.id}` })),
+    // A quiz from a note follows it, and one whose note is gone has nowhere to belong and is left out; a quiz on a topic stands alone
+    ...quizzes.filter(q => !q.note_id || noteCourse.has(q.note_id)).map(q => {
+      const n = q.note_id
+      return { kind: 'quiz' as const, id: q.id, title: q.title, course_id: n ? noteCourse.get(n) ?? null : null, notebook_id: n ? noteBook.get(n) ?? null : null, at: q.created_at, meta: '', blurb: n ? `From ${noteTitle.get(n) || 'Untitled'}` : undefined, href: `/quiz/${q.id}` }
+    }),
     ...chats.map(c => ({ kind: 'chat' as const, id: c.id, title: c.title, course_id: c.course_id, at: c.updated_at, meta: '', href: `/tutor/${c.id}` })),
     ...files.map(f => ({ kind: 'file' as const, id: f.id, title: f.name, course_id: f.course_id, notebook_id: f.notebook_id ?? null, at: f.created_at, meta: `${MATERIAL_LABEL[f.mime] ?? 'File'} · ${fileSize(f.bytes)}`, href: `/files/${f.id}` })),
   ]

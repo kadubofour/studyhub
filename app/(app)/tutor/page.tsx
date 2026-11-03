@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
 import { createChat, listChatContexts, listChats, type TutorChat } from '@/lib/data/tutor'
 import { aboutLine, filterChats, type ChatContext } from '@/lib/tutor/chatList'
-import { STARTERS, starterMessage } from '@/lib/tutor/starters'
+import { STARTERS, starterMessage, type Starter } from '@/lib/tutor/starters'
 import type { Course } from '@/lib/types'
 import { ChatMark, ComposeButton, PhoneCount, PhoneEmpty, PhoneGroup, PhoneRow, PhoneSearch, PhoneTitle, tick } from '@/components/ui/PhoneList'
 import { groupByDate, rowDate } from '@/lib/notes/noteRows'
@@ -56,6 +56,12 @@ export default function TutorPage() {
     return open(about, starter ? starterMessage(STARTERS.find(s => s.id === starter)!, t.title) : undefined)
   }
 
+  // A quiz can be on anything, so Quiz me goes straight to a chat to say what on; the others first ask what they are about
+  function pickStarter(st: Starter) {
+    if (st.id === 'quiz') void open({}, starterMessage(st, null))
+    else setPicking({ starter: st.id })
+  }
+
   const withChats = useMemo(() => courses.filter(c => chats?.some(x => x.course_id === c.id)), [courses, chats])
   const shown = useMemo(() => filterChats(chats ?? [], contexts, courseId || null, ''), [chats, contexts, courseId])
   const filtering = courseId !== ''
@@ -77,7 +83,7 @@ export default function TutorPage() {
         {failed && <p role="alert" className="mb-3 text-sm text-danger">Couldn&apos;t start a chat. Check your connection and try again.</p>}
         <PhoneSearch label="Search chats" value={q} onChange={setQ} />
         <section aria-label="Ways to start" className="mb-5">
-          <StarterChips label="Start with" onPick={st => setPicking({ starter: st.id })} />
+          <StarterChips label="Start with" onPick={pickStarter} />
         </section>
         {chats?.length === 0 && <PhoneEmpty>No chats yet. Pick a way to start above, or tap the button below.</PhoneEmpty>}
         {chats && chats.length > 0 && phoneShown.length === 0 && <PhoneEmpty>No chats match.</PhoneEmpty>}
@@ -100,7 +106,7 @@ export default function TutorPage() {
       {failed && <p role="alert" className="mb-3 text-sm text-danger">Couldn&apos;t start a chat. Check your connection and try again.</p>}
 
       <section aria-label="Ways to start" className="mb-5 space-y-1.5">
-        <StarterChips label="Start with" onPick={st => setPicking({ starter: st.id })} />
+        <StarterChips label="Start with" onPick={pickStarter} />
         <p className="text-xs text-muted">Pick one, then what it is about. The message is ready for you to change and send.</p>
       </section>
 

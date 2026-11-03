@@ -50,7 +50,7 @@ export default function QuizPage() {
   return (
     <div className="min-h-dvh">
       <header className="flex items-center gap-2 border-b border-line px-4 py-2">
-        <Link href={`/notes/${quiz.note_id}`} className="btn-ghost" aria-label="Back to note"><ArrowLeft size={17} aria-hidden /></Link>
+        <Link href={quiz.note_id ? `/notes/${quiz.note_id}` : '/quiz'} className="btn-ghost" aria-label={quiz.note_id ? 'Back to note' : 'Back to quizzes'}><ArrowLeft size={17} aria-hidden /></Link>
         <h1 className="font-medium">{quiz.title}</h1>
       </header>
       {attempt.finished_at

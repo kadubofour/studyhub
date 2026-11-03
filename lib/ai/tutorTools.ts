@@ -16,7 +16,7 @@ export type ProposalArgs = {
 export type Proposal = {
   [K in ToolName]: { id: string; tool: K; args: ProposalArgs[K]; state: 'pending' | 'added' | 'discarded'; itemId?: string; itemKind?: 'note' | 'deck' | 'quiz' | 'task' | 'class' | 'notebook' }
 }[ToolName]
-export type ToolContext = { noteId: string | null; courseIds: string[]; deckIds: string[] }
+export type ToolContext = { courseIds: string[]; deckIds: string[] }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const id = z.string().regex(UUID)
@@ -67,7 +67,6 @@ export function parseToolCall(name: string, argsJson: string, ctx: ToolContext, 
     return { ...base, tool: 'create_flashcards', args: { deck_id: deck_id ?? null, deck_name: deck_id ? null : deck_name ?? null, cards: a.data.cards, course_id: a.data.course_id ?? null } }
   }
   if (name === 'create_quiz') {
-    if (!ctx.noteId) return null
     const a = QuizArgs.safeParse(raw)
     if (!a.success) return null
     const questions = validateQuestions(a.data.questions.map(q => ({ ...q, options: q.options ?? null })), ['mcq', 'true_false', 'short'], 30)
@@ -97,7 +96,7 @@ const fn = (name: ToolName, description: string, properties: Record<string, unkn
 const course = { type: ['string', 'null'], description: 'id of one of the student\'s courses, or null' }
 
 // What the model may ask for. Each call becomes a proposal the student approves; nothing is saved by the call itself.
-export function toolDefinitions(hasNote: boolean): OpenAI.Responses.Tool[] {
+export function toolDefinitions(): OpenAI.Responses.Tool[] {
   const tools = [
     fn('create_note', 'Propose a new note for the student, only when they ask for one or agree to one. Markdown, maths as LaTeX between $...$.',
       { title: { type: 'string' }, body: { type: 'string', description: 'Markdown' }, course_id: course }, ['title', 'body']),
@@ -105,12 +104,10 @@ export function toolDefinitions(hasNote: boolean): OpenAI.Responses.Tool[] {
       { deck_id: { type: ['string', 'null'] }, deck_name: { type: ['string', 'null'] }, course_id: course,
         cards: { type: 'array', items: { type: 'object', properties: { front: { type: 'string' }, back: { type: 'string' } }, required: ['front', 'back'], additionalProperties: false } } }, ['cards']),
   ]
-  if (hasNote) {
-    tools.push(fn('create_quiz', 'Propose a quiz on the note this chat is about (at least 3 questions), only when the student asks. mcq has exactly 4 distinct options and "answer" is the exact text of the right one; true_false has options null and answer "true"/"false"; short has options null.',
-      { title: { type: 'string' }, questions: { type: 'array', items: { type: 'object', properties: {
-        type: { type: 'string', enum: ['mcq', 'true_false', 'short'] }, prompt: { type: 'string' }, options: { type: ['array', 'null'], items: { type: 'string' } },
-        answer: { type: 'string' }, explanation: { type: 'string' } }, required: ['type', 'prompt', 'options', 'answer', 'explanation'], additionalProperties: false } } }, ['title', 'questions']))
-  }
+  tools.push(fn('create_quiz', 'Propose a quiz (at least 3 questions) on whatever the student asks for: any topic, what you have just covered, or their material. It needs no note. Only when the student asks. mcq has exactly 4 distinct options and "answer" is the exact text of the right one; true_false has options null and answer "true"/"false"; short has options null.',
+    { title: { type: 'string' }, questions: { type: 'array', items: { type: 'object', properties: {
+      type: { type: 'string', enum: ['mcq', 'true_false', 'short'] }, prompt: { type: 'string' }, options: { type: ['array', 'null'], items: { type: 'string' } },
+      answer: { type: 'string' }, explanation: { type: 'string' } }, required: ['type', 'prompt', 'options', 'answer', 'explanation'], additionalProperties: false } } }, ['title', 'questions']))
   tools.push(fn('create_task', 'Propose one task or deadline for the student\'s planner, only when they ask.',
     { title: { type: 'string' }, type: { type: 'string', enum: ['assignment', 'exam', 'reading', 'other'] }, due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD or null' },
       priority: { type: 'string', enum: ['low', 'normal', 'high'] }, course_id: course }, ['title']))

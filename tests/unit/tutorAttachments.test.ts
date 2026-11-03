@@ -56,8 +56,8 @@ describe('resendable (what the tutor reads again for a follow-up)', () => {
     expect(resendable(history, 0).map(i => i)).toEqual([6, 2])
   })
   it('skips one that would go over the pages left after this message\'s own', () => {
-    const history = [q([pdf(9)]), a, q([photo(3)]), a]
-    expect(resendable(history, 1)).toEqual([2]) // the 9-page PDF does not fit beside 1 + 1
+    const history = [q([pdf(14)]), a, q([photo(3)]), a]
+    expect(resendable(history, 1)).toEqual([2]) // the 14-page PDF does not fit beside 1 + 1
     expect(resendable(history, ATTACH_LIMITS.pages)).toEqual([])
   })
 })

@@ -10,7 +10,7 @@ import { MAX_SCAN_BYTES, MAX_SCAN_PAGES } from '@/lib/scan/limits'
 import { countPdfPages } from '@/lib/import/pdfPages'
 import { pdfActionCost } from '@/lib/billing/plans'
 
-// Reading up to 10 pages with the strong model can take a while; 300 s is the Hobby plan's maximum
+// Reading up to 15 pages with the strong model can take a while; 300 s is the Hobby plan's maximum
 export const maxDuration = 300
 
 const TARGETS: ScanTarget[] = ['note', 'cards', 'planner']

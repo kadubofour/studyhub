@@ -20,10 +20,10 @@ import type { Course, NoteSummary } from '@/lib/types'
 const TYPES: [QuestionType, string][] = [['mcq', 'Multiple choice'], ['true_false', 'True or false'], ['short', 'Short answer']]
 const COUNTS = [{ value: '5', label: '5' }, { value: '10', label: '10' }, { value: '15', label: '15' }]
 
-// Quiz yourself from anywhere: pick a note, how many questions and which kinds, and start. Quizzes already made are listed to take again.
+// Quiz yourself from anywhere: name any topic or pick a note, how many questions and which kinds, and start. Quizzes already made are listed to take again.
 export function QuizStartDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Dialog open={open} onClose={onClose} title="Quiz yourself" icon={ListChecks} size="md" subtitle="Pick a note and Studyhub writes questions from it.">
+    <Dialog open={open} onClose={onClose} title="Quiz yourself" icon={ListChecks} size="md" subtitle="Name any topic or pick a note, and Studyhub writes the questions.">
       {open && <Body onClose={onClose} />}
     </Dialog>
   )
@@ -37,6 +37,7 @@ function Body({ onClose }: { onClose: () => void }) {
   const [past, setPast] = useState<Awaited<ReturnType<typeof listRecentQuizzes>>>([])
   const [query, setQuery] = useState('')
   const [noteId, setNoteId] = useState<string | null>(null)
+  const [topic, setTopic] = useState('')
   const [count, setCount] = useState('10')
   const [types, setTypes] = useState<QuestionType[]>(['mcq', 'true_false', 'short'])
   const [busy, setBusy] = useState(false)
@@ -63,15 +64,17 @@ function Body({ onClose }: { onClose: () => void }) {
   // A chosen note the search has hidden is not chosen any more: Start must not quiz something that cannot be seen
   const chosen = noteId && shown.some(n => n.id === noteId) ? noteId : null
   const hiddenCount = (notes?.length ?? 0) - shown.length
+  const subject = topic.trim()
+  const canStart = (!!subject || !!chosen) && types.length > 0 && !busy
 
   async function start() {
-    if (!chosen || starting.current) return
+    if (!canStart || starting.current) return
     starting.current = true
     const controller = new AbortController()
     request.current = controller
     setBusy(true); setError(null)
     try {
-      const r = await postAi<Quiz>('/api/ai/quiz', { noteId: chosen, count: Number(count), types }, controller.signal)
+      const r = await postAi<Quiz>('/api/ai/quiz', { ...(subject ? { topic: subject } : { noteId: chosen }), count: Number(count), types }, controller.signal)
       if (controller.signal.aborted) return
       starting.current = false
       setBusy(false)
@@ -86,8 +89,15 @@ function Body({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Which note?</p>
+      <label className="block space-y-2">
+        <span className="block text-sm font-medium">What do you want to be quizzed on?</span>
+        <input className="input w-full" value={topic} maxLength={200} placeholder="The Krebs cycle, French verbs, anything"
+          onChange={e => { setTopic(e.target.value); setNoteId(null); setError(null) }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void start() } }} />
+      </label>
+
+      {notes?.length !== 0 && <div className="space-y-2">
+        <p className="text-sm font-medium">Or use one of your notes</p>
         {notes && notes.length > 6 && (
           <label className="flex items-center gap-2 rounded-xl border border-line bg-raised px-3 py-2 text-sm">
             <Search size={15} className="text-muted" aria-hidden />
@@ -95,7 +105,6 @@ function Body({ onClose }: { onClose: () => void }) {
           </label>
         )}
         {notes === null ? <p className="rounded-xl bg-surface px-4 py-6 text-center text-sm text-muted" role="status">Loading your notes…</p>
-          : notes.length === 0 ? <p className="rounded-xl bg-surface px-4 py-6 text-center text-sm text-muted">You have no notes yet. <Link href="/notes" onClick={onClose} className="text-accent underline">Write one</Link>, then quiz yourself on it.</p>
           : shown.length === 0 ? <p className="rounded-xl bg-surface px-4 py-6 text-center text-sm text-muted">No note matches “{query}”.</p>
           : (
             <div role="radiogroup" aria-label="Note" className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl">
@@ -105,11 +114,11 @@ function Body({ onClose }: { onClose: () => void }) {
                 const tab = on || (!chosen && i === 0)
                 return (
                   <button key={n.id} type="button" role="radio" aria-checked={on} tabIndex={tab ? 0 : -1}
-                    onClick={() => { setNoteId(n.id); setError(null) }}
+                    onClick={() => { setNoteId(n.id); setTopic(''); setError(null) }}
                     onKeyDown={e => {
                       const to = radioKeyTarget(e.key, i, shown.length)
                       if (to === null) return
-                      e.preventDefault(); setNoteId(shown[to].id); setError(null); focusRadio(e.currentTarget, to)
+                      e.preventDefault(); setNoteId(shown[to].id); setTopic(''); setError(null); focusRadio(e.currentTarget, to)
                     }}
                     className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition ${on ? 'border-accent bg-accent-soft' : 'border-line bg-raised hover:bg-surface'}`}>
                     <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-accent' : 'border-line'}`}>{on && <span className="size-2 rounded-full bg-accent-solid" />}</span>
@@ -121,7 +130,7 @@ function Body({ onClose }: { onClose: () => void }) {
             </div>
           )}
         {hiddenCount > 0 && !query.trim() && <p className="text-xs text-muted">Showing your {shown.length} latest notes. Search to find the others.</p>}
-      </div>
+      </div>}
 
       <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
         <div className="space-y-1.5">
@@ -163,7 +172,7 @@ function Body({ onClose }: { onClose: () => void }) {
 
       <DialogFooter note={plan.billing && !plan.loading && !plan.isPremium ? freeAllowanceText(plan.usedToday) : undefined}>
         <button type="button" className={BTN_OUTLINE} onClick={onClose}>Cancel</button>
-        <button type="button" className={BTN_SOLID} disabled={!chosen || !types.length || busy} onClick={start}>{busy ? 'Writing quiz…' : '✦ Start quiz'}</button>
+        <button type="button" className={BTN_SOLID} disabled={!canStart} onClick={start}>{busy ? 'Writing quiz…' : '✦ Start quiz'}</button>
       </DialogFooter>
     </div>
   )

@@ -1,17 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { MAX_CARDS, parseToolCall, toolDefinitions, type ToolContext } from '@/lib/ai/tutorTools'
 
-const C1 = '11111111-1111-4111-8111-111111111111', D1 = '22222222-2222-4222-8222-222222222222', N1 = '33333333-3333-4333-8333-333333333333'
-const ctx: ToolContext = { noteId: N1, courseIds: [C1], deckIds: [D1] }
+const C1 = '11111111-1111-4111-8111-111111111111', D1 = '22222222-2222-4222-8222-222222222222'
+const ctx: ToolContext = { courseIds: [C1], deckIds: [D1] }
 const parse = (name: string, args: object | string, c: ToolContext = ctx) => parseToolCall(name, typeof args === 'string' ? args : JSON.stringify(args), c, 'p1')
 const card = (n: number) => ({ front: `Q${n}`, back: `A${n}` })
 const mcq = (p: string) => ({ type: 'mcq', prompt: p, options: ['a', 'b', 'c', 'd'], answer: 'b', explanation: 'x' })
 
 describe('tool definitions', () => {
-  it('offers the quiz tool only when the chat is attached to a note', () => {
-    const names = (n: boolean) => toolDefinitions(n).map(t => (t as { name: string }).name)
-    expect(names(true)).toEqual(['create_note', 'create_flashcards', 'create_quiz', 'create_task', 'create_class', 'create_notebook'])
-    expect(names(false)).toEqual(['create_note', 'create_flashcards', 'create_task', 'create_class', 'create_notebook'])
+  it('always offers the quiz tool, with or without a note', () => {
+    expect(toolDefinitions().map(t => (t as { name: string }).name)).toEqual(['create_note', 'create_flashcards', 'create_quiz', 'create_task', 'create_class', 'create_notebook'])
   })
 })
 
@@ -49,9 +47,6 @@ describe('create_quiz', () => {
     expect((ok?.args as { questions: { id: string }[] }).questions.map(q => q.id)).toEqual(['q1', 'q2', 'q3'])
     expect(parse('create_quiz', { title: 'x', questions: [mcq('A'), mcq('B')] })).toBeNull()
     expect(parse('create_quiz', { title: 'x', questions: [mcq('A'), mcq('B'), { ...mcq('C'), options: ['a', 'a', 'c', 'd'] }] })).toBeNull()
-  })
-  it('is dropped when the chat has no note', () => {
-    expect(parse('create_quiz', { title: 'x', questions: [mcq('A'), mcq('B'), mcq('C')] }, { ...ctx, noteId: null })).toBeNull()
   })
 })
 

@@ -5,7 +5,7 @@ import { tutorInstructions } from '@/lib/ai/tutorContext'
 
 const COURSE = '11111111-1111-4111-8111-111111111111'
 const OTHER = '22222222-2222-4222-8222-222222222222'
-const ctx = { noteId: null, courseIds: [COURSE], deckIds: [] }
+const ctx = { courseIds: [COURSE], deckIds: [] }
 const call = (name: string, args: unknown) => parseToolCall(name, JSON.stringify(args), ctx, 'p1')
 
 describe('the tutor can propose a weekly class', () => {
@@ -49,7 +49,7 @@ describe('the tutor can propose a notebook', () => {
 
 describe('what the model is offered', () => {
   it('has both tools, and tells the tutor it may propose them', () => {
-    const names = toolDefinitions(false).map(t => (t as { name: string }).name)
+    const names = toolDefinitions().map(t => (t as { name: string }).name)
     expect(names).toEqual(expect.arrayContaining(['create_class', 'create_notebook', 'create_task', 'create_note', 'create_flashcards']))
     expect(tutorInstructions(false)).toMatch(/weekly class for their timetable or a notebook/)
   })

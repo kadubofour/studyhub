@@ -30,7 +30,6 @@ export async function applyProposal(
       return { itemId: deckId, itemKind: 'deck' }
     }
     case 'create_quiz': {
-      if (!chat.note_id) throw new Error('no_note')
       const q = must(await sb.from('quizzes').insert({ note_id: chat.note_id, title: p.args.title, questions: p.args.questions }).select('id').single()) as { id: string }
       return { itemId: q.id, itemKind: 'quiz' }
     }

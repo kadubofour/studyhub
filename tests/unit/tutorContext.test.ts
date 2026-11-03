@@ -52,9 +52,13 @@ describe('tutorInstructions', () => {
     expect(t).toMatch(/not instructions/i)
     expect(t).toMatch(/only when the student asks/i)
   })
-  it('only offers the quiz tool when there is a note (a quiz in conversation is always fine)', () => {
-    expect(tutorInstructions(false)).not.toMatch(/quiz on the note/i)
-    expect(tutorInstructions(true)).toMatch(/quiz on the note/i)
+  it('makes a quiz on anything when asked, without asking for a note first', () => {
+    for (const t of [tutorInstructions(false), tutorInstructions(true)]) {
+      expect(t).toMatch(/call create_quiz in that same reply/)
+      expect(t).toMatch(/never ask them to write or upload a note/i)
+    }
+    expect(tutorInstructions(true)).toMatch(/quiz them on the note this chat is about/)
+    expect(tutorInstructions(false)).toMatch(/ask what to quiz them on/)
   })
 
 describe('buildInput size', () => {

@@ -76,7 +76,7 @@ export function QuizResults({ quiz, attempt, previous, onRetake, onRetryMissed }
             <button type="button" className={wrong.length > 0 && onRetryMissed ? BTN_SOFT : BTN_SOLID} onClick={() => setPicking(true)}>Make cards from {wrong.length} wrong answer{wrong.length === 1 ? '' : 's'}</button>
           )}
           <button type="button" className={BTN_OUTLINE} onClick={onRetake}><RotateCcw size={15} aria-hidden />Retake</button>
-          <Link href={`/notes/${quiz.note_id}`} className={BTN_OUTLINE}>Back to note</Link>
+          <Link href={quiz.note_id ? `/notes/${quiz.note_id}` : '/quiz'} className={BTN_OUTLINE}>{quiz.note_id ? 'Back to note' : 'Back to quizzes'}</Link>
         </div>
         {picking && (
           <div className="mt-4 space-y-3 text-left">

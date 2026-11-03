@@ -45,8 +45,8 @@ describe('addPending', () => {
     expect(addPending(four, photo(5))).toEqual({ list: four, error: 'Up to 4 files a message.' })
   })
   it('keeps photos and PDF pages to 10 together', () => {
-    const pdf: Pending = { id: 'd', kind: 'pdf', name: 'w.pdf', pages: 10, file: file('w.pdf', 'application/pdf') }
-    expect(addPending([photo(1)], pdf).error).toBe('Up to 10 photos and PDF pages a message. This one would make 11.')
+    const pdf: Pending = { id: 'd', kind: 'pdf', name: 'w.pdf', pages: 15, file: file('w.pdf', 'application/pdf') }
+    expect(addPending([photo(1)], pdf).error).toBe('Up to 15 photos and PDF pages a message. This one would make 16.')
   })
 })
 

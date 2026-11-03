@@ -40,7 +40,7 @@ export async function readFile(file: File): Promise<Pending | { error: string }>
   }
 }
 
-/** Adds one to the list if it fits: at most 4 files, and 10 photos and PDF pages together */
+/** Adds one to the list if it fits: at most 4 files, and 15 photos and PDF pages together */
 export function addPending(list: Pending[], next: Pending): { list: Pending[]; error?: string } {
   if (list.length >= ATTACH_LIMITS.count) return { list, error: `Up to ${ATTACH_LIMITS.count} files a message.` }
   const pages = pagesOf([...list, next] as Attachment[])

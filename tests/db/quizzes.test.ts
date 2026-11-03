@@ -30,6 +30,13 @@ describe('quizzes and attempts', () => {
     expect((await B.sb.from('quizzes').insert({ note_id: noteId, title: 'x', questions })).error).not.toBeNull()
     expect((await B.sb.from('quiz_attempts').insert({ quiz_id: quizId, total: 3 })).error).not.toBeNull()
   })
+  it('can be on no note at all, and stay private', async () => {
+    const quiz = await A.sb.from('quizzes').insert({ note_id: null, title: 'French verbs', questions }).select('id,note_id').single()
+    expect(quiz.error).toBeNull()
+    expect(quiz.data!.note_id).toBeNull()
+    expect((await B.sb.from('quizzes').select('id').eq('id', quiz.data!.id)).data).toEqual([])
+    expect((await A.sb.from('quiz_attempts').insert({ quiz_id: quiz.data!.id, total: 3 })).error).toBeNull()
+  })
   it('reject bad shapes', async () => {
     const { noteId, quizId } = await makeQuiz(A)
     expect((await A.sb.from('quizzes').insert({ note_id: noteId, title: 'x', questions: [] })).error).not.toBeNull()

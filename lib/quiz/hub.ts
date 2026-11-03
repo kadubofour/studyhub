@@ -3,7 +3,7 @@ import { percent } from './summary'
 // The numbers behind the Quiz page: everything the student has made and taken, worked out from plain rows
 
 export interface HubInput {
-  quizzes: { id: string; note_id: string; title: string; created_at: string; questions: unknown[] }[]
+  quizzes: { id: string; note_id: string | null; title: string; created_at: string; questions: unknown[] }[]
   /** Finished attempts only */
   attempts: { id: string; quiz_id: string; correct: number; total: number; finished_at: string }[]
   notes: { id: string; title: string; course_id: string | null }[]
@@ -12,7 +12,7 @@ export interface HubInput {
 }
 
 export interface HubRow {
-  id: string; title: string; noteId: string; noteTitle: string | null; courseId: string | null; courseName: string | null; courseColor: string | null
+  id: string; title: string; noteId: string | null; noteTitle: string | null; courseId: string | null; courseName: string | null; courseColor: string | null
   questions: number; attempts: number; bestPct: number | null; lastPct: number | null; lastAt: string | null; createdAt: string
 }
 export interface Hub {
@@ -34,7 +34,7 @@ export function buildQuizHub({ quizzes, attempts, notes, courses, now }: HubInpu
   const courseOf = new Map(courses.map(c => [c.id, c]))
 
   const rows: HubRow[] = quizzes.map(q => {
-    const note = noteOf.get(q.note_id)
+    const note = q.note_id ? noteOf.get(q.note_id) : undefined
     const course = note?.course_id ? courseOf.get(note.course_id) : undefined
     const mine = done.filter(a => a.quiz_id === q.id)
     const last = mine[mine.length - 1]
@@ -52,7 +52,8 @@ export function buildQuizHub({ quizzes, attempts, notes, courses, now }: HubInpu
   // Weakest course first: where the student most needs to go back
   const groups = new Map<string | null, number[]>()
   for (const a of done) {
-    const note = noteOf.get(quizzes.find(q => q.id === a.quiz_id)!.note_id)
+    const noteId = quizzes.find(q => q.id === a.quiz_id)!.note_id
+    const note = noteId ? noteOf.get(noteId) : undefined
     const key = note?.course_id && courseOf.has(note.course_id) ? note.course_id : null
     groups.set(key, [...(groups.get(key) ?? []), percent(a.correct, a.total)])
   }

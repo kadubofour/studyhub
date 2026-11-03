@@ -9,7 +9,7 @@ export type Attachment =
 
 export const ATTACH_LIMITS = {
   count: 4, // attachments in one message
-  pages: 10, // photos and PDF pages the tutor reads in one turn, counting attachments it reads again
+  pages: 15, // photos and PDF pages the tutor reads in one turn, counting attachments it reads again
   pdfBytes: 24 * 1024 * 1024,
   docChars: 30_000,
   resendQuestions: 2, // earlier questions whose attachments the tutor reads again, so a follow-up still has them

@@ -63,7 +63,9 @@ test('the Quiz dialog opens from the Quiz page, Flashcards and Library too', asy
   await page.goto('/flashcards')
   await quizFromFlashcards(page)
   await expect(page.getByRole('dialog', { name: 'Quiz yourself' })).toBeVisible()
-  await expect(page.getByText(/You have no notes yet/)).toBeVisible()
+  // a student with no notes can still quiz on anything
+  await page.getByLabel('What do you want to be quizzed on?').fill('World War I')
+  await expect(page.getByRole('button', { name: /Start quiz/ })).toBeEnabled()
 })
 
 test('the Quiz dialog, the player and the results have no serious accessibility problems', async ({ page }) => {

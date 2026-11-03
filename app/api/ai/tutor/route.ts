@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   // A question's stored attachments are checked again like a new message's: the student can write that column directly
   const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: unknown }[]).reverse()
     .map(h => ({ role: h.role, content: h.content, attachments: h.role === 'user' ? checkAttachments(h.attachments, user.id, chat.id) ?? [] : [] }))
-  const toolCtx = { noteId: (chat.note_id as string | null) ?? null, courseIds: (courses ?? []).map(c => c.id as string), deckIds: (decks ?? []).map(d => d.id as string) }
+  const toolCtx = { courseIds: (courses ?? []).map(c => c.id as string), deckIds: (decks ?? []).map(d => d.id as string) }
 
   // The message is counted before any file is read, so a stream of requests naming big files uses the student's allowance; refused, it is given back
   const reserved = await reserveTutorMessage(user.id)
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 
   const gen = streamTutor(openai(), {
-    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: toolDefinitions(!!chat.note_id), signal: request.signal,
+    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: toolDefinitions(), signal: request.signal,
     input: buildInput({ history, context: context.text, message, parts: attachmentParts(counted, fresh.files) }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status

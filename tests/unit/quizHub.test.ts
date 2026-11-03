@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildQuizHub, filterRows, type HubInput } from '@/lib/quiz/hub'
 
-const q = (id: string, note_id: string, title: string, n = 5, created_at = '2026-10-01T00:00:00Z') => ({ id, note_id, title, created_at, questions: Array.from({ length: n }, (_, i) => ({ id: `${id}-${i}` })) })
+const q = (id: string, note_id: string | null, title: string, n = 5, created_at = '2026-10-01T00:00:00Z') => ({ id, note_id, title, created_at, questions: Array.from({ length: n }, (_, i) => ({ id: `${id}-${i}` })) })
 const a = (id: string, quiz_id: string, correct: number, total: number, finished_at: string) => ({ id, quiz_id, correct, total, finished_at })
 const input = (o: Partial<HubInput> = {}): HubInput => ({
   quizzes: [], attempts: [], notes: [{ id: 'n1', title: 'Cells', course_id: 'c1' }, { id: 'n2', title: 'Loose note', course_id: null }],
@@ -24,6 +24,12 @@ describe('buildQuizHub', () => {
       attempts: [a('1', 'a', 4, 5, '2026-10-08T10:00:00Z'), a('2', 'a', 5, 5, '2026-10-15T10:00:00Z'), a('3', 'b', 1, 4, '2026-10-16T09:00:00Z')],
     }))
     expect(h.stats).toEqual({ quizzes: 2, taken: 3, average: Math.round((80 + 100 + 25) / 3), best: 100, right: 10, answered: 14, lastWeek: 2 })
+  })
+
+  it('keeps a quiz with no note, counted under no course', () => {
+    const h = buildQuizHub(input({ quizzes: [q('t', null, 'French verbs')], attempts: [a('1', 't', 4, 5, '2026-10-15T10:00:00Z')] }))
+    expect(h.rows[0]).toMatchObject({ title: 'French verbs', noteId: null, noteTitle: null, courseId: null, bestPct: 80 })
+    expect(h.byCourse).toEqual([{ courseId: null, name: 'No course', color: null, attempts: 1, avgPct: 80 }])
   })
 
   it('a row per quiz with its note, course, best and latest score', () => {

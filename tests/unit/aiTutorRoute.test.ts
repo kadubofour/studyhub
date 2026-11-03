@@ -262,7 +262,7 @@ describe('POST /api/ai/tutor with files and photos', () => {
     expect((await call({ attachments: [{ ...photo(1), path: `someone/${CHAT}/p.jpg` }] })).status).toBe(400)
     expect((await call({ attachments: [photo(1)] })).status).toBe(400) // not uploaded
     stored = { [`${dir}/w.pdf`]: 'PDF' }
-    pdfPages = 11 // the PDF has more pages than the browser said
+    pdfPages = 16 // the PDF has more pages than the browser said
     expect((await call({ attachments: [pdf] })).status).toBe(413)
     expect(inserted.length).toBe(before)
   })
@@ -307,7 +307,7 @@ describe('POST /api/ai/tutor with files: after the review', () => {
 
   it('counts the message before reading any file, and gives it back when the files are refused', async () => {
     stored = { [`${dir}/w.pdf`]: 'PDF' }
-    pdfPages = 11
+    pdfPages = 16
     expect((await call({ attachments: [{ kind: 'pdf', name: 'w.pdf', path: `${dir}/w.pdf`, pages: 2 }] })).status).toBe(413)
     expect(release).toHaveBeenCalledTimes(1)
     release.mockClear()
@@ -325,7 +325,7 @@ describe('POST /api/ai/tutor with files: after the review', () => {
 
   it('checks an earlier question\'s files again before reading them: a changed list is not trusted', async () => {
     stored = { [`${dir}/w.pdf`]: 'PDF', [`${dir}/p1.jpg`]: 'IMG' }
-    pdfPages = 11 // the stored list says 1 page; the file has 11
+    pdfPages = 16 // the stored list says 1 page; the file has 16
     history = [
       { role: 'user', content: 'Long one', attachments: [{ kind: 'pdf', name: 'w.pdf', path: `${dir}/w.pdf`, pages: 1 }] },
       { role: 'user', content: 'Someone else\'s', attachments: [{ kind: 'photo', name: 'x.jpg', path: `u2/${CHAT}/x.jpg`, pages: 1 }] },

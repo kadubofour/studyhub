@@ -224,6 +224,21 @@ describe('the Quiz dialog', () => {
     expect(push).toHaveBeenCalledWith('/quiz/new-quiz')
   })
 
+  it('quizzes on a typed topic with no note, and a topic and a note replace each other', async () => {
+    postAi.mockResolvedValue({ ok: true, value: { id: 'new-quiz' } })
+    await open()
+    const box = screen.getByRole('textbox', { name: /What do you want to be quizzed on/ }) as HTMLInputElement
+    fireEvent.click(screen.getByRole('radio', { name: /Glycolysis/ }))
+    fireEvent.change(box, { target: { value: 'French verbs' } })
+    expect(screen.getByRole('radio', { name: /Glycolysis/ }).getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(screen.getByRole('radio', { name: /Glycolysis/ }))
+    expect(box.value).toBe('')
+    fireEvent.change(box, { target: { value: '  French verbs ' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Start quiz/ })) })
+    expect(postAi).toHaveBeenCalledWith('/api/ai/quiz', { topic: 'French verbs', count: 10, types: ['mcq', 'true_false', 'short'] }, expect.any(AbortSignal))
+    expect(push).toHaveBeenCalledWith('/quiz/new-quiz')
+  })
+
   it('will not start with no kind of question chosen', async () => {
     await open()
     fireEvent.click(screen.getByRole('radio', { name: /Krebs cycle/ }))
@@ -301,10 +316,13 @@ describe('the Quiz dialog', () => {
     expect(screen.getByText(/Showing your 30 latest notes/)).toBeTruthy()
   })
 
-  it('invites you to write a note when there are none', async () => {
+  it('needs no notes: with none, a typed topic is all it takes', async () => {
     notes = []
     await open()
-    expect(screen.getByText(/You have no notes yet/)).toBeTruthy()
+    expect(screen.queryByRole('radiogroup', { name: 'Note' })).toBeNull()
+    expect(screen.queryByText(/one of your notes/)).toBeNull()
+    fireEvent.change(screen.getByRole('textbox', { name: /What do you want to be quizzed on/ }), { target: { value: 'World War I' } })
+    expect((screen.getByRole('button', { name: /Start quiz/ }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('lists your quizzes with the best score and a way to take them again', async () => {

@@ -193,7 +193,7 @@ export function ScanDialog({ open, onClose, initialTarget, onSaved, initialFiles
                 <>
                   <span aria-hidden className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent"><Images size={24} /></span>
                   <p className="mt-3 font-medium">Drop photos or a PDF here</p>
-                  <p className="mx-auto mb-4 mt-1 max-w-xs text-xs text-muted">Add up to 10 pages: photos of notes, slides, a whiteboard or a timetable, or one short PDF.</p>
+                  <p className="mx-auto mb-4 mt-1 max-w-xs text-xs text-muted">Add up to 15 pages: photos of notes, slides, a whiteboard or a timetable, or one short PDF.</p>
                   <div className="flex flex-wrap justify-center gap-2">{takePhotos}{choose}</div>
                 </>
               )}

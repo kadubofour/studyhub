@@ -80,13 +80,13 @@ describe('POST /api/ai/scan', () => {
     expect(scanToPlanner.mock.calls[1][2]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('refuses more than 10 pages, or a PDF with photos, and still deletes the uploads', async () => {
-    const eleven = Array.from({ length: 11 }, (_, i) => `u1/p${i}.jpg`)
-    const res = await call({ paths: eleven, target: 'note' })
+  it('refuses more than 15 pages, or a PDF with photos, and still deletes the uploads', async () => {
+    const sixteen = Array.from({ length: 16 }, (_, i) => `u1/p${i}.jpg`)
+    const res = await call({ paths: sixteen, target: 'note' })
     expect(res.status).toBe(413)
     expect(await res.json()).toEqual({ error: 'too_many_pages' })
     expect((await call({ paths: ['u1/a.pdf', 'u1/b.jpg'], target: 'note' })).status).toBe(413)
-    pdfPages = 12
+    pdfPages = 16
     expect((await call({ paths: ['u1/a.pdf'], target: 'note' })).status).toBe(413)
     expect(scanToNote).not.toHaveBeenCalled()
     expect(removed).toHaveLength(3)

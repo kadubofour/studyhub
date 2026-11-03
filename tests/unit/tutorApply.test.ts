@@ -36,11 +36,12 @@ describe('applyProposal', () => {
     expect(await applyProposal(sb, p({ id: 'p', tool: 'create_flashcards', state: 'pending', args: { ...args, deck_id: 'd1', deck_name: null } }), chat)).toEqual({ itemId: 'd1', itemKind: 'deck' })
     expect(createDeck).not.toHaveBeenCalled()
   })
-  it('saves a quiz on the chat\'s note, and refuses when the chat has none', async () => {
+  it('saves a quiz on the chat\'s note, or on its own when the chat has none', async () => {
     const quiz = p({ id: 'p', tool: 'create_quiz', state: 'pending', args: { title: 'Quiz', questions: [] } })
     expect(await applyProposal(sb, quiz, chat)).toEqual({ itemId: 'q9', itemKind: 'quiz' })
     expect(quizInsert).toHaveBeenCalledWith('quizzes', { note_id: 'n1', title: 'Quiz', questions: [] })
-    await expect(applyProposal(sb, quiz, { course_id: null, note_id: null })).rejects.toThrow('no_note')
+    expect(await applyProposal(sb, quiz, { course_id: null, note_id: null })).toEqual({ itemId: 'q9', itemKind: 'quiz' })
+    expect(quizInsert).toHaveBeenLastCalledWith('quizzes', { note_id: null, title: 'Quiz', questions: [] })
   })
   it('saves a task', async () => {
     const args = { title: 'Read', type: 'reading' as const, due_at: null, priority: 'normal' as const, course_id: null }

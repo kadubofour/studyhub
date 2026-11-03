@@ -51,7 +51,7 @@ export default function QuizHubPage() {
   const date = (iso: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', timeZone: profile.timezone }).format(new Date(iso))
 
   async function remove(r: HubRow) {
-    if (!await confirm({ title: `Delete “${r.title}”?`, body: 'The quiz and its scores are removed, along with the XP and streak credit they earned. Your note stays.', confirmLabel: 'Delete', danger: true })) return
+    if (!await confirm({ title: `Delete “${r.title}”?`, body: `The quiz and its scores are removed, along with the XP and streak credit they earned.${r.noteId ? ' Your note stays.' : ''}`, confirmLabel: 'Delete', danger: true })) return
     try { await deleteQuiz(supabase(), r.id); setData(d => d && { ...d, quizzes: d.quizzes.filter(q => q.id !== r.id), attempts: d.attempts.filter(a => a.quiz_id !== r.id) }); toast('Quiz deleted.') }
     catch { toast('Couldn\'t delete that quiz.') }
   }
@@ -71,7 +71,7 @@ export default function QuizHubPage() {
     return page(
       <div>
         {header}
-        <EmptyState icon={ListChecks} tone="a" title="No quizzes yet" body="Pick a note and Studyhub writes questions from it. Every quiz you make, and how each one went, is kept here.">
+        <EmptyState icon={ListChecks} tone="a" title="No quizzes yet" body="Name any topic or pick a note, and Studyhub writes the questions. Every quiz you make, and how each one went, is kept here.">
           <button type="button" className={BTN_SOLID} onClick={requestQuiz}><Plus size={16} aria-hidden />Make your first quiz</button>
         </EmptyState>
       </div>
@@ -168,7 +168,7 @@ export default function QuizHubPage() {
                     <p className="truncate text-sm font-medium">{r.title}</p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
                       {r.courseName && <span className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-[3px]" style={{ background: r.courseColor ?? 'var(--line)' }} />{r.courseName}</span>}
-                      {r.noteTitle ? <Link href={`/notes/${r.noteId}`} className="underline-offset-2 hover:underline">{r.noteTitle}</Link> : <span>Note deleted</span>}
+                      {r.noteTitle ? <Link href={`/notes/${r.noteId}`} className="underline-offset-2 hover:underline">{r.noteTitle}</Link> : r.noteId && <span>Note deleted</span>}
                       <span>{r.questions} {r.questions === 1 ? 'question' : 'questions'}</span>
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
@@ -213,7 +213,7 @@ function PhoneQuiz({ hub, rows, failed, reload, query, onQuery, courses, hasLoos
       <StudyTabs current="quiz" />
       {failed && <p role="alert" className="mb-4 text-sm text-danger">Couldn&apos;t load your quizzes. <button type="button" className="underline" onClick={reload}>Try again</button></p>}
       {!hub && !failed && <Working kind="load" size="sm" label="Loading your quizzes" className="text-sm text-muted" />}
-      {hub && hub.rows.length === 0 && <PhoneEmpty>No quizzes yet. Tap + and Studyhub writes questions from a note.</PhoneEmpty>}
+      {hub && hub.rows.length === 0 && <PhoneEmpty>No quizzes yet. Tap + and Studyhub writes questions on any topic.</PhoneEmpty>}
       {hub && hub.rows.length > 0 && s && <>
         <PhoneSearch label="Search quizzes" value={query} onChange={onQuery} />
         {s.taken > 0 && (

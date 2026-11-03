@@ -12,12 +12,12 @@ test('the Tutor page: ways to start, a starter that asks what it is about, and a
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
   expect(axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 
-  await ways.getByRole('button', { name: /Quiz me/ }).click()
-  const picker = page.getByRole('dialog', { name: 'Quiz me' })
+  await ways.getByRole('button', { name: /Summarise my notes/ }).click()
+  const picker = page.getByRole('dialog', { name: 'Summarise my notes' })
   await picker.getByRole('button', { name: /Krebs cycle/ }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/)
   // the message is ready, and nothing was sent
-  await expect(page.getByLabel('Message')).toHaveValue('Quiz me on Krebs cycle')
+  await expect(page.getByLabel('Message')).toHaveValue('Summarise the key points of Krebs cycle')
   await expect(page.getByText(/Ask anything/)).toBeVisible()
   await expect(page.getByText('About').first()).toBeVisible()
 })

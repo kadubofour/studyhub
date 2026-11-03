@@ -38,9 +38,10 @@ describe('addFiles', () => {
     const one = (await addFiles([], [photo('a.jpg')], count(0))).pages
     expect((await addFiles([], [photo('a.heic', 'image/heic')], count(0))).error).toBe('Use photos (JPEG, PNG or WebP) or a PDF.')
     expect((await addFiles(one, [pdf()], count(2))).error).toBe('Scan either photos or one PDF, not both.')
-    expect((await addFiles([], [pdf()], count(12))).error).toBe('This PDF has 12 pages; Scan reads up to 10. Use Import for longer PDFs.')
+    expect((await addFiles([], [pdf()], count(15))).error).toBeNull()
+    expect((await addFiles([], [pdf()], count(16))).error).toBe('This PDF has 16 pages; Scan reads up to 15. Use Import for longer PDFs.')
     expect((await addFiles([], [pdf('big.pdf', 25 * 1024 * 1024)], count(1))).error).toBe('This PDF is larger than 24 MB.')
-    expect((await addFiles([], Array.from({ length: 11 }, (_, i) => photo(`${i}.jpg`)), count(0))).error).toBe('Up to 10 pages per scan.')
+    expect((await addFiles([], Array.from({ length: 16 }, (_, i) => photo(`${i}.jpg`)), count(0))).error).toBe('Up to 15 pages per scan.')
     expect((await addFiles([], [pdf()], async () => { throw new Error('bad') })).error).toBe('Couldn\'t open this PDF.')
     expect(uploads).toEqual([])
   })
