@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { create, moveNoteToNotebook, noteWithText, signUp } from './helpers'
+import { create, moveNoteToNotebook, noteWithText, openNewNotebook, signUp } from './helpers'
 
 test('notebooks: make one, move a note into it, open its page, rename it, delete it (what is in it goes to General)', async ({ page }) => {
   test.setTimeout(120_000)
@@ -9,7 +9,7 @@ test('notebooks: make one, move a note into it, open its page, rename it, delete
   await page.goto('/library')
   const shelf = page.getByRole('list', { name: 'Notebooks' })
   await expect(shelf.getByRole('link', { name: 'General' })).toBeVisible()
-  await page.getByRole('button', { name: 'Create new notebook' }).click()
+  await openNewNotebook(page)
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Cell biology')
   await dialog.getByRole('button', { name: 'Create' }).click()
@@ -46,7 +46,7 @@ test('a notebook is where things are started: a note, a deck, material, and a re
   test.setTimeout(120_000)
   await signUp(page)
   await page.goto('/library')
-  await page.getByRole('button', { name: 'Create new notebook' }).click()
+  await openNewNotebook(page)
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Chemistry')
   await dialog.getByRole('button', { name: 'Create' }).click()

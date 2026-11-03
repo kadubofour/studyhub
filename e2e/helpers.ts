@@ -82,6 +82,12 @@ export async function create(page: Page, item: 'New note' | 'New deck' | 'Record
   await page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: item, exact: true }).click()
 }
 
+// The Library's own Create button opens the dialog that makes a notebook
+export async function openNewNotebook(page: Page) {
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  await page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: 'New notebook', exact: true }).click()
+}
+
 // A new note from inside a note: File > New note on a computer; a phone has no File menu, so from the Notes list
 export async function newNoteFromNote(page: Page) {
   const file = page.getByRole('menuitem', { name: 'File', exact: true })

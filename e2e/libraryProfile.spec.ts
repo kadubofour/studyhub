@@ -35,10 +35,10 @@ test('Library: find loose material under Unsorted, move it into a course, and se
   await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
 })
 
-test('Library opens on a course named in the address, and a new student sees the card that makes a notebook', async ({ page }) => {
+test('Library opens on a course named in the address, and a new student is told how to make a notebook', async ({ page }) => {
   await signUp(page)
   await page.goto('/library')
-  await expect(page.getByRole('button', { name: 'Create new notebook' })).toBeVisible() // a new student starts with the card that makes a notebook
+  await expect(page.getByText('No notebooks yet. Use Create to make one.')).toBeVisible()
   await noteWithText(page, 'Enzymes')
   await page.goto('/library?course=none')
   await expect(page.getByRole('link', { name: /Enzymes/ })).toBeVisible()

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { FolderPlus } from 'lucide-react'
 import { LibraryOverview } from '@/components/library/LibraryOverview'
 import type { NotebookCard } from '@/lib/library/notebookCards'
 import type { LibraryItem } from '@/lib/library/items'
@@ -14,24 +15,31 @@ const card = (id: string, name: string, over: Partial<NotebookCard> = {}, def = 
   notebook: { id, name, is_default: def }, counts: { note: 2, deck: 1, lecture: 0, file: 0, quiz: 0 }, total: 3, lastAt: '2030-05-10T02:00:00Z', color: '#1D9E75', ...over,
 })
 const setup = (cards: NotebookCard[], over: Record<string, unknown> = {}) => {
-  const props = { cards, found: [] as LibraryItem[], bookName: () => 'Biology', now, q: '', onQ: vi.fn(), sort: 'recent' as const, onSort: vi.fn(), onMaterials: vi.fn(), onNewNotebook: vi.fn(), create: [], onRename: vi.fn(), onDelete: vi.fn(), ...over }
+  const props = { cards, found: [] as LibraryItem[], bookName: () => 'Biology', now, q: '', onQ: vi.fn(), sort: 'recent' as const, onSort: vi.fn(), onMaterials: vi.fn(), create: [], onRename: vi.fn(), onDelete: vi.fn(), ...over }
   render(<LibraryOverview {...props} />)
   return props
 }
 
 describe('LibraryOverview', () => {
-  it('shows a card for each notebook after a small card that makes a new one', () => {
-    const p = setup([card('b', 'Biology'), card('c', 'Chemistry', { total: 0, lastAt: null, counts: { note: 0, deck: 0, lecture: 0, file: 0, quiz: 0 } })])
+  it('shows a card for each notebook', () => {
+    setup([card('b', 'Biology'), card('c', 'Chemistry', { total: 0, lastAt: null, counts: { note: 0, deck: 0, lecture: 0, file: 0, quiz: 0 } })])
     const items = within(screen.getByRole('list', { name: 'Notebooks' })).getAllByRole('listitem')
-    expect(items).toHaveLength(3)
-    fireEvent.click(within(items[0]).getByRole('button', { name: 'Create new notebook' }))
-    expect(p.onNewNotebook).toHaveBeenCalled()
-    expect(within(items[1]).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/notebooks/b')
-    expect(items[1].textContent).toContain('2 notes')
-    expect(items[1].textContent).toContain('1 deck')
-    expect(items[1].textContent).toContain('10h ago')
-    expect(items[2].textContent).toContain('Empty')
-    expect(items[2].textContent).toContain('Not yet')
+    expect(items).toHaveLength(2)
+    expect(within(items[0]).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/notebooks/b')
+    expect(items[0].textContent).toContain('2 notes')
+    expect(items[0].textContent).toContain('1 deck')
+    expect(items[0].textContent).toContain('10h ago')
+    expect(items[1].textContent).toContain('Empty')
+    expect(items[1].textContent).toContain('Not yet')
+  })
+  it('makes notebooks only from the Create menu, and says where when there are none', () => {
+    const onSelect = vi.fn()
+    setup([], { create: [{ label: 'New notebook', icon: FolderPlus, onSelect }] })
+    expect(screen.queryByRole('button', { name: 'Create new notebook' })).toBeNull()
+    expect(screen.getByText('No notebooks yet. Use Create to make one.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New notebook' }))
+    expect(onSelect).toHaveBeenCalled()
   })
   it('has no course cards, plans or progress bars', () => {
     setup([card('b', 'Biology')])
@@ -45,7 +53,7 @@ describe('LibraryOverview', () => {
     expect(p.onMaterials).toHaveBeenCalled()
     expect(p.onQ).toHaveBeenCalledWith('bio')
     expect(screen.getByRole('button', { name: 'Create' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'New notebook' })).toBeNull() // the card makes notebooks
+    expect(screen.queryByRole('button', { name: 'New notebook' })).toBeNull() // Create's menu makes notebooks
   })
   it('lists what a search finds inside the notebooks, with the notebook each is in, and says when nothing matches', () => {
     const found: LibraryItem[] = [{ kind: 'note', id: 'n1', title: 'Krebs cycle', course_id: null, notebook_id: 'b', at: '', meta: '', href: '/notes/n1' }]

@@ -22,12 +22,12 @@ const BAR = 'inline-flex h-11 items-center justify-center gap-2 rounded-xl borde
 
 // The Library's landing: a card for each notebook (a notebook is a study set: everything for one subject, in one place).
 // Materials adds raw study material (a PDF, slides, a document) to a notebook.
-export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onSort, onMaterials, onNewNotebook, create, onRename, onDelete }: {
+export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onSort, onMaterials, create, onRename, onDelete }: {
   cards: NotebookCard[]; now: Date; q: string; onQ: (q: string) => void; sort: NotebookSort; onSort: (s: NotebookSort) => void
   /** What a search finds inside the notebooks, and the name of the notebook an item is in */
   found: LibraryItem[]; bookName: (id: string | null | undefined) => string
-  onMaterials: () => void; onNewNotebook: () => void
-  /** What the Create button offers (a new note, a recording…) */
+  onMaterials: () => void
+  /** What the Create button offers (a new note, a recording, a notebook…) */
   create: MenuEntry[]
   onRename: (c: NotebookCard) => void; onDelete: (c: NotebookCard) => void
 }) {
@@ -67,10 +67,6 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
 
       {phone ? (
         <>
-          <button type="button" onClick={onNewNotebook}
-            className="mb-5 flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line bg-surface/60 px-4 text-left text-[16px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-            <Plus size={20} aria-hidden className="text-muted" />Create new notebook
-          </button>
           {cards.length > 0 && (
             <PhoneGroup name="Notebooks">
               {cards.map(c => (
@@ -86,18 +82,12 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
             ...(rowMenu.card.notebook.is_default ? [] : [{ label: 'Delete', icon: Trash2, danger: true, onSelect: () => onDelete(rowMenu.card) } as MenuEntry]),
           ]} />}
         </>
-      ) : (
+      ) : cards.length > 0 && (
       <ul aria-label="Notebooks" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <li className="self-start">
-          <button type="button" onClick={onNewNotebook}
-            className="flex min-h-[5.5rem] w-full flex-row items-center gap-4 rounded-2xl border-2 border-dashed border-line bg-surface/60 px-5 text-left transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-            <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-full bg-raised text-muted"><Plus size={20} /></span>
-            <span className="text-[16px] font-semibold">Create new notebook</span>
-          </button>
-        </li>
         {cards.map(c => <Card key={c.notebook.id} card={c} now={now} onRename={onRename} onDelete={onDelete} />)}
       </ul>
       )}
+      {cards.length === 0 && !q.trim() && <p className="mt-6 text-center text-sm text-muted">No notebooks yet. Use Create to make one.</p>}
       {cards.length === 0 && q.trim() && found.length === 0 && <p className="mt-6 text-center text-sm text-muted">Nothing matches “{q.trim()}”.</p>}
 
       {q.trim() && found.length > 0 && (

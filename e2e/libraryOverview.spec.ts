@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { create, noteWithText, signUp } from './helpers'
+import { create, noteWithText, openNewNotebook, signUp } from './helpers'
 
-test('the Library opens on a card for each notebook; a small card makes another; search looks inside notebooks', async ({ page, isMobile }) => {
+test('the Library opens on a card for each notebook; Create makes another; search looks inside notebooks', async ({ page, isMobile }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle') // made without choosing a notebook: General
   await page.goto('/library')
@@ -10,9 +10,8 @@ test('the Library opens on a card for each notebook; a small card makes another;
   await expect(general).toContainText('1 note')
   if (!isMobile) await expect(general).toContainText('Last updated') // a phone has a row, with its date
   await expect(shelf.getByRole('progressbar')).toHaveCount(0) // no course cards, no progress bars
-  await expect(page.getByRole('button', { name: 'Create new notebook' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Create new notebook' }).click()
+  await openNewNotebook(page)
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Chemistry')
   await dialog.getByRole('button', { name: 'Create' }).click()
@@ -40,7 +39,7 @@ test('the toolbar and a notebook card\'s menu: Materials, Create, rename and del
   await expect(page.getByRole('menu', { name: 'Create' }).getByRole('menuitem', { name: 'New note', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   // a made notebook can be renamed and deleted from its card
-  await page.getByRole('button', { name: 'Create new notebook' }).click()
+  await openNewNotebook(page)
   await page.getByRole('dialog', { name: 'New notebook' }).getByLabel('Name').fill('Temp')
   await page.getByRole('dialog', { name: 'New notebook' }).getByRole('button', { name: 'Create' }).click()
   // a card has its ⋮ button; a phone's row opens the same menu when pressed and held (a right click)

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { noteFileAction, signUp, switchToMarkdown, noteSaved, create, listAction, tickOf, moveNoteToNotebook } from './helpers'
+import { noteFileAction, signUp, switchToMarkdown, noteSaved, create, listAction, tickOf, moveNoteToNotebook, openNewNotebook } from './helpers'
 
 const fixture = (f: string) => path.join(process.cwd(), 'e2e', 'fixtures', f)
 
@@ -111,7 +111,7 @@ test('export a notebook\'s notes as a PDF', async ({ page, context }) => {
   await noteSaved(page)
   // both are in General; a notebook of its own keeps one apart
   await page.goto('/library')
-  await page.getByRole('button', { name: 'Create new notebook' }).click()
+  await openNewNotebook(page)
   const dialog = page.getByRole('dialog', { name: 'New notebook' })
   await dialog.getByLabel('Name').fill('Only beta')
   await dialog.getByRole('button', { name: 'Create' }).click()

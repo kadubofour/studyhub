@@ -263,7 +263,7 @@ export default function LibraryPage() {
         <LibraryOverview cards={notebookCards({ notebooks, items: known ?? items, courses, q: bookQuery, sort: bookSort })} now={now}
           found={found} bookName={id => bookOf(id)?.name ?? 'General'}
           q={bookQuery} onQ={setBookQuery} sort={bookSort} onSort={setBookSort}
-          onMaterials={() => setDialog('upload')} onNewNotebook={() => setDialog('new')}
+          onMaterials={() => setDialog('upload')}
           create={[
             { label: 'New note', icon: FilePlus, onSelect: () => { void newNote() } },
             { label: 'Record lecture', icon: Mic, onSelect: () => router.push('/lectures/record') },
