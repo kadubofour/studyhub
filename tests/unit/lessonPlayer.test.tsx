@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { LessonPlayer } from '@/components/tutor/LessonPlayer'
 import { cleanLesson } from '@/lib/lesson/script'
+import { lessonSpeed, parseSpeed } from '@/lib/lesson/speed'
 
 const el = (id: string, over: Record<string, unknown> = {}) => ({ id, kind: 'box', x: 10, y: 10, w: 30, h: 16, x2: 0, y2: 0, text: id, color: 'accent', ...over })
 const script = cleanLesson({
@@ -17,6 +18,7 @@ const script = cleanLesson({
 const played: string[] = []
 beforeEach(() => {
   played.length = 0
+  lessonSpeed.set(1)
   vi.useFakeTimers()
   Object.defineProperty(HTMLMediaElement.prototype, 'play', { configurable: true, value: function (this: HTMLAudioElement) { played.push(this.src); return Promise.resolve() } })
   Object.defineProperty(HTMLMediaElement.prototype, 'pause', { configurable: true, value: () => {} })
@@ -86,6 +88,53 @@ describe('the lesson player', () => {
     render(<LessonPlayer script={script} voices={voices} onDelete={onDelete} />)
     fireEvent.click(screen.getByRole('button', { name: 'Delete lesson' }))
     expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the speed of a lesson', () => {
+  const slider = () => screen.getByRole('slider', { name: /Speed/ }) as HTMLInputElement
+  const set = (v: number) => fireEvent.change(slider(), { target: { value: String(v) } })
+  it('goes from half speed to double, starting at normal, and says what it is', () => {
+    render(<LessonPlayer script={script} voices={voices} />)
+    expect([slider().min, slider().max, slider().value]).toEqual(['0.5', '2', '1'])
+    set(1.5)
+    expect(slider().getAttribute('aria-valuetext')).toBe('1.5 times')
+    expect(screen.getByText('1.5×')).toBeTruthy()
+  })
+  it('changes the voice at once without starting it again, and keeps the speed on the next step', () => {
+    render(<LessonPlayer script={script} voices={voices} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    const a = document.querySelector('audio')!
+    expect(a.playbackRate).toBe(1)
+    set(0.5)
+    expect(a.playbackRate).toBe(0.5)
+    expect(played).toEqual(['http://v/0.mp3'])
+    fireEvent.ended(a)
+    expect(played.at(-1)).toBe('http://v/1.mp3')
+    expect(a.playbackRate).toBe(0.5)
+  })
+  it('sets the speed of the drawing too', () => {
+    render(<LessonPlayer script={script} voices={voices} />)
+    set(2)
+    expect(screen.getByRole('region', { name: /Lesson/ }).style.getPropertyValue('--lesson-speed')).toBe('2')
+  })
+  it('a step with no voice is shown for less time when faster', () => {
+    render(<LessonPlayer script={script} voices={[null, null, null]} />)
+    set(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    act(() => { vi.advanceTimersByTime(1200) })
+    expect(screen.getByText('First, acetyl-CoA arrives.')).toBeTruthy()
+    act(() => { vi.advanceTimersByTime(100) })
+    expect(screen.getByText('It joins oxaloacetate to make citrate.')).toBeTruthy()
+  })
+  it('is remembered, and a nonsense stored value falls back to normal', () => {
+    render(<LessonPlayer script={script} voices={voices} />)
+    set(1.25)
+    cleanup()
+    render(<LessonPlayer script={script} voices={voices} />)
+    expect(slider().value).toBe('1.25')
+    for (const bad of [0, 3, 1.1, '2', null]) expect(parseSpeed(bad)).toBe(1)
+    expect(parseSpeed(0.75)).toBe(0.75)
   })
 })
 

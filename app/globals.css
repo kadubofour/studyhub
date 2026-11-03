@@ -524,15 +524,37 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .app-root .app-root[data-look="playful"] .toast { border: 2px solid var(--outline); box-shadow: 3px 3px 0 var(--outline); }
 
 /* A visual lesson (components/tutor/LessonPlayer.tsx): what a step adds to the board grows in, an arrow draws itself, and what the voice points at glows */
-@keyframes lesson-in { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: none; } }
-.lesson-in { transform-box: fill-box; transform-origin: center; animation: lesson-in .5s cubic-bezier(.2, .8, .2, 1) both; }
-@keyframes lesson-draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
-.lesson-in .lesson-line { stroke-dasharray: var(--len); animation: lesson-draw .7s ease-out both; }
-@keyframes lesson-late { 0%, 70% { opacity: 0; } 100% { opacity: 1; } }
-.lesson-in .lesson-head, .lesson-in .lesson-label { animation: lesson-late .9s ease-out both; }
-.lesson-focus { filter: drop-shadow(0 0 1.6px var(--c)); }
-.lesson-focus rect, .lesson-focus ellipse { stroke-width: 1.3; }
-@media (prefers-reduced-motion: reduce) { .lesson-in, .lesson-in .lesson-line, .lesson-in .lesson-head, .lesson-in .lesson-label { animation: none; } }
+/* A visual lesson is a chalkboard, the same in light and dark: it brings its own colours, so the buttons on it read as chalk too. New things are drawn
+   as a teacher would: the outline first, then the shading, then the writing, all at the speed the lesson is playing (--lesson-speed). */
+.lesson-chalk {
+  --board: #1f3b33; --tray: #182f29;
+  --bg: var(--board); --raised: var(--board); --surface: rgb(244 241 230 / .1); --line: rgb(244 241 230 / .16);
+  --fg: #f4f1e6; --muted: #bccbc3; --danger: #ffa8a8;
+  color: var(--fg);
+}
+.lesson-hand { font-family: var(--font-kalam), "Segoe Print", "Bradley Hand", cursive; }
+.lesson-tray { background: var(--tray); }
+.lesson-play { display: inline-flex; min-height: 2.5rem; align-items: center; gap: .5rem; border-radius: 9999px; background: var(--fg); padding: .5rem 1rem; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--tray); transition: background-color .15s; }
+.lesson-play:hover { background: #fff; }
+.lesson-chalk button:focus-visible, .lesson-speed input:focus-visible { outline: 2px solid #f6d55c; outline-offset: 2px; }
+.lesson-speed input { appearance: none; -webkit-appearance: none; height: 1.5rem; min-width: 0; flex: 1; background: transparent; cursor: pointer; border-radius: 9999px; }
+.lesson-speed input::-webkit-slider-runnable-track { height: 3px; border-radius: 9999px; background: var(--muted); }
+.lesson-speed input::-moz-range-track { height: 3px; border-radius: 9999px; background: var(--muted); }
+.lesson-speed input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6.5px; border-radius: 9999px; background: #f6d55c; }
+.lesson-speed input::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 9999px; background: #f6d55c; }
+@media (pointer: coarse) { .lesson-speed input { height: 2.75rem; } .lesson-speed input::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -9.5px; } .lesson-speed input::-moz-range-thumb { width: 22px; height: 22px; } }
+
+@keyframes lesson-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes lesson-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lesson-write { from { clip-path: inset(-30% 105% -30% -5%); } to { clip-path: inset(-30% -5% -30% -5%); } }
+.lesson-in .lesson-stroke { stroke-dasharray: 1; animation: lesson-draw calc(.8s / var(--lesson-speed, 1)) ease-in-out both; }
+.lesson-in .lesson-shade { animation: lesson-appear calc(.4s / var(--lesson-speed, 1)) ease-out calc(.6s / var(--lesson-speed, 1)) both; }
+.lesson-in .lesson-head { animation: lesson-appear calc(.15s / var(--lesson-speed, 1)) ease-out calc(.75s / var(--lesson-speed, 1)) both; }
+.lesson-in .lesson-writing { animation: lesson-write calc(.7s / var(--lesson-speed, 1)) linear calc(.65s / var(--lesson-speed, 1)) both; }
+.lesson-in > .lesson-writing:only-child { animation-delay: 0s; }
+.lesson-focus .lesson-chalkline { filter: drop-shadow(0 0 1.2px var(--c)); }
+.lesson-focus rect.lesson-stroke, .lesson-focus ellipse.lesson-stroke { stroke-width: 1.05; }
+@media (prefers-reduced-motion: reduce) { .lesson-in .lesson-stroke, .lesson-in .lesson-shade, .lesson-in .lesson-head, .lesson-in .lesson-writing { animation: none; stroke-dasharray: none; } }
 
 /* The live tutor's voice, drawn as something alive: soft translucent layers that change shape slowly while the student speaks (it breathes), faster
    while the tutor does (it swells), with a thin light sweeping round it while it thinks. No flat sphere, no rings. */
