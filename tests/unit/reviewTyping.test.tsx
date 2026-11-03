@@ -58,6 +58,7 @@ describe('answering by typing', () => {
     await check()
     expect(screen.getByText('Not quite')).toBeTruthy()
     expect(screen.getByRole('status').textContent).toContain('Suggested: Again')
+    expect(screen.queryByRole('button', { name: 'I was right' })).toBeNull() // the check stands; the rating is still the student's own
   })
 
   it('typing numbers or a space in the box never rates or reveals', async () => {

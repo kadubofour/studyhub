@@ -147,9 +147,6 @@ function Review() {
               : <>
                   {typed.feedback && <p className="text-sm">{typed.feedback}</p>}
                   <p className="text-xs text-muted">Suggested: {LABELS[typed.check.suggested]}</p>
-                  {typed.check.verdict !== 'correct' && (
-                    <button type="button" className="text-xs text-accent underline underline-offset-2" onClick={() => setTyped(t => (t ? { ...t, check: verdictCheck('correct') } : t))}>I was right</button>
-                  )}
                 </>}
             <p className="text-xs text-muted">You wrote</p>
             <p className="whitespace-pre-wrap text-sm">{typed.text}</p>
