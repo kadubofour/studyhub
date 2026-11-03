@@ -523,22 +523,22 @@ body { background: var(--bg); color: var(--fg); font-size: 1rem; line-height: 1.
 .app-root[data-look="playful"] .toast,
 .app-root .app-root[data-look="playful"] .toast { border: 2px solid var(--outline); box-shadow: 3px 3px 0 var(--outline); }
 
-/* A visual lesson (components/tutor/LessonPlayer.tsx): what a step adds to the board grows in, an arrow draws itself, and what the voice points at glows */
-/* A visual lesson's sheet follows the theme. New things are drawn in order: the outline first, then the shading, then the writing, all at the speed
-   the lesson is playing (--lesson-speed). */
-.lesson-board { --lesson-blue: #2563eb; --lesson-amber: #b45309; --lesson-green: #15803d; }
-.dark .lesson-board { --lesson-blue: #7cb7ff; --lesson-amber: #f5b84a; --lesson-green: #5fd38d; }
+/* A visual lesson (components/tutor/LessonPlayer.tsx) looks marked up with a note's tools: the pen's colours (lib/markup/marks.ts), lighter in dark mode so
+   they show, and the highlighter's see-through swipe. New things are drawn in order, the pen first and then the writing, at the lesson's speed (--lesson-speed). */
+.lesson-page { --pen-red: #dc2626; --pen-orange: #ea580c; --pen-green: #16a34a; --pen-blue: #2563eb; }
+.dark .lesson-page { --pen-red: #f87171; --pen-orange: #fb923c; --pen-green: #4ade80; --pen-blue: #60a5fa; }
+.lesson-highlight { stroke: #fde047; stroke-dasharray: 1; opacity: .6; mix-blend-mode: multiply; animation: lesson-draw calc(.45s / var(--lesson-speed, 1)) ease-out both; }
+.dark .lesson-highlight { opacity: .3; mix-blend-mode: normal; }
 @keyframes lesson-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes lesson-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lesson-write { from { clip-path: inset(-30% 105% -30% -5%); } to { clip-path: inset(-30% -5% -30% -5%); } }
 .lesson-in .lesson-stroke { stroke-dasharray: 1; animation: lesson-draw calc(.8s / var(--lesson-speed, 1)) ease-in-out both; }
-.lesson-in .lesson-shade { animation: lesson-appear calc(.4s / var(--lesson-speed, 1)) ease-out calc(.6s / var(--lesson-speed, 1)) both; }
+.lesson-in .lesson-highlight { animation-delay: calc(.7s / var(--lesson-speed, 1)); }
 .lesson-in .lesson-head { animation: lesson-appear calc(.15s / var(--lesson-speed, 1)) ease-out calc(.75s / var(--lesson-speed, 1)) both; }
 .lesson-in .lesson-writing { animation: lesson-write calc(.7s / var(--lesson-speed, 1)) linear calc(.65s / var(--lesson-speed, 1)) both; }
 .lesson-in > .lesson-writing:only-child { animation-delay: 0s; }
-.lesson-focus :is(rect, ellipse).lesson-stroke { stroke-width: 1; filter: drop-shadow(0 0 .6px var(--c)); }
-.lesson-focus line.lesson-stroke { stroke-width: 1.4; }
-@media (prefers-reduced-motion: reduce) { .lesson-in .lesson-stroke, .lesson-in .lesson-shade, .lesson-in .lesson-head, .lesson-in .lesson-writing { animation: none; stroke-dasharray: none; } }
+.lesson-focus .lesson-stroke, .lesson-focus .lesson-head { stroke-width: .95; }
+@media (prefers-reduced-motion: reduce) { .lesson-highlight, .lesson-in .lesson-stroke, .lesson-in .lesson-head, .lesson-in .lesson-writing { animation: none; stroke-dasharray: none; } }
 
 /* The live tutor's voice, drawn as something alive: soft translucent layers that change shape slowly while the student speaks (it breathes), faster
    while the tutor does (it swells), with a thin light sweeping round it while it thinks. No flat sphere, no rings. */

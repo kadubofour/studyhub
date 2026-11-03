@@ -36,6 +36,15 @@ describe('the lesson player', () => {
     expect(shown()).toEqual(['a'])
     expect(document.querySelector('[data-element="a"]')!.getAttribute('class')).toContain('lesson-focus') // the voice points at it
   })
+  it('highlights what the voice points at, and only while it does', () => {
+    render(<LessonPlayer script={script} voices={voices} />)
+    const swiped = () => [...document.querySelectorAll('.lesson-highlight')].map(e => e.closest('[data-element]')!.getAttribute('data-element'))
+    expect(swiped()).toEqual(['a'])
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(swiped()).toEqual(['b'])
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(swiped()).toEqual([])
+  })
   it('builds the drawing up as steps go on, and takes it back down going back', () => {
     render(<LessonPlayer script={script} voices={voices} />)
     fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
