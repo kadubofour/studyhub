@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { ago } from '@/lib/library/ago'
 import { contents, notebookCards } from '@/lib/library/notebookCards'
 import type { Kind, LibraryItem } from '@/lib/library/items'
 import type { Notebook } from '@/lib/types'
@@ -7,14 +6,6 @@ import type { Notebook } from '@/lib/types'
 const now = new Date('2030-05-10T12:00:00Z')
 const HOUR = 3_600_000, DAY = 24 * HOUR
 const iso = (msAgo: number) => new Date(now.getTime() - msAgo).toISOString()
-
-describe('ago', () => {
-  it.each([[30_000, 'just now'], [10 * 60_000, '10m ago'], [10 * HOUR, '10h ago'], [3 * DAY, '3d ago'], [21 * DAY, '3w ago']])('%d ms is "%s"', (ms, text) => expect(ago(iso(ms), now)).toBe(text))
-  it('is a date after two months, and empty for nonsense', () => {
-    expect(ago(iso(90 * DAY), now)).toMatch(/2030/)
-    expect(ago('nope', now)).toBe('')
-  })
-})
 
 const book = (id: string, name: string, extra: Partial<Notebook> = {}): Notebook => ({ id, name, created_at: iso(100 * DAY), ...extra })
 const item = (kind: Kind, id: string, notebook: string | null, at: string): LibraryItem => ({ kind, id, title: id, course_id: null, notebook_id: notebook, at, meta: '', href: `/x/${id}` })

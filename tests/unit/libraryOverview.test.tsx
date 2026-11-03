@@ -10,27 +10,29 @@ const push = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
 afterEach(() => { cleanup(); push.mockClear() })
 
-const now = new Date('2030-05-10T12:00:00Z')
 const card = (id: string, name: string, over: Partial<NotebookCard> = {}, def = false): NotebookCard => ({
   notebook: { id, name, is_default: def }, counts: { note: 2, deck: 1, lecture: 0, file: 0, quiz: 0 }, total: 3, lastAt: '2030-05-10T02:00:00Z', color: '#1D9E75', ...over,
 })
 const setup = (cards: NotebookCard[], over: Record<string, unknown> = {}) => {
-  const props = { cards, found: [] as LibraryItem[], bookName: () => 'Biology', now, q: '', onQ: vi.fn(), sort: 'recent' as const, onSort: vi.fn(), onMaterials: vi.fn(), create: [], onRename: vi.fn(), onDelete: vi.fn(), ...over }
+  const props = { cards, found: [] as LibraryItem[], bookName: () => 'Biology', q: '', onQ: vi.fn(), sort: 'recent' as const, onSort: vi.fn(), onMaterials: vi.fn(), create: [], onRename: vi.fn(), onDelete: vi.fn(), ...over }
   render(<LibraryOverview {...props} />)
   return props
 }
 
 describe('LibraryOverview', () => {
-  it('shows a card for each notebook', () => {
+  it('draws each notebook as a notebook, saying only what is inside', () => {
     setup([card('b', 'Biology'), card('c', 'Chemistry', { total: 0, lastAt: null, counts: { note: 0, deck: 0, lecture: 0, file: 0, quiz: 0 } })])
     const items = within(screen.getByRole('list', { name: 'Notebooks' })).getAllByRole('listitem')
     expect(items).toHaveLength(2)
     expect(within(items[0]).getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/notebooks/b')
-    expect(items[0].textContent).toContain('2 notes')
-    expect(items[0].textContent).toContain('1 deck')
-    expect(items[0].textContent).toContain('10h ago')
-    expect(items[1].textContent).toContain('Empty')
-    expect(items[1].textContent).toContain('Not yet')
+    expect(items[0].querySelector('[data-notebook-cover]')?.textContent).toContain('2 notes · 1 deck')
+    expect(items[1].querySelector('[data-notebook-cover]')?.textContent).toContain('Empty')
+    expect(items[0].textContent).not.toContain('Last updated')
+  })
+  it('pressing and holding a notebook opens the same menu as its ⋮ button', () => {
+    setup([card('b', 'Biology')])
+    fireEvent.contextMenu(screen.getByRole('link', { name: 'Biology' }))
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeTruthy()
   })
   it('makes notebooks only from the Create menu, and says where when there are none', () => {
     const onSelect = vi.fn()

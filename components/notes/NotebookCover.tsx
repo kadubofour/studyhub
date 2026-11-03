@@ -14,8 +14,10 @@ export function coverColor(id: string): string {
  * A notebook drawn as a notebook: a coloured cover, a darker spine with its rings, a label with the name, and how many notes are inside.
  * `kind` draws the two that are not notebooks: All notes (a grey cover) and Unfiled (loose pages, with no cover).
  */
-export function NotebookCover({ name, count, color, kind = 'notebook', on = false }: {
+export function NotebookCover({ name, count, detail, color, kind = 'notebook', on = false }: {
   name: string; count: number; color?: string; kind?: 'notebook' | 'all' | 'loose'; on?: boolean
+  /** What to say is inside, when it is more than notes */
+  detail?: string
 }) {
   const ring = on ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : ''
   if (kind === 'loose') return (
@@ -37,7 +39,7 @@ export function NotebookCover({ name, count, color, kind = 'notebook', on = fals
         <span className="rounded-md bg-white/92 px-1.5 py-1.5 text-[12.5px] font-semibold leading-tight text-[#151628] shadow-sm [overflow-wrap:anywhere]">
           <span className="line-clamp-2">{name}</span>
         </span>
-        <span className="text-[11px] font-semibold text-white">{plural(count)}</span>
+        <span className={`text-[11px] font-semibold text-white ${detail ? 'pr-7' : ''}`}>{detail ?? plural(count)}</span>
       </span>
       {/* the page edges showing at the side */}
       <span className="w-1 shrink-0 bg-white/30" />

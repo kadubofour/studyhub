@@ -260,7 +260,7 @@ export default function LibraryPage() {
     return (
       <div>
         <PageHeader title="Library" />
-        <LibraryOverview cards={notebookCards({ notebooks, items: known ?? items, courses, q: bookQuery, sort: bookSort })} now={now}
+        <LibraryOverview cards={notebookCards({ notebooks, items: known ?? items, courses, q: bookQuery, sort: bookSort })}
           found={found} bookName={id => bookOf(id)?.name ?? 'General'}
           q={bookQuery} onQ={setBookQuery} sort={bookSort} onSort={setBookSort}
           onMaterials={() => setDialog('upload')}

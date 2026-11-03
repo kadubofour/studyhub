@@ -1,14 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { create, noteWithText, openNewNotebook, signUp } from './helpers'
 
-test('the Library opens on a card for each notebook; Create makes another; search looks inside notebooks', async ({ page, isMobile }) => {
+test('the Library opens on a shelf of notebooks; Create makes another; search looks inside notebooks', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle') // made without choosing a notebook: General
   await page.goto('/library')
   const shelf = page.getByRole('list', { name: 'Notebooks' })
   const general = shelf.getByRole('listitem').filter({ hasText: 'General' })
   await expect(general).toContainText('1 note')
-  if (!isMobile) await expect(general).toContainText('Last updated') // a phone has a row, with its date
   await expect(shelf.getByRole('progressbar')).toHaveCount(0) // no course cards, no progress bars
 
   await openNewNotebook(page)
@@ -42,7 +41,7 @@ test('the toolbar and a notebook card\'s menu: Materials, Create, rename and del
   await openNewNotebook(page)
   await page.getByRole('dialog', { name: 'New notebook' }).getByLabel('Name').fill('Temp')
   await page.getByRole('dialog', { name: 'New notebook' }).getByRole('button', { name: 'Create' }).click()
-  // a card has its ⋮ button; a phone's row opens the same menu when pressed and held (a right click)
+  // a notebook has its ⋮ button; a phone also opens the same menu when it is pressed and held (a right click)
   const options = async (name: string) => { if (isMobile) await page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: new RegExp(name) }).click({ button: 'right' }); else await page.getByRole('button', { name: `Options for ${name}` }).click() }
   await options('Temp')
   await page.getByRole('menuitem', { name: 'Rename' }).click()

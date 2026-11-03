@@ -6,10 +6,8 @@ import { ArrowUpRight, FileText, MoreVertical, Pencil, Plus, Search, Trash2, Upl
 import { Dropdown } from '@/components/ui/Dropdown'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { NotebookCover } from '@/components/notes/NotebookCover'
-import { NotebookMark, PhoneGroup, PhoneRow } from '@/components/ui/PhoneList'
 import { useScreen } from '@/lib/ui/useScreen'
-import { ago } from '@/lib/library/ago'
-import { CARD_KINDS, contents, type NotebookCard, type NotebookSort } from '@/lib/library/notebookCards'
+import { contents, type NotebookCard, type NotebookSort } from '@/lib/library/notebookCards'
 import type { LibraryItem } from '@/lib/library/items'
 
 const SORTS = [
@@ -20,10 +18,10 @@ const SORTS = [
 
 const BAR = 'inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line bg-raised px-4 text-sm font-medium transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
 
-// The Library's landing: a card for each notebook (a notebook is a study set: everything for one subject, in one place).
+// The Library's landing: a shelf of notebooks, each drawn as a notebook (a notebook is a study set: everything for one subject, in one place).
 // Materials adds raw study material (a PDF, slides, a document) to a notebook.
-export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onSort, onMaterials, create, onRename, onDelete }: {
-  cards: NotebookCard[]; now: Date; q: string; onQ: (q: string) => void; sort: NotebookSort; onSort: (s: NotebookSort) => void
+export function LibraryOverview({ cards, found, bookName, q, onQ, sort, onSort, onMaterials, create, onRename, onDelete }: {
+  cards: NotebookCard[]; q: string; onQ: (q: string) => void; sort: NotebookSort; onSort: (s: NotebookSort) => void
   /** What a search finds inside the notebooks, and the name of the notebook an item is in */
   found: LibraryItem[]; bookName: (id: string | null | undefined) => string
   onMaterials: () => void
@@ -32,10 +30,7 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
   onRename: (c: NotebookCard) => void; onDelete: (c: NotebookCard) => void
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
-  const router = useRouter()
   const phone = useScreen() === 'phone'
-  // on a phone a notebook is a row in a rounded group, as in the Tutor and Practice lists; pressing and holding it opens its menu
-  const [rowMenu, setRowMenu] = useState<{ x: number; y: number; card: NotebookCard } | null>(null)
   return (
     <div>
       <div role="search" className="mb-5 flex flex-wrap items-center gap-2">
@@ -65,26 +60,9 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
         {menu && <ContextMenu x={Math.max(8, menu.x)} y={menu.y} label="Create" items={create} onClose={() => setMenu(null)} />}
       </div>
 
-      {phone ? (
-        <>
-          {cards.length > 0 && (
-            <PhoneGroup name="Notebooks">
-              {cards.map(c => (
-                <PhoneRow key={c.notebook.id} href={`/notebooks/${c.notebook.id}`} mark={<NotebookMark color={c.color} />} title={c.notebook.name}
-                  date={c.lastAt ? ago(c.lastAt, now) : undefined} line={contents(c)}
-                  onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, card: c }) }} />
-              ))}
-            </PhoneGroup>
-          )}
-          {rowMenu && <ContextMenu x={rowMenu.x} y={rowMenu.y} label={`${rowMenu.card.notebook.name} options`} onClose={() => setRowMenu(null)} items={[
-            { label: 'Open', icon: ArrowUpRight, onSelect: () => router.push(`/notebooks/${rowMenu.card.notebook.id}`) },
-            { label: 'Rename', icon: Pencil, onSelect: () => onRename(rowMenu.card) },
-            ...(rowMenu.card.notebook.is_default ? [] : [{ label: 'Delete', icon: Trash2, danger: true, onSelect: () => onDelete(rowMenu.card) } as MenuEntry]),
-          ]} />}
-        </>
-      ) : cards.length > 0 && (
-      <ul aria-label="Notebooks" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map(c => <Card key={c.notebook.id} card={c} now={now} onRename={onRename} onDelete={onDelete} />)}
+      {cards.length > 0 && (
+      <ul aria-label="Notebooks" className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-x-5 gap-y-6">
+        {cards.map(c => <Book key={c.notebook.id} card={c} onRename={onRename} onDelete={onDelete} />)}
       </ul>
       )}
       {cards.length === 0 && !q.trim() && <p className="mt-6 text-center text-sm text-muted">No notebooks yet. Use Create to make one.</p>}
@@ -109,9 +87,10 @@ export function LibraryOverview({ cards, found, bookName, now, q, onQ, sort, onS
   )
 }
 
-function Card({ card, now, onRename, onDelete }: { card: NotebookCard; now: Date; onRename: (c: NotebookCard) => void; onDelete: (c: NotebookCard) => void }) {
+// A notebook on the shelf: the cover is the link, and pressing and holding it (a right click) opens the same menu as its ⋮ button
+function Book({ card, onRename, onDelete }: { card: NotebookCard; onRename: (c: NotebookCard) => void; onDelete: (c: NotebookCard) => void }) {
   const router = useRouter()
-  const { notebook, lastAt, color } = card
+  const { notebook, color } = card
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const href = `/notebooks/${notebook.id}`
   const items: MenuEntry[] = [
@@ -120,24 +99,15 @@ function Card({ card, now, onRename, onDelete }: { card: NotebookCard; now: Date
     ...(notebook.is_default ? [] : [{ label: 'Delete', icon: Trash2, danger: true, onSelect: () => onDelete(card) } as MenuEntry]),
   ]
   return (
-    <li className="group relative rounded-2xl border border-line bg-raised p-4 transition hover:shadow-md">
-      <div className="flex items-start gap-4">
-        <div aria-hidden className="w-14 shrink-0"><NotebookCover name={notebook.name} count={card.total} color={color} /></div>
-        <div className="min-w-0 flex-1">
-          {/* the whole card is the link; the ⋮ button sits above it */}
-          <h3 className="truncate text-[17px] font-semibold"><Link href={href} className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-accent">{notebook.name}</Link></h3>
-          <p className="mt-1 text-sm text-muted">{contents(card)}</p>
-          <p className="mt-3 flex flex-wrap gap-1.5">
-            {CARD_KINDS.filter(k => card.counts[k.kind] > 0).map(k => (
-              <span key={k.kind} className="inline-flex items-center rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{card.counts[k.kind]} {k.one}{card.counts[k.kind] === 1 ? '' : 's'}</span>
-            ))}
-          </p>
-        </div>
-        <button type="button" aria-label={`Options for ${notebook.name}`} aria-haspopup="menu" className="relative z-10 -mr-2 -mt-1 grid size-9 place-items-center rounded-full text-muted hover:bg-surface"
-          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right, y: r.bottom + 4 }) }}><MoreVertical size={18} aria-hidden /></button>
-        {menu && <ContextMenu x={menu.x} y={menu.y} label={`${notebook.name} options`} onClose={() => setMenu(null)} items={items} />}
-      </div>
-      <p className="mt-4 flex items-center justify-between text-sm text-muted"><span>Last updated</span><span className="text-fg/80">{lastAt ? ago(lastAt, now) : 'Not yet'}</span></p>
+    <li className="relative">
+      <Link href={href} aria-label={notebook.name} title={notebook.name} onContextMenu={e => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }) }}
+        className="block rounded-l-md rounded-r-xl outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
+        <NotebookCover name={notebook.name} count={card.total} detail={contents(card)} color={color} />
+      </Link>
+      <span className="sr-only">{contents(card)}</span>
+      <button type="button" aria-label={`Options for ${notebook.name}`} aria-haspopup="menu" className="absolute bottom-1 right-1.5 grid size-9 place-items-center rounded-full text-white hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right, y: r.bottom + 4 }) }}><MoreVertical size={18} aria-hidden /></button>
+      {menu && <ContextMenu x={menu.x} y={menu.y} label={`${notebook.name} options`} onClose={() => setMenu(null)} items={items} />}
     </li>
   )
 }
