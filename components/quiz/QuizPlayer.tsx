@@ -25,7 +25,7 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
   })
   const [typed, setTyped] = useState('')
   const [checking, setChecking] = useState(false)
-  const [selfMark, setSelfMark] = useState<string | null>(null) // answer awaiting "I was right/wrong"
+  const [unmarked, setUnmarked] = useState(false) // the AI could not be reached to mark this answer
   const [error, setError] = useState<string | null>(null)
   const cardRef = useRef<HTMLElement>(null)
   const goOn = useRef<HTMLButtonElement>(null)
@@ -46,7 +46,7 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
 
   async function record(rec: AnswerRecord) {
     const next = { ...answers, [q.id]: rec }
-    setAnswers(next); setSelfMark(null)
+    setAnswers(next); setUnmarked(false)
     setSaving(n => n + 1)
     await saveAttempt(supabase(), attempt.id, next, scoreOf(next)).catch(() => setError('Couldn\'t save your answer. Check your connection.'))
     setSaving(n => n - 1)
@@ -62,12 +62,12 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
     if (!given) return
     // a match, or a slip in a word, is right at once; only a different wording waits for the AI
     if (markInstant(q, given) === true || checkAnswer(given, q.answer).verdict !== 'different') { await record({ given, correct: true, feedback: null }); return }
-    setChecking(true); setError(null)
+    setChecking(true); setError(null); setUnmarked(false)
     try {
       const res = await fetch('/api/ai/quiz/mark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attemptId: attempt.id, questionId: q.id, answer: given }) })
       if (res.ok) { const m = await res.json() as { correct: boolean; feedback: string }; await record({ given, correct: m.correct, feedback: m.feedback }) }
-      else setSelfMark(given)
-    } catch { setSelfMark(given) } finally { setChecking(false) }
+      else setUnmarked(true)
+    } catch { setUnmarked(true) } finally { setChecking(false) }
   }
 
   async function finish() {
@@ -155,24 +155,20 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
         </div>
       )}
 
-      {q.type === 'short' && !done && !selfMark && (
+      {q.type === 'short' && !done && (
         <div className="mt-4 space-y-3">
           <label className="field"><span>Your answer</span>
             <textarea rows={4} value={typed} onChange={e => setTyped(e.target.value)} maxLength={1000} className="text-base" />
           </label>
+          {unmarked && <p role="alert" className="text-sm text-danger">Couldn&apos;t check your answer. Try again, or skip this question, which counts as wrong.</p>}
           {checking
             ? <Working kind="check" size="sm" label="Checking your answer" className="text-sm text-muted" />
-            : <button type="button" className={`${BTN_SOLID} w-full sm:w-auto`} disabled={!typed.trim()} onClick={check}>Check</button>}
-        </div>
-      )}
-
-      {selfMark && (
-        <div className="mt-4 rounded-xl bg-surface p-4 text-sm">
-          <p>Couldn&apos;t mark this automatically. Expected: <MathText>{q.answer}</MathText></p>
-          <div className="mt-3 flex gap-2">
-            <button type="button" className="btn" onClick={() => record({ given: selfMark, correct: true, feedback: null })}>I was right</button>
-            <button type="button" className="btn" onClick={() => record({ given: selfMark, correct: false, feedback: null })}>I was wrong</button>
-          </div>
+            : (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button type="button" className={`${BTN_SOLID} w-full sm:w-auto`} disabled={!typed.trim()} onClick={check}>{unmarked ? 'Try again' : 'Check'}</button>
+                {unmarked && <button type="button" className="btn w-full sm:w-auto" onClick={() => record({ given: typed.trim(), correct: false, feedback: null })}>Skip question</button>}
+              </div>
+            )}
         </div>
       )}
 
@@ -185,9 +181,6 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
           {done.feedback && <p className="mt-2"><MathText>{done.feedback}</MathText></p>}
           {q.explanation && <p className="mt-2 text-muted"><MathText>{q.explanation}</MathText></p>}
           <div className="mt-4 flex items-center justify-end gap-3">
-            {q.type === 'short' && !done.correct && (
-              <button type="button" className="btn mr-auto" onClick={() => record({ ...done, correct: true })}>I was right</button>
-            )}
             <span className="hidden text-xs text-muted md:inline">Press Enter</span>
             {last ? <button ref={goOn} type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={finish}>See results</button>
               : <button ref={goOn} type="button" className={`${BTN_SOLID} w-full sm:w-auto`} onClick={next}>Next</button>}
