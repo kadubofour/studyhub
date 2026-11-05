@@ -1,6 +1,27 @@
-// Says text aloud, a piece at a time, in order. Each piece is fetched as soon as it is queued (so the next is ready while one plays), played in turn,
-// and the whole queue can be cut off at once: that is how the tutor stops when the student speaks. A piece the server cannot voice is read by the
-// browser's own voice instead, so the tutor is never silent.
+// Says text aloud, a piece at a time, in order, in the same voice as a visual lesson. The next pieces are fetched while one plays, and the whole queue can be cut
+// off at once: that is how the tutor stops when the student speaks. Sentences that come in while those are being fetched are joined into one piece, because the
+// voice is natural across a few sentences said together and resets its tone with every piece; so the first sentence still starts quickly. A piece the server
+// cannot voice, even after trying again, is read by the browser's own voice instead, so the tutor is never silent.
+
+const AHEAD = 2 // pieces fetched and waiting at once, so a long reply does not send a burst of requests
+const JOIN_UP_TO = 400 // characters in a joined piece, about what a lesson's step says
+const LONGEST = 500 // characters in any piece (the server refuses more than 600): a longer sentence is broken where it pauses
+const RETRY_MS = 400
+
+/** A sentence too long for one piece, broken at a comma or else a space */
+export function splitLong(text: string, max = LONGEST): string[] {
+  const out: string[] = []
+  let left = text
+  while (left.length > max) {
+    const head = left.slice(0, max)
+    const at = Math.max(head.lastIndexOf(', '), head.lastIndexOf('; '), head.lastIndexOf(': '))
+    const cut = at > max / 2 ? at + 1 : head.lastIndexOf(' ') > 0 ? head.lastIndexOf(' ') : max
+    out.push(left.slice(0, cut).trim())
+    left = left.slice(cut).trim()
+  }
+  if (left) out.push(left)
+  return out
+}
 
 export type SpeakerIo = {
   /** The audio for one piece, or null when it could not be made */
@@ -26,27 +47,36 @@ export interface Speaker {
 
 export function createSpeaker(io: SpeakerIo): Speaker {
   type Item = { text: string; audio: Promise<Blob | null> }
-  const queue: Item[] = []
+  const queue: Item[] = [] // being fetched, in order
+  const waiting: string[] = [] // not fetched yet
   let control = new AbortController()
   let running = false
   let current: { stop: () => void } | null = null
   let saying = ''
   let generation = 0
+  // Starts fetching what is waiting, as far as there is room, with sentences that fit said together
+  function fetchNext() {
+    while (queue.length < AHEAD && waiting.length) {
+      let text = waiting.shift()!
+      while (waiting.length && text.length + 1 + waiting[0].length <= JOIN_UP_TO) text += ` ${waiting.shift()}`
+      queue.push({ text, audio: io.fetchAudio(text, control.signal).catch(() => null) })
+    }
+  }
   const s: Speaker = {
     onStart: null, onIdle: null,
     get saying() { return saying },
-    get busy() { return running || queue.length > 0 },
+    get busy() { return running || queue.length > 0 || waiting.length > 0 },
     add(text) {
       const t = text.trim()
       if (!t) return
-      const signal = control.signal
-      queue.push({ text: t, audio: io.fetchAudio(t, signal).catch(() => null) })
+      waiting.push(...splitLong(t))
+      fetchNext()
       if (!running) void run()
     },
     stop() {
       generation++
       control.abort(); control = new AbortController()
-      queue.length = 0
+      queue.length = 0; waiting.length = 0
       current?.stop(); current = null
       const wasBusy = running
       running = false; saying = ''
@@ -59,6 +89,7 @@ export function createSpeaker(io: SpeakerIo): Speaker {
     let started = false
     while (queue.length && mine === generation) {
       const item = queue.shift()!
+      fetchNext()
       const blob = await item.audio
       if (mine !== generation) return
       if (!started) { started = true; s.onStart?.() }
@@ -83,9 +114,19 @@ export function createSpeaker(io: SpeakerIo): Speaker {
 /** The speaker for a browser: the server's voice through an audio element, the browser's own voice as the fallback */
 export function browserSpeakerIo(): SpeakerIo {
   return {
+    // A failure is tried once more before the browser's voice is used; a piece the server refuses as it stands would only be refused again
     async fetchAudio(text, signal) {
-      const res = await fetch('/api/ai/speak', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal })
-      return res.ok ? res.blob() : null
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const res = await fetch('/api/ai/speak', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal })
+          if (res.ok) return await res.blob()
+          if (attempt > 0 || (res.status < 500 && res.status !== 429)) return null
+        } catch (e) {
+          if (attempt > 0 || signal.aborted) throw e
+        }
+        await new Promise(r => setTimeout(r, RETRY_MS))
+        if (signal.aborted) return null
+      }
     },
     play(blob) {
       const url = URL.createObjectURL(blob)

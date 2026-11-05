@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { createSpeaker, type SpeakerIo } from '@/lib/voice/speaker'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { browserSpeakerIo, createSpeaker, splitLong, type SpeakerIo } from '@/lib/voice/speaker'
 
 const tick = () => new Promise(r => setTimeout(r, 0))
 
@@ -73,6 +73,40 @@ describe('createSpeaker', () => {
     await finish()
     expect(log).toContain('say:two.')
   })
+  it('says sentences together once two pieces are waiting, so the voice stays natural and a long reply is not a burst of requests', async () => {
+    const { io, log, finish } = fakeIo()
+    const sp = createSpeaker(io)
+    for (const s of ['one.', 'two.', 'three.', 'four.', 'five.']) sp.add(s)
+    await tick(); await tick()
+    const fetched = () => log.filter(l => l.startsWith('fetch'))
+    expect(fetched()).toEqual(['fetch:one.', 'fetch:two.', 'fetch:three.']) // one playing and two ready; the rest wait
+    expect(sp.busy).toBe(true)
+    await finish()
+    expect(fetched().at(-1)).toBe('fetch:four. five.')
+    await finish(); await finish()
+    expect(log.filter(l => l.startsWith('play'))).toEqual(['play:one.', 'play:two.', 'play:three.', 'play:four. five.'])
+    expect(sp.saying).toBe('four. five.')
+  })
+  it('joins no more than a step of a lesson says at once, and drops what was waiting when stopped', async () => {
+    const { io, log } = fakeIo()
+    const sp = createSpeaker(io)
+    const long = 'x'.repeat(300)
+    for (const s of ['a.', 'b.', long, long, long]) sp.add(s)
+    await tick(); await tick()
+    expect(log.filter(l => l.startsWith('fetch')).every(l => l.length <= 'fetch:'.length + 400)).toBe(true)
+    sp.stop()
+    expect(sp.busy).toBe(false)
+  })
+  it('breaks a sentence too long for one piece where it pauses, losing nothing', async () => {
+    const pause = `${'word '.repeat(60).trim()}, ${'more '.repeat(80).trim()}`
+    const parts = splitLong(pause)
+    expect(parts.length).toBeGreaterThan(1)
+    expect(parts[0].endsWith(',')).toBe(true)
+    expect(parts.every(p => p.length <= 500)).toBe(true)
+    expect(parts.join(' ')).toBe(pause)
+    expect(splitLong('y'.repeat(1200)).every(p => p.length <= 500)).toBe(true)
+    expect(splitLong('short')).toEqual(['short'])
+  })
   it('ignores empty pieces', async () => {
     const { io, log } = fakeIo()
     const sp = createSpeaker(io)
@@ -80,5 +114,33 @@ describe('createSpeaker', () => {
     await tick()
     expect(log).toEqual([])
     expect(sp.busy).toBe(false)
+  })
+})
+
+describe('fetching the voice', () => {
+  afterEach(() => { vi.unstubAllGlobals() })
+  const respond = (...replies: (Response | Error)[]) => {
+    const f = vi.fn(async () => { const r = replies.shift()!; if (r instanceof Error) throw r; return r })
+    vi.stubGlobal('fetch', f)
+    return f
+  }
+  const get = () => browserSpeakerIo().fetchAudio('Hello.', new AbortController().signal)
+  it('tries a failure again before giving up on the voice', async () => {
+    const f = respond(new Response('', { status: 502 }), new Response('mp3'))
+    expect(await (await get())!.text()).toBe('mp3')
+    expect(f).toHaveBeenCalledTimes(2)
+    const g = respond(new Error('offline'), new Response('mp3'))
+    expect(await (await get())!.text()).toBe('mp3')
+    expect(g).toHaveBeenCalledTimes(2)
+  })
+  it('tries when told it is going too fast, and stops after the second failure', async () => {
+    const f = respond(new Response('', { status: 429 }), new Response('', { status: 429 }))
+    expect(await get()).toBeNull()
+    expect(f).toHaveBeenCalledTimes(2)
+  })
+  it('does not ask again for what the server refuses as it stands', async () => {
+    const f = respond(new Response('', { status: 400 }))
+    expect(await get()).toBeNull()
+    expect(f).toHaveBeenCalledTimes(1)
   })
 })

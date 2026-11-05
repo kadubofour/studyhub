@@ -92,7 +92,7 @@ export function useLiveSession() {
     if (!sp || !spoken) { resolve(); return }
     const was = sp.onIdle
     sp.onIdle = () => { sp.onIdle = was; was?.(); resolve() }
-    takeSentences(spoken, true).ready.forEach(s => sp.add(s))
+    sp.add(spoken) // a step's words said together, as a saved lesson says them
     if (id !== turn.current) { sp.onIdle = was; resolve() }
   }), [])
 
