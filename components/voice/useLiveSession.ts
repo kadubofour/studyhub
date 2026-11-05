@@ -148,7 +148,7 @@ export function useLiveSession() {
     patch({ phase: 'drawing' })
     let script: LessonScript | null = null
     try {
-      const res = await fetch('/api/ai/lesson/live', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal, body: JSON.stringify({ question: text, answer: reply, chatId }) })
+      const res = await fetch('/api/ai/lesson/live', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal, body: JSON.stringify({ question: text, answer: reply }) })
       if (res.ok) script = ((await res.json()) as { script: LessonScript }).script
     } catch { if (id !== turn.current) return }
     if (id !== turn.current) return
