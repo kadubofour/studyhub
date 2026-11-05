@@ -53,6 +53,29 @@ describe('tutor chats and messages', () => {
   })
 })
 
+describe('tutor_find_material and kept files', () => {
+  it('finds the matching passage of a kept file, not its first page, and only the student\'s own', async () => {
+    const u = await newUser(), other = await newUser()
+    const body = `${'Nothing much on this first page at all. '.repeat(200)} Oxidative phosphorylation happens across the inner membrane. ${'More filler goes here. '.repeat(200)}`
+    const { data: file } = await u.sb.from('materials').insert({ name: 'week3.pdf', mime: 'application/pdf', bytes: 1, path: `${u.id}/w.pdf`, body, body_status: 'ready' }).select('id').single()
+    const { data } = await u.sb.rpc('tutor_find_material', { p_query: 'oxidative phosphorylation', p_limit: 5 })
+    const rows = data as { kind: string; id: string; title: string; snippet: string }[]
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ kind: 'file', id: file!.id, title: 'week3.pdf' })
+    expect(rows[0].snippet).toContain('inner membrane')
+    expect(rows[0].snippet).not.toContain('[[')
+    expect((await other.sb.rpc('tutor_find_material', { p_query: 'oxidative phosphorylation', p_limit: 5 })).data).toEqual([])
+  })
+  it('finds a file by its name before its text is read, and leaves out one a note was made from', async () => {
+    const u = await newUser()
+    await u.sb.from('materials').insert({ name: 'thermodynamics.pdf', mime: 'application/pdf', bytes: 1, path: `${u.id}/t.pdf` })
+    expect(((await u.sb.rpc('tutor_find_material', { p_query: 'thermodynamics', p_limit: 5 })).data as { kind: string }[]).map(r => r.kind)).toEqual(['file'])
+    const { data: note } = await u.sb.from('notes').insert({ title: 'Other', content_md: 'x' }).select('id').single()
+    await u.sb.from('materials').update({ note_id: note!.id }).eq('path', `${u.id}/t.pdf`)
+    expect((await u.sb.rpc('tutor_find_material', { p_query: 'thermodynamics', p_limit: 5 })).data).toEqual([])
+  })
+})
+
 describe('tutor_find_material', () => {
   it('finds the student\'s own notes, lectures and cards, and never another student\'s', async () => {
     const u = await newUser(), other = await newUser()

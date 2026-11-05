@@ -41,7 +41,7 @@ const CHAT_KINDS: ('note' | 'lecture')[] = ['note', 'lecture'] // one array for 
 // An attachment that was sent, back in the bar: it is not uploaded again
 const asPending = (a: Attachment): Pending => (a.kind === 'document' ? { id: crypto.randomUUID(), ...a } : a.kind === 'photo' ? { id: crypto.randomUUID(), kind: 'photo', name: a.name, pages: 1, sent: a } : { id: crypto.randomUUID(), kind: 'pdf', name: a.name, pages: a.pages, sent: a })
 const forget = (p: Pending) => { if (p.kind === 'photo' && p.preview && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(p.preview) }
-const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string) => `/lectures/${id}`, card: () => '/flashcards' }
+const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string) => `/lectures/${id}`, card: () => '/flashcards', file: (id: string) => `/files/${id}` }
 
 export function ChatView({ chatId }: { chatId: string }) {
   const router = useRouter()
@@ -425,7 +425,7 @@ export function ChatView({ chatId }: { chatId: string }) {
                 {time && <span className="ml-auto self-center text-xs">{time}</span>}
               </div>
               {m.id !== 'pending' && m.status === 'ok' && (
-                <MessageLesson chatId={chatId} messageId={m.id} content={m.content} lesson={lessons.find(l => l.message_id === m.id)}
+                <MessageLesson chatId={chatId} messageId={m.id} content={m.content} proposals={m.proposals.length} lesson={lessons.find(l => l.message_id === m.id)}
                   onMade={l => setLessons(ls => [...ls, l])} onRemoved={id => setLessons(ls => ls.filter(l => l.id !== id))} />
               )}
               {m.proposals.map(p => (

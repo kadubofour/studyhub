@@ -12,6 +12,7 @@ import type { TopicStat } from '@/lib/topics/types'
 import type { TranscriptLine } from '@/lib/lectures/time'
 import { ATTACH_LIMITS, checkAttachments, pagesOf, resendable, type Attachment } from '@/lib/tutor/attachments'
 import { attachmentParts } from '@/lib/ai/tutorAttachments'
+import { tutorFiles } from '@/lib/ai/tutorFiles'
 import { countPdfPages } from '@/lib/import/pdfPages'
 
 export const maxDuration = 120
@@ -67,6 +68,12 @@ export async function POST(request: Request) {
     const { data: l } = await sb.from('lectures').select('id,title,transcript,course_id').eq('id', chat.lecture_id).maybeSingle()
     if (l) { attached = { kind: 'lecture', id: l.id, title: l.title, text: transcriptText(l.transcript as TranscriptLine[]) }; courseId ??= (l.course_id as string | null) ?? null }
   }
+  // The message is counted before any file is read, so a stream of requests naming big files uses the student's allowance; refused, it is given back
+  const reserved = await reserveTutorMessage(user.id)
+  if (reserved !== 'ok') return aiErrorResponse(reserved)
+  const refuse = async (status: number, error: string) => { await releaseTutorMessage(user.id); return bad(status, error) }
+  // Files kept in the Library, read for the first time here if they need it, so the search below can find them
+  const kept = await tutorFiles(sb, { courseId, message })
   const [{ data: found }, { data: courses }, { data: decks }, { data: past }] = await Promise.all([
     sb.rpc('tutor_find_material', { p_query: message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' '), p_limit: 5 }),
     sb.from('courses').select('id,name'),
@@ -83,16 +90,12 @@ export async function POST(request: Request) {
       if (!error && Array.isArray(data)) weak = weakSpots(data as TopicStat[], new Date()).map(s => ({ name: s.name, detail: evidence(s) }))
     } catch { /* the tutor works without it */ }
   }
-  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak })
+  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak, named: kept.named, files: kept.list })
   // A question's stored attachments are checked again like a new message's: the student can write that column directly
   const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: unknown }[]).reverse()
     .map(h => ({ role: h.role, content: h.content, attachments: h.role === 'user' ? checkAttachments(h.attachments, user.id, chat.id) ?? [] : [] }))
   const toolCtx = { courseIds: (courses ?? []).map(c => c.id as string), deckIds: (decks ?? []).map(d => d.id as string) }
 
-  // The message is counted before any file is read, so a stream of requests naming big files uses the student's allowance; refused, it is given back
-  const reserved = await reserveTutorMessage(user.id)
-  if (reserved !== 'ok') return aiErrorResponse(reserved)
-  const refuse = async (status: number, error: string) => { await releaseTutorMessage(user.id); return bad(status, error) }
   // This message's files must all be there, within the page limit and the size budget
   const fresh = await fetchFiles(sb, attachments, ATTACH_LIMITS.pdfBytes)
   if (fresh.over) return refuse(413, 'too_large')
@@ -102,6 +105,19 @@ export async function POST(request: Request) {
   // Earlier questions' files are read again, newest first, while they fit in what is left; a file sent again with this message is not read twice
   let pagesLeft = ATTACH_LIMITS.pages - pagesOf(counted)
   let bytesLeft = ATTACH_LIMITS.pdfBytes - fresh.bytes
+  // A kept PDF the student asked about that has no text in it (a scan) goes to the model as it is, when it fits
+  const scannedParts: ReturnType<typeof attachmentParts> = []
+  for (const f of kept.scanned) {
+    if (f.bytes > bytesLeft) continue
+    const { data } = await sb.storage.from('materials').download(f.path)
+    if (!data) continue
+    const buf = Buffer.from(await data.arrayBuffer())
+    const pages = await countPdfPages(buf)
+    if (pages > pagesLeft || buf.length > bytesLeft) continue
+    pagesLeft -= pages; bytesLeft -= buf.length
+    scannedParts.push(...attachmentParts([{ kind: 'pdf', name: f.name, path: f.path, pages }], new Map([[f.path, buf.toString('base64')]])))
+    context.sources.push({ kind: 'file', id: f.id, title: f.name })
+  }
   const resent = new Map<number, ReturnType<typeof attachmentParts>>()
   for (const i of resendable(past12, pagesOf(counted))) {
     const atts = past12[i].attachments.filter(a => a.kind === 'document' || !fresh.files.has(a.path))
@@ -119,7 +135,7 @@ export async function POST(request: Request) {
 
   const gen = streamTutor(openai(), {
     instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: toolDefinitions(), signal: request.signal,
-    input: buildInput({ history, context: context.text, message, parts: attachmentParts(counted, fresh.files) }),
+    input: buildInput({ history, context: context.text, message, parts: [...attachmentParts(counted, fresh.files), ...scannedParts] }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status
   let first: IteratorResult<{ type: 'delta'; text: string } | { type: 'tool'; name: string; args: string }>
