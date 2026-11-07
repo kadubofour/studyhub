@@ -8,6 +8,9 @@ let courses: Course[] = []
 let items: LibraryItem[] = []
 let fails = false
 let libraryFails = false
+let view = ''
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(view) }))
+vi.mock('@/components/library/MaterialBrowser', () => ({ MaterialBrowser: (p: { title?: string }) => <div data-testid="browser">{p.title}</div> }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 let createFails = false
 const createCourse = vi.fn(async (_sb: unknown, c: { name: string; color: string }) => { if (createFails) throw new Error('offline'); return { id: 'new', ...c } })
@@ -20,7 +23,7 @@ const open = async () => { await act(async () => { render(<CoursesPage />) }) }
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
-  createCourse.mockClear(); createFails = false; courses = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }, { id: 'lang', name: 'Spanish', color: '#BA7517' }]; items = []; fails = false; libraryFails = false })
+  view = ''; createCourse.mockClear(); createFails = false; courses = [{ id: 'bio', name: 'Biology', color: '#1D9E75' }, { id: 'lang', name: 'Spanish', color: '#BA7517' }]; items = []; fails = false; libraryFails = false })
 afterEach(cleanup)
 
 describe('Courses', () => {
@@ -90,5 +93,32 @@ describe('making a course from Courses', () => {
     await open()
     await make('  ')
     expect(createCourse).not.toHaveBeenCalled()
+  })
+  it('has a card for what is in no course, linking to its page, only when there is some', async () => {
+    items = [item('note', 'n1', 'bio'), item('note', 'n2', null), item('deck', 'd1', null)]
+    await open()
+    const card = within(screen.getByRole('list', { name: 'Your courses' })).getByRole('link', { name: /Unsorted/ })
+    expect(card.getAttribute('href')).toBe('/courses/none')
+    expect(card.textContent).toContain('1 note · 1 deck')
+    cleanup(); items = [item('note', 'n1', 'bio')]
+    await open()
+    expect(screen.queryByRole('link', { name: /Unsorted/ })).toBeNull()
+  })
+  it('with no course at all, material that is in none still shows, and is not hidden by "No courses yet"', async () => {
+    courses = []; items = [item('note', 'n2', null)]
+    await open()
+    expect(screen.queryByText('No courses yet')).toBeNull()
+    expect(screen.getByRole('link', { name: /Unsorted/ }).getAttribute('href')).toBe('/courses/none')
+  })
+  it('says so with no course and nothing in none', async () => {
+    courses = []; items = []
+    await open()
+    expect(screen.getByText('No courses yet')).toBeTruthy()
+  })
+  it('All material is the same things in one list, across courses', async () => {
+    view = 'view=all'
+    await open()
+    expect(screen.getByTestId('browser').textContent).toBe('All material')
+    expect(screen.getByRole('link', { name: 'Courses' }).getAttribute('href')).toBe('/courses')
   })
 })
