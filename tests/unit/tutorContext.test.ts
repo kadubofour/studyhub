@@ -127,6 +127,7 @@ describe('how the tutor teaches', () => {
     expect(t).toMatch(/Ask questions sparingly/)
     expect(t).toMatch(/Never ask two questions in one reply/)
     expect(t).toMatch(/do not end every reply with one/)
+    expect(t).toMatch(/answer a question wrongly, or only partly right, that is the time to ask a follow-up/)
   })
   it('never draws with text characters, and points to Explain visually instead', () => {
     expect(t).toMatch(/Never draw a diagram, graph, arrows or a table out of text characters/)
