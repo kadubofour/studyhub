@@ -120,11 +120,13 @@ describe('guided mode instructions', () => {
 
 describe('how the tutor teaches', () => {
   const t = tutorInstructions(true)
-  it('builds understanding from the student\'s own material: its notation, its examples, one worked example, one check question', () => {
+  it('builds understanding from the student\'s own material: its notation, its examples, one worked example, a check question only when it tells you something', () => {
     expect(t).toMatch(/understands, not that they get a summary/)
     expect(t).toMatch(/its own words, notation, definitions and worked examples/)
     expect(t).toMatch(/worked example/)
-    expect(t).toMatch(/one short question at the end, and wait for the answer/)
+    expect(t).toMatch(/Ask questions sparingly/)
+    expect(t).toMatch(/Never ask two questions in one reply/)
+    expect(t).toMatch(/do not end every reply with one/)
   })
   it('never draws with text characters, and points to Explain visually instead', () => {
     expect(t).toMatch(/Never draw a diagram, graph, arrows or a table out of text characters/)
