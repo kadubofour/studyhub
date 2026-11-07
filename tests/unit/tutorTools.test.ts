@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MAX_CARDS, parseToolCall, toolDefinitions, type ToolContext } from '@/lib/ai/tutorTools'
+import { LESSON_STATE_TOOL, MAX_CARDS, lessonStateTool, parseLessonState, parseToolCall, toolDefinitions, type ToolContext } from '@/lib/ai/tutorTools'
 
 const C1 = '11111111-1111-4111-8111-111111111111', D1 = '22222222-2222-4222-8222-222222222222'
 const ctx: ToolContext = { courseIds: [C1], deckIds: [D1] }
@@ -71,5 +71,20 @@ describe('bad calls', () => {
     expect(parse('delete_everything', {})).toBeNull()
     expect(parse('create_note', '{not json')).toBeNull()
     expect(parse('create_note', '[]')).toBeNull()
+  })
+})
+
+describe('the tutor\'s own notes on a lesson', () => {
+  it('is a tool, apart from the ones the student approves', () => {
+    expect((lessonStateTool(4000) as { name: string }).name).toBe(LESSON_STATE_TOOL)
+    expect(toolDefinitions().map(t => (t as { name: string }).name)).not.toContain(LESSON_STATE_TOOL)
+    expect(parseToolCall(LESSON_STATE_TOOL, JSON.stringify({ state: 'x' }), { courseIds: [], deckIds: [] }, 'p')).toBeNull() // never a proposal
+  })
+  it('keeps the state it is given, trimmed and within the limit, and nothing unusable', () => {
+    expect(parseLessonState(JSON.stringify({ state: '  Plan: sets, rationals. Done: sets.  ' }), 4000)).toBe('Plan: sets, rationals. Done: sets.')
+    expect(parseLessonState(JSON.stringify({ state: 'x'.repeat(9000) }), 4000)).toHaveLength(4000)
+    expect(parseLessonState(JSON.stringify({ state: '   ' }), 4000)).toBeNull()
+    expect(parseLessonState('not json', 4000)).toBeNull()
+    expect(parseLessonState(JSON.stringify({}), 4000)).toBeNull()
   })
 })
