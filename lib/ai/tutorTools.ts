@@ -140,3 +140,18 @@ export function toolDefinitions(): OpenAI.Responses.Tool[] {
     { page: { type: 'string', enum: Object.keys(PAGES), description: 'a place in the app' }, item: { type: 'string', enum: Object.keys(ITEM_PATHS) }, id: { type: 'string' } }, []))
   return tools
 }
+
+export const LESSON_STATE_TOOL = 'save_lesson_state'
+/** The tutor's own notes on a lesson it is teaching over several messages: not a proposal, kept with the chat without asking the student */
+export function lessonStateTool(max: number): OpenAI.Responses.Tool {
+  return { type: 'function', name: LESSON_STATE_TOOL, strict: false,
+    description: `Save where this lesson has got to, so you still have it in later messages. Use it while you teach a course or topic over several messages: the plan (the topics in order, taken from the student's material) and what is done and what comes next. Write the whole state each time; it replaces the last. Up to ${max} characters. Not for single questions. The student is not shown it.`,
+    parameters: { type: 'object', properties: { state: { type: 'string', description: 'Plan, covered so far, next step' } }, required: ['state'], additionalProperties: false } }
+}
+/** The state a call asks to keep, or null when it is not usable */
+export function parseLessonState(argsJson: string, max: number): string | null {
+  try {
+    const a = z.object({ state: z.string().trim().min(1) }).safeParse(JSON.parse(argsJson))
+    return a.success ? a.data.state.slice(0, max) : null
+  } catch { return null }
+}
