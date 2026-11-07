@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import type { Proposal } from '@/lib/ai/tutorTools'
 
@@ -12,6 +13,8 @@ export function ProposalCard({ proposal, onAdd, onDiscard }: { proposal: Proposa
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
 
+  // A command to go somewhere: one tap, nothing to approve or save
+  if (proposal.tool === 'open_in_app') return <Link href={proposal.args.href} className="btn inline-flex w-fit items-center gap-1.5">Open {proposal.args.label}<ArrowRight size={15} aria-hidden /></Link>
   if (proposal.state === 'discarded') return <p className="text-xs text-muted">Discarded</p>
   if (proposal.state === 'added') {
     return (
@@ -83,7 +86,7 @@ export function ProposalCard({ proposal, onAdd, onDiscard }: { proposal: Proposa
         <input className="input w-full" aria-label="Notebook name" maxLength={80} value={d.args.name} onChange={e => setDraft({ ...d, args: { ...d.args, name: e.target.value } })} />
       </>
     )
-  } else {
+  } else if (draft.tool === 'create_task') {
     const d = draft
     body = (
       <>
