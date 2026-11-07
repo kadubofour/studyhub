@@ -1,6 +1,7 @@
 'use client'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { BackNavLink } from '@/components/ui/BackNavLink'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Link2Off, Loader2, Mic, MoreHorizontal, Paperclip, Pencil, RefreshCw, Square, Trash2, X, ChevronLeft } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
@@ -306,7 +307,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-3xl flex-col gap-3 max-md:min-h-[calc(100dvh-13rem)]">
       {/* a phone gets a bar like the other screens: back to the Tutor, the name, and one ⋯ menu for everything else */}
       {showsPhone(screen) && <div className="sticky top-0 z-20 -mx-1 flex items-center gap-1 bg-bg/90 py-1 backdrop-blur md:hidden">
-        <Link href="/tutor" aria-label="Back to the Tutor" className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-accent active:bg-surface"><ChevronLeft size={26} aria-hidden /></Link>
+        <BackNavLink href="/tutor" aria-label="Back to the Tutor" className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-accent active:bg-surface"><ChevronLeft size={26} aria-hidden /></BackNavLink>
         {renaming === null
           ? <h1 className="min-w-0 flex-1 truncate font-display text-[1.35rem] font-bold leading-tight tracking-tight">{chat.title}</h1>
           : <input aria-label="Chat name" className="input min-w-0 flex-1 text-lg font-semibold" value={renaming} maxLength={200} autoFocus

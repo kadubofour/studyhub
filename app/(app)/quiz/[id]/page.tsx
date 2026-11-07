@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import { BackNavLink } from '@/components/ui/BackNavLink'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
@@ -50,7 +50,7 @@ export default function QuizPage() {
   return (
     <div className="min-h-dvh">
       <header className="flex items-center gap-2 border-b border-line px-4 py-2">
-        <Link href={quiz.note_id ? `/notes/${quiz.note_id}` : '/quiz'} className="btn-ghost" aria-label={quiz.note_id ? 'Back to note' : 'Back to quizzes'}><ArrowLeft size={17} aria-hidden /></Link>
+        <BackNavLink href={quiz.note_id ? `/notes/${quiz.note_id}` : '/quiz'} className="btn-ghost" aria-label={quiz.note_id ? 'Back to note' : 'Back to quizzes'}><ArrowLeft size={17} aria-hidden /></BackNavLink>
         <h1 className="font-medium">{quiz.title}</h1>
       </header>
       {attempt.finished_at
