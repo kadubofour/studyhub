@@ -33,12 +33,12 @@ export function MoreMenu({ onGo, onClose }: { onGo: (href: string) => void; onCl
     <>
       <div aria-hidden className="create-in fixed inset-0 z-40 bg-black/45" />
       <div ref={ref} role="menu" aria-label="More" onKeyDown={move} style={{ background: 'var(--glass-strong)' }}
-        className="create-in fixed inset-x-3 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-50 mx-auto grid max-w-md grid-cols-3 gap-2 rounded-3xl border border-line p-3 shadow-[0_20px_50px_-12px_rgb(0_0_0/0.45)]">
+        className="create-in fixed inset-x-3 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-50 mx-auto grid max-w-md grid-cols-2 gap-2 min-[400px]:grid-cols-3 rounded-3xl border border-line p-3 shadow-[0_20px_50px_-12px_rgb(0_0_0/0.45)]">
         {MORE_ITEMS.map(({ href, label, icon: Icon }) => (
           <button key={href} type="button" role="menuitem" onClick={() => { onClose(); onGo(href) }}
-            className="flex min-h-20 flex-col items-start justify-between gap-2 rounded-2xl bg-surface p-3 text-left outline-none transition active:scale-[.98] focus-visible:ring-2 focus-visible:ring-[var(--accent-solid)]">
+            className="flex min-h-20 flex-col items-start justify-between gap-2 rounded-2xl bg-surface p-2.5 text-left outline-none transition active:scale-[.98] focus-visible:ring-2 focus-visible:ring-[var(--accent-solid)]">
             <span aria-hidden className="grid size-9 place-items-center rounded-xl bg-raised text-accent"><Icon size={18} /></span>
-            <span className="text-[15px] font-medium">{label}</span>
+            <span className="text-sm font-medium">{label}</span>
           </button>
         ))}
       </div>

@@ -201,7 +201,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     </button>
   )
   // The phone dock: icons only, the current place in the student's colour and drawn bolder; names are for screen readers
-  const dockItem = 'grid size-11 place-items-center rounded-full transition active:scale-95 min-[400px]:size-12'
+  const dockItem = 'grid size-9 place-items-center rounded-full transition active:scale-95 min-[340px]:size-10 min-[400px]:size-11 min-[440px]:size-12'
   const dockLink = (href: string) => {
     const { label, icon: Icon } = PLACES.find(p => p.href === href)!
     const on = isActive(path, href)
@@ -286,7 +286,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
         <main className={immersive ? 'w-full' : `mx-auto w-full px-5 ${path.startsWith('/planner') ? 'max-w-none py-6 md:px-10 md:py-8' : `${{ focused: 'max-w-5xl md:px-12', wide: 'max-w-[1320px] md:px-10 xl:px-14', full: 'max-w-none md:px-10' }[contentWidthOf(profile.content_width)]} py-6 md:py-8`}`}>{!immersive && <EndingBanner />}{children}</main>
       </div>
       {!immersive && (
-        <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit items-center gap-1 rounded-full border border-line bg-raised px-2 py-1 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.3)] md:hidden">
+        <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit items-center gap-0.5 rounded-full border border-line bg-raised px-1.5 py-1 min-[400px]:gap-1 min-[400px]:px-2 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.3)] md:hidden">
           {DOCK.slice(0, DOCK_SPLIT).map(dockLink)}
           <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => { setMore(false); setCreating(c => (c ? null : 'dock')) }}
             className={`${dockItem} ${creating === 'dock' ? 'text-accent-solid' : 'text-fg'}`}>
