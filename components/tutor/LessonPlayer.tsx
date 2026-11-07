@@ -181,6 +181,16 @@ export function LessonPlayer({ script, voices, onDelete }: { script: LessonScrip
           ))}
         </div>
       </div>
+      {!!script.takeaways?.length && !wide && (
+        <div className="border-t border-line bg-surface px-4 py-3" data-takeaways>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">Key takeaways</h4>
+          <ul className="mt-1.5 space-y-1.5 text-[15px] leading-relaxed">
+            {script.takeaways.map((t, i) => (
+              <li key={i} className="flex gap-2"><span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--accent-solid)]" /><span>{t}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }

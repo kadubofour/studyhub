@@ -5,6 +5,15 @@ const el = (id: string, over: Record<string, unknown> = {}) => ({ id, kind: 'box
 const steps = (...s: [string, string[], string[]?][]) => s.map(([narration, show, focus]) => ({ narration, show, focus: focus ?? [] }))
 
 describe('cleaning a lesson the AI wrote', () => {
+  it('keeps a few short plain takeaways, and none when there are none', () => {
+    const base = { elements: [el('a')], steps: steps(['One.', ['a']], ['Two.', []]) }
+    const l = cleanLesson({ ...base, takeaways: ['  Area is $x^2$.  ', '', 'b', 'c', 'd', 'e', 'f', 'x'.repeat(500)] })
+    expect(l.takeaways).toHaveLength(5)
+    expect(l.takeaways![0]).toBe('Area is x².')
+    expect(cleanLesson({ ...base, takeaways: ['y'.repeat(500)] }).takeaways![0].length).toBeLessThanOrEqual(180)
+    expect(cleanLesson(base).takeaways).toBeUndefined()
+    expect(cleanLesson({ ...base, takeaways: 'nope' }).takeaways).toBeUndefined()
+  })
   it('keeps a good lesson as it is', () => {
     const l = cleanLesson({ title: 'The Krebs cycle', elements: [el('a'), el('b', { x: 60 })], steps: steps(['First.', ['a']], ['Then.', ['b'], ['a']]) })
     expect(l.title).toBe('The Krebs cycle')
