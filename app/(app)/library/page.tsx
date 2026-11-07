@@ -291,6 +291,7 @@ export default function LibraryPage() {
           {/* Notes and Lectures live in the Library now: a note is written and a lecture recorded from here */}
           <NewNoteButton courseId={courseName ? course : null} className="btn" />
           <Link href="/lectures/record" className="btn"><Mic size={14} aria-hidden />Record lecture</Link>
+          <Link href="/lectures" className="btn-ghost text-accent">All lectures</Link>
           {!empty && (
             <>
               <button type="button" className="btn" onClick={() => setDialog('upload')}><Upload size={14} aria-hidden />Upload file</button>

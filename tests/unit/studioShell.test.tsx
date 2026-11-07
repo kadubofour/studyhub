@@ -197,10 +197,20 @@ describe('on a phone', () => {
     await shell()
     const nav = screen.getByRole('navigation', { name: 'Main' })
     const dock = within(nav)
-    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Practice', 'Tutor'])
+    expect(Array.from(nav.children).map(el => el.getAttribute('aria-label'))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Practice', 'Tutor', 'More'])
     expect(dock.getByRole('link', { name: 'Library' }).getAttribute('aria-current')).toBe('page') // /notes is inside the Library
     fireEvent.click(dock.getByRole('button', { name: 'Create new' }))
     expect(screen.getByRole('menu', { name: 'Create' })).toBeTruthy()
+  })
+  it('has a More tab holding the places the dock has no room for, and closing Create when it opens', async () => {
+    path = '/home'
+    await shell()
+    const dock = within(screen.getByRole('navigation', { name: 'Main' }))
+    fireEvent.click(dock.getByRole('button', { name: 'Create new' }))
+    fireEvent.click(dock.getByRole('button', { name: 'More' }))
+    expect(screen.queryByRole('menu', { name: 'Create' })).toBeNull()
+    const menu = within(screen.getByRole('menu', { name: 'More' }))
+    expect(menu.getAllByRole('menuitem').map(el => el.textContent)).toEqual(['Focus', 'Progress', 'Leaderboard', 'Courses', 'Lectures', 'Quizzes', 'Settings'])
   })
 })
 

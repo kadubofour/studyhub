@@ -2,7 +2,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { GraduationCap, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Sun } from 'lucide-react'
+import { Ellipsis, GraduationCap, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Sun } from 'lucide-react'
 import { QuizStartDialog } from '@/components/quiz/QuizStartDialog'
 import { ReminderHost } from '@/components/reminders/ReminderHost'
 import { requestReminder } from '@/lib/reminders/events'
@@ -12,6 +12,7 @@ import { UploadMaterial } from '@/components/notes/UploadMaterial'
 import { TopBar } from './TopBar'
 import { CommandPalette } from './CommandPalette'
 import { CreateMenu, type CreateAction } from './CreateMenu'
+import { MORE_ITEMS, MoreMenu } from './MoreMenu'
 import { Avatar } from '@/components/profile/Avatar'
 import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
 import type { ScanTarget } from '@/lib/ai/scan'
@@ -88,6 +89,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const [quizzing, setQuizzing] = useState(false)
   const [scanFiles, setScanFiles] = useState<File[] | undefined>(undefined)
   const [scanTarget, setScanTarget] = useState<ScanTarget | undefined>(undefined)
+  const [more, setMore] = useState(false) // the phone dock's sheet of the other places
   const [creating, setCreating] = useState<null | 'rail' | 'wide' | 'dock'>(null)
   // The sidebar: wide with names and courses, or shrunk to a rail of icons; remembered on this device
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed)
@@ -199,7 +201,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     </button>
   )
   // The phone dock: icons only, the current place in the student's colour and drawn bolder; names are for screen readers
-  const dockItem = 'grid size-12 place-items-center rounded-full transition active:scale-95'
+  const dockItem = 'grid size-11 place-items-center rounded-full transition active:scale-95 min-[400px]:size-12'
   const dockLink = (href: string) => {
     const { label, icon: Icon } = PLACES.find(p => p.href === href)!
     const on = isActive(path, href)
@@ -286,13 +288,19 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       {!immersive && (
         <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit items-center gap-1 rounded-full border border-line bg-raised px-2 py-1 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.3)] md:hidden">
           {DOCK.slice(0, DOCK_SPLIT).map(dockLink)}
-          <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => setCreating(c => (c ? null : 'dock'))}
+          <button type="button" aria-label="Create new" aria-haspopup="menu" aria-expanded={creating === 'dock'} onClick={() => { setMore(false); setCreating(c => (c ? null : 'dock')) }}
             className={`${dockItem} ${creating === 'dock' ? 'text-accent-solid' : 'text-fg'}`}>
             <Plus size={26} strokeWidth={creating === 'dock' ? 2.6 : 2} aria-hidden />
           </button>
           {DOCK.slice(DOCK_SPLIT).map(dockLink)}
+          {/* the places with no room in the dock; lit while one of them is the page */}
+          <button type="button" data-more-button aria-label="More" aria-haspopup="menu" aria-expanded={more} onClick={() => { setCreating(null); setMore(m => !m) }}
+            className={`${dockItem} ${more || MORE_ITEMS.some(m => isActive(path, m.href)) ? 'text-accent-solid' : 'text-fg'}`}>
+            <Ellipsis size={24} strokeWidth={more ? 2.6 : 2} aria-hidden />
+          </button>
         </nav>
       )}
+      {more && <MoreMenu onGo={go} onClose={() => setMore(false)} />}
       {creating && <CreateMenu from={creating} onPick={act} onClose={() => setCreating(null)} />}
       {palette && <CommandPalette items={paletteItems} onRun={run} onClose={() => setPalette(false)} />}
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
