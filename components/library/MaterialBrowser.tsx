@@ -18,6 +18,7 @@ import { notebookColor } from '@/lib/notes/notebooks'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { useCoursesChanged } from '@/lib/course/events'
 import { notebookCards, type NotebookSort } from '@/lib/library/notebookCards'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { loadLibrary, moveItems } from '@/lib/data/library'
@@ -106,6 +107,8 @@ export function MaterialBrowser({ course: fixed, embedded = false, title = 'Libr
     return () => { live = false }
   }, [])
 
+  // a course renamed or deleted from somewhere else (a right click) reads them, and what was in it, again
+  useCoursesChanged(() => { listCourses(supabase()).then(setCourses).catch(() => {}); void load() })
   const courseOf = (id: string | null) => courses.find(c => c.id === id) ?? null
   const bookOf = (id: string | null | undefined) => notebooks.find(b => b.id === id) ?? null
   // An address naming a course that is gone (or never was) shows everything instead of an empty list

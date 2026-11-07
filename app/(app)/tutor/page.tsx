@@ -12,6 +12,8 @@ import { TutorPickDialog, type TutorTarget } from '@/components/tutor/TutorPickD
 import { useLiveTutor } from '@/components/voice/LiveTutorProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { useCoursesChanged } from '@/lib/course/events'
+import { useChatsChanged } from '@/lib/tutor/events'
 import { createChat, listChatContexts, listChats, type TutorChat } from '@/lib/data/tutor'
 import { aboutLine, filterChats, type ChatContext } from '@/lib/tutor/chatList'
 import { STARTERS, starterMessage, type Starter } from '@/lib/tutor/starters'
@@ -31,13 +33,16 @@ export default function TutorPage() {
   const [picking, setPicking] = useState<null | { starter: string | null }>(null)
   const [failed, setFailed] = useState(false)
 
+  const [version, setVersion] = useState(0) // a chat or a course renamed or deleted somewhere else (a right click) reads the list again
+  useChatsChanged(() => setVersion(v => v + 1))
+  useCoursesChanged(() => setVersion(v => v + 1))
   useEffect(() => {
     const sb = supabase()
     Promise.all([listChats(sb), listCourses(sb)]).then(async ([c, cs]) => {
       setChats(c); setCourses(cs)
       setContexts(await listChatContexts(sb, c).catch(() => ({}))) // what each is about is a nicety: the list works without it
-    }).catch(() => setChats([]))
-  }, [])
+    }).catch(() => setChats(prev => prev ?? []))
+  }, [version])
 
   async function open(input: Parameters<typeof createChat>[1], message?: string) {
     setFailed(false)

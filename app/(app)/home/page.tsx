@@ -10,6 +10,7 @@ import { useSaver } from '@/components/providers/ToastProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { useCoursesChanged } from '@/lib/course/events'
 import { greetingFont } from '@/lib/appearance'
 import { useLook } from '@/components/providers/useLook'
 import { HeroFocus } from '@/components/home/HeroFocus'
@@ -86,6 +87,8 @@ export default function HomePage() {
       setCourses(c); setTasks(t); setClasses(cl); setDue(d); setDoneBefore(done); setWeek(dailyMinutes(sessions, tz))
     })
   }, [tz])
+  // A course renamed or deleted from somewhere else (a right click) reads them again
+  useCoursesChanged(() => { listCourses(supabase()).then(setCourses).catch(() => {}) })
   // Course material is read on its own, so a slow list never holds up the rest of Home
   useEffect(() => {
     const sb = supabase()

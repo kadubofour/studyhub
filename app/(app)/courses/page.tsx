@@ -10,6 +10,7 @@ import { CourseMark, PhoneGroup, PhoneRow } from '@/components/ui/PhoneList'
 import { useScreen } from '@/lib/ui/useScreen'
 import { NewCourseButton } from '@/components/quick/NewCourseButton'
 import { supabase } from '@/lib/supabase/client'
+import { useCoursesChanged } from '@/lib/course/events'
 import { listCourses } from '@/lib/data/courses'
 import { loadLibrary } from '@/lib/data/library'
 import { summaryLine } from '@/lib/course/summary'
@@ -37,6 +38,8 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[] | null>(null)
   const [items, setItems] = useState<LibraryItem[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [version, setVersion] = useState(0) // a course renamed or deleted somewhere else (a right click) reads the list again
+  useCoursesChanged(() => setVersion(v => v + 1))
 
   useEffect(() => {
     let live = true
@@ -44,7 +47,7 @@ export default function CoursesPage() {
     // What is in each course is a nice-to-have: the list shows without it
     loadLibrary(supabase(), new Date()).then(l => { if (live) setItems(l) }).catch(() => { if (live) setItems([]) })
     return () => { live = false }
-  }, [])
+  }, [version])
 
   if (all) return <div><Tabs current="all" /><MaterialBrowser title="All material" /></div>
   if (failed) return <div><PageHeader title="Courses" /><p role="alert" className="text-sm text-danger">Could not load your courses. Check your connection.</p></div>

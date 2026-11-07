@@ -14,6 +14,7 @@ import { CommandPalette } from './CommandPalette'
 import { CreateMenu, type CreateAction } from './CreateMenu'
 import { MORE_ITEMS, MoreMenu } from './MoreMenu'
 import { ShortcutsDialog } from './ShortcutsDialog'
+import { QuickActions } from './QuickActions'
 import { isTyping, nextKey, type KeyState } from '@/lib/shell/shortcuts'
 import { Avatar } from '@/components/profile/Avatar'
 import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
@@ -331,6 +332,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       )}
       {more && <MoreMenu onGo={go} onClose={() => setMore(false)} />}
       {creating && <CreateMenu from={creating} onPick={act} onClose={() => setCreating(null)} />}
+      <QuickActions go={go} />
       <ShortcutsDialog open={shortcuts} onClose={() => setShortcuts(false)} />
       {palette && <CommandPalette items={paletteItems} onRun={run} onClose={() => setPalette(false)} />}
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
