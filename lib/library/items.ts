@@ -1,5 +1,8 @@
 import type { Notebook } from '@/lib/types'
 
+/** What material with no course is called. The Library's course bar already says this; kept in one place so it can be changed once. */
+export const NO_COURSE_LABEL = 'Unsorted'
+
 export type Kind = 'note' | 'deck' | 'lecture' | 'quiz' | 'chat' | 'file'
 export type LibraryItem = { kind: Kind; id: string; title: string; course_id: string | null; at: string; meta: string; href: string; due?: number; notebook_id?: string | null; /** What is inside, in a line: a note's first words, the note a quiz is from */ blurb?: string }
 // course: 'all', 'none' (not in any course) or a course id; folder: the notebook open, if one is
@@ -42,14 +45,15 @@ const browsing = (v: View) => v.kind === null && !v.q.trim()
 const filed = (i: LibraryItem) => i.kind === 'note' && !!i.notebook_id
 
 // The folders shown while browsing, by name, with how many notes each holds in the course shown.
-// An empty notebook shows under All (so a new one can be found), not under a course it has nothing in.
+// An empty notebook shows under All (so a new one can be found), and under the course it was made for, but not under any other.
 export function folders(items: LibraryItem[], notebooks: Notebook[], v: View): { notebook: Notebook; count: number }[] {
   if (v.folder || !browsing(v)) return []
   const count: Record<string, number> = {}
   for (const i of items) if (filed(i) && inCourse(i, v.course)) count[i.notebook_id!] = (count[i.notebook_id!] ?? 0) + 1
   return notebooks
     .map(notebook => ({ notebook, count: count[notebook.id] ?? 0 }))
-    .filter(f => v.course === 'all' || f.count > 0)
+    // a notebook set to this course shows in it even while empty, so one made from the course's own page is not lost
+    .filter(f => v.course === 'all' || f.count > 0 || (v.course !== 'none' && f.notebook.course_id === v.course))
     .sort((a, b) => a.notebook.name.localeCompare(b.notebook.name, undefined, { sensitivity: 'base', numeric: true }))
 }
 

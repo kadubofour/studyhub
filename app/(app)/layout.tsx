@@ -9,6 +9,7 @@ import { AppShell } from '@/components/shell/AppShell'
 import { FocusProvider } from '@/components/providers/FocusProvider'
 import { ReminderProvider } from '@/components/providers/ReminderProvider'
 import { AmbientPlayer } from '@/components/focus/AmbientPlayer'
+import { NavTracker } from '@/components/shell/NavTracker'
 import { LiveTutorProvider } from '@/components/voice/LiveTutorProvider'
 import type { Profile } from '@/lib/types'
 import type { Metadata } from 'next'
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <FocusProvider>
             <ReminderProvider>
               <AmbientPlayer />
+              <NavTracker />
               <LiveTutorProvider>
                 <AppShell initialCollapsed={(await cookies()).get(SIDEBAR_COOKIE)?.value === '1'}>{children}</AppShell>
               </LiveTutorProvider>

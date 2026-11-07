@@ -9,7 +9,7 @@ const mcq = (p: string) => ({ type: 'mcq', prompt: p, options: ['a', 'b', 'c', '
 
 describe('tool definitions', () => {
   it('always offers the quiz tool, with or without a note', () => {
-    expect(toolDefinitions().map(t => (t as { name: string }).name)).toEqual(['create_note', 'create_flashcards', 'create_quiz', 'create_task', 'create_class', 'create_notebook'])
+    expect(toolDefinitions().map(t => (t as { name: string }).name)).toEqual(['create_note', 'create_flashcards', 'create_quiz', 'create_task', 'create_class', 'create_notebook', 'open_in_app'])
   })
 })
 

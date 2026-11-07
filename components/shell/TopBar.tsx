@@ -108,16 +108,16 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
         <span role="status" aria-live="polite" className="sr-only">
           {burst ? (burst.levelUp ? `Level up! You reached level ${burst.levelUp} (+${burst.gained} XP)` : `+${burst.gained} XP`) : ''}
         </span>
-        {xp && xp.streak > 0 && <span role="img" aria-label={`${xp.streak}-day streak`} className={`${extra} tile-c text-fg @min-[30rem]:inline-flex`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></span>}
+        {xp && xp.streak > 0 && <Link href="/progress" aria-label={`${xp.streak}-day streak`} className={`${extra} tile-c text-fg @min-[30rem]:inline-flex`}><Flame size={15} aria-hidden /><span aria-hidden>{xp.streak}</span></Link>}
         {xp && (
-          <span className={`${chip} bg-surface text-fg`}>
+          <Link href="/progress" className={`${chip} bg-surface text-fg`}>
             <Zap size={15} className="text-accent" aria-hidden /><span>Level {xp.level.level}</span>
             {/* the progress for screen readers always; drawn as a small bar when the top bar has room */}
             <span role="progressbar" aria-label={`Progress to level ${xp.level.level + 1}`} aria-valuenow={xp.level.into} aria-valuemin={0} aria-valuemax={xp.level.span} aria-valuetext={`${xp.level.into} of ${xp.level.span} XP`} className="sr-only" />
             <span aria-hidden className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-line @min-[40rem]:block">
               <span className="block h-full rounded-full bg-accent-solid" style={{ width: `${Math.round((xp.level.into / xp.level.span) * 100)}%` }} />
             </span>
-          </span>
+          </Link>
         )}
       </div>
       {/* a phone has no sidebar: the student's profile is at the end of this bar */}

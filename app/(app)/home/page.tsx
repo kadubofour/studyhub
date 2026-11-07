@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, FolderOpen, BookOpen } from 'lucide-react'
+import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -42,7 +42,6 @@ import { nextOccurrence, type MyReminder } from '@/lib/reminders/mine'
 // Home's shortcuts on a phone, which has no sidebar (Profile is the avatar beside the greeting)
 const SHORTCUTS = [
   { href: '/courses', label: 'Courses', icon: BookOpen },
-  { href: '/library', label: 'Library', icon: FolderOpen },
   { href: '/progress', label: 'Progress', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

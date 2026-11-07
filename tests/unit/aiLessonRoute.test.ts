@@ -34,7 +34,7 @@ vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/
 import { POST } from '@/app/api/ai/lesson/route'
 
 const el = (id: string) => ({ id, kind: 'box', x: 10, y: 10, w: 30, h: 16, x2: 0, y2: 0, text: id, color: 'accent' })
-const aiLesson = { title: 'The Krebs cycle', elements: [el('a'), el('b')], steps: [{ narration: 'First, acetyl-CoA joins in.', show: ['a'], focus: ['a'] }, { narration: 'Then it turns.', show: ['b'], focus: [] }] }
+const aiLesson = { title: 'The Krebs cycle', takeaways: ['The cycle turns.'], elements: [el('a'), el('b')], steps: [{ narration: 'First, acetyl-CoA joins in.', show: ['a'], focus: ['a'] }, { narration: 'Then it turns.', show: ['b'], focus: [] }] }
 const call = (body: object = { chatId: CHAT, messageId: REPLY }) => POST(new Request('http://x', { method: 'POST', body: JSON.stringify(body) }))
 const fns = () => adminRpc.mock.calls.map(c => `${c[0]}${(c[1] as { p_cost?: number })?.p_cost !== undefined ? `:${(c[1] as { p_cost: number }).p_cost}` : ''}`)
 
@@ -104,7 +104,7 @@ describe('POST /api/ai/lesson', () => {
     expect(fns()).toEqual([])
   })
   it('says so when nothing usable comes back, and gives the actions back', async () => {
-    parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { title: 'x', elements: [], steps: [] } })
+    parse.mockResolvedValue({ status: 'completed', output: [], output_parsed: { title: 'x', elements: [], steps: [], takeaways: [] } })
     const res = await call()
     expect(res.status).toBe(422)
     expect(await res.json()).toEqual({ error: 'empty' })

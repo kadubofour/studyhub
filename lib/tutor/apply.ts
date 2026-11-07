@@ -51,5 +51,7 @@ export async function applyProposal(
       const b = await createNotebook(sb, p.args.name, p.args.course_id ?? chat.course_id)
       return { itemId: b.id, itemKind: 'notebook' }
     }
+    case 'open_in_app':
+      throw new Error('Opening a page saves nothing') // the card links to it; it is never added
   }
 }

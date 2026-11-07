@@ -9,6 +9,8 @@ export const MIN_STEPS = 2
 export const MAX_ELEMENTS = 40
 export const MAX_NARRATION = 420
 export const MAX_TEXT = 60
+export const MAX_TAKEAWAYS = 5
+export const MAX_TAKEAWAY = 180
 
 export const COLORS = ['accent', 'blue', 'amber', 'green', 'muted'] as const
 export const KINDS = ['box', 'circle', 'text', 'arrow'] as const
@@ -19,7 +21,8 @@ export type LessonKind = (typeof KINDS)[number]
 export interface LessonElement { id: string; kind: LessonKind; x: number; y: number; w: number; h: number; x2: number; y2: number; text: string; color: LessonColor }
 /** What the step reveals, what it points at, what is said, and where the voice is stored once made */
 export interface LessonStep { narration: string; show: string[]; focus: string[]; audio?: string | null }
-export interface LessonScript { title: string; elements: LessonElement[]; steps: LessonStep[] }
+/** takeaways: the few things to remember, shown in a card under the lesson (absent on lessons made before the card) */
+export interface LessonScript { title: string; elements: LessonElement[]; steps: LessonStep[]; takeaways?: string[] }
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -53,7 +56,7 @@ export function plainMaths(text: string): string {
  * What the AI wrote, made safe to draw: places kept on the board, text kept short, duplicate ids and unknown ids dropped, and any
  * element no step reveals shown by the last one, so nothing written is lost. Throws EmptyLessonError when there is no lesson in it.
  */
-export function cleanLesson(raw: { title?: unknown; elements?: unknown; steps?: unknown }): LessonScript {
+export function cleanLesson(raw: { title?: unknown; elements?: unknown; steps?: unknown; takeaways?: unknown }): LessonScript {
   const seen = new Set<string>()
   const elements: LessonElement[] = []
   for (const e of Array.isArray(raw.elements) ? raw.elements : []) {
@@ -87,7 +90,8 @@ export function cleanLesson(raw: { title?: unknown; elements?: unknown; steps?: 
   for (const s of steps) s.show = s.show.filter(id => !revealed.has(id) && !!revealed.add(id))
   const left = elements.filter(e => !revealed.has(e.id)).map(e => e.id)
   if (left.length) steps[steps.length - 1].show.push(...left)
-  return { title: words(raw.title, 120) || 'Visual lesson', elements, steps }
+  const takeaways = (Array.isArray(raw.takeaways) ? raw.takeaways : []).map(t => plainMaths(words(t, MAX_TAKEAWAY))).filter(Boolean).slice(0, MAX_TAKEAWAYS)
+  return { title: words(raw.title, 120) || 'Visual lesson', elements, steps, ...(takeaways.length ? { takeaways } : {}) }
 }
 
 /** For each element, the step that first shows it */

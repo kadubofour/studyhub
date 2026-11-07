@@ -18,6 +18,8 @@ const push = vi.fn()
 const requestUpload = vi.fn()
 const createChat = vi.fn(async (..._a: unknown[]) => ({ id: 'chat1' }))
 const startRevision = vi.fn(async (..._a: unknown[]) => '/tutor/rev1?ask=Quiz')
+// what is in the course is the browser's own business (tests/unit/libraryPage.test.tsx)
+vi.mock('@/components/library/MaterialBrowser', () => ({ MaterialBrowser: (p: { course: string; embedded?: boolean }) => <div data-testid="browser" data-course={p.course} data-embedded={String(!!p.embedded)} /> }))
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'bio' }), useRouter: () => ({ push }) }))
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/lib/data/coursePage', () => ({ loadCoursePage: async () => { loadCalls++; if (loadError) throw new Error('offline'); return page } }))
@@ -50,11 +52,11 @@ describe('Course page', () => {
     expect(screen.getByRole('heading', { name: 'Biology' })).toBeTruthy()
     expect(screen.getByText('1 note · 2 decks · 1 lecture')).toBeTruthy()
   })
-  it('lists each kind that has items, with a link to each', async () => {
+  it('shows everything in the course through the material browser, scoped to it', async () => {
     await open()
-    expect(screen.getByRole('link', { name: /Krebs cycle/ }).getAttribute('href')).toBe('/note/n1')
-    expect(screen.getByRole('heading', { name: 'Decks' })).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: 'Quizzes' })).toBeNull()
+    const b = screen.getByTestId('browser')
+    expect(b.getAttribute('data-course')).toBe('bio')
+    expect(b.getAttribute('data-embedded')).toBe('true')
   })
   it('totals the cards due across decks and links to review', async () => {
     await open()
@@ -91,23 +93,15 @@ describe('Course page', () => {
     expect(screen.getByRole('button', { name: 'New note' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'New deck' }).getAttribute('href')).toBe('/flashcards?new=1&course=bio')
   })
-  it('Upload opens the upload dialog and Library opens on this course', async () => {
+  it('Upload opens the upload dialog, and there is no second way into a Library', async () => {
     await open()
     await click(screen.getByRole('button', { name: /Upload/ }))
     expect(requestUpload).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('link', { name: /Open in Library/ }).getAttribute('href')).toBe('/library?course=bio')
+    expect(screen.queryByRole('link', { name: /Library/ })).toBeNull()
   })
-  it('offers See all when a kind has more than five', async () => {
-    page = FULL()
-    page!.items = Array.from({ length: 7 }, (_, i) => item('note', `n${i}`, `Note ${i}`, `2026-10-0${i + 1}T00:00:00Z`))
-    await open()
-    expect(screen.getByRole('link', { name: 'See all 7 in Library' }).getAttribute('href')).toBe('/library?course=bio')
-    expect(screen.queryByRole('link', { name: 'Note 0' })).toBeNull()
-  })
-  it('an empty course says what goes in it', async () => {
+  it('an empty course still has its actions and no due or exam strips', async () => {
     page = { course, items: [], topics: [], exam: null }
     await open()
-    expect(screen.getByText('Nothing here yet')).toBeTruthy()
     expect(screen.getByRole('button', { name: /Upload/ })).toBeTruthy()
     expect(screen.queryByText(/cards due/)).toBeNull()
   })
@@ -120,13 +114,13 @@ describe('Course page', () => {
     page = null
     await open()
     expect(screen.getByText(/couldn.t find that course/i)).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Go to Library' }).getAttribute('href')).toBe('/library')
+    expect(screen.getByRole('link', { name: 'Go to Courses' }).getAttribute('href')).toBe('/courses')
   })
-  it('keeps the header and says so when the items could not load', async () => {
+  it('keeps the header when the summary of what is in it could not load', async () => {
     page!.items = null
     await open()
     expect(screen.getByRole('heading', { name: 'Biology' })).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toMatch(/Could not load/)
+    expect(screen.getByTestId('browser')).toBeTruthy()
   })
   it('Review opens the one deck that is due, so the count matches what is reviewed', async () => {
     page!.items = [item('deck', 'd1', 'Cells', '2026-10-09T10:00:00Z', { due: 3 }), item('deck', 'd2', 'Genetics', '2026-10-08T10:00:00Z', { due: 0 })]
@@ -136,16 +130,6 @@ describe('Course page', () => {
   it('with several decks due, Review is labelled as covering every course', async () => {
     await open()
     expect(screen.getByRole('link', { name: 'Review all courses' }).getAttribute('href')).toBe('/review')
-  })
-  it('a failed retry keeps the header and says so, and a double tap loads once', async () => {
-    page!.items = null
-    await open()
-    loadError = true; loadCalls = 0
-    const b = screen.getByRole('button', { name: 'Try again' })
-    await act(async () => { fireEvent.click(b); fireEvent.click(b) })
-    expect(loadCalls).toBe(1)
-    expect(screen.getByRole('heading', { name: 'Biology' })).toBeTruthy()
-    expect(screen.getByText(/Could not reload/)).toBeTruthy()
   })
   it('offers retry when the whole page cannot load', async () => {
     loadError = true

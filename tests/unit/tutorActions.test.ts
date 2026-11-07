@@ -54,3 +54,27 @@ describe('what the model is offered', () => {
     expect(tutorInstructions(false)).toMatch(/weekly class for their timetable or a notebook/)
   })
 })
+
+describe('the tutor can offer to open a place in the app', () => {
+  const DECK = '33333333-3333-4333-8333-333333333333'
+  const withDeck = { courseIds: [COURSE], deckIds: [DECK] }
+  const open = (args: unknown, c = withDeck) => parseToolCall('open_in_app', JSON.stringify(args), c, 'p1')
+  it('to a page, with a fixed address the model cannot choose', () => {
+    expect(open({ page: 'planner' })).toEqual({ id: 'p1', state: 'pending', tool: 'open_in_app', args: { href: '/planner', label: 'Planner' } })
+    expect(open({ page: 'quizzes' })).toMatchObject({ args: { href: '/quiz', label: 'Quizzes' } })
+    expect(open({ page: 'https://evil.example' })).toBeNull()
+    expect(open({ page: '/settings' })).toBeNull()
+  })
+  it('to one of the student\'s items by id, and a course or deck only if it is theirs', () => {
+    expect(open({ item: 'note', id: OTHER })).toMatchObject({ args: { href: `/notes/${OTHER}` } })
+    expect(open({ item: 'deck', id: DECK })).toMatchObject({ args: { href: `/flashcards/${DECK}` } })
+    expect(open({ item: 'deck', id: OTHER })).toBeNull()
+    expect(open({ item: 'course', id: OTHER })).toBeNull()
+    expect(open({ item: 'note', id: '../../x' })).toBeNull()
+    expect(open({})).toBeNull()
+  })
+  it('is a tool the model can call, and opening saves nothing', async () => {
+    expect(toolDefinitions().map(t => (t as { name: string }).name)).toContain('open_in_app')
+    await expect(applyProposal({} as never, open({ page: 'home' })!, { course_id: null, note_id: null })).rejects.toThrow()
+  })
+})

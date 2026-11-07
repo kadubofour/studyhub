@@ -29,6 +29,15 @@ const shown = () => [...document.querySelectorAll('[data-element]')].map(e => e.
 const voices = ['http://v/0.mp3', 'http://v/1.mp3', 'http://v/2.mp3']
 
 describe('the lesson player', () => {
+  it('shows the key takeaways under the lesson, and nothing when a lesson has none', () => {
+    const withCard = cleanLesson({ ...script, takeaways: ['Citrate comes first.', 'The cycle turns again.'] })
+    const { unmount } = render(<LessonPlayer script={withCard} voices={voices} />)
+    expect(screen.getByText('Key takeaways')).toBeTruthy()
+    expect(screen.getByText('Citrate comes first.')).toBeTruthy()
+    unmount()
+    render(<LessonPlayer script={script} voices={voices} />)
+    expect(screen.queryByText('Key takeaways')).toBeNull()
+  })
   it('starts at the first step, with only what it shows, and says it in words', () => {
     render(<LessonPlayer script={script} voices={voices} />)
     expect(screen.getByRole('region', { name: 'Lesson: The Krebs cycle' })).toBeTruthy()

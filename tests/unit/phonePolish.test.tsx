@@ -66,7 +66,7 @@ describe('the Look picker on a phone', () => {
 describe('the dock on a phone', () => {
   it('is a small pill of icons, with each place named for screen readers', () => {
     const src = fs.readFileSync('components/shell/AppShell.tsx', 'utf8')
-    expect(src).toContain('mx-auto flex w-fit items-center gap-1 rounded-full')
+    expect(src).toContain('mx-auto flex w-fit items-center gap-0.5 rounded-full')
     expect(src).toContain('aria-label={label}')
     expect(src).not.toContain('{short ?? label}')
   })
@@ -116,9 +116,9 @@ describe('the focus timer on Home, on a phone', () => {
 })
 
 describe('Library filters on a phone', () => {
-  const src = () => fs.readFileSync('app/(app)/library/page.tsx', 'utf8')
+  const src = () => fs.readFileSync('components/library/MaterialBrowser.tsx', 'utf8')
   it('a phone has its own search, and a computer a column of search, kinds and order that stays in view', () => {
-    expect(src()).toContain('{phone && <PhoneSearch label="Search the library"')
+    expect(src()).toContain("{phone && <PhoneSearch label={fixed ? 'Search this course' : 'Search the library'}")
     expect(src()).toContain('<aside aria-label="Find and filter" className="mb-5 space-y-5 lg:sticky lg:top-6 lg:mb-0 lg:self-start">')
     expect(src()).toContain('<div data-filter-row className="flex flex-wrap items-center gap-2">')
   })
@@ -165,7 +165,7 @@ describe('the soft button', () => {
 
 describe('one look for every choice, on a phone and on a computer', () => {
   it('tabs, filters, view switches and sections use the same style at the same size on a phone as on a computer', () => {
-    const files = ['app/(app)/planner/page.tsx', 'app/(app)/focus/page.tsx', 'app/(app)/library/page.tsx', 'components/notes/study/StudyPanel.tsx', 'components/calendar/CalendarToolbar.tsx',
+    const files = ['app/(app)/planner/page.tsx', 'app/(app)/focus/page.tsx', 'components/library/MaterialBrowser.tsx', 'components/notes/study/StudyPanel.tsx', 'components/calendar/CalendarToolbar.tsx',
       'components/quiz/QuizStartDialog.tsx', 'components/ui/ViewOptions.tsx', 'components/ui/ChoiceChips.tsx', 'components/settings/SettingsRail.tsx', 'components/planner/CourseBar.tsx', 'components/planner/TaskRail.tsx']
     for (const f of files) expect(fs.readFileSync(f, 'utf8'), f).toMatch(/[`"']choice /)
     const css = fs.readFileSync('app/globals.css', 'utf8')

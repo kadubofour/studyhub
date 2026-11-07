@@ -39,7 +39,7 @@ vi.mock('@/lib/data/notebooks', () => ({
   createNotebook: (sb: unknown, n: string) => createNotebook(sb, n), renameNotebook: (sb: unknown, id: string, n: string) => renameNotebook(sb, id, n),
   deleteNotebook: (sb: unknown, id: string) => deleteNotebook(sb, id), moveNotes: (...a: unknown[]) => moveNotes(...a),
 }))
-import LibraryPage from '@/app/(app)/library/page'
+import { MaterialBrowser, MaterialBrowser as LibraryPage } from '@/components/library/MaterialBrowser'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 
@@ -369,5 +369,45 @@ describe('Library', () => {
       await open()
       expect(screen.queryByRole('list', { name: 'Notebooks' })).toBeNull()
     })
+  })
+})
+
+describe('Material browser inside a course', () => {
+  const openIn = async (course: string) => { await act(async () => { render(<ToastProvider><ConfirmProvider><MaterialBrowser course={course} embedded /></ConfirmProvider></ToastProvider>) }) }
+  it('shows only that course\'s things, with no course bar and no page header of its own', async () => {
+    await openIn('bio')
+    const text = rows().join('|')
+    expect(text).toContain('Krebs cycle'); expect(text).toContain('Cells'); expect(text).toContain('Week 3 lecture')
+    expect(text).not.toContain('Spanish verbs'); expect(text).not.toContain('Loose thoughts')
+    expect(screen.queryByRole('group', { name: 'Courses' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Library', level: 1 })).toBeNull()
+    expect(screen.getByLabelText('Search this course')).toBeTruthy()
+  })
+  it('shows what is in no course for "none", the same way', async () => {
+    await openIn('none')
+    const text = rows().join('|')
+    expect(text).toContain('Loose thoughts'); expect(text).toContain('Why the matrix?')
+    expect(text).not.toContain('Krebs cycle')
+  })
+  it('a notebook made here starts in this course', async () => {
+    await openIn('bio')
+    await click(screen.getByRole('button', { name: /New notebook/ }))
+    const dialog = screen.getByRole('dialog', { name: 'New notebook', hidden: true })
+    expect(within(dialog).getByText(/Biology/)).toBeTruthy()
+  })
+  it('shows a notebook and the notes in it even when its notes are of another course too, so nothing disappears', async () => {
+    items = [item('note', 'a', 'Cell notes', 'bio', '2026-10-10T10:00:00Z'), { ...item('note', 'b', 'Verb notes', 'lang', '2026-10-09T10:00:00Z'), notebook_id: 'mix' }, { ...item('note', 'c', 'Mixed bio', 'bio', '2026-10-08T10:00:00Z'), notebook_id: 'mix' }]
+    notebooks = [{ id: 'mix', name: 'Mixed', created_at: '2026-10-01T00:00:00Z' }]
+    await openIn('bio')
+    expect(rows().join('|')).toContain('Cell notes')
+    expect(rows().join('|')).toContain('Mixed bio')
+    expect(screen.getByRole('link', { name: /Open Mixed, 1 note/ })).toBeTruthy()
+  })
+  it('shows an empty notebook made for this course, and not one made for another', async () => {
+    items = [item('note', 'a', 'Cell notes', 'bio', '2026-10-10T10:00:00Z')]
+    notebooks = [{ id: 'mine', name: 'Genetics', created_at: '', course_id: 'bio' }, { id: 'theirs', name: 'Verbs', created_at: '', course_id: 'lang' }] as never
+    await openIn('bio')
+    expect(screen.getByRole('link', { name: /Open Genetics, 0 notes/ })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /Open Verbs/ })).toBeNull()
   })
 })

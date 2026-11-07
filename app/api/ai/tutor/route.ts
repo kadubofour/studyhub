@@ -74,11 +74,14 @@ export async function POST(request: Request) {
   const refuse = async (status: number, error: string) => { await releaseTutorMessage(user.id); return bad(status, error) }
   // Files kept in the Library, read for the first time here if they need it, so the search below can find them
   const kept = await tutorFiles(sb, { courseId, message })
-  const [{ data: found }, { data: courses }, { data: decks }, { data: past }] = await Promise.all([
-    sb.rpc('tutor_find_material', { p_query: message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' '), p_limit: 5 }),
+  const { data: past } = await sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12)
+  // A follow-up such as "why?" says little by itself, so the student's last two questions are searched along with it
+  const earlier = ((past ?? []) as { role: string; content: string }[]).filter(h => h.role === 'user').slice(0, 2).map(h => h.content.slice(0, 300))
+  const asked = message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' ')
+  const [{ data: found }, { data: courses }, { data: decks }] = await Promise.all([
+    sb.rpc('tutor_find_material', { p_query: [asked, ...earlier].join(' ').slice(0, 1000), p_limit: 8 }),
     sb.from('courses').select('id,name'),
     sb.from('decks').select('id,name'),
-    sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
   ])
   const matches = ((found ?? []) as { kind: Material['kind']; id: string; title: string; snippet: string }[])
     .map(m => ({ kind: m.kind, id: m.id, title: m.title, text: m.snippet }))

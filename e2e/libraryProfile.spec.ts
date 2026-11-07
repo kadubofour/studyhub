@@ -11,7 +11,7 @@ test('Library: find loose material under Unsorted, move it into a course, and se
   await expect(page.getByText('Cells')).toBeVisible()
 
   await openLibraryMaterials(page)
-  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'All material' })).toBeVisible()
   const list = page.getByRole('region', { name: 'Library items' }) // each kind in its own section
   await expect(list.getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
   await expect(list.getByRole('link', { name: /Cells/ })).toBeVisible()
@@ -40,7 +40,7 @@ test('Library opens on a course named in the address, and a new student is told 
   await page.goto('/library')
   await expect(page.getByText('No notebooks yet. Use Create to make one.')).toBeVisible()
   await noteWithText(page, 'Enzymes')
-  await page.goto('/library?course=none')
+  await page.goto('/library?course=none') // the old address still opens what is in no course
   await expect(page.getByRole('link', { name: /Enzymes/ })).toBeVisible()
   await page.getByRole('link', { name: /Enzymes/ }).click()
   await expect(page).toHaveURL(/\/notes\/[0-9a-f-]{36}$/)
@@ -70,11 +70,11 @@ test('Profile: shows who and how far, and the school, programme and colour can b
   }
 })
 
-test('the Library and Profile are reachable from the sidebar', async ({ page, isMobile }) => {
+test('Courses and Profile are reachable from the sidebar', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the sidebar is for wider screens')
   await signUp(page)
-  await page.getByRole('link', { name: 'Library' }).first().click()
-  await expect(page).toHaveURL(/\/library$/)
+  await page.getByRole('link', { name: 'Courses' }).first().click()
+  await expect(page).toHaveURL(/\/courses$/)
   await page.getByRole('link', { name: 'Ama', exact: true }).click()
   await expect(page).toHaveURL(/\/profile$/)
 })

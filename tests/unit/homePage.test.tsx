@@ -47,10 +47,10 @@ describe('Home, as it was, in the new design', () => {
     expect(hero.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/focus')
     expect(screen.getByRole('region', { name: 'Welcome' }).className).toContain('hero-page')
   })
-  it('has the phone shortcuts in the hero: Courses, Library, Progress and Settings (the profile is in the top bar)', async () => {
+  it('has the phone shortcuts in the hero: Courses, Progress and Settings (the profile is in the top bar)', async () => {
     await home()
     const hero = within(screen.getByRole('region', { name: 'Welcome' }))
-    for (const [name, href] of [['Courses', '/courses'], ['Library', '/library'], ['Progress', '/progress'], ['Settings', '/settings']])
+    for (const [name, href] of [['Courses', '/courses'], ['Progress', '/progress'], ['Settings', '/settings']])
       expect(hero.getByRole('link', { name }).getAttribute('href')).toBe(href)
     expect(hero.queryByRole('link', { name: 'Profile' })).toBeNull()
   })

@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, BookOpen, CornerDownLeft, FileText, Layers, Mic, Search, Sparkles } from 'lucide-react'
+import { ArrowRight, BookOpen, CornerDownLeft, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Search, Sparkles } from 'lucide-react'
 import { filterPalette, type PaletteItem } from '@/lib/shell/palette'
 
 const GROUP_ICON = { 'Do': Sparkles, 'Go to': ArrowRight, 'Courses': BookOpen, 'Recent': FileText }
-const HINT_ICON: Record<string, typeof FileText> = { Note: FileText, Deck: Layers, Lecture: Mic }
+const HINT_ICON: Record<string, typeof FileText> = { Note: FileText, Deck: Layers, Lecture: Mic, Notebook: FolderOpen, Quiz: ListChecks, File: FileText, Chat: MessagesSquare }
 
 // Search or jump: one box that goes anywhere and does anything. Typing narrows the list; the arrow keys move; Enter runs; Escape closes.
 export function CommandPalette({ items, onRun, onClose }: { items: PaletteItem[]; onRun: (item: PaletteItem) => void; onClose: () => void }) {

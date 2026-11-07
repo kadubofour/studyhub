@@ -1,6 +1,5 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Check, ChevronLeft, PenLine, Redo2, Share, Type, Undo2 } from 'lucide-react'
 import { editedLine } from '@/lib/notes/noteRows'
@@ -34,6 +33,8 @@ import { listNotebooks } from '@/lib/data/notebooks'
 import { listCourses } from '@/lib/data/courses'
 import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 import { useAutosave } from '@/lib/ui/useAutosave'
+import { BackNavLink } from '@/components/ui/BackNavLink'
+import { courseHref } from '@/lib/course/home'
 import { shouldLeaveOnEscape } from '@/lib/ui/escapeToLeave'
 import { NOTES_CHANGED } from '@/lib/notes/events'
 import type { Course, EditorMode, Note, Notebook } from '@/lib/types'
@@ -120,13 +121,14 @@ function NoteEditor({ id }: { id: string }) {
   const screen = useScreen()
   // back goes to the notebook the note is in
   const notebookNow = draft ? draft.notebook_id : note?.notebook_id
-  const backHref = notebookNow ? `/notebooks/${notebookNow}` : '/library'
+  const courseNow = draft ? draft.course_id : note?.course_id
+  const backHref = notebookNow ? `/notebooks/${notebookNow}` : courseHref(courseNow)
 
   useEffect(() => {
     const sb = supabase()
     Promise.all([getNote(sb, id), listCourses(sb), listNotebooks(sb).catch(() => [])])
       .then(([n, c, b]) => { setNote(n); setDraft(n); draftRef.current = n; setCourses(c); setBooks(b) })
-      .catch(() => router.replace('/library'))
+      .catch(() => router.replace('/courses'))
   }, [id, router])
 
   function change(patch: Patch) {
@@ -294,7 +296,7 @@ function NoteEditor({ id }: { id: string }) {
       {/* A phone's top bar, as notes apps have it: back to the notes, typing or drawing, then undo, redo, share and ⋯, and Done
           while writing. The course, the tutor and Study are in the ⋯ sheet. */}
       {showsPhone(screen) && <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-0.5 bg-bg/90 px-1.5 py-1 backdrop-blur md:hidden">
-        <Link href={backHref} aria-label="Back to notebook" className="flex items-center rounded-lg py-2 pl-0.5 pr-2 text-[17px] text-accent active:opacity-60"><ChevronLeft size={26} aria-hidden />Notebook</Link>
+        <BackNavLink href={backHref} aria-label="Back to notebook" className="flex items-center rounded-lg py-2 pl-0.5 pr-2 text-[17px] text-accent active:opacity-60"><ChevronLeft size={26} aria-hidden />Notebook</BackNavLink>
         {mode === 'rich' && !reading && (
           <div role="radiogroup" aria-label="Type or draw" className="ml-1 flex rounded-full bg-surface p-0.5">
             {([[false, 'Type', Type], [true, 'Draw', PenLine]] as const).map(([pen, label, Icon]) => (
@@ -336,7 +338,7 @@ function NoteEditor({ id }: { id: string }) {
         {findOpen && <div className="basis-full px-1 pb-1"><FindBar search={search} onClose={closeFind} /></div>}
       </header>}
       {showsComputer(screen) && <header ref={headRef} className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-1.5 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur max-md:hidden sm:gap-2 md:px-6">
-        <Link href={backHref} className="btn-ghost" aria-label="Back to notebook" title="Back to the notebook (Esc)"><ArrowLeft size={17} aria-hidden /></Link>
+        <BackNavLink href={backHref} className="btn-ghost" aria-label="Back to notebook" title="Back (Esc)"><ArrowLeft size={17} aria-hidden /></BackNavLink>
         {/* File, Edit and View are for wider screens; a phone has the toolbar */}
         <div className="hidden md:block"><NoteMenuBar actions={actions} mode={mode} reading={reading} fullWidth={fullWidth} autoMath={profile.auto_math} /></div>
         {/* on a phone the course picker gives up room first, so the buttons stay on one line */}

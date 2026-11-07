@@ -4,7 +4,7 @@ import { validateQuestions } from './quiz'
 import type { Question } from '@/lib/quiz/types'
 
 export const MAX_CARDS = 30
-export type ToolName = 'create_note' | 'create_flashcards' | 'create_quiz' | 'create_task' | 'create_class' | 'create_notebook'
+export type ToolName = 'create_note' | 'create_flashcards' | 'create_quiz' | 'create_task' | 'create_class' | 'create_notebook' | 'open_in_app'
 export type ProposalArgs = {
   create_note: { title: string; body: string; course_id: string | null }
   create_flashcards: { deck_id: string | null; deck_name: string | null; cards: { front: string; back: string }[]; course_id: string | null }
@@ -12,10 +12,17 @@ export type ProposalArgs = {
   create_task: { title: string; type: 'assignment' | 'exam' | 'reading' | 'other'; due_at: string | null; priority: 'low' | 'normal' | 'high'; course_id: string | null }
   create_class: { course_id: string; day_of_week: number; start_time: string; end_time: string; location: string | null; kind: 'lecture' | 'lab' | 'tutorial' | 'seminar' | 'other' }
   create_notebook: { name: string; course_id: string | null }
+  open_in_app: { href: string; label: string }
 }
 export type Proposal = {
   [K in ToolName]: { id: string; tool: K; args: ProposalArgs[K]; state: 'pending' | 'added' | 'discarded'; itemId?: string; itemKind?: 'note' | 'deck' | 'quiz' | 'task' | 'class' | 'notebook' }
 }[ToolName]
+// The places a command can open: fixed paths and items by id, never an address the model wrote, so a command can only go somewhere in the app
+export const PAGES = {
+  home: '/home', planner: '/planner', flashcards: '/flashcards', review: '/review', quizzes: '/quiz', tutor: '/tutor', focus: '/focus',
+  progress: '/progress', leaderboard: '/leaderboard', lectures: '/lectures', courses: '/courses', settings: '/settings', profile: '/profile',
+} as const
+export const ITEM_PATHS = { note: '/notes', deck: '/flashcards', quiz: '/quiz', notebook: '/notebooks', lecture: '/lectures', course: '/courses', file: '/files' } as const
 export type ToolContext = { courseIds: string[]; deckIds: string[] }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -45,6 +52,10 @@ const ClassArgs = z.object({
   course_id: id, day_of_week: z.number().int().min(0).max(6), start_time: hhmm, end_time: hhmm,
   location: z.string().trim().max(100).nullish(), kind: z.enum(['lecture', 'lab', 'tutorial', 'seminar', 'other']).nullish(),
 }).refine(c => c.end_time > c.start_time)
+const OpenArgs = z.union([
+  z.object({ page: z.enum(Object.keys(PAGES) as [keyof typeof PAGES, ...(keyof typeof PAGES)[]]) }),
+  z.object({ item: z.enum(Object.keys(ITEM_PATHS) as [keyof typeof ITEM_PATHS, ...(keyof typeof ITEM_PATHS)[]]), id }),
+])
 const NotebookArgs = z.object({ name: text(80), course_id: id.nullish() })
 
 export function parseToolCall(name: string, argsJson: string, ctx: ToolContext, pid: string): Proposal | null {
@@ -88,6 +99,15 @@ export function parseToolCall(name: string, argsJson: string, ctx: ToolContext, 
     if (!a.success || !ownsCourse(a.data.course_id)) return null
     return { ...base, tool: 'create_notebook', args: { name: a.data.name, course_id: a.data.course_id ?? null } }
   }
+  if (name === 'open_in_app') {
+    const a = OpenArgs.safeParse(raw)
+    if (!a.success) return null
+    const d = a.data
+    if ('page' in d) return { ...base, tool: 'open_in_app', args: { href: PAGES[d.page], label: d.page === 'quizzes' ? 'Quizzes' : d.page[0].toUpperCase() + d.page.slice(1) } }
+    if (d.item === 'course' && !ctx.courseIds.includes(d.id)) return null
+    if (d.item === 'deck' && !ctx.deckIds.includes(d.id)) return null
+    return { ...base, tool: 'open_in_app', args: { href: `${ITEM_PATHS[d.item]}/${d.id}`, label: d.item[0].toUpperCase() + d.item.slice(1) } }
+  }
   return null
 }
 
@@ -116,5 +136,7 @@ export function toolDefinitions(): OpenAI.Responses.Tool[] {
       location: { type: ['string', 'null'] }, kind: { type: 'string', enum: ['lecture', 'lab', 'tutorial', 'seminar', 'other'] } }, ['course_id', 'day_of_week', 'start_time', 'end_time']))
   tools.push(fn('create_notebook', 'Propose a new notebook (a study set holding a subject\'s notes, decks, recordings and files), only when the student asks.',
     { name: { type: 'string' }, course_id: course }, ['name']))
+  tools.push(fn('open_in_app', 'Offer to take the student somewhere in the app, when they ask to go, open, show or start something ("open my planner", "take me to my flashcards", "start a focus session", "open that note"). The student taps to go; nothing changes. Give either "page" or both "item" and "id" (an id from <material>, <courses> or <decks> only).',
+    { page: { type: 'string', enum: Object.keys(PAGES), description: 'a place in the app' }, item: { type: 'string', enum: Object.keys(ITEM_PATHS) }, id: { type: 'string' } }, []))
   return tools
 }

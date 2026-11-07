@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { AlertTriangle, Circle, CircleCheck, CircleDot, FileText, FolderOpen, Layers, ListChecks, MessagesSquare, Mic, Paperclip, Upload, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Circle, CircleCheck, CircleDot, FolderOpen, Layers, MessagesSquare, Upload } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BackLink } from '@/components/ui/BackLink'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
@@ -14,24 +14,15 @@ import { loadCoursePage, type CoursePage } from '@/lib/data/coursePage'
 import { createChat } from '@/lib/data/tutor'
 import { requestUpload } from '@/lib/scan/events'
 import { startRevision } from '@/lib/tutor/revise'
-import { cardsDue, courseSections, examLine, summaryLine } from '@/lib/course/summary'
+import { cardsDue, examLine, summaryLine } from '@/lib/course/summary'
 import { STATUS_LABEL, evidence, progressLine, weakSpots } from '@/lib/topics/status'
-import type { Kind } from '@/lib/library/items'
 import type { TopicStatus } from '@/lib/topics/types'
 import { Working } from '@/components/ui/Working'
+import { MaterialBrowser } from '@/components/library/MaterialBrowser'
 import { useScreen } from '@/lib/ui/useScreen'
 
-const KIND: Record<Kind, { plural: string; icon: LucideIcon; tone: 'a' | 'b' | 'c' }> = {
-  note: { plural: 'Notes', icon: FileText, tone: 'b' },
-  deck: { plural: 'Decks', icon: Layers, tone: 'a' },
-  lecture: { plural: 'Lectures', icon: Mic, tone: 'c' },
-  quiz: { plural: 'Quizzes', icon: ListChecks, tone: 'a' },
-  chat: { plural: 'Tutor chats', icon: MessagesSquare, tone: 'b' },
-  file: { plural: 'Files', icon: Paperclip, tone: 'c' },
-}
 const STATUS_ICON = { not_started: Circle, covered: CircleDot, weak: AlertTriangle, mastered: CircleCheck } as const
 const STATUS_TONE: Record<TopicStatus, string> = { not_started: 'text-muted', covered: 'text-accent', weak: 'text-danger', mastered: 'text-success' }
-const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '')
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
 
 // One study space for a course: what is in it, what is due, the next exam, its topics, and ways to start studying
@@ -49,17 +40,14 @@ export default function CoursePageRoute() {
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
-  const [reloading, setReloading] = useState(false)
   const inFlight = useRef(false) // set at once, before the next render, so a quick double tap loads once
   // A retry: if it fails the page that is already showing stays, with a message
   const load = useCallback(async () => {
     if (inFlight.current) return
     inFlight.current = true
-    setReloading(true)
     try { setData(await loadCoursePage(supabase(), id, new Date())); setFailed(false) }
     catch { if (data) toast('Could not reload this course. Check your connection.'); else setFailed(true) }
     inFlight.current = false
-    setReloading(false)
   }, [id, data, toast])
   useEffect(() => {
     let live = true
@@ -76,12 +64,11 @@ export default function CoursePageRoute() {
   if (data === undefined) return <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
   if (data === null) return (
     <EmptyState icon={FolderOpen} tone="b" title="Course not found" body="We couldn't find that course. It may have been deleted.">
-      <Link href="/library" className="btn-primary">Go to Library</Link>
+      <Link href="/courses" className="btn-primary">Go to Courses</Link>
     </EmptyState>
   )
 
   const { course, items, topics, exam } = data
-  const sections = items ? courseSections(items, course.id) : []
   const due = items ? cardsDue(items) : 0
   const dueDecks = items ? items.filter(i => i.kind === 'deck' && (i.due ?? 0) > 0) : []
   const weak = topics ? weakSpots(topics.map(t => ({ ...t })), now) : []
@@ -114,7 +101,6 @@ export default function CoursePageRoute() {
             <Link href={`/flashcards?new=1&course=${course.id}`} aria-label="New deck" title="New deck" className={ICON_BTN}><Layers size={19} aria-hidden /></Link>
             <button type="button" aria-label="Upload" title="Upload" className={ICON_BTN} onClick={requestUpload}><Upload size={19} aria-hidden /></button>
             <button type="button" aria-label="Ask the tutor" title="Ask the tutor" className={ICON_BTN} disabled={busy !== null} onClick={() => { void ask() }}><MessagesSquare size={19} aria-hidden /></button>
-            <Link href={`/library?course=${course.id}`} aria-label="Open in Library" title="Open in Library" className={ICON_BTN}><FolderOpen size={19} aria-hidden /></Link>
           </div>
         </header>
       ) : (
@@ -128,7 +114,6 @@ export default function CoursePageRoute() {
           <Link href={`/flashcards?new=1&course=${course.id}`} className="btn"><Layers size={14} aria-hidden />New deck</Link>
           <button type="button" className="btn" onClick={requestUpload}><Upload size={14} aria-hidden />Upload</button>
           <button type="button" className="btn" disabled={busy !== null} onClick={() => { void ask() }}><MessagesSquare size={14} aria-hidden />Ask the tutor</button>
-          <Link href={`/library?course=${course.id}`} className="btn-ghost text-accent">Open in Library</Link>
         </div>
       </header>
       )}
@@ -187,36 +172,8 @@ export default function CoursePageRoute() {
           )}
       </section>
 
-      {items === null ? (
-        <div role="alert" className="card text-sm text-danger">
-          Could not load this course&apos;s material.
-          <button type="button" className="btn ml-2" disabled={reloading} onClick={() => { void load() }}>Try again</button>
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState icon={FolderOpen} tone="b" title={`Nothing in ${course.name} yet`} body="Notes, decks, lectures, quizzes and tutor chats you add to this course show up here.">
-          <Link href="/library" className="btn">Write a note</Link>
-        </EmptyState>
-      ) : sections.map(s => {
-        const k = KIND[s.kind]
-        return (
-          <section key={s.kind} aria-label={k.plural} className="card">
-            <div className="mb-2 flex items-center gap-2">
-              <span aria-hidden className={`tile-${k.tone} flex size-8 items-center justify-center rounded-lg border border-line`}><k.icon size={16} className="text-accent" /></span>
-              <h2 className="font-semibold">{k.plural}</h2>
-              <span className="text-sm text-muted">{s.total}</span>
-            </div>
-            <ul className="divide-y divide-line">
-              {s.shown.map(i => (
-                <li key={i.id} className="flex items-center justify-between gap-3 py-2">
-                  <Link href={i.href} className="min-w-0 flex-1 truncate hover:text-accent">{i.title}</Link>
-                  <span className="shrink-0 text-xs text-muted">{[i.meta, day(i.at)].filter(Boolean).join(' · ')}</span>
-                </li>
-              ))}
-            </ul>
-            {s.total > s.shown.length && <Link href={`/library?course=${course.id}`} className="mt-2 inline-block text-sm text-accent underline">See all {s.total} in Library</Link>}
-          </section>
-        )
-      })}
+      {/* Everything in the course: its notebooks first, then the rest by kind, searchable, with the same moving and menus as everywhere */}
+      <MaterialBrowser course={course.id} embedded />
     </div>
   )
 }
