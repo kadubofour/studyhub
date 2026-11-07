@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AudioLines, MessageSquarePlus, MessagesSquare } from 'lucide-react'
 import { StarterChips } from '@/components/tutor/StarterChips'
-import { ChoiceChips } from '@/components/ui/ChoiceChips'
+import { CourseFilter } from '@/components/tutor/CourseFilter'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
@@ -110,8 +110,18 @@ export default function TutorPage() {
         <p className="text-xs text-muted">Pick one, then what it is about. The message is ready for you to change and send.</p>
       </section>
 
-      {chats !== null && chats.length > 0 && withChats.length > 1 && (
-        <ChoiceChips label="Course" size="sm" className="mb-3" value={courseId} options={[{ value: '', label: 'All courses' }, ...withChats.map(c => ({ value: c.id, label: c.name, color: c.color }))]} onChange={setCourseId} />
+      {chats !== null && chats.length > 0 && (
+        <div className="mb-3">
+          <div className="mb-1 flex items-baseline justify-between gap-3">
+            <h2 className="section-label !mb-0">Your chats</h2>
+            <span className="text-sm text-muted" aria-live="polite">{filtering ? `${shown.length} of ${chats.length}` : chats.length === 1 ? '1 chat' : `${chats.length} chats`}</span>
+          </div>
+          {withChats.length > 1 && (
+            <CourseFilter label="Show chats from" value={courseId}
+              options={[{ value: '', label: 'All courses', count: chats.length }, ...withChats.map(c => ({ value: c.id, label: c.name, color: c.color, count: chats.filter(x => x.course_id === c.id).length }))]}
+              onChange={setCourseId} />
+          )}
+        </div>
       )}
 
       {chats?.length === 0 && <EmptyState icon={MessagesSquare} tone="a" title="Ask anything about your courses" body="No chats yet. Pick a way to start above, or start a new chat." />}
