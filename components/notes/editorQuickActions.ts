@@ -1,9 +1,10 @@
 import type { Editor } from '@tiptap/core'
 import {
-  Bold, ClipboardPaste, Columns3, Copy, Heading2, Italic, Rows3, Scissors, Sigma, Table, Trash2,
+  Bold, ClipboardPaste, Columns3, Copy, Heading2, Italic, MessagesSquare, Rows3, Scissors, Sigma, Table, Trash2,
 } from 'lucide-react'
 import type { MenuEntry } from '@/components/ui/ContextMenu'
 import type { EditMath } from './extensions'
+import { selectedPassage } from './ExplainBubble'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const mod = (k: string) => (isMac ? `⌘${k}` : `Ctrl+${k}`)
@@ -14,6 +15,8 @@ const mod = (k: string) => (isMac ? `⌘${k}` : `Ctrl+${k}`)
  */
 export function editorQuickActions(editor: Editor, at: { mathPos: number | null }, h: {
   onInsertEquation: () => void; onEditMath: EditMath; onPasteFailed: () => void
+  /** Asks the tutor to explain the selected text */
+  onExplain?: (text: string) => void
 }): MenuEntry[] {
   const run = (fn: (c: ReturnType<Editor['chain']>) => ReturnType<Editor['chain']>) => () => { fn(editor.chain().focus()).run() }
   const empty = editor.state.selection.empty
@@ -24,6 +27,10 @@ export function editorQuickActions(editor: Editor, at: { mathPos: number | null 
     const pos = at.mathPos!
     items.push({ label: 'Edit equation', icon: Sigma, onSelect: () => h.onEditMath(math.type.name === 'blockMath' ? 'block' : 'inline', math.attrs.latex, pos) }, 'sep')
   }
+
+  // With text selected: the tutor can explain it, first in the menu
+  const passage = h.onExplain ? selectedPassage(editor) : ''
+  if (passage) items.push({ label: 'Ask the tutor to explain', icon: MessagesSquare, onSelect: () => h.onExplain!(passage) }, 'sep')
 
   items.push(
     // Cut/Copy go through the browser so the clipboard gets rich text too

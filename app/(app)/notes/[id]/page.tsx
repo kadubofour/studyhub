@@ -17,6 +17,8 @@ import { ShareDialog } from '@/components/share/ShareDialog'
 import { requestReminder } from '@/lib/reminders/events'
 import { StudyPanel, type StudyTab } from '@/components/notes/study/StudyPanel'
 import { AskTutorButton } from '@/components/tutor/AskTutorButton'
+import { createChat, findChat } from '@/lib/data/tutor'
+import { explainMessage } from '@/lib/tutor/explainSelection'
 import { FindBar } from '@/components/notes/FindBar'
 import { EquationDialog, type EquationInit } from '@/components/notes/EquationDialog'
 import { requestUpload } from '@/lib/scan/events'
@@ -123,6 +125,15 @@ function NoteEditor({ id }: { id: string }) {
   const notebookNow = draft ? draft.notebook_id : note?.notebook_id
   const courseNow = draft ? draft.course_id : note?.course_id
   const backHref = notebookNow ? `/notebooks/${notebookNow}` : courseHref(courseNow)
+  // Selected text, explained: the chat about this note (or a new one) opens with the passage quoted and the question asked at once
+  async function explain(text: string) {
+    if (!draft) return
+    try {
+      const sb = supabase()
+      const chat = await findChat(sb, { note_id: draft.id }) ?? await createChat(sb, { title: (draft.title || 'New chat').slice(0, 200), note_id: draft.id, course_id: draft.course_id })
+      router.push(`/tutor/${chat.id}?ask=${encodeURIComponent(explainMessage(draft.title, text))}&send=1`)
+    } catch { toast("Couldn't open the tutor. Check your connection and try again.") }
+  }
 
   useEffect(() => {
     const sb = supabase()
@@ -368,7 +379,7 @@ function NoteEditor({ id }: { id: string }) {
             {mode === 'rich' ? (
               <RichEditor key={`rich-${note.id}`} markdown={draft.content_md} onChange={md => change({ content_md: md })}
                 onReady={setEditor} onEditMath={editMath} onInsertEquation={actions.insertEquation} drawing={inking} onDraw={() => setInking(i => !i)} autoMath={profile.auto_math}
-                onNewNote={() => { void actions.newNote() }} />
+                onNewNote={() => { void actions.newNote() }} onExplain={text => { void explain(text) }} />
             ) : (
               <div className="mt-4 grid gap-6 md:grid-cols-2">
                 <textarea ref={markdownRef} className="input min-h-[70vh] font-mono text-[13px]" value={draft.content_md} aria-label="Markdown"

@@ -46,7 +46,10 @@ const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string
 
 export function ChatView({ chatId }: { chatId: string }) {
   const router = useRouter()
-  const ask = useSearchParams().get('ask')
+  const params = useSearchParams()
+  const ask = params.get('ask')
+  // A message that is sent as soon as the chat has loaded ("Explain" on selected text in a note): taken at the first render, as the address is cleared at once
+  const sendAtStart = useRef(params.get('send') === '1' && !!params.get('ask') ? (params.get('ask') ?? '').slice(0, 4000) : null)
   const confirm = useConfirm()
   const toast = useToast()
   const [chat, setChat] = useState<TutorChat | null>(null)
@@ -253,6 +256,15 @@ export function ChatView({ chatId }: { chatId: string }) {
     catch { toast('Added. It may show as new again after a reload.') }
   }
 
+  // It goes once, and the box stays empty: it is not left there to be sent a second time
+  useEffect(() => {
+    const message = sendAtStart.current
+    if (!message || !chat) return
+    sendAtStart.current = null
+    setText('')
+    void send(message)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat])
   async function toggleGuided(on: boolean) {
     setChat(c => c && { ...c, guided: on })
     try { await setChatGuided(supabase(), chatId, on) }
