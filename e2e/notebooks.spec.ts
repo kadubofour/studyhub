@@ -36,7 +36,7 @@ test('notebooks: make one, move a note into it, open its page, rename it, delete
 
   await page.getByRole('button', { name: 'Delete notebook' }).click()
   await page.getByRole('button', { name: 'Delete', exact: true }).click()
-  await expect(page).toHaveURL(/\/library$/)
+  await expect(page).toHaveURL(/\/courses\/(none|[0-9a-f-]{36})$/) // back to the course the notebook was in
   await expect(page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: 'Cells' })).toHaveCount(0)
   await page.getByRole('list', { name: 'Notebooks' }).getByRole('link', { name: 'General' }).click()
   await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible() // moved to General, not lost

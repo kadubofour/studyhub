@@ -34,6 +34,7 @@ import { listCourses } from '@/lib/data/courses'
 import { exportNotesToWord, openPdfExport } from '@/lib/export/exportNotes'
 import { useAutosave } from '@/lib/ui/useAutosave'
 import { BackNavLink } from '@/components/ui/BackNavLink'
+import { courseHref } from '@/lib/course/home'
 import { shouldLeaveOnEscape } from '@/lib/ui/escapeToLeave'
 import { NOTES_CHANGED } from '@/lib/notes/events'
 import type { Course, EditorMode, Note, Notebook } from '@/lib/types'
@@ -120,13 +121,14 @@ function NoteEditor({ id }: { id: string }) {
   const screen = useScreen()
   // back goes to the notebook the note is in
   const notebookNow = draft ? draft.notebook_id : note?.notebook_id
-  const backHref = notebookNow ? `/notebooks/${notebookNow}` : '/library'
+  const courseNow = draft ? draft.course_id : note?.course_id
+  const backHref = notebookNow ? `/notebooks/${notebookNow}` : courseHref(courseNow)
 
   useEffect(() => {
     const sb = supabase()
     Promise.all([getNote(sb, id), listCourses(sb), listNotebooks(sb).catch(() => [])])
       .then(([n, c, b]) => { setNote(n); setDraft(n); draftRef.current = n; setCourses(c); setBooks(b) })
-      .catch(() => router.replace('/library'))
+      .catch(() => router.replace('/courses'))
   }, [id, router])
 
   function change(patch: Patch) {

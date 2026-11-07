@@ -15,7 +15,7 @@ vi.mock('@/lib/data/notebooks', () => ({ listNotebooks: async () => [], createNo
 vi.mock('@/lib/scan/events', () => ({ requestUpload: vi.fn() }))
 const findChat = vi.fn(), createChat = vi.fn()
 vi.mock('@/lib/data/tutor', () => ({ findChat: (...a: unknown[]) => findChat(...a), createChat: (...a: unknown[]) => createChat(...a) }))
-import LibraryPage from '@/app/(app)/library/page'
+import { MaterialBrowser as LibraryPage } from '@/components/library/MaterialBrowser'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 

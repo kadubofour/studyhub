@@ -39,8 +39,7 @@ vi.mock('@/lib/data/notebooks', () => ({
   createNotebook: (sb: unknown, n: string) => createNotebook(sb, n), renameNotebook: (sb: unknown, id: string, n: string) => renameNotebook(sb, id, n),
   deleteNotebook: (sb: unknown, id: string) => deleteNotebook(sb, id), moveNotes: (...a: unknown[]) => moveNotes(...a),
 }))
-import LibraryPage from '@/app/(app)/library/page'
-import { MaterialBrowser } from '@/components/library/MaterialBrowser'
+import { MaterialBrowser, MaterialBrowser as LibraryPage } from '@/components/library/MaterialBrowser'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 

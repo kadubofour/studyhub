@@ -23,6 +23,8 @@ import type { Kind, LibraryItem } from '@/lib/library/items'
 import type { Course, Notebook } from '@/lib/types'
 import { PAGE_TITLE } from '@/components/ui/PageHeader'
 import { BackLink } from '@/components/ui/BackLink'
+import { notebookHomeHref } from '@/lib/course/home'
+import { notebookCourse } from '@/lib/notes/notebooks'
 import { Working } from '@/components/ui/Working'
 import { CardsMark, ChecklistMark, ComposeButton, FileMark, NotebookMark, PhoneGroup, PhoneRow, SheetMark, StripMark } from '@/components/ui/PhoneList'
 import { useScreen } from '@/lib/ui/useScreen'
@@ -69,12 +71,15 @@ export default function NotebookPage() {
     return () => { live = false }
   }, [id, again])
 
+  // back and delete lead to the course the notebook is in (its own, else the one its notes share), or to the page for material in no course
+  const home = book ? notebookHomeHref(book, items.filter(i => i.kind === 'note')) : '/courses'
+  const homeCourse = book ? courses.find(c => c.id === notebookCourse(book, items.filter(i => i.kind === 'note'))) : undefined
   if (book === undefined) return <Working kind="load" size="sm" label="Loading" className="text-sm text-muted" />
   if (book === null) return (
     <div className="py-10 text-center">
       <h1 className="font-display text-2xl font-semibold">Notebook not found</h1>
       <p className="mt-1 text-sm text-muted">It may have been deleted.</p>
-      <Link href="/library" className="btn mt-4">Go to Library</Link>
+      <Link href="/courses" className="btn mt-4">Go to Courses</Link>
     </div>
   )
 
@@ -100,12 +105,12 @@ export default function NotebookPage() {
   }
   async function remove() {
     if (!await confirm({ title: 'Delete this notebook?', body: `“${book!.name}” will be deleted. Everything in it moves to General.`, confirmLabel: 'Delete', danger: true })) return
-    try { await deleteNotebook(supabase(), book!.id); router.push('/library') } catch { toast("Couldn't delete the notebook.") }
+    try { await deleteNotebook(supabase(), book!.id); router.push(home) } catch { toast("Couldn't delete the notebook.") }
   }
 
   return (
     <div>
-      <BackLink href="/library">Library</BackLink>
+      <BackLink href={home}>{homeCourse?.name ?? 'Courses'}</BackLink>
       {/* a computer: the cover beside the title and labelled buttons; a phone: a small mark beside the title, and a row of plain icons */}
       <div className={phone ? 'mb-6' : 'mb-8 flex flex-wrap items-end gap-6'}>
         {phone ? (

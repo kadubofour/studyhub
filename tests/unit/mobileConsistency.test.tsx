@@ -15,8 +15,8 @@ describe('one page title everywhere', () => {
 })
 
 describe('the way back from a page inside another', () => {
-  it.each([['app/(app)/flashcards/[deck]/page.tsx', '/flashcards', 'Flashcards'], ['app/(app)/courses/[id]/page.tsx', '/courses', 'Courses'], ['app/(app)/notebooks/[id]/page.tsx', '/library', 'Library']])('%s links back to %s', (f, href, label) => {
-    expect(src(f)).toContain(`<BackLink href="${href}">${label}</BackLink>`)
+  it.each([['app/(app)/flashcards/[deck]/page.tsx', '/flashcards', 'Flashcards'], ['app/(app)/courses/[id]/page.tsx', '/courses', 'Courses'], ['app/(app)/notebooks/[id]/page.tsx', '{home}', "{homeCourse?.name ?? 'Courses'}"]])('%s links back to %s', (f, href, label) => {
+    expect(src(f)).toContain(href.startsWith('{') ? `<BackLink href=${href}>${label}</BackLink>` : `<BackLink href="${href}">${label}</BackLink>`)
   })
 })
 

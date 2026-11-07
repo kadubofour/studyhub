@@ -6,7 +6,7 @@ const press = (keys: [string, number][]) => keys.reduce((r, [k, at]) => nextKey(
 describe('keyboard shortcuts that go somewhere', () => {
   it('G then a letter goes to its place, in either case', () => {
     expect(press([['g', 0], ['p', 300]]).go).toBe('/planner')
-    expect(press([['G', 0], ['L', 100]]).go).toBe('/library')
+    expect(press([['G', 0], ['C', 100]]).go).toBe('/courses')
   })
   it('a letter on its own does nothing', () => {
     expect(press([['p', 0]]).go).toBeUndefined()

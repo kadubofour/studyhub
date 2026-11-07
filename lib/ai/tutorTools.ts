@@ -19,7 +19,7 @@ export type Proposal = {
 }[ToolName]
 // The places a command can open: fixed paths and items by id, never an address the model wrote, so a command can only go somewhere in the app
 export const PAGES = {
-  home: '/home', planner: '/planner', library: '/library', flashcards: '/flashcards', review: '/review', quizzes: '/quiz', tutor: '/tutor', focus: '/focus',
+  home: '/home', planner: '/planner', flashcards: '/flashcards', review: '/review', quizzes: '/quiz', tutor: '/tutor', focus: '/focus',
   progress: '/progress', leaderboard: '/leaderboard', lectures: '/lectures', courses: '/courses', settings: '/settings', profile: '/profile',
 } as const
 export const ITEM_PATHS = { note: '/notes', deck: '/flashcards', quiz: '/quiz', notebook: '/notebooks', lecture: '/lectures', course: '/courses', file: '/files' } as const

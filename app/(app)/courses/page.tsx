@@ -22,7 +22,7 @@ import { Working } from '@/components/ui/Working'
 function Tabs({ current }: { current: 'courses' | 'all' }) {
   return (
     <nav aria-label="Courses view" className="mb-4 inline-flex rounded-xl bg-surface p-1 text-[15px] font-medium">
-      {([['courses', '/courses', 'Courses'], ['all', '/courses?view=all', 'All material']] as const).map(([id, href, label]) => (
+      {([['courses', '/courses', 'Courses'], ['all', '/courses?show=material', 'All material']] as const).map(([id, href, label]) => (
         <Link key={id} href={href} replace aria-current={current === id ? 'page' : undefined}
           className={`rounded-lg px-4 py-1.5 transition ${current === id ? 'bg-raised shadow-sm' : 'text-muted hover:text-fg'}`}>{label}</Link>
       ))}
@@ -32,7 +32,7 @@ function Tabs({ current }: { current: 'courses' | 'all' }) {
 
 // Every course in one place, each opening its own page, and the material that is in no course
 export default function CoursesPage() {
-  const all = useSearchParams().get('view') === 'all'
+  const all = useSearchParams().get('show') === 'material' // (the browser inside reads its own ?view=all for its list)
   const phone = useScreen() === 'phone' // a phone shows the courses as rows in a rounded group, as the Tutor and Practice lists do
   const [courses, setCourses] = useState<Course[] | null>(null)
   const [items, setItems] = useState<LibraryItem[] | null>(null)

@@ -1,13 +1,12 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { BarChart3, FolderOpen, ListChecks, Mic, Settings, Timer, Trophy, type LucideIcon } from 'lucide-react'
+import { BarChart3, ListChecks, Mic, Settings, Timer, Trophy, type LucideIcon } from 'lucide-react'
 
 // The places the phone dock has no room for. Opens above the dock as a sheet, like Create.
 export const MORE_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/focus', label: 'Focus', icon: Timer },
   { href: '/progress', label: 'Progress', icon: BarChart3 },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/courses', label: 'Courses', icon: FolderOpen },
   { href: '/lectures', label: 'Lectures', icon: Mic },
   { href: '/quiz', label: 'Quizzes', icon: ListChecks },
   { href: '/settings', label: 'Settings', icon: Settings },

@@ -101,7 +101,7 @@ test('the page names itself, and the floating dock is a pill of five places and 
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await expect(page.getByRole('banner')).not.toContainText('Home')
   const bar = page.getByRole('navigation', { name: 'Main' })
-  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Library', 'Create new', 'Practice', 'Tutor'])
+  expect(await bar.locator('a, button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual(['Home', 'Planner', 'Courses', 'Create new', 'Practice', 'Tutor', 'More'])
   const box = (await bar.boundingBox())!
   expect(box.y + box.height).toBeGreaterThanOrEqual(740)
   expect(box.width).toBeLessThanOrEqual(352) // a pill that hugs its six icons (Create among them), with room left on each side of a 375 px screen
@@ -118,7 +118,7 @@ test('the page names itself, and the floating dock is a pill of five places and 
   await page.goto('/home')
   await page.getByRole('button', { name: 'Search or jump' }).click()
   const results = page.getByRole('listbox', { name: 'Results' })
-  for (const n of ['Courses', 'Library', 'Profile', 'Progress', 'Settings', 'Lectures', 'Tutor']) await expect(results.getByRole('option', { name: n, exact: true })).toBeAttached()
+  for (const n of ['Courses', 'Profile', 'Progress', 'Settings', 'Lectures', 'Tutor']) await expect(results.getByRole('option', { name: n, exact: true })).toBeAttached()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('link', { name: /timer, .* left$/ })).toBeVisible() // the focus timer's way in: the top bar's timer
 })

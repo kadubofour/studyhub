@@ -4,7 +4,6 @@
 export const GO_SHORTCUTS: { key: string; href: string; label: string }[] = [
   { key: 'h', href: '/home', label: 'Home' },
   { key: 'p', href: '/planner', label: 'Planner' },
-  { key: 'l', href: '/library', label: 'Library' },
   { key: 'f', href: '/flashcards', label: 'Practice (flashcards)' },
   { key: 'q', href: '/quiz', label: 'Quizzes' },
   { key: 'r', href: '/review', label: 'Review cards' },

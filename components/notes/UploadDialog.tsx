@@ -147,7 +147,7 @@ export function UploadDialog({ open, onClose, courses, notebooks = [], notebookI
         await updateMaterial(supabase(), fromMaterial.id, { note_id: n.id }).catch(() => {})
       } else if (source) {
         await keepMaterial(supabase(), profile.id, source.file, source.kind, { course_id: courseId || null, note_id: n.id, notebook_id: bookId || null })
-          .catch(() => toast('The note is saved, but the original file couldn\'t be kept in your Library.'))
+          .catch(() => toast('The note is saved, but the original file couldn\'t be kept in your material.'))
       }
       onImported?.(n.id)
       close()
@@ -165,7 +165,7 @@ export function UploadDialog({ open, onClose, courses, notebooks = [], notebookI
     savingRef.current = true; setSaving(true)
     try {
       const m = await keepMaterial(supabase(), profile.id, picked.file, picked.kind, { course_id: courseId || null, note_id: null, notebook_id: bookId || null })
-      toast('Kept in your Library.')
+      toast('Kept in your material.')
       close()
       if (onKept) onKept()
       else if (await mayLeave()) router.push(`/files/${m.id}`)
@@ -179,11 +179,11 @@ export function UploadDialog({ open, onClose, courses, notebooks = [], notebookI
   const goToLectures = () => { void mayLeave().then(ok => { if (ok) { close(); router.push('/lectures') } }) }
   const chosenCourse = courses.find(c => c.id === courseId)
   const SUBTITLE = {
-    pick: keepOnly ? 'Keep a file in your Library as it is.' : 'Keep a file in your Library, or turn it into a note you can study from.',
+    pick: keepOnly ? 'Keep a file in your material as it is.' : 'Keep a file in your material, or turn it into a note you can study from.',
     choose: 'What should happen to it?',
-    keep: 'It goes to your Library as it is.',
+    keep: 'It goes to your material as it is.',
     working: 'Reading it…',
-    review: fromMaterial ? 'Check it over, then save it as a note.' : 'Check it over, then save it as a note. The original file is kept in your Library.',
+    review: fromMaterial ? 'Check it over, then save it as a note.' : 'Check it over, then save it as a note. The original file is kept in your material.',
     recording: 'Audio and video go through Lectures.',
   }
   // the file chosen: its name and size, above the choice and the keep step
@@ -210,7 +210,7 @@ export function UploadDialog({ open, onClose, courses, notebooks = [], notebookI
           {!fromMaterial && (
             <button type="button" className={option} onClick={() => setStage('keep')}>
               <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-muted"><FolderOpen size={17} /></span>
-              <span><span className="block text-sm font-medium">Just keep the file</span><span className="block text-xs text-muted">Save it to your Library as it is. You can make a note from it later.</span></span>
+              <span><span className="block text-sm font-medium">Just keep the file</span><span className="block text-xs text-muted">Save it to your material as it is. You can make a note from it later.</span></span>
             </button>
           )}
           {!fromMaterial && <DialogFooter><button type="button" className={BTN_OUTLINE} onClick={reset}>Choose another</button></DialogFooter>}

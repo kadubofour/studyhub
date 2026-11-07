@@ -278,7 +278,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
             })}
             {wide && courses.length > 0 && (
               <div role="group" aria-labelledby="nav-courses" className="rail-fade mt-4 flex flex-col gap-0.5">
-                <Link id="nav-courses" href="/courses" onClick={e => guard(e, '/courses')} className="px-3 pb-1 text-[13px] font-semibold text-muted hover:text-fg">Courses</Link>
+                <span id="nav-courses" className="px-3 pb-1 text-[13px] font-semibold text-muted">Your courses</span>
                 {courses.map(c => {
                   const on = isActive(path, `/courses/${c.id}`)
                   return (

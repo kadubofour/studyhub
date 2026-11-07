@@ -25,7 +25,7 @@ export default function QuizPage() {
     if (boot.current?.id !== id) {
       boot.current = { id, run: getQuiz(sb, id).then(async q => ({ q, a: (await getOpenAttempt(sb, q.id)) ?? (await startAttempt(sb, q)) })) } // resume or start
     }
-    boot.current.run.then(({ q, a }) => { if (live) { setQuiz(q); setAttempt(a) } }).catch(() => { if (live) router.replace('/library') })
+    boot.current.run.then(({ q, a }) => { if (live) { setQuiz(q); setAttempt(a) } }).catch(() => { if (live) router.replace('/courses') })
     return () => { live = false }
   }, [id, router])
 

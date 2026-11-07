@@ -167,11 +167,11 @@ export default function ProfilePage() {
 
       <p className="flex gap-4 text-sm text-muted max-md:hidden">
         <Link href="/settings" className="hover:text-fg">Settings</Link>
-        <Link href="/library" className="hover:text-fg">Library</Link>
+        <Link href="/courses" className="hover:text-fg">Courses</Link>
       </p>
       {/* on a phone, the Leaderboard and the same two places as a list of rows */}
       <nav aria-label="More" className="card !p-2 md:hidden">
-        {([['/progress', 'Progress', BarChart3], ['/leaderboard', 'Leaderboard', Trophy], ['/settings', 'Settings', Settings], ['/library', 'Library', FolderOpen]] as const).map(([href, label, Icon]) => (
+        {([['/progress', 'Progress', BarChart3], ['/leaderboard', 'Leaderboard', Trophy], ['/settings', 'Settings', Settings], ['/courses', 'Courses', FolderOpen]] as const).map(([href, label, Icon]) => (
           <Link key={href} href={href} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-[15px] font-medium transition active:bg-surface">
             <span aria-hidden className="grid size-9 place-items-center rounded-full bg-surface text-muted"><Icon size={18} /></span>{label}
             <ChevronRight size={18} className="ml-auto text-muted" aria-hidden />

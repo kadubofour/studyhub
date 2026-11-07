@@ -116,7 +116,7 @@ describe('making a course from Courses', () => {
     expect(screen.getByText('No courses yet')).toBeTruthy()
   })
   it('All material is the same things in one list, across courses', async () => {
-    view = 'view=all'
+    view = 'show=material'
     await open()
     expect(screen.getByTestId('browser').textContent).toBe('All material')
     expect(screen.getByRole('link', { name: 'Courses' }).getAttribute('href')).toBe('/courses')
