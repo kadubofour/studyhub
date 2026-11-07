@@ -10,6 +10,7 @@ import { NewNoteButton } from '@/components/quick/NewNoteButton'
 import { useProfile } from '@/components/providers/ProfileProvider'
 import { useToast } from '@/components/providers/ToastProvider'
 import { supabase } from '@/lib/supabase/client'
+import { useCoursesChanged } from '@/lib/course/events'
 import { loadCoursePage, type CoursePage } from '@/lib/data/coursePage'
 import { createChat } from '@/lib/data/tutor'
 import { requestUpload } from '@/lib/scan/events'
@@ -49,6 +50,7 @@ export default function CoursePageRoute() {
     catch { if (data) toast('Could not reload this course. Check your connection.'); else setFailed(true) }
     inFlight.current = false
   }, [id, data, toast])
+  useCoursesChanged(() => { void load() }) // renamed or deleted from somewhere else
   useEffect(() => {
     let live = true
     loadCoursePage(supabase(), id, new Date()).then(d => { if (live) { setData(d); setFailed(false) } }).catch(() => { if (live) setFailed(true) })

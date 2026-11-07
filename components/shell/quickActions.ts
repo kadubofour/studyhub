@@ -1,4 +1,4 @@
-import { ArrowUpRight, ExternalLink, FilePlus, FileText, FolderPlus, Layers, Link2, ListChecks, MessagesSquare, Mic, Play } from 'lucide-react'
+import { ArrowUpRight, ExternalLink, FilePlus, FileText, FolderPlus, Layers, Link2, ListChecks, MessagesSquare, Mic, Pencil, Play, Trash2 } from 'lucide-react'
 import type { MenuEntry } from '@/components/ui/ContextMenu'
 import type { Entity } from '@/lib/shell/entityLinks'
 
@@ -10,12 +10,17 @@ export type QuickDeps = {
   copyLink: (href: string) => void
   askTutor: (e: Entity, title: string) => void
   newNote: (where: { course_id?: string; notebook_id?: string }) => void
+  /** Changes a course's or a chat's name, and deletes one (each asks first) */
+  rename: (e: Entity) => void
+  remove: (e: Entity) => void
 }
 
 export function quickActions(e: Entity, href: string, title: string, d: QuickDeps): MenuEntry[] {
   const open: MenuEntry = { label: e.kind === 'quiz' ? 'Take' : 'Open', icon: ArrowUpRight, onSelect: () => d.go(href) }
   const tab: MenuEntry = { label: 'Open in new tab', icon: ExternalLink, onSelect: () => d.newTab(href) }
   const copy: MenuEntry = { label: 'Copy link', icon: Link2, onSelect: () => d.copyLink(href) }
+  const rename: MenuEntry = { label: 'Rename…', icon: Pencil, onSelect: () => d.rename(e) }
+  const remove: MenuEntry = { label: 'Delete…', icon: Trash2, danger: true, onSelect: () => d.remove(e) }
   const ask: MenuEntry = { label: 'Ask the tutor', icon: MessagesSquare, onSelect: () => d.askTutor(e, title) }
   switch (e.kind) {
     case 'note': return [open, tab, 'sep', ask,
@@ -25,11 +30,12 @@ export function quickActions(e: Entity, href: string, title: string, d: QuickDep
     case 'lecture': return [open, tab, 'sep', ask, 'sep', copy]
     case 'course': return [open, tab, 'sep',
       { label: 'New note here', icon: FilePlus, onSelect: () => d.newNote({ course_id: e.id }) },
-      { label: 'New deck here', icon: Layers, onSelect: () => d.go(`/flashcards?new=1&course=${e.id}`) }, ask, 'sep', copy]
+      { label: 'New deck here', icon: Layers, onSelect: () => d.go(`/flashcards?new=1&course=${e.id}`) }, ask, 'sep', rename, copy, 'sep', remove]
     case 'notebook': return [open, tab, 'sep',
       { label: 'New note here', icon: FolderPlus, onSelect: () => d.newNote({ notebook_id: e.id }) },
       { label: 'Record lecture here', icon: Mic, onSelect: () => d.go(`/lectures/record?notebook=${e.id}`) }, 'sep', copy]
     case 'deck': return [open, tab, 'sep', { label: 'Review this deck', icon: Play, onSelect: () => d.go(`/review?deck=${e.id}`) }, 'sep', copy]
+    case 'chat': return [open, tab, 'sep', rename, copy, 'sep', remove]
     default: return [open, tab, 'sep', copy]
   }
 }

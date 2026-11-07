@@ -18,7 +18,7 @@ describe('what a path is the page of', () => {
   })
 })
 
-const deps = (): QuickDeps => ({ go: vi.fn(), newTab: vi.fn(), copyLink: vi.fn(), askTutor: vi.fn(), newNote: vi.fn() })
+const deps = (): QuickDeps => ({ go: vi.fn(), newTab: vi.fn(), copyLink: vi.fn(), askTutor: vi.fn(), newNote: vi.fn(), rename: vi.fn(), remove: vi.fn() })
 const labels = (kind: Parameters<typeof quickActions>[0]['kind']) => quickActions({ kind, id: ID }, `/x/${ID}`, 'T', deps()).filter(e => e !== 'sep').map(e => (e as { label: string }).label)
 const run = (kind: Parameters<typeof quickActions>[0]['kind'], label: string, d: QuickDeps) => (quickActions({ kind, id: ID }, `/x/${ID}`, 'T', d).find(e => e !== 'sep' && e.label === label) as { onSelect: () => void }).onSelect()
 
@@ -44,10 +44,21 @@ describe('what a right click on a link offers', () => {
     expect(d.newNote).toHaveBeenCalledWith({ notebook_id: ID })
     expect(d.go).toHaveBeenCalledWith(`/lectures/record?notebook=${ID}`)
   })
-  it('a deck: review it. A lecture: ask the tutor. Nothing destructive anywhere.', () => {
+  it('a deck: review it. A lecture: ask the tutor.', () => {
     const d = deps(); run('deck', 'Review this deck', d)
     expect(d.go).toHaveBeenCalledWith(`/review?deck=${ID}`)
     expect(labels('lecture')).toContain('Ask the tutor')
-    for (const k of ['note', 'deck', 'lecture', 'course', 'notebook', 'chat', 'quiz', 'file'] as const) expect(labels(k).join('|')).not.toMatch(/delete|remove/i)
+  })
+  it('a course and a chat can be renamed and deleted, and nothing else can be deleted from here', () => {
+    for (const k of ['course', 'chat'] as const) expect(labels(k)).toEqual(expect.arrayContaining(['Rename…', 'Delete…']))
+    for (const k of ['note', 'deck', 'lecture', 'notebook', 'quiz', 'file'] as const) expect(labels(k).join('|'), k).not.toMatch(/delete|rename/i)
+    const d = deps(); run('chat', 'Rename…', d); run('course', 'Delete…', d)
+    expect(d.rename).toHaveBeenCalledWith({ kind: 'chat', id: ID })
+    expect(d.remove).toHaveBeenCalledWith({ kind: 'course', id: ID })
+  })
+  it('puts Delete last, apart from the rest, in red', () => {
+    const items = quickActions({ kind: 'course', id: ID }, `/x/${ID}`, 'T', deps())
+    expect(items.at(-2)).toBe('sep')
+    expect(items.at(-1)).toMatchObject({ label: 'Delete…', danger: true })
   })
 })
