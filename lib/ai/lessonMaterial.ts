@@ -18,7 +18,7 @@ export async function lessonMaterial(sb: SupabaseClient, chat: { note_id?: strin
       const { data: l } = await sb.from('lectures').select('id,title,transcript').eq('id', chat.lecture_id).maybeSingle()
       if (l) attached = { kind: 'lecture', id: l.id, title: l.title, text: transcriptText(l.transcript as Parameters<typeof transcriptText>[0]) }
     }
-    const { data: found } = await sb.rpc('tutor_find_material', { p_query: question.slice(0, 500), p_limit: 3 })
+    const { data: found } = await sb.rpc('tutor_find_material', { p_query: question.slice(0, 500), p_limit: 6 })
     const matches = ((found ?? []) as { kind: Material['kind']; id: string; title: string; snippet: string }[]).map(m => ({ kind: m.kind, id: m.id, title: m.title, text: m.snippet }))
     return buildContext({ attached, matches, courses: [], decks: [] }).text
   } catch {
