@@ -66,7 +66,7 @@ describe('the Look picker on a phone', () => {
 describe('the dock on a phone', () => {
   it('is a small pill of icons, with each place named for screen readers', () => {
     const src = fs.readFileSync('components/shell/AppShell.tsx', 'utf8')
-    expect(src).toContain('mx-auto flex w-fit items-center gap-1 rounded-full')
+    expect(src).toContain('mx-auto flex w-fit items-center gap-0.5 rounded-full')
     expect(src).toContain('aria-label={label}')
     expect(src).not.toContain('{short ?? label}')
   })

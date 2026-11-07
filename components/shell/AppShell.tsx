@@ -13,6 +13,8 @@ import { TopBar } from './TopBar'
 import { CommandPalette } from './CommandPalette'
 import { CreateMenu, type CreateAction } from './CreateMenu'
 import { MORE_ITEMS, MoreMenu } from './MoreMenu'
+import { ShortcutsDialog } from './ShortcutsDialog'
+import { isTyping, nextKey, type KeyState } from '@/lib/shell/shortcuts'
 import { Avatar } from '@/components/profile/Avatar'
 import { announceScanSaved, useOpenScan, useOpenUpload } from '@/lib/scan/events'
 import type { ScanTarget } from '@/lib/ai/scan'
@@ -26,6 +28,10 @@ import { isRecording } from '@/lib/lectures/recordingGuard'
 import { supabase } from '@/lib/supabase/client'
 import { updateProfile } from '@/lib/data/profile'
 import { createNote, listNotes } from '@/lib/data/notes'
+import { listNotebooks } from '@/lib/data/notebooks'
+import { listRecentQuizzes } from '@/lib/data/quizzes'
+import { listMaterials } from '@/lib/data/materials'
+import { listChats } from '@/lib/data/tutor'
 import { listDecks } from '@/lib/data/decks'
 import { listLectures } from '@/lib/data/lectures'
 import { appearanceVars, contentWidthOf } from '@/lib/appearance'
@@ -55,6 +61,7 @@ const DO: PaletteItem[] = [
   { id: 'do:scan', group: 'Do', label: 'Scan', keywords: 'photo camera pages', run: { action: 'scan' } },
   { id: 'do:timetable', group: 'Do', label: 'Upload timetable', keywords: 'schedule classes lectures week photo pdf', run: { action: 'timetable' } },
   { id: 'do:task', group: 'Do', label: 'New task', keywords: 'todo assignment exam planner', run: { action: 'new-task' } },
+  { id: 'do:shortcuts', group: 'Do', label: 'Keyboard shortcuts', keywords: 'keys hotkeys help', run: { action: 'shortcuts' } },
   { id: 'do:reminder', group: 'Do', label: 'New reminder', keywords: 'remind me alarm alert', run: { action: 'new-reminder' } },
 ]
 
@@ -112,6 +119,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
   const wide = !collapsed
   const look = useLook()
   const [palette, setPalette] = useState(false)
+  const [shortcuts, setShortcuts] = useState(false)
   const [material, setMaterial] = useState<PaletteItem[]>([])
   useOpenScan((files, target) => { setScanFiles(files); setScanTarget(target); setScanning(true) })
   useOpenUpload(() => setUploading(true))
@@ -128,17 +136,37 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  // G then a letter goes to a place, and ? lists them; neither while typing, with a modifier held or with a dialog open
+  const keyState = useRef<KeyState>({ armedAt: null })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || isTyping(e.target) || document.querySelector('dialog[open]')) { keyState.current = { armedAt: null }; return }
+      const r = nextKey(keyState.current, e.key, Date.now())
+      keyState.current = r.state
+      if (r.help) { e.preventDefault(); setShortcuts(true) }
+      else if (r.go) { e.preventDefault(); go(r.go) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [go])
   // The student's material, read when the palette opens, so it can jump straight to a note, deck or lecture
   useEffect(() => {
     if (!palette) return
     let live = true
     const sb = supabase()
-    Promise.all([listNotes(sb), listDecks(sb), listLectures(sb)]).then(([n, d, l]) => {
+    // each list is read on its own, so one that fails only leaves its own things out
+    const some = <T,>(p: Promise<T[]>) => p.catch(() => [] as T[])
+    Promise.all([some(listNotes(sb)), some(listDecks(sb)), some(listLectures(sb)), some(listNotebooks(sb)), some(listRecentQuizzes(sb, 30)), some(listMaterials(sb)), some(listChats(sb))]).then(([n, d, l, nb, q, f, c]) => {
       if (!live) return
       const all = [
         ...n.map(x => ({ at: x.updated_at, item: { id: `note:${x.id}`, group: 'Recent' as const, label: x.title || 'Untitled', hint: 'Note', run: { href: `/notes/${x.id}` } } })),
         ...d.map(x => ({ at: x.created_at ?? '', item: { id: `deck:${x.id}`, group: 'Recent' as const, label: x.name, hint: 'Deck', run: { href: `/flashcards/${x.id}` } } })),
         ...l.map(x => ({ at: x.recorded_at, item: { id: `lecture:${x.id}`, group: 'Recent' as const, label: x.title, hint: 'Lecture', run: { href: `/lectures/${x.id}` } } })),
+        ...nb.map(x => ({ at: x.created_at ?? '', item: { id: `notebook:${x.id}`, group: 'Recent' as const, label: x.name, hint: 'Notebook', run: { href: `/notebooks/${x.id}` } } })),
+        ...q.map(x => ({ at: x.quiz.created_at ?? '', item: { id: `quiz:${x.quiz.id}`, group: 'Recent' as const, label: x.quiz.title, hint: 'Quiz', run: { href: `/quiz/${x.quiz.id}` } } })),
+        // a file a note was made from is found as that note
+        ...f.filter(x => !x.note_id).map(x => ({ at: x.created_at ?? '', item: { id: `file:${x.id}`, group: 'Recent' as const, label: x.name, hint: 'File', run: { href: `/files/${x.id}` } } })),
+        ...c.map(x => ({ at: x.updated_at, item: { id: `chat:${x.id}`, group: 'Recent' as const, label: x.title, hint: 'Chat', run: { href: `/tutor/${x.id}` } } })),
       ]
       setMaterial(all.sort((a, b) => b.at.localeCompare(a.at)).map(x => x.item))
     }).catch(() => {})
@@ -159,13 +187,14 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
     if (a === 'new-note') void newNote()
     else if (a === 'new-deck') go('/flashcards?new=1')
     else if (a === 'record') go('/lectures/record')
-    else if (a === 'new-task') go('/planner')
+    else if (a === 'new-task') go('/planner?new=1')
     else if (a === 'new-reminder') requestReminder()
     else if (a === 'upload') setUploading(true)
     else if (a === 'scan') { setScanFiles(undefined); setScanTarget(undefined); setScanning(true) }
     else if (a === 'timetable') { setScanFiles(undefined); setScanTarget('planner'); setScanning(true) }
     else if (a === 'quiz') setQuizzing(true)
     else if (a === 'theme') toggleTheme()
+    else if (a === 'shortcuts') setShortcuts(true)
   }
   const paletteItems: PaletteItem[] = [
     ...DO,
@@ -302,6 +331,7 @@ export function AppShell({ children, initialCollapsed = false }: { children: Rea
       )}
       {more && <MoreMenu onGo={go} onClose={() => setMore(false)} />}
       {creating && <CreateMenu from={creating} onPick={act} onClose={() => setCreating(null)} />}
+      <ShortcutsDialog open={shortcuts} onClose={() => setShortcuts(false)} />
       {palette && <CommandPalette items={paletteItems} onRun={run} onClose={() => setPalette(false)} />}
       {quizzing && <QuizStartDialog open onClose={() => setQuizzing(false)} />}
       <ReminderHost />

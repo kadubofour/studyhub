@@ -13,8 +13,13 @@ const items: PaletteItem[] = [
 const labels = (q: string) => filterPalette(items, q).map(i => i.label)
 
 describe('filterPalette', () => {
-  it('with nothing typed: what can be done, then where to go, then recent material', () => {
-    expect(labels('')).toEqual(['New note', 'Start focus', 'Upload', 'Home', 'Planner', 'Notes', 'Flashcards', 'Biology', 'Krebs cycle', 'Café revision'])
+  it('with nothing typed: the latest material first, then what can be done, then where to go', () => {
+    expect(labels('')).toEqual(['Krebs cycle', 'Café revision', 'New note', 'Start focus', 'Upload', 'Home', 'Planner', 'Notes', 'Flashcards', 'Biology'])
+  })
+  it('with nothing typed shows only the latest few things, and the rest are found by typing', () => {
+    const many = [...items, ...Array.from({ length: 8 }, (_, i): PaletteItem => ({ id: `recent:x${i}`, group: 'Recent', label: `Old ${i}`, run: { href: `/notes/x${i}` } }))]
+    expect(filterPalette(many, '').filter(i => i.group === 'Recent')).toHaveLength(5)
+    expect(filterPalette(many, 'old 7').map(i => i.label)).toEqual(['Old 7'])
   })
   it('finds by name, any case, and by what a thing is also called', () => {
     expect(labels('PLAN')).toEqual(['Planner'])

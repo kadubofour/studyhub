@@ -53,7 +53,9 @@ export default function PlannerPage() {
   const [classes, setClasses] = useState<ClassSlot[]>([])
   const [editing, setEditing] = useState<Task | null>(null)
   // The student's own reminders are one more list here; ?list=reminders opens on it (a reminder about nothing leads here)
-  const askedList = useSearchParams().get('list')
+  const params = useSearchParams()
+  const askedList = params.get('list')
+  const focusNew = params.get('new') // "New task" from anywhere opens the planner with the cursor in the task box
   const [reminding, setReminding] = useState(askedList === 'reminders')
   const [seenList, setSeenList] = useState(askedList)
   if (askedList !== seenList) { setSeenList(askedList); if (askedList === 'reminders') { setTab('tasks'); setReminding(true) } }
@@ -239,7 +241,7 @@ export default function PlannerPage() {
               <h2 className="font-display text-[1.6rem] font-semibold leading-tight tracking-tight max-lg:sr-only">{title}</h2>
               <p className="mt-0.5 text-sm text-muted" aria-live="polite">{subtitle}</p>
             </div>
-            {list !== 'done' && <QuickAdd variant="card" courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />}
+            {list !== 'done' && <QuickAdd variant="card" focusSignal={focusNew} courses={courses} defaultCourseId={filter} tz={tz} onAdd={add} />}
             {loaded && courses.length === 0 && tasks.length === 0 && (
               <p className="mb-3 text-sm text-muted">Add your first course with “+ Course”, then add tasks above.</p>
             )}
