@@ -1,10 +1,11 @@
 'use client'
+import { BookOpen, LayoutGrid } from 'lucide-react'
 import { focusRadio, radioKeyTarget } from '@/lib/ui/radioKeys'
 
 export type CourseOption = { value: string; label: string; color?: string; count: number }
 
 // Which course's chats the list shows: a row of tabs on the list's own heading line, each with how many chats it holds, the open one underlined.
-// It reads as a filter of the list below it, not as one more way to start a chat. A group of radio buttons, so the arrow keys move along it.
+// Each has a small icon: the course's own colour on a book, a grid for all of them. It reads as a filter of the list below it, not as one more way to start a chat. A group of radio buttons, so the arrow keys move along it.
 // On a narrow screen it scrolls sideways.
 export function CourseFilter({ label, value, options, onChange, className = '' }: {
   label: string; value: string; options: CourseOption[]; onChange: (v: string) => void; className?: string
@@ -22,7 +23,8 @@ export function CourseFilter({ label, value, options, onChange, className = '' }
               e.preventDefault(); onChange(options[to].value); focusRadio(e.currentTarget, to)
             }}
             className={`choice relative -mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-[14px] outline-none transition focus-visible:bg-surface pointer-coarse:py-3 ${on ? 'border-[var(--accent-solid)] font-semibold text-fg' : 'border-transparent text-muted hover:text-fg'}`}>
-            {o.color && <span data-dot aria-hidden className="size-2 shrink-0 rounded-[3px]" style={{ background: o.color }} />}
+            {/* a course is a book in its own colour; All courses is a grid of them */}
+            {o.value === '' ? <LayoutGrid size={15} aria-hidden className="shrink-0" /> : <BookOpen size={15} aria-hidden className="shrink-0" style={o.color ? { color: o.color } : undefined} />}
             {o.label}
             <span aria-hidden className={`text-xs tabular-nums ${on ? 'text-muted' : 'text-muted/70'}`}>{o.count}</span>
           </button>

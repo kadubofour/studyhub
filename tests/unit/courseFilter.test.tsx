@@ -23,6 +23,12 @@ describe('the course filter on the chat list', () => {
     fireEvent.keyDown(screen.getByRole('radio', { name: /All courses/ }), { key: 'ArrowRight' })
     expect(onChange).toHaveBeenLastCalledWith('m')
   })
+  it('has an icon on each, a book in the course\'s colour and a grid for all, and no coloured dot', () => {
+    const { container } = render(<CourseFilter label="Show chats from" value="" options={options} onChange={() => {}} />)
+    expect(container.querySelectorAll('[data-dot]')).toHaveLength(0)
+    expect(container.querySelectorAll('button svg')).toHaveLength(3)
+    expect((screen.getByRole('radio', { name: /MATH 121/ }).querySelector('svg') as SVGElement).style.color).toBe('rgb(139, 124, 246)')
+  })
   it('only the chosen one is in the tab order', () => {
     render(<CourseFilter label="Show chats from" value="s" options={options} onChange={() => {}} />)
     expect(screen.getAllByRole('radio').map(r => r.getAttribute('tabindex'))).toEqual(['-1', '-1', '0'])
