@@ -226,4 +226,31 @@ describe('ChatView', () => {
     expect(screen.getByRole('heading', { name: 'Newest answer' })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Old answer' })).toBeNull()
   })
+
+  describe('a question that goes at once, from Explain on text selected in a note', () => {
+    it('sends it once the chat has loaded, takes it out of the address, and leaves the box empty', async () => {
+      const sent: string[] = []
+      send = async (_c, m) => { sent.push(m); return { ok: true, lines: lines([{ t: 'delta', text: 'Sure.' }, { t: 'done', messageId: 'm2', proposals: [] }]) } }
+      search = 'ask=' + encodeURIComponent('Explain this from my note “Krebs”:\n\n> NADH carries electrons.') + '&send=1'
+      await open()
+      expect(sent).toEqual(['Explain this from my note “Krebs”:\n\n> NADH carries electrons.'])
+      expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('')
+      expect(router.replace).toHaveBeenCalledWith('/tutor/c1')
+    })
+    it('sends it once only, even in strict mode', async () => {
+      const sent: string[] = []
+      send = async (_c, m) => { sent.push(m); return { ok: true, lines: lines([{ t: 'done', messageId: 'm2', proposals: [] }]) } }
+      search = 'ask=Explain%20this&send=1'
+      await act(async () => { render(<StrictMode><ToastProvider><ConfirmProvider><ChatView chatId="c1" /></ConfirmProvider></ToastProvider></StrictMode>) })
+      expect(sent).toHaveLength(1)
+    })
+    it('only fills the box, without sending, when it is not asked to send (a Revise button)', async () => {
+      const sent: string[] = []
+      send = async (_c, m) => { sent.push(m); return { ok: true, lines: lines([]) } }
+      search = 'ask=Quiz%20me%20on%20Krebs'
+      await open()
+      expect(sent).toEqual([])
+      expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('Quiz me on Krebs')
+    })
+  })
 })
