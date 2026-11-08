@@ -135,6 +135,16 @@ describe('POST /api/ai/tutor', () => {
       await (await call({ message: 'continue' })).text()
       expect((modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content).toContain('- note ' + NOTE + ': Sets')
     })
+    it('puts the course\'s topics in the outline, in order, with how the student is doing', async () => {
+      chat = { ...chat, note_id: null, course_id: C1 }
+      note = [{ id: NOTE, title: 'Sets', content_md: 'A set is a collection.' }] as never
+      stats = [{ topic_id: 't2', name: 'Rational numbers', position: 1, answers_30d: 6, correct_30d: 2, status: 'weak' }, { topic_id: 't1', name: 'Sets', position: 0, answers_30d: 0, correct_30d: 0, status: 'covered' }]
+      await (await call({ message: 'teach me biology' })).text()
+      const text = (modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content
+      expect(text).toContain('Topics, in the order to teach them:')
+      expect(text.indexOf('1. Sets')).toBeGreaterThan(-1)
+      expect(text.indexOf('1. Sets')).toBeLessThan(text.indexOf('2. Rational numbers (weak, 33% right'))
+    })
     it('gives no outline for a chat about no course', async () => {
       chat = { ...chat, note_id: null, course_id: null }
       await (await call({ message: 'why NADH?' })).text()
