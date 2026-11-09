@@ -18,14 +18,14 @@ describe('how sharply a PDF page is drawn', () => {
 
 describe('what Explain asks the tutor', () => {
   it('quotes the selected words and says where they are from', () => {
-    expect(explainMessage('Week 3 slides.pdf', { page: 4, text: 'The  Krebs\ncycle', picked: true }))
-      .toBe('Explain this from page 4 of Week 3 slides.pdf to me in plain words:\n\nThe Krebs cycle')
+    expect(explainMessage('Week 3 slides.pdf', { page: 4, text: 'The  Krebs cycle', picked: true }))
+      .toBe('Explain this from page 4 of “Week 3 slides.pdf”, step by step, in simple terms:\n\n> The Krebs cycle')
   })
   it('asks about the page when nothing is selected', () => {
-    expect(explainMessage('a.pdf', { page: 2, text: 'Mitosis', picked: false })).toBe('Explain page 2 of a.pdf to me in plain words. It says:\n\nMitosis')
+    expect(explainMessage('a.pdf', { page: 2, text: 'Mitosis', picked: false })).toBe('Explain page 2 of “a.pdf”, step by step, in simple terms:\n\n> Mitosis')
   })
   it('just names the page of a scan, which has no words to quote', () => {
-    expect(explainMessage('scan.pdf', { page: 1, text: '  ', picked: false })).toBe('Explain page 1 of scan.pdf to me in plain words.')
+    expect(explainMessage('scan.pdf', { page: 1, text: '  ', picked: false })).toBe('Explain page 1 of “scan.pdf”, step by step, in simple terms.')
   })
   it('keeps a long page short enough for the address', () => {
     expect(explainMessage('a.pdf', { page: 1, text: 'x'.repeat(5000), picked: false }).length).toBeLessThan(1600)

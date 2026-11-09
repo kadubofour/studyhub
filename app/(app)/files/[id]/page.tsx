@@ -70,13 +70,13 @@ export default function FilePage() {
     } catch { setMaking(null); toast('Couldn\'t open the file. Check your connection.') }
   }
 
-  // The tutor gets a chat of its own about this, with the question ready to send; its reply can then be explained visually like any other
+  // As with Explain on a note, the chat opens and the question is asked at once; the reply can then be explained visually like any other
   async function explain(part: PdfPart) {
     if (!file) return
     try {
       const chat = await createChat(supabase(), { title: file.name.slice(0, 200), course_id: file.course_id })
-      router.push(`/tutor/${chat.id}?ask=${encodeURIComponent(explainMessage(file.name, part))}`)
-    } catch { toast('Couldn\'t open the tutor. Check your connection.') }
+      router.push(`/tutor/${chat.id}?ask=${encodeURIComponent(explainMessage(file.name, part))}&send=1`)
+    } catch { toast('Couldn\'t open the tutor. Check your connection and try again.') }
   }
 
   async function remove() {

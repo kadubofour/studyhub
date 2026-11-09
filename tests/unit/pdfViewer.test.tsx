@@ -17,6 +17,13 @@ import { PdfViewer } from '@/components/files/PdfViewer'
 
 const onePdf = (numPages = 3) => async () => ({ numPages, getPage })
 const show = async (onExplain?: (p: unknown) => void) => { await act(async () => { render(<PdfViewer url="https://x/a.pdf?token=t" name="a.pdf" onExplain={onExplain} />) }) }
+const BUBBLE = 'Ask the tutor to explain the selected text'
+const select = (text: string, anchorNode: Node) => {
+  vi.spyOn(document, 'getSelection').mockReturnValue({
+    toString: () => text, anchorNode, rangeCount: 1, getRangeAt: () => ({ getBoundingClientRect: () => ({ left: 10, right: 60, top: 0, bottom: 0 }) }),
+  } as unknown as Selection)
+  act(() => { document.dispatchEvent(new Event('selectionchange')) })
+}
 
 beforeEach(() => {
   urls.length = 0
@@ -68,10 +75,18 @@ describe('the PDF viewer', () => {
     const inPage = document.createElement('span')
     inPage.textContent = 'divides'
     screen.getByRole('group', { name: 'Page 2' }).append(inPage)
-    vi.spyOn(document, 'getSelection').mockReturnValue({ toString: () => 'divides', anchorNode: inPage.firstChild } as unknown as Selection)
-    act(() => { document.dispatchEvent(new Event('selectionchange')) })
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Explain selection' })) })
+    select('divides', inPage.firstChild!)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: BUBBLE })) })
     expect(onExplain).toHaveBeenCalledWith({ page: 2, text: 'divides', picked: true })
+  })
+
+  it('does not offer it for a stray letter', async () => {
+    await show(vi.fn())
+    const inPage = document.createElement('span')
+    inPage.textContent = 'a'
+    screen.getByRole('group', { name: 'Page 1' }).append(inPage)
+    select('a', inPage.firstChild!)
+    expect(screen.queryByRole('button', { name: BUBBLE })).toBeNull()
   })
 
   it('ignores words selected elsewhere on the page', async () => {
@@ -79,9 +94,8 @@ describe('the PDF viewer', () => {
     const outside = document.createElement('p')
     outside.textContent = 'elsewhere'
     document.body.append(outside)
-    vi.spyOn(document, 'getSelection').mockReturnValue({ toString: () => 'elsewhere', anchorNode: outside.firstChild } as unknown as Selection)
-    act(() => { document.dispatchEvent(new Event('selectionchange')) })
-    expect(screen.getByRole('button', { name: 'Explain page' })).toBeTruthy()
+    select('elsewhere', outside.firstChild!)
+    expect(screen.queryByRole('button', { name: BUBBLE })).toBeNull()
     outside.remove()
   })
 

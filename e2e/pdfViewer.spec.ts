@@ -24,16 +24,26 @@ test('a kept PDF is read inside the app, and Explain takes it to the tutor', asy
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
   expect(axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 
-  // the question is waiting in a new chat: nothing is sent until the student presses Send
+  // words selected in the PDF get the same button as words selected in a note, and asking about them goes straight to the tutor
+  await first.locator('.pdf-text span').filter({ hasText: 'Krebs' }).evaluate(el => {
+    const words = document.createRange()
+    words.selectNodeContents(el)
+    getSelection()?.removeAllRanges()
+    getSelection()?.addRange(words)
+  })
+  await page.getByRole('button', { name: 'Ask the tutor to explain the selected text' }).click()
+  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}/)
+  await expect(page.getByText('Explain this from page 1 of “cells.pdf”, step by step, in simple terms', { exact: false })).toBeVisible()
+  await expect(page.getByText('mitochondrial matrix')).toBeVisible() // the fake tutor's reply, with nothing more pressed
+  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/, { timeout: 15_000 }) // taken from the address, so a reload does not ask again
+  await expect(page.getByRole('link', { name: 'cells.pdf' })).toHaveAttribute('href', /\/files\/[0-9a-f-]{36}$/) // the tutor read the file itself
+
+  // the whole page can be asked about too
+  await page.goBack()
+  await expect(page).toHaveURL(/\/files\/[0-9a-f-]{36}$/)
   await page.getByRole('button', { name: 'Explain page' }).click()
   await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}/)
-  const box = page.getByLabel('Message')
-  await expect(box).toHaveValue(/Explain page 1 of cells\.pdf to me in plain words\. It says:\s+Cell biology The Krebs cycle makes ATP\./)
-  await expect(page).toHaveURL(/\/tutor\/[0-9a-f-]{36}$/) // taken from the address, so a reload does not fill the box again
-
-  await page.locator('form').filter({ has: box }).getByRole('button', { name: 'Send' }).click()
-  await expect(page.getByText('mitochondrial matrix')).toBeVisible() // the fake tutor's reply
-  await expect(page.getByRole('link', { name: 'cells.pdf' })).toHaveAttribute('href', /\/files\/[0-9a-f-]{36}$/) // the tutor read the file itself
+  await expect(page.getByText('Explain page 1 of “cells.pdf”, step by step, in simple terms', { exact: false })).toBeVisible()
 })
 
 test('a PDF sent to the tutor opens inside the app', async ({ page }) => {
