@@ -10,6 +10,7 @@ import { TableTools } from './TableTools'
 import { TableGridPicker } from './TableGridPicker'
 import { editorQuickActions } from './editorQuickActions'
 import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
+import { ExplainBubble } from './ExplainBubble'
 import { HIGHLIGHTS, type HighlightName } from '@/lib/notes/markup'
 import { useToast } from '@/components/providers/ToastProvider'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -137,7 +138,7 @@ function onlyPicture(data: DataTransfer | null): boolean {
 // The description a picture gets from its file name: "Krebs cycle.png" -> "Krebs cycle"; a screenshot's "image.png" gets none
 const altFrom = (name: string) => { const n = name.replace(/\.[^.]+$/, '').trim(); return /^(image|screenshot|untitled)\d*$/i.test(n) ? '' : n.slice(0, 120) }
 
-export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, drawing = false, onDraw, autoMath = true, onNewNote }: {
+export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEquation, drawing = false, onDraw, autoMath = true, onNewNote, onExplain }: {
   markdown: string
   onChange: (md: string) => void
   /** Hands the editor to the page (menu bar commands, find); null when it goes away. */
@@ -153,6 +154,8 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
   autoMath?: boolean
   /** A phone's bar, while not typing, starts a new note */
   onNewNote?: () => void
+  /** Text selected in the note, asked to the tutor to explain: a button by the selection and a choice in the right-click menu */
+  onExplain?: (text: string) => void
 }) {
   const toast = useToast()
   const { profile } = useProfile()
@@ -273,6 +276,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
     const items = editorQuickActions(editor, { mathPos }, {
       onInsertEquation: () => onInsertEquation?.(),
       onEditMath: (kind, latex, pos) => onEditMath?.(kind, latex, pos),
+      onExplain: onExplain ? (text: string) => onExplain(text) : undefined,
       onPasteFailed: () => toast(`Your browser blocked pasting from this menu. Use ${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+'}V instead.`),
     })
     setMenu({ x: e.clientX, y: e.clientY, items })
@@ -335,6 +339,7 @@ export function RichEditor({ markdown, onChange, onReady, onEditMath, onInsertEq
       <NoteImagesContext.Provider value={imagesCtx}>
         <EditorContent editor={editor} onContextMenu={openQuickActions} />
       </NoteImagesContext.Provider>
+      {onExplain && <ExplainBubble editor={editor} onExplain={onExplain} below={showsPhone(screen)} hidden={drawing || !!menu} />}
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} label="Quick actions" onClose={closeMenu}
         footer="Shift + right-click for the browser menu" />}
     </div>

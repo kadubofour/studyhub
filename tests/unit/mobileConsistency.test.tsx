@@ -15,8 +15,8 @@ describe('one page title everywhere', () => {
 })
 
 describe('the way back from a page inside another', () => {
-  it.each([['app/(app)/flashcards/[deck]/page.tsx', '/flashcards', 'Flashcards'], ['app/(app)/courses/[id]/page.tsx', '/courses', 'Courses'], ['app/(app)/notebooks/[id]/page.tsx', '/library', 'Library']])('%s links back to %s', (f, href, label) => {
-    expect(src(f)).toContain(`<BackLink href="${href}">${label}</BackLink>`)
+  it.each([['app/(app)/flashcards/[deck]/page.tsx', '/flashcards', 'Flashcards'], ['app/(app)/courses/[id]/page.tsx', '/courses', 'Courses'], ['app/(app)/notebooks/[id]/page.tsx', '{home}', "{homeCourse?.name ?? 'Courses'}"]])('%s links back to %s', (f, href, label) => {
+    expect(src(f)).toContain(href.startsWith('{') ? `<BackLink href=${href}>${label}</BackLink>` : `<BackLink href="${href}">${label}</BackLink>`)
   })
 })
 
@@ -38,8 +38,8 @@ describe('empty states', () => {
 
 describe('Library filters on a phone', () => {
   it('sort and layout stay together in the column beside the items, wrapping rather than scrolling', () => {
-    expect(src('app/(app)/library/page.tsx')).toContain('<div data-filter-row className="flex flex-wrap items-center gap-2">')
-    expect(src('app/(app)/library/page.tsx')).toContain('className="flex-nowrap"')
+    expect(src('components/library/MaterialBrowser.tsx')).toContain('<div data-filter-row className="flex flex-wrap items-center gap-2">')
+    expect(src('components/library/MaterialBrowser.tsx')).toContain('className="flex-nowrap"')
   })
 })
 

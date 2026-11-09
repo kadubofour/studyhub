@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import { BackNavLink } from '@/components/ui/BackNavLink'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
@@ -25,7 +25,7 @@ export default function QuizPage() {
     if (boot.current?.id !== id) {
       boot.current = { id, run: getQuiz(sb, id).then(async q => ({ q, a: (await getOpenAttempt(sb, q.id)) ?? (await startAttempt(sb, q)) })) } // resume or start
     }
-    boot.current.run.then(({ q, a }) => { if (live) { setQuiz(q); setAttempt(a) } }).catch(() => { if (live) router.replace('/library') })
+    boot.current.run.then(({ q, a }) => { if (live) { setQuiz(q); setAttempt(a) } }).catch(() => { if (live) router.replace('/courses') })
     return () => { live = false }
   }, [id, router])
 
@@ -50,7 +50,7 @@ export default function QuizPage() {
   return (
     <div className="min-h-dvh">
       <header className="flex items-center gap-2 border-b border-line px-4 py-2">
-        <Link href={quiz.note_id ? `/notes/${quiz.note_id}` : '/quiz'} className="btn-ghost" aria-label={quiz.note_id ? 'Back to note' : 'Back to quizzes'}><ArrowLeft size={17} aria-hidden /></Link>
+        <BackNavLink href={quiz.note_id ? `/notes/${quiz.note_id}` : '/quiz'} className="btn-ghost" aria-label={quiz.note_id ? 'Back to note' : 'Back to quizzes'}><ArrowLeft size={17} aria-hidden /></BackNavLink>
         <h1 className="font-medium">{quiz.title}</h1>
       </header>
       {attempt.finished_at

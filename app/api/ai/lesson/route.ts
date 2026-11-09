@@ -27,10 +27,13 @@ export async function POST(request: Request) {
   const at = (msgs ?? []).findIndex(m => m.id === messageId)
   const reply = at >= 0 ? msgs![at] : null
   if (!chat || !reply || reply.role !== 'assistant' || !reply.content.trim()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
-  const question = [...msgs!.slice(0, at)].reverse().find(m => m.role === 'user')?.content ?? ''
+  const asked = msgs!.slice(0, at).filter(m => m.role === 'user').map(m => m.content)
+  const question = asked.at(-1) ?? ''
+  // the student's few questions before this one show what they already know and where they are stuck
+  const said = asked.slice(-5, -1)
 
   const result = await runAiAction(async client => {
-    const script = await writeLesson(client, { question, answer: reply.content, title: chat.title }, request.signal)
+    const script = await writeLesson(client, { question, answer: reply.content, title: chat.title, said }, request.signal)
     const voices = await Promise.all(script.steps.map(s => speakStep(client, s.narration, request.signal)))
     // stored in the student's own folder; a failure here gives the AI actions back (runAiAction releases them)
     const id = crypto.randomUUID()

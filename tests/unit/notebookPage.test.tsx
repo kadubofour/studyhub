@@ -49,7 +49,7 @@ describe('a notebook\'s page', () => {
     expect(within(screen.getByRole('list', { name: 'Decks in Cell biology' })).getAllByRole('link')).toHaveLength(1)
     expect(within(screen.getByRole('list', { name: 'Materials in Cell biology' })).getAllByRole('link')).toHaveLength(1)
     expect(screen.queryByText('Elsewhere')).toBeNull() // in another notebook
-    expect(screen.getByRole('link', { name: 'Library' }).getAttribute('href')).toBe('/library')
+    expect(screen.getByRole('link', { name: 'Biology' }).getAttribute('href')).toBe('/courses/bio') // its notes all share one course, so it is in that course
   })
   it('starts things inside it: a note, a recording, a deck and materials', async () => {
     await open()
@@ -76,13 +76,13 @@ describe('a notebook\'s page', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Organic' })).toBeTruthy()
     expect((screen.getByTestId('notebook-cover').firstElementChild as HTMLElement).style.background).toBe('rgb(186, 117, 23)')
   })
-  it('deletes it after asking, moving everything to General, and goes back to the Library', async () => {
+  it('deletes it after asking, moving everything to General, and goes back to the page of its course', async () => {
     await open()
     await click(screen.getByRole('button', { name: 'Delete notebook' }))
     expect(screen.getByText(/moves to General/i)).toBeTruthy()
     await click(screen.getByRole('button', { name: /^Delete$/ }))
     expect(deleteNotebook).toHaveBeenCalledWith({}, 'nb1')
-    expect(push).toHaveBeenCalledWith('/library')
+    expect(push).toHaveBeenCalledWith('/courses/bio')
   })
   it('cannot delete General', async () => {
     books = [{ id: 'nb1', name: 'General', course_id: null, is_default: true }]
@@ -104,6 +104,6 @@ describe('a notebook\'s page', () => {
     id = 'gone'
     await open()
     expect(screen.getByRole('heading', { name: 'Notebook not found' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Go to Library' }).getAttribute('href')).toBe('/library')
+    expect(screen.getByRole('link', { name: 'Go to Courses' }).getAttribute('href')).toBe('/courses')
   })
 })

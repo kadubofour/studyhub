@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, FolderOpen, BookOpen } from 'lucide-react'
+import { Bell, Layers, Play, Pause, BarChart3, Settings, School, ArrowRight, BookOpen } from 'lucide-react'
 import { TaskRow } from '@/components/planner/TaskRow'
 import { QuickAdd } from '@/components/planner/QuickAdd'
 import { useProfile } from '@/components/providers/ProfileProvider'
@@ -10,6 +10,7 @@ import { useSaver } from '@/components/providers/ToastProvider'
 import { fmtClock, MODE_LABEL, useFocus } from '@/components/providers/FocusProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
+import { useCoursesChanged } from '@/lib/course/events'
 import { greetingFont } from '@/lib/appearance'
 import { useLook } from '@/components/providers/useLook'
 import { HeroFocus } from '@/components/home/HeroFocus'
@@ -42,7 +43,6 @@ import { nextOccurrence, type MyReminder } from '@/lib/reminders/mine'
 // Home's shortcuts on a phone, which has no sidebar (Profile is the avatar beside the greeting)
 const SHORTCUTS = [
   { href: '/courses', label: 'Courses', icon: BookOpen },
-  { href: '/library', label: 'Library', icon: FolderOpen },
   { href: '/progress', label: 'Progress', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -87,6 +87,8 @@ export default function HomePage() {
       setCourses(c); setTasks(t); setClasses(cl); setDue(d); setDoneBefore(done); setWeek(dailyMinutes(sessions, tz))
     })
   }, [tz])
+  // A course renamed or deleted from somewhere else (a right click) reads them again
+  useCoursesChanged(() => { listCourses(supabase()).then(setCourses).catch(() => {}) })
   // Course material is read on its own, so a slow list never holds up the rest of Home
   useEffect(() => {
     const sb = supabase()

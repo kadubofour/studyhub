@@ -1,6 +1,7 @@
 'use client'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { BackNavLink } from '@/components/ui/BackNavLink'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PdfChip } from '@/components/files/PdfChip'
 import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Link2Off, Loader2, Mic, MoreHorizontal, Paperclip, Pencil, RefreshCw, Square, Trash2, X, ChevronLeft } from 'lucide-react'
@@ -46,7 +47,10 @@ const SOURCE_LINK = { note: (id: string) => `/notes/${id}`, lecture: (id: string
 
 export function ChatView({ chatId }: { chatId: string }) {
   const router = useRouter()
-  const ask = useSearchParams().get('ask')
+  const params = useSearchParams()
+  const ask = params.get('ask')
+  // A message that is sent as soon as the chat has loaded ("Explain" on selected text in a note): taken at the first render, as the address is cleared at once
+  const sendAtStart = useRef(params.get('send') === '1' && !!params.get('ask') ? (params.get('ask') ?? '').slice(0, 4000) : null)
   const confirm = useConfirm()
   const toast = useToast()
   const [chat, setChat] = useState<TutorChat | null>(null)
@@ -253,6 +257,15 @@ export function ChatView({ chatId }: { chatId: string }) {
     catch { toast('Added. It may show as new again after a reload.') }
   }
 
+  // It goes once, and the box stays empty: it is not left there to be sent a second time
+  useEffect(() => {
+    const message = sendAtStart.current
+    if (!message || !chat) return
+    sendAtStart.current = null
+    setText('')
+    void send(message)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat])
   async function toggleGuided(on: boolean) {
     setChat(c => c && { ...c, guided: on })
     try { await setChatGuided(supabase(), chatId, on) }
@@ -307,7 +320,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-3xl flex-col gap-3 max-md:min-h-[calc(100dvh-13rem)]">
       {/* a phone gets a bar like the other screens: back to the Tutor, the name, and one ⋯ menu for everything else */}
       {showsPhone(screen) && <div className="sticky top-0 z-20 -mx-1 flex items-center gap-1 bg-bg/90 py-1 backdrop-blur md:hidden">
-        <Link href="/tutor" aria-label="Back to the Tutor" className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-accent active:bg-surface"><ChevronLeft size={26} aria-hidden /></Link>
+        <BackNavLink href="/tutor" aria-label="Back to the Tutor" className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-accent active:bg-surface"><ChevronLeft size={26} aria-hidden /></BackNavLink>
         {renaming === null
           ? <h1 className="min-w-0 flex-1 truncate font-display text-[1.35rem] font-bold leading-tight tracking-tight">{chat.title}</h1>
           : <input aria-label="Chat name" className="input min-w-0 flex-1 text-lg font-semibold" value={renaming} maxLength={200} autoFocus

@@ -119,6 +119,54 @@ describe('POST /api/ai/tutor', () => {
     expect(out.filter(l => l.t === 'delta').map(l => l.text).join('')).toMatch(/couldn't prepare/)
     expect(inserted[1][1].proposals).toHaveLength(1)
   })
+  describe('a lesson over several messages', () => {
+    it('gives the tutor what the course holds when the message names the course, whichever course the chat was opened in', async () => {
+      chat = { ...chat, note_id: null, course_id: null }
+      note = [{ id: NOTE, title: 'Rational numbers', content_md: 'A rational number is a ratio of integers.' }] as never
+      await (await call({ message: 'you should be teaching biology' })).text()
+      const text = (modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content
+      expect(text).toContain('<course_outline>')
+      expect(text).toContain('Course: Biology')
+      expect(text).toContain('A rational number is a ratio of integers.')
+    })
+    it('gives the outline for the course the chat is about, with no mention of it in the message', async () => {
+      chat = { ...chat, note_id: null, course_id: C1 }
+      note = [{ id: NOTE, title: 'Sets', content_md: 'A set is a collection.' }] as never
+      await (await call({ message: 'continue' })).text()
+      expect((modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content).toContain('- note ' + NOTE + ': Sets')
+    })
+    it('puts the course\'s topics in the outline, in order, with how the student is doing', async () => {
+      chat = { ...chat, note_id: null, course_id: C1 }
+      note = [{ id: NOTE, title: 'Sets', content_md: 'A set is a collection.' }] as never
+      stats = [{ topic_id: 't2', name: 'Rational numbers', position: 1, answers_30d: 6, correct_30d: 2, status: 'weak' }, { topic_id: 't1', name: 'Sets', position: 0, answers_30d: 0, correct_30d: 0, status: 'covered' }]
+      await (await call({ message: 'teach me biology' })).text()
+      const text = (modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content
+      expect(text).toContain('Topics, in the order to teach them:')
+      expect(text.indexOf('1. Sets')).toBeGreaterThan(-1)
+      expect(text.indexOf('1. Sets')).toBeLessThan(text.indexOf('2. Rational numbers (weak, 33% right'))
+    })
+    it('gives no outline for a chat about no course', async () => {
+      chat = { ...chat, note_id: null, course_id: null }
+      await (await call({ message: 'why NADH?' })).text()
+      expect((modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content).not.toContain('<course_outline>')
+    })
+    it('is given the lesson state kept with the chat, with every message', async () => {
+      chat = { ...chat, lesson_state: 'Plan: sets, rationals. Done: sets. Next: rationals.' }
+      await (await call({ message: 'continue' })).text()
+      expect((modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content).toContain('<lesson_state>\nPlan: sets, rationals. Done: sets. Next: rationals.\n</lesson_state>')
+    })
+    it('keeps the state the tutor saves, without showing it as a proposal or as something it could not prepare', async () => {
+      script = [{ type: 'delta', text: 'Next, rational numbers.' }, { type: 'tool', name: 'save_lesson_state', args: JSON.stringify({ state: 'Plan: sets, rationals. Done: sets.' }) }]
+      const out = await lines(await call({ message: 'continue' }))
+      expect(updated.some(([t, p]) => t === 'tutor_chats' && p.lesson_state === 'Plan: sets, rationals. Done: sets.')).toBe(true)
+      expect(out.at(-1)).toMatchObject({ t: 'done', proposals: [] })
+      expect(out.filter(l => l.t === 'delta').map(l => l.text).join('')).toBe('Next, rational numbers.')
+    })
+    it('offers the tutor the tool for it, as well as the ones the student approves', async () => {
+      await (await call()).text()
+      expect((modelInput.mock.calls[0][0] as { tools: { name: string }[] }).tools.map(t => t.name)).toContain('save_lesson_state')
+    })
+  })
   it('is refused before anything is saved when the limit is reached', async () => {
     reserve = 'tutor_limit'
     const res = await call()

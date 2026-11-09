@@ -65,10 +65,11 @@ describe('TopBar keeping up', () => {
     const chip = screen.getByLabelText('4-day streak')
     expect(chip.textContent).toBe('4')
   })
-  it('names the streak for screen readers as an image, since a plain span cannot be named', async () => {
+  it('names the streak for screen readers, and the streak and level both lead to Progress', async () => {
     xp = summary({ streak: 4 })
     await open()
-    expect(screen.getByRole('img', { name: '4-day streak' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '4-day streak' }).getAttribute('href')).toBe('/progress')
+    expect(screen.getByText('Level 2').closest('a')?.getAttribute('href')).toBe('/progress')
   })
   it('shows the cheer first in the strip, so it does not push the other chips about', async () => {
     xp = summary({ total: 120 })

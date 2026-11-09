@@ -17,9 +17,9 @@ test('Progress welcomes a new student in words, not a row of zeros, and the tab 
   await expect(stats.getByText('0 days')).toBeVisible()
 })
 
-test('every page names itself in the tab: Library, Practice, Tutor, Planner, Profile', async ({ page }) => {
+test('every page names itself in the tab: Courses, Practice, Tutor, Planner, Profile', async ({ page }) => {
   await signUp(page)
-  for (const [path, title] of [['/library', 'Library'], ['/flashcards', 'Practice'], ['/quiz', 'Practice'], ['/tutor', 'Tutor'], ['/planner', 'Planner'], ['/profile', 'Profile'], ['/home', 'Home']] as const) {
+  for (const [path, title] of [['/courses', 'Courses'], ['/flashcards', 'Practice'], ['/quiz', 'Practice'], ['/tutor', 'Tutor'], ['/planner', 'Planner'], ['/profile', 'Profile'], ['/home', 'Home']] as const) {
     await page.goto(path)
     await expect(page, path).toHaveTitle(`${title} · Studyhub`)
   }

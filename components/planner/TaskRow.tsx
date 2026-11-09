@@ -1,5 +1,7 @@
 'use client'
-import { Trash2, FileText, Flag, GraduationCap, BookOpenText } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Pencil, RotateCcw, Trash2, FileText, Flag, GraduationCap, BookOpenText } from 'lucide-react'
+import { ContextMenu, type MenuEntry } from '@/components/ui/ContextMenu'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { DateTile } from '@/components/ui/DateTile'
 import type { Course, Task, TaskType } from '@/lib/types'
@@ -16,8 +18,15 @@ export function TaskRow({ task, course, tz, now, done, onToggle, onDelete, onEdi
 }) {
   const saving = task.id.startsWith('temp-')
   const type = showType ? TYPE[task.type] : undefined
+  // Right click (or press and hold) anywhere on the row: done or not done, edit, delete
+  const [at, setAt] = useState<null | { x: number; y: number }>(null)
+  const entries: MenuEntry[] = [
+    { label: done ? 'Mark not done' : 'Mark done', icon: done ? RotateCcw : Check, onSelect: onToggle, disabled: saving },
+    ...(onEdit ? [{ label: 'Edit', icon: Pencil, onSelect: onEdit, disabled: saving }] : []),
+    ...(onDelete ? ['sep' as const, { label: 'Delete', icon: Trash2, onSelect: onDelete, danger: true, disabled: saving }] : []),
+  ]
   return (
-    <div className="group mb-1.5 flex items-center gap-3 rounded-r-xl border border-l-4 border-line bg-raised py-2 pl-3 pr-2 transition hover:shadow-sm"
+    <div onContextMenu={e => { e.preventDefault(); setAt({ x: e.clientX, y: e.clientY }) }} className="group mb-1.5 flex items-center gap-3 rounded-r-xl border border-l-4 border-line bg-raised py-2 pl-3 pr-2 transition hover:shadow-sm"
       style={{ borderLeftColor: course?.color ?? 'var(--line)' }}>
       <input type="checkbox" checked={!!done} onChange={onToggle} aria-label={`Mark ${task.title} done`}
         disabled={saving} title={saving ? 'Saving…' : undefined}
@@ -42,6 +51,7 @@ export function TaskRow({ task, course, tz, now, done, onToggle, onDelete, onEdi
           <Trash2 size={14} aria-hidden />
         </button>
       )}
+      {at && <ContextMenu x={at.x} y={at.y} label={`${task.title} options`} items={entries} onClose={() => setAt(null)} />}
     </div>
   )
 }

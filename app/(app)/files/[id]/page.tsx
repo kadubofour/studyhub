@@ -6,6 +6,7 @@ import { Download, ExternalLink, FileText, Loader2, Sparkles, Trash2 } from 'luc
 import { UploadDialog } from '@/components/notes/UploadDialog'
 import { requestScan } from '@/lib/scan/events'
 import { BackLink } from '@/components/ui/BackLink'
+import { courseHref } from '@/lib/course/home'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CourseTag } from '@/components/ui/CourseTag'
 import { useToast } from '@/components/providers/ToastProvider'
@@ -45,7 +46,7 @@ export default function FilePage() {
       setFile(m)
       listCourses(sb).then(cs => { if (live) { setCourses(cs); setCourse(cs.find(c => c.id === m.course_id) ?? null) } }).catch(() => {})
       if (m.mime === MATERIAL_MIME.pdf || m.mime.startsWith('image/')) materialUrl(sb, m).then(u => { if (live) setView(u) }).catch(() => { if (live) setNoLink(true) })
-    }).catch(() => router.replace('/library')) // deleted or someone else's file
+    }).catch(() => router.replace('/courses')) // deleted or someone else's file
     return () => { live = false }
   }, [id, router])
 
@@ -85,12 +86,12 @@ export default function FilePage() {
       confirmLabel: 'Delete file', danger: true,
     })
     if (!ok) return
-    try { await deleteMaterial(supabase(), file); router.replace('/library') } catch { toast('Couldn\'t delete the file.') }
+    try { await deleteMaterial(supabase(), file); router.replace(courseHref(file.course_id)) } catch { toast('Couldn\'t delete the file.') }
   }
 
   return (
     <div>
-      <BackLink href="/library">Library</BackLink>
+      <BackLink href={courseHref(file?.course_id)}>{course?.name ?? 'Courses'}</BackLink>
       <PageHeader title={file?.name ?? 'File'} summary={file ? `${MATERIAL_LABEL[file.mime] ?? 'File'} · ${fileSize(file.bytes)} · Added ${day(file.created_at)}` : undefined} actions={file && <>
         {file.mime !== MATERIAL_MIME.pdf && <button type="button" className="btn" onClick={() => { void open(false) }}><ExternalLink size={14} aria-hidden />Open</button>}
         <button type="button" className="btn" onClick={() => { void open(true) }}><Download size={14} aria-hidden />Download</button>

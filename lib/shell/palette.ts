@@ -12,6 +12,7 @@ export interface PaletteItem {
   run: { href: string } | { action: string }
 }
 
+export const RECENT_SHOWN = 5
 const GROUP_ORDER: PaletteGroup[] = ['Do', 'Go to', 'Courses', 'Recent']
 const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
@@ -19,7 +20,8 @@ const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerC
 export function filterPalette(items: PaletteItem[], query: string): PaletteItem[] {
   const words = plain(query).split(/\s+/).filter(Boolean)
   const byGroup = (a: PaletteItem, b: PaletteItem) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group)
-  if (!words.length) return [...items].sort(byGroup)
+  // Nothing typed: the latest few things first (what the student was just at), then what can be done and where to go; the rest of the material is found by typing
+  if (!words.length) return [...items.filter(i => i.group === 'Recent').slice(0, RECENT_SHOWN), ...items.filter(i => i.group !== 'Recent').sort(byGroup)]
   const scored = items.flatMap((item, i) => {
     const label = plain(item.label)
     const all = `${label} ${plain(item.alias ?? '')} ${plain(item.keywords ?? '')}`

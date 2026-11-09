@@ -4,8 +4,10 @@ import { aiErrorResponse, classifyAiError } from '@/lib/ai/run'
 import { isAiConfigured, openai } from '@/lib/ai/openai'
 import { releaseTutorMessage, reserveTutorMessage } from '@/lib/ai/tutorLimit'
 import { streamTutor } from '@/lib/ai/tutor'
-import { buildContext, buildInput, tutorInstructions, type Material } from '@/lib/ai/tutorContext'
-import { parseToolCall, toolDefinitions, type Proposal } from '@/lib/ai/tutorTools'
+import { LESSON_STATE_MAX, buildContext, buildInput, tutorInstructions, type Material } from '@/lib/ai/tutorContext'
+import { LESSON_STATE_TOOL, lessonStateTool, parseLessonState, parseToolCall, toolDefinitions, type Proposal } from '@/lib/ai/tutorTools'
+import { courseNamed } from '@/lib/ai/courseNamed'
+import { courseOutline } from '@/lib/ai/courseOutline'
 import { transcriptText } from '@/lib/ai/lectureNote'
 import { evidence, weakSpots } from '@/lib/topics/status'
 import type { TopicStat } from '@/lib/topics/types'
@@ -57,6 +59,8 @@ export async function POST(request: Request) {
   // Everything below is read with the student's own session: row-level security means only their data
   const { data: chat } = await sb.from('tutor_chats').select('id,title,course_id,note_id,lecture_id,guided').eq('id', body.chatId).maybeSingle()
   if (!chat) return bad(404, 'not_found')
+  // Where a long lesson has got to; read apart from the chat, so a database without the column yet (a deploy ahead of its migration) only loses this
+  const lessonState = ((await sb.from('tutor_chats').select('lesson_state').eq('id', chat.id).maybeSingle()).data as { lesson_state?: string | null } | null)?.lesson_state ?? null
 
   let attached: Material | null = null
   // The course this chat is about: its own, else the attached note's or lecture's
@@ -68,18 +72,28 @@ export async function POST(request: Request) {
     const { data: l } = await sb.from('lectures').select('id,title,transcript,course_id').eq('id', chat.lecture_id).maybeSingle()
     if (l) { attached = { kind: 'lecture', id: l.id, title: l.title, text: transcriptText(l.transcript as TranscriptLine[]) }; courseId ??= (l.course_id as string | null) ?? null }
   }
+  // The student's courses, read first: a message that names one ("teach me MATH 121") is about it, whichever course the chat was opened in
+  const { data: courseRows } = await sb.from('courses').select('id,name')
+  const allCourses = (courseRows ?? []) as { id: string; name: string }[]
+  const asked = courseNamed(message, allCourses)
+  courseId = asked?.id ?? courseId
+  const aboutCourse = allCourses.find(c => c.id === courseId) ?? null
   // The message is counted before any file is read, so a stream of requests naming big files uses the student's allowance; refused, it is given back
   const reserved = await reserveTutorMessage(user.id)
   if (reserved !== 'ok') return aiErrorResponse(reserved)
   const refuse = async (status: number, error: string) => { await releaseTutorMessage(user.id); return bad(status, error) }
   // Files kept in the Library, read for the first time here if they need it, so the search below can find them
   const kept = await tutorFiles(sb, { courseId, message })
-  const [{ data: found }, { data: courses }, { data: decks }, { data: past }] = await Promise.all([
-    sb.rpc('tutor_find_material', { p_query: message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' '), p_limit: 5 }),
-    sb.from('courses').select('id,name'),
+  const { data: past } = await sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12)
+  // A follow-up such as "why?" says little by itself, so the student's last two questions are searched along with it
+  const earlier = ((past ?? []) as { role: string; content: string }[]).filter(h => h.role === 'user').slice(0, 2).map(h => h.content.slice(0, 300))
+  const sought = message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' ')
+  const [{ data: found }, { data: decks }, outline] = await Promise.all([
+    sb.rpc('tutor_find_material', { p_query: [sought, ...earlier].join(' ').slice(0, 1000), p_limit: 8 }),
     sb.from('decks').select('id,name'),
-    sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
+    aboutCourse ? courseOutline(sb, aboutCourse) : Promise.resolve(''),
   ])
+  const courses = allCourses
   const matches = ((found ?? []) as { kind: Material['kind']; id: string; title: string; snippet: string }[])
     .map(m => ({ kind: m.kind, id: m.id, title: m.title, text: m.snippet }))
   // The course's weak and stale topics, so the tutor can offer help when a question touches one; never fatal
@@ -90,7 +104,7 @@ export async function POST(request: Request) {
       if (!error && Array.isArray(data)) weak = weakSpots(data as TopicStat[], new Date()).map(s => ({ name: s.name, detail: evidence(s) }))
     } catch { /* the tutor works without it */ }
   }
-  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak, named: kept.named, files: kept.list })
+  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak, named: kept.named, files: kept.list, outline, lessonState })
   // A question's stored attachments are checked again like a new message's: the student can write that column directly
   const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: unknown }[]).reverse()
     .map(h => ({ role: h.role, content: h.content, attachments: h.role === 'user' ? checkAttachments(h.attachments, user.id, chat.id) ?? [] : [] }))
@@ -134,7 +148,7 @@ export async function POST(request: Request) {
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 
   const gen = streamTutor(openai(), {
-    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: toolDefinitions(), signal: request.signal,
+    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: [...toolDefinitions(), lessonStateTool(LESSON_STATE_MAX)], signal: request.signal,
     input: buildInput({ history, context: context.text, message, parts: [...attachmentParts(counted, fresh.files), ...scannedParts] }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status
@@ -157,9 +171,14 @@ export async function POST(request: Request) {
       try {
         take(first)
         for (let r = first; !r.done; ) { r = await gen.next(); take(r) }
-        const proposals = calls.flatMap(c => parseToolCall(c.name, c.args, toolCtx, crypto.randomUUID()) ?? [])
-        if (proposals.length < calls.length) {
-          const note = `${reply ? '\n\n' : ''}_(I couldn't prepare ${calls.length - proposals.length === 1 ? 'one of the things' : 'some of the things'} you asked for.)_`
+        // The tutor's own notes on the lesson are kept with the chat, not shown or approved; a failed save only means the next message has the old ones
+        const stateCall = calls.filter(c => c.name === LESSON_STATE_TOOL).at(-1)
+        const state = stateCall ? parseLessonState(stateCall.args, LESSON_STATE_MAX) : null
+        if (state) await sb.from('tutor_chats').update({ lesson_state: state }).eq('id', chat.id).then(() => {}, () => {})
+        const asks = calls.filter(c => c.name !== LESSON_STATE_TOOL)
+        const proposals = asks.flatMap(c => parseToolCall(c.name, c.args, toolCtx, crypto.randomUUID()) ?? [])
+        if (proposals.length < asks.length) {
+          const note = `${reply ? '\n\n' : ''}_(I couldn't prepare ${asks.length - proposals.length === 1 ? 'one of the things' : 'some of the things'} you asked for.)_`
           reply += note; send({ t: 'delta', text: note })
         }
         const messageId = await saveReply(reply, proposals, 'ok')

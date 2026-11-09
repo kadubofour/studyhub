@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { noteWithText, signUp, listAction, startLibrarySelect, openCoursePageFromLibrary, openLibraryMaterials } from './helpers'
 
-test('Course page: gathers a course material, and opens from Library', async ({ page }) => {
+test('Course page: gathers a course material, and opens from All material', async ({ page }) => {
   await signUp(page)
   await noteWithText(page, 'Krebs cycle')
   await page.goto('/flashcards')
@@ -23,12 +23,11 @@ test('Course page: gathers a course material, and opens from Library', async ({ 
   await expect(page).toHaveURL(/\/courses\/[0-9a-f-]{36}$/, { timeout: 20_000 }) // the first visit compiles the page in the dev server
   await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()
   await expect(page.getByText('1 note · 1 deck')).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Notes' }).getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Decks' }).getByRole('link', { name: /Cells/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible() // the course page lists what is in it
+  await expect(page.getByRole('link', { name: /Cells/ })).toBeVisible()
 
   await page.reload() // read again, not just shown
   await expect(page.getByRole('heading', { level: 1, name: 'Biology' })).toBeVisible()
-  await page.getByRole('link', { name: 'Open in Library' }).click()
   await expect(page.getByRole('link', { name: /Krebs cycle/ })).toBeVisible()
 })
 
@@ -38,8 +37,8 @@ test('Course page: a course that does not exist says so', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Course not found' })).toBeVisible()
   await page.goto('/courses/not-an-id')
   await expect(page.getByRole('heading', { name: 'Course not found' })).toBeVisible()
-  await page.getByRole('link', { name: 'Go to Library' }).click()
-  await expect(page).toHaveURL(/\/library$/)
+  await page.getByRole('link', { name: 'Go to Courses' }).click()
+  await expect(page).toHaveURL(/\/courses$/)
 })
 
 test('Course page: asking the tutor opens a chat in the course', async ({ page }) => {

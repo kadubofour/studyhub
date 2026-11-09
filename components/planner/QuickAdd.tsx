@@ -1,5 +1,5 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, Flag } from 'lucide-react'
 import { ChoiceChips } from '@/components/ui/ChoiceChips'
 import { BTN_SOLID } from '@/components/ui/buttonStyles'
@@ -10,14 +10,18 @@ import type { Course, TaskType } from '@/lib/types'
 
 const TYPE_OPTIONS = [{ value: 'other', label: 'Task' }, { value: 'assignment', label: 'Assignment' }, { value: 'exam', label: 'Exam' }, { value: 'reading', label: 'Reading' }]
 
-export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false, implicitDue, variant = 'inline' }: {
+export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false, implicitDue, variant = 'inline', focusSignal }: {
   courses: Course[]; defaultCourseId: string | null; tz: string; onAdd: (t: NewTask) => void; compact?: boolean
   /** 'card': a roomy composer on a card, for the planner; 'inline': the one line used on Home */
   variant?: 'inline' | 'card'
+  /** When this becomes something (a page opened with "new task"), the box takes the cursor */
+  focusSignal?: string | null
   /** Label for the due date the caller applies when no date is typed (Home uses "Today") */
   implicitDue?: string
 }) {
   const [text, setText] = useState('')
+  const input = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (focusSignal) input.current?.focus() }, [focusSignal])
   // On a phone the composer is a single line until it is first used: then the course and type choices appear, and stay (a composer that
   // folded away when you tapped elsewhere would move the page under the tap)
   const [used, setUsed] = useState(false)
@@ -42,7 +46,7 @@ export function QuickAdd({ courses, defaultCourseId, tz, onAdd, compact = false,
       <form onSubmit={submit} onFocus={() => setUsed(true)}
         className="mb-4 rounded-2xl border border-line bg-raised p-2.5 shadow-sm md:p-3">
         <div className="flex items-center gap-2">
-          <input aria-label="Add a task" className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-base outline-none placeholder:text-muted" value={text} onChange={e => setText(e.target.value)}
+          <input ref={input} aria-label="Add a task" className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-base outline-none placeholder:text-muted" value={text} onChange={e => setText(e.target.value)}
             placeholder="Add a task: Calc problem set fri" />
           <button className={`${BTN_SOLID} shrink-0`} disabled={!text.trim()}>Add</button>
         </div>

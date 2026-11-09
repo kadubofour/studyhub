@@ -175,7 +175,7 @@ export async function listAction(page: Page, menuLabel: string, computerName: st
 
 // The Library's items are tickable at once on a computer; a phone ticks only after Select in its menu
 export async function startLibrarySelect(page: Page) {
-  if (await onPhone(page)) await listAction(page, 'Library options', 'Select')
+  if (await onPhone(page)) await listAction(page, 'All material options', 'Select')
 }
 
 // The tick for a list item: "Select <title>" on a computer; on a phone the whole row is the checkbox, named by its title
@@ -189,7 +189,7 @@ export async function noteMenuInList(page: Page, title: string) {
 
 // Library, with a course picked: its course page is a link on a computer and an item in the ⋯ menu on a phone
 export async function openCoursePageFromLibrary(page: Page) {
-  if (await onPhone(page)) await listAction(page, 'Library options', 'Open course page')
+  if (await onPhone(page)) await listAction(page, 'All material options', 'Open course page')
   else await page.getByRole('link', { name: 'Open course page' }).click()
 }
 
@@ -199,9 +199,9 @@ export async function quizFromFlashcards(page: Page) {
   else await page.getByRole('main').getByRole('button', { name: 'Quiz', exact: true }).click()
 }
 
-// The Library opens on its notebooks as cards; this is every note, deck, lecture and file in one list
+// All material (once the Library) opens on its notebooks as cards; this is every note, deck, lecture and file in one list
 export async function openLibraryMaterials(page: Page) {
-  await page.goto('/library?view=all')
+  await page.goto('/courses?show=material&view=all')
 }
 
 // Puts the open note in a notebook: the Notebook picker in a computer's top bar, or in a phone's Note options sheet
