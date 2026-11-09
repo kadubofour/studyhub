@@ -35,6 +35,7 @@ vi.mock('@/lib/tutor/attachClient', async orig => ({
 }))
 const router = { push: vi.fn(), replace: vi.fn() }
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams('') }))
+vi.mock('@/components/files/PdfViewer', () => ({ PdfViewer: ({ url }: { url: string }) => <div data-testid="pdf">{url}</div> }))
 import { ChatView } from '@/components/tutor/ChatView'
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider'
 import { ToastProvider } from '@/components/providers/ToastProvider'
@@ -114,13 +115,16 @@ describe('attachments in the conversation', () => {
   const q = (atts: Attachment[], content = 'What is this?') => ({ id: 'm1', role: 'user', content, sources: [], proposals: [], status: 'ok', created_at: '', attachments: atts })
   const a = { id: 'm2', role: 'assistant', content: 'A cell.', sources: [], proposals: [], status: 'ok', created_at: '', attachments: [] }
 
-  it('shows a question\'s files under it: photos and PDFs open in a new tab, documents are named', async () => {
+  it('shows a question\'s files under it: photos open in a new tab, PDFs inside the app, documents are named', async () => {
     messages = [q([{ kind: 'photo', name: 'q1.jpg', path: 'u/c1/a.jpg', pages: 1 }, { kind: 'pdf', name: 'week3.pdf', path: 'u/c1/w.pdf', pages: 2 }, { kind: 'document', name: 'notes.docx', text: 'x' }]), a]
     await open()
     const list = within(screen.getByRole('list', { name: 'Attached' }))
     expect(list.getByRole('link', { name: /q1\.jpg/ }).getAttribute('href')).toBe('https://files/u/c1/a.jpg')
     expect(list.getByRole('link', { name: /q1\.jpg/ }).getAttribute('target')).toBe('_blank')
-    expect(list.getByRole('link', { name: /week3\.pdf/ }).getAttribute('href')).toBe('https://files/u/c1/w.pdf')
+    expect(list.queryByRole('link', { name: /week3\.pdf/ })).toBeNull()
+    expect(screen.queryByTestId('pdf')).toBeNull()
+    fireEvent.click(list.getByRole('button', { name: /week3\.pdf/ }))
+    expect(screen.getByTestId('pdf').textContent).toBe('https://files/u/c1/w.pdf')
     expect(list.getByText('notes.docx')).toBeTruthy()
     expect(signed).toHaveBeenCalledTimes(1)
   })

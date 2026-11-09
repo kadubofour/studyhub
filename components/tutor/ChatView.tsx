@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { PdfChip } from '@/components/files/PdfChip'
 import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Link2Off, Loader2, Mic, MoreHorizontal, Paperclip, Pencil, RefreshCw, Square, Trash2, X, ChevronLeft } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
@@ -389,9 +390,11 @@ export function ChatView({ chatId }: { chatId: string }) {
                 <ul aria-label="Attached" className="flex flex-wrap justify-end gap-1.5">
                   {m.attachments.map((a, j) => (
                     <li key={j} className="max-w-56">
-                      {a.kind !== 'document' && fileUrls[a.path]
+                      {a.kind === 'pdf' && fileUrls[a.path]
+                        ? <PdfChip url={fileUrls[a.path]} name={a.name} className="flex max-w-full items-center gap-1.5 rounded-xl border border-line bg-raised px-2.5 py-1.5 text-xs hover:border-accent" />
+                        : a.kind === 'photo' && fileUrls[a.path]
                         ? <a href={fileUrls[a.path]} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-xl border border-line bg-raised px-2.5 py-1.5 text-xs hover:border-accent">
-                            {a.kind === 'photo' ? <img src={fileUrls[a.path]} alt="" className="size-8 rounded object-cover" /> : <FileText size={14} aria-hidden className="text-muted" />}
+                            <img src={fileUrls[a.path]} alt="" className="size-8 rounded object-cover" />
                             <span className="truncate">{a.name}</span>
                           </a>
                         : <span className="flex items-center gap-1.5 rounded-xl border border-line bg-raised px-2.5 py-1.5 text-xs"><FileText size={14} aria-hidden className="text-muted" /><span className="truncate">{a.name}</span></span>}

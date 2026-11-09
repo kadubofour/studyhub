@@ -12,14 +12,17 @@ import { useToast } from '@/components/providers/ToastProvider'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { supabase } from '@/lib/supabase/client'
 import { listCourses } from '@/lib/data/courses'
-import { deleteMaterial, fileSize, getMaterial, MATERIAL_LABEL, materialFile, materialUrl, type Material } from '@/lib/data/materials'
+import { deleteMaterial, fileSize, getMaterial, MATERIAL_LABEL, MATERIAL_MIME, materialFile, materialUrl, type Material } from '@/lib/data/materials'
+import { createChat } from '@/lib/data/tutor'
+import { PdfViewer } from '@/components/files/PdfViewer'
+import { explainMessage, type PdfPart } from '@/lib/files/pdfView'
 import type { Course } from '@/lib/types'
 import { Working } from '@/components/ui/Working'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 
 // An uploaded file kept in the Library: what it is, the note it became (or a way to make one), and a way to open, download or delete it.
-// A PDF or a photo is shown here too.
+// A PDF or a photo is shown here too, a PDF in the app's own viewer.
 export default function FilePage() {
   const id = String(useParams<{ id: string }>().id)
   const router = useRouter()
@@ -28,6 +31,7 @@ export default function FilePage() {
   const [file, setFile] = useState<Material | null>(null)
   const [course, setCourse] = useState<Course | null>(null)
   const [view, setView] = useState<string | null>(null)
+  const [noLink, setNoLink] = useState(false)
   const [courses, setCourses] = useState<Course[]>([])
   // the file, fetched to make a note from it
   const [making, setMaking] = useState<File | 'loading' | null>(null)
@@ -40,7 +44,7 @@ export default function FilePage() {
       if (!live) return
       setFile(m)
       listCourses(sb).then(cs => { if (live) { setCourses(cs); setCourse(cs.find(c => c.id === m.course_id) ?? null) } }).catch(() => {})
-      if (m.mime === 'application/pdf' || m.mime.startsWith('image/')) materialUrl(sb, m).then(u => { if (live) setView(u) }).catch(() => {})
+      if (m.mime === MATERIAL_MIME.pdf || m.mime.startsWith('image/')) materialUrl(sb, m).then(u => { if (live) setView(u) }).catch(() => { if (live) setNoLink(true) })
     }).catch(() => router.replace('/library')) // deleted or someone else's file
     return () => { live = false }
   }, [id, router])
@@ -65,6 +69,15 @@ export default function FilePage() {
     } catch { setMaking(null); toast('Couldn\'t open the file. Check your connection.') }
   }
 
+  // The tutor gets a chat of its own about this, with the question ready to send; its reply can then be explained visually like any other
+  async function explain(part: PdfPart) {
+    if (!file) return
+    try {
+      const chat = await createChat(supabase(), { title: file.name.slice(0, 200), course_id: file.course_id })
+      router.push(`/tutor/${chat.id}?ask=${encodeURIComponent(explainMessage(file.name, part))}`)
+    } catch { toast('Couldn\'t open the tutor. Check your connection.') }
+  }
+
   async function remove() {
     if (!file) return
     const ok = await confirm({
@@ -79,7 +92,7 @@ export default function FilePage() {
     <div>
       <BackLink href="/library">Library</BackLink>
       <PageHeader title={file?.name ?? 'File'} summary={file ? `${MATERIAL_LABEL[file.mime] ?? 'File'} · ${fileSize(file.bytes)} · Added ${day(file.created_at)}` : undefined} actions={file && <>
-        <button type="button" className="btn" onClick={() => { void open(false) }}><ExternalLink size={14} aria-hidden />Open</button>
+        {file.mime !== MATERIAL_MIME.pdf && <button type="button" className="btn" onClick={() => { void open(false) }}><ExternalLink size={14} aria-hidden />Open</button>}
         <button type="button" className="btn" onClick={() => { void open(true) }}><Download size={14} aria-hidden />Download</button>
         <button type="button" className="btn-ghost hover:!text-danger" onClick={() => { void remove() }}><Trash2 size={14} aria-hidden />Delete file</button>
       </>} />
@@ -95,7 +108,8 @@ export default function FilePage() {
           {view && (photo
             // eslint-disable-next-line @next/next/no-img-element -- a short-lived private link, which next/image cannot optimise
             ? <img src={view} alt={file.name} className="max-h-[75dvh] max-w-full rounded-2xl border border-line" />
-            : <iframe src={view} title={file.name} className="h-[75dvh] w-full rounded-2xl border border-line bg-raised" />)}
+            : <PdfViewer key={view} url={view} name={file.name} onExplain={explain} />)}
+          {noLink && <p role="alert" className="text-sm text-muted">Couldn&apos;t show this file. Check your connection and open the page again.</p>}
         </div>
       )}
       {making instanceof File && file && (

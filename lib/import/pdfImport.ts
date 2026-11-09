@@ -6,6 +6,7 @@ import type { KeepPicture } from './pictures'
 import { placeFigures, textWithPictures, type PagePictures } from './placeFigures'
 import { pdfPagePictures } from './pdfPictures'
 import { figureRedrawer } from './figureRedraw'
+import { pdfEngine } from './pdfEngine'
 
 // Base64 grows a PDF by a third and the AI request is capped at 32 MB, hence 24 MB
 export const MAX_PDF_BYTES = 24 * 1024 * 1024
@@ -34,8 +35,7 @@ const MESSAGES: Record<string, string> = {
 }
 
 export async function loadPdf(file: File) {
-  const pdfjs = await import('pdfjs-dist')
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+  const pdfjs = await pdfEngine()
   return pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
 }
 
