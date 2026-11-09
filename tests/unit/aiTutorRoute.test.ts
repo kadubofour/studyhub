@@ -31,9 +31,10 @@ const rpcCalls: [string, unknown][] = []
 const inserted: [string, Record<string, unknown>][] = []
 const updated: [string, Record<string, unknown>][] = []
 let insertError: object | null = null
-const result = (data: unknown) => {
+let kept: Record<string, unknown>[] = [] // the files kept in the Library
+const result =(data: unknown) => {
   const q: Record<string, unknown> = {}
-  for (const k of ['select', 'eq', 'order', 'limit']) q[k] = () => q
+  for (const k of ['select', 'eq', 'order', 'limit', 'or']) q[k] = () => q
   q.maybeSingle = async () => ({ data: Array.isArray(data) ? (data[0] ?? null) : data, error: null })
   q.then = (res: (v: unknown) => unknown) => res({ data, error: null })
   return q
@@ -43,7 +44,7 @@ const sb = {
   storage: { from: (bucket: string) => ({
     download: async (path: string) => {
       downloaded.push(`${bucket}:${path}`)
-      return bucket === 'tutor-files' && path in stored ? { data: path in big ? new Blob([new Uint8Array(big[path])]) : new Blob([stored[path]]), error: null } : { data: null, error: { message: 'not found' } }
+      return (bucket === 'tutor-files' || bucket === 'materials') && path in stored ? { data: path in big ? new Blob([new Uint8Array(big[path])]) : new Blob([stored[path]]), error: null } : { data: null, error: { message: 'not found' } }
     },
   }) },
   rpc: (fn: string, args?: unknown) => {
@@ -57,6 +58,7 @@ const sb = {
     if (table === 'lectures') return result(lecture)
     if (table === 'courses') return result([{ id: C1, name: 'Biology' }])
     if (table === 'decks') return result([])
+    if (table === 'materials') return result(kept)
     if (table === 'tutor_messages') return {
       ...result(history),
       insert: (row: Record<string, unknown>) => {
@@ -80,7 +82,7 @@ beforeEach(() => {
   lecture = null
   matches = []; history = []; script = [{ type: 'delta', text: 'NADH carries ' }, { type: 'delta', text: 'electrons.' }]
   process.env.OPENAI_API_KEY = 'k'
-  stored = {}; big = {}; downloaded.length = 0; pdfPages = 2
+  stored = {}; big = {}; downloaded.length = 0; pdfPages = 2; kept = []
 })
 afterEach(() => { delete process.env.OPENAI_API_KEY })
 
@@ -102,6 +104,33 @@ describe('POST /api/ai/tutor', () => {
     expect(o.input.at(-1)!.content).toContain('The Krebs cycle runs in the matrix.')
     expect(o.input.at(-1)!.content).toContain('Why NADH?')
     expect(o.tools.map(t => t.name)).toContain('create_quiz')
+  })
+  it('gives the model everything in the chat\'s course, whatever the message says', async () => {
+    chat = { id: CHAT, title: 'Stats', course_id: C1, note_id: null, lecture_id: null }
+    note = [{ id: NOTE, title: 'Week 1', content_md: 'Words from the course note.' }] as never
+    kept = [{ id: 'f1', name: 'book.pdf', mime: 'application/pdf', path: 'u/book.pdf', bytes: 10, course_id: C1, note_id: null, body_status: 'ready', created_at: '', body: 'Words from the uploaded book.' }]
+    await (await call({ message: 'inferential' })).text()
+    const input = (modelInput.mock.calls[0][0] as { input: { content: string }[] }).input.at(-1)!.content
+    expect(input).toContain('Words from the course note.')
+    expect(input).toContain('Words from the uploaded book.')
+  })
+  it('treats a turn that only saved its lesson notes as a failure, not an empty reply', async () => {
+    script = [{ type: 'tool', name: 'save_lesson_state', args: '{"state":"Next: step 2"}' }]
+    const out = await lines(await call({ message: 'inferential' }))
+    expect(out.at(-1)).toMatchObject({ t: 'error', error: 'ai_failed' })
+    expect(inserted.filter(([, r]) => r.role === 'assistant')).toEqual([])
+    expect(release).toHaveBeenCalled()
+  })
+  it('sends the course\'s scanned PDFs too', async () => {
+    chat = { id: CHAT, title: 'Stats', course_id: C1, note_id: null, lecture_id: null }
+    note = [] as never
+    kept = [{ id: 's1', name: 'scan.pdf', mime: 'application/pdf', path: 'u/scan.pdf', bytes: 10, course_id: C1, note_id: null, body_status: 'no_text', created_at: '' }]
+    stored = { 'u/scan.pdf': 'pdf' }
+    const out = await lines(await call({ message: 'inferential' }))
+    expect(downloaded).toContain('materials:u/scan.pdf')
+    expect(out[0].sources).toEqual([{ kind: 'file', id: 's1', title: 'scan.pdf' }])
+    const content = (modelInput.mock.calls[0][0] as { input: { content: { type: string }[] }[] }).input.at(-1)!.content
+    expect(content.some(p => p.type === 'input_file')).toBe(true)
   })
   it('names the chat after the first message', async () => {
     await (await call({ message: 'Explain the electron transport chain' })).text()

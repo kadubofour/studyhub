@@ -79,6 +79,7 @@ describe('what the tutor is told', () => {
   it('says what kind of file each is, and when it has no text', () => {
     expect(fileLine(row('a', 'x.pdf'))).toBe('x.pdf (PDF)')
     expect(fileLine(row('a', 'x.pdf', { body_status: 'no_text' }))).toBe('x.pdf (PDF, no text in it)')
+    expect(fileLine(row('a', 'x.pdf', { body_status: 'pending' }))).toBe('x.pdf (PDF, not read yet)')
   })
   it('lists the files, gives a named one the room of an attached note and names it as a source, and does not repeat it', () => {
     const text = 'y'.repeat(9000)
@@ -138,9 +139,30 @@ describe('tutorFiles', () => {
     expect(updates.map(u => u[0])).toEqual(['c1', 'c2', 'o1', 'o2', 'o3'])
     expect(got.list.map(l => l.split('.')[0])).toEqual(['c1', 'c2']) // it sees the chat's course's files
   })
+  it('reads every waiting file in the chat\'s course on one message, however many there are', async () => {
+    rows = Array.from({ length: 9 }, (_, i) => row(`c${i}`, `c${i}.txt`, { mime: 'text/plain', body_status: 'pending', path: `u/c${i}`, course_id: 'C' }))
+    files = Object.fromEntries(rows.map(r => [r.path, TEXT]))
+    await tutorFiles(sb(), { courseId: 'C', message: 'hello' })
+    expect(updates).toHaveLength(9)
+  })
+  it('counts a file in one of the course\'s notebooks as the course\'s', async () => {
+    rows = [row('a', 'a.pdf', { notebook_id: 'N' }), row('b', 'b.pdf', { notebook_id: 'other' })]
+    const got = await tutorFiles(sb(), { courseId: 'C', message: 'hello', notebookIds: ['N'] })
+    expect(got.list).toEqual(['a.pdf (PDF)'])
+  })
+  it('hands over the course\'s scanned PDFs too, keeping the ones asked about apart', async () => {
+    rows = [row('a', 'scan.pdf', { body_status: 'no_text', course_id: 'C' }), row('b', 'b.pdf', { body_status: 'no_text', course_id: 'C' }), row('c', 'c.pdf', { body_status: 'no_text', course_id: 'C', note_id: 'n' }), row('d', 'd.pdf', { body_status: 'no_text', course_id: 'other' })]
+    const got = await tutorFiles(sb(), { courseId: 'C', message: 'read scan please' })
+    expect(got.scanned.map(f => f.id)).toEqual(['a'])
+    expect(got.courseScans.map(f => f.id)).toEqual(['b'])
+  })
+  it('hands over no scans without a course', async () => {
+    rows = [row('a', 'a.pdf', { body_status: 'no_text' })]
+    expect((await tutorFiles(sb(), { courseId: null, message: 'hello' })).courseScans).toEqual([])
+  })
   it('never stops the tutor: a failure means no files', async () => {
     const broken = { from: () => { throw new Error('down') } } as never
-    expect(await tutorFiles(broken, { courseId: null, message: 'x' })).toEqual({ list: [], named: [], scanned: [] })
+    expect(await tutorFiles(broken, { courseId: null, message: 'x' })).toEqual({ list: [], named: [], scanned: [], courseScans: [] })
   })
 })
 vi.mock('server-only', () => ({}))

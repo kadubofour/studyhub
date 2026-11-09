@@ -8,6 +8,7 @@ import { LESSON_STATE_MAX, buildContext, buildInput, tutorInstructions, type Mat
 import { LESSON_STATE_TOOL, lessonStateTool, parseLessonState, parseToolCall, toolDefinitions, type Proposal } from '@/lib/ai/tutorTools'
 import { courseNamed } from '@/lib/ai/courseNamed'
 import { courseOutline } from '@/lib/ai/courseOutline'
+import { courseMaterial } from '@/lib/ai/tutorCourse'
 import { transcriptText } from '@/lib/ai/lectureNote'
 import { evidence, weakSpots } from '@/lib/topics/status'
 import type { TopicStat } from '@/lib/topics/types'
@@ -83,13 +84,16 @@ export async function POST(request: Request) {
   if (reserved !== 'ok') return aiErrorResponse(reserved)
   const refuse = async (status: number, error: string) => { await releaseTutorMessage(user.id); return bad(status, error) }
   // Files kept in the Library, read for the first time here if they need it, so the search below can find them
-  const kept = await tutorFiles(sb, { courseId, message })
+  const notebookIds = courseId ? ((await sb.from('notebooks').select('id').eq('course_id', courseId)).data ?? []).map(b => b.id as string) : []
+  const kept = await tutorFiles(sb, { courseId, message, notebookIds })
+  const course = courseId ? await courseMaterial(sb, courseId, notebookIds) : [] // read after the files above, so one read for the first time is in it
   const { data: past } = await sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12)
   // A follow-up such as "why?" says little by itself, so the student's last two questions are searched along with it
   const earlier = ((past ?? []) as { role: string; content: string }[]).filter(h => h.role === 'user').slice(0, 2).map(h => h.content.slice(0, 300))
   const sought = message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' ')
+  const query = [sought, ...earlier].join(' ').slice(0, 1000)
   const [{ data: found }, { data: decks }, outline] = await Promise.all([
-    sb.rpc('tutor_find_material', { p_query: [sought, ...earlier].join(' ').slice(0, 1000), p_limit: 8 }),
+    sb.rpc('tutor_find_material', { p_query: query, p_limit: 8 }),
     sb.from('decks').select('id,name'),
     aboutCourse ? courseOutline(sb, aboutCourse) : Promise.resolve(''),
   ])
@@ -104,7 +108,7 @@ export async function POST(request: Request) {
       if (!error && Array.isArray(data)) weak = weakSpots(data as TopicStat[], new Date()).map(s => ({ name: s.name, detail: evidence(s) }))
     } catch { /* the tutor works without it */ }
   }
-  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak, named: kept.named, files: kept.list, outline, lessonState })
+  const context = buildContext({ attached, matches, courses: courses ?? [], decks: decks ?? [], weak, named: kept.named, files: kept.list, outline, lessonState, course, query })
   // A question's stored attachments are checked again like a new message's: the student can write that column directly
   const past12 = ((past ?? []) as { role: 'user' | 'assistant'; content: string; attachments?: unknown }[]).reverse()
     .map(h => ({ role: h.role, content: h.content, attachments: h.role === 'user' ? checkAttachments(h.attachments, user.id, chat.id) ?? [] : [] }))
@@ -119,19 +123,22 @@ export async function POST(request: Request) {
   // Earlier questions' files are read again, newest first, while they fit in what is left; a file sent again with this message is not read twice
   let pagesLeft = ATTACH_LIMITS.pages - pagesOf(counted)
   let bytesLeft = ATTACH_LIMITS.pdfBytes - fresh.bytes
-  // A kept PDF the student asked about that has no text in it (a scan) goes to the model as it is, when it fits
+  // A kept PDF with no text in it (a scan) goes to the model as it is, when it fits
   const scannedParts: ReturnType<typeof attachmentParts> = []
-  for (const f of kept.scanned) {
-    if (f.bytes > bytesLeft) continue
-    const { data } = await sb.storage.from('materials').download(f.path)
-    if (!data) continue
-    const buf = Buffer.from(await data.arrayBuffer())
-    const pages = await countPdfPages(buf)
-    if (pages > pagesLeft || buf.length > bytesLeft) continue
-    pagesLeft -= pages; bytesLeft -= buf.length
-    scannedParts.push(...attachmentParts([{ kind: 'pdf', name: f.name, path: f.path, pages }], new Map([[f.path, buf.toString('base64')]])))
-    context.sources.push({ kind: 'file', id: f.id, title: f.name })
+  const addScans = async (list: typeof kept.scanned) => {
+    for (const f of list) {
+      if (f.bytes > bytesLeft) continue
+      const { data } = await sb.storage.from('materials').download(f.path)
+      if (!data) continue
+      const buf = Buffer.from(await data.arrayBuffer())
+      const pages = await countPdfPages(buf)
+      if (pages > pagesLeft || buf.length > bytesLeft) continue
+      pagesLeft -= pages; bytesLeft -= buf.length
+      scannedParts.push(...attachmentParts([{ kind: 'pdf', name: f.name, path: f.path, pages }], new Map([[f.path, buf.toString('base64')]])))
+      context.sources.push({ kind: 'file', id: f.id, title: f.name })
+    }
   }
+  await addScans(kept.scanned)
   const resent = new Map<number, ReturnType<typeof attachmentParts>>()
   for (const i of resendable(past12, pagesOf(counted))) {
     const atts = past12[i].attachments.filter(a => a.kind === 'document' || !fresh.files.has(a.path))
@@ -143,6 +150,7 @@ export async function POST(request: Request) {
     pagesLeft -= pagesOf(recounted); bytesLeft -= got.bytes
     resent.set(i, attachmentParts(recounted, got.files))
   }
+  await addScans(kept.courseScans) // the rest of the course's scans get the room what the student asked about and sent has left
   const history = past12.map((h, i) => ({ role: h.role, content: named(h.content, h.attachments), parts: resent.get(i) }))
   const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
@@ -181,6 +189,7 @@ export async function POST(request: Request) {
           const note = `${reply ? '\n\n' : ''}_(I couldn't prepare ${asks.length - proposals.length === 1 ? 'one of the things' : 'some of the things'} you asked for.)_`
           reply += note; send({ t: 'delta', text: note })
         }
+        if (!reply.trim() && !proposals.length) throw new Error('The AI sent back nothing.') // only its own lesson notes: nothing for the student to read
         const messageId = await saveReply(reply, proposals, 'ok')
         // Name the chat only if it still has its default name (a rename made while the reply was written wins); always touch it so it moves to the top
         if (chat.title === 'New chat') await sb.from('tutor_chats').update({ title: (message || counted[0]?.name || 'New chat').slice(0, 60) }).eq('id', chat.id).eq('title', 'New chat')
