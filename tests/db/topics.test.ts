@@ -10,8 +10,10 @@ const note = async (u: U, courseId: string | null, title = 'Krebs') =>
 const deck = async (u: U, courseId: string | null) => (await u.sb.from('decks').insert({ name: 'Cells', course_id: courseId }).select('id').single()).data!.id as string
 const lecture = async (u: U, courseId: string | null) =>
   (await u.sb.from('lectures').insert({ title: 'Bio lecture', duration_seconds: 60, mime: 'audio/webm', course_id: courseId }).select('id').single()).data!.id as string
+const file = async (u: U, courseId: string | null) =>
+  (await u.sb.from('materials').insert({ name: 'Sets slides.pdf', mime: 'application/pdf', bytes: 10, path: `${u.id}/${crypto.randomUUID()}-sets.pdf`, course_id: courseId }).select('id').single()).data!.id as string
 const topic = async (u: U, courseId: string, name: string) => (await u.sb.from('topics').insert({ course_id: courseId, name }).select('id').single()).data!.id as string
-const link = (u: U, topicId: string, target: { note_id?: string; lecture_id?: string; deck_id?: string }) => u.sb.from('topic_links').insert({ topic_id: topicId, ...target })
+const link = (u: U, topicId: string, target: { note_id?: string; lecture_id?: string; deck_id?: string; material_id?: string }) => u.sb.from('topic_links').insert({ topic_id: topicId, ...target })
 const save = (u: U, courseId: string, topics: unknown) => u.sb.rpc('save_course_topics', { p_course: courseId, p_topics: topics })
 const stats = async (u: U, courseId: string) => (await u.sb.rpc('topic_stats', { p_course: courseId })).data as Row[]
 const mcq = (p: string) => ({ id: p, type: 'mcq', prompt: p, options: ['a', 'b', 'c', 'd'], answer: 'a', explanation: 'x' })
@@ -206,5 +208,65 @@ describe('a topic stays in its course', () => {
     expect((await u.sb.from('topics').update({ course_id: c2 }).eq('id', t)).error).not.toBeNull()
     expect((await u.sb.from('topics').select('course_id').eq('id', t).single()).data).toEqual({ course_id: c1 })
     expect((await u.sb.from('topics').update({ name: 'Renamed', position: 3 }).eq('id', t)).error).toBeNull() // other edits still fine
+  })
+
+  describe('uploaded files', () => {
+    it('a topic can link to a file in its own course, and not to another course\'s, nor another student\'s', async () => {
+      const A = await newUser(), B = await newUser()
+      const bio = await course(A), chem = await course(A, 'Chemistry')
+      const t = await topic(A, bio, 'Sets')
+      expect((await link(A, t, { material_id: await file(A, bio) })).error).toBeNull()
+      expect((await link(A, t, { material_id: await file(A, chem) })).error).not.toBeNull() // another course
+      expect((await link(A, t, { material_id: await file(B, null) })).error).not.toBeNull() // someone else's file
+      expect((await link(A, t, { material_id: await file(A, null) })).error).not.toBeNull() // a file with no course
+    })
+    it('a link still has exactly one target', async () => {
+      const A = await newUser()
+      const bio = await course(A)
+      const t = await topic(A, bio, 'Sets')
+      expect((await link(A, t, { material_id: await file(A, bio), note_id: await note(A, bio) })).error).not.toBeNull()
+    })
+    it('save_course_topics keeps a file link, and the file is counted in topic_stats', async () => {
+      const A = await newUser()
+      const bio = await course(A)
+      const f = await file(A, bio)
+      expect((await save(A, bio, [{ name: 'Sets', links: [{ kind: 'file', id: f }] }])).error).toBeNull()
+      const [row] = await stats(A, bio) as (Row & { files: number })[]
+      expect(row.files).toBe(1)
+      expect(row.notes).toBe(0)
+      expect(row.status).toBe('not_started')
+    })
+    it('answers to a quiz made from a file count towards the topic, like a note\'s', async () => {
+      const A = await newUser()
+      const bio = await course(A)
+      const f = await file(A, bio)
+      await save(A, bio, [{ name: 'Sets', links: [{ kind: 'file', id: f }] }])
+      const q = (await A.sb.from('quizzes').insert({ note_id: null, material_id: f, title: 'Quiz', questions: [mcq('q1'), mcq('q2'), mcq('q3')] }).select('id').single()).data!.id as string
+      await attempt(A, q, { q1: true, q2: true, q3: false }, 1)
+      const [row] = await stats(A, bio)
+      expect(row).toMatchObject({ answers_30d: 3, correct_30d: 2, status: 'covered' })
+    })
+    it('a quiz can only point at the student\'s own file, and deleting the file keeps the quiz', async () => {
+      const A = await newUser(), B = await newUser()
+      const f = await file(B, null)
+      expect((await A.sb.from('quizzes').insert({ note_id: null, material_id: f, title: 'Quiz', questions: [mcq('q1'), mcq('q2'), mcq('q3')] })).error).not.toBeNull()
+      const mine = await file(A, null)
+      const q = (await A.sb.from('quizzes').insert({ note_id: null, material_id: mine, title: 'Quiz', questions: [mcq('q1'), mcq('q2'), mcq('q3')] }).select('id').single()).data!.id as string
+      await A.sb.from('materials').delete().eq('id', mine)
+      expect((await A.sb.from('quizzes').select('id,material_id').eq('id', q).single()).data).toEqual({ id: q, material_id: null })
+    })
+    it('moving a file to another course drops its topic links, and deleting it removes them', async () => {
+      const A = await newUser()
+      const bio = await course(A), chem = await course(A, 'Chemistry')
+      const f = await file(A, bio)
+      const t = await topic(A, bio, 'Sets')
+      await link(A, t, { material_id: f })
+      await A.sb.from('materials').update({ course_id: chem }).eq('id', f)
+      expect((await A.sb.from('topic_links').select('id').eq('topic_id', t)).data).toHaveLength(0)
+      const g = await file(A, bio)
+      await link(A, t, { material_id: g })
+      await A.sb.from('materials').delete().eq('id', g)
+      expect((await A.sb.from('topic_links').select('id').eq('topic_id', t)).data).toHaveLength(0)
+    })
   })
 })

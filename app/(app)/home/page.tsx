@@ -28,6 +28,7 @@ import { AiError } from '@/components/ai/AiError'
 import { SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
 import { useWarmup } from '@/components/plan/useWarmup'
+import { useTopicCards } from '@/components/plan/useTopicCards'
 import { countTasksDoneSince, createTask, listOpenTasks, setTaskDone, type NewTask } from '@/lib/data/tasks'
 import { listClasses } from '@/lib/data/classes'
 import { countDueCards } from '@/lib/data/cards'
@@ -75,6 +76,7 @@ export default function HomePage() {
   const { reload: reloadXp } = useXp(focus.todayMinutes) // the level, XP and streak are in the top bar
   const plans = usePlans(reloadXp)
   const warmup = useWarmup()
+  const cards = useTopicCards()
 
   useEffect(() => {
     const sb = supabase()
@@ -198,10 +200,12 @@ export default function HomePage() {
           {sessions.length > 0 && <div className="mb-2 divide-y divide-line overflow-hidden rounded-xl bg-surface/60">
             {sessions.map(({ v, s }) => (
               <SessionRow key={s.id} s={s} course={courseOf(v.courseId)} done={!!s.done_at}
-                onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id} />
+                onToggle={() => plans.setDone(v.plan.id, s.id, !s.done_at)} onWarmup={() => { void warmup.start(s) }} warmingUp={warmup.busy === s.id}
+                onCards={() => { void cards.start(s, v.courseId) }} makingCards={cards.busy === s.id} />
             ))}
           </div>}
           {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
+          {cards.error && <AiError code={cards.error.code} message={cards.error.message} />}
           {list.length === 0 && sessions.length === 0 && <p className="py-2 text-[15px] text-muted">{doneToday > 0 ? 'All done for today. Add something below if you like.' : 'Nothing due today. Add something below.'}</p>}
           {list.map(t => (
             <TaskRow key={t.id} task={t} course={courseOf(t.course_id)} tz={tz} now={now} done={doneIds.has(t.id)} onToggle={() => toggle(t)} showType={false} />

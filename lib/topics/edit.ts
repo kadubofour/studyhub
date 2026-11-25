@@ -6,6 +6,7 @@ const union = (a: TopicLink[], b: TopicLink[]) => [...a, ...b.filter(l => !a.som
 const aiLinks = (t: DraftTopic): TopicLink[] => [
   ...t.notes.map(id => ({ kind: 'note' as const, id })),
   ...t.lectures.map(id => ({ kind: 'lecture' as const, id })),
+  ...(t.files ?? []).map(id => ({ kind: 'file' as const, id })),
 ]
 
 // The saved topics, in order, with their links

@@ -28,8 +28,8 @@ export function TopicEditor({ initial, material, fresh, saving, error, onSave, o
   }
 
   const titleOf = (l: TopicLink) =>
-    (l.kind === 'note' ? material.notes.find(n => n.id === l.id)?.title : l.kind === 'lecture' ? material.lectures.find(x => x.id === l.id)?.title : material.decks.find(d => d.id === l.id)?.name) ?? 'Removed item'
-  const kindWord = { note: 'Note', lecture: 'Lecture', deck: 'Deck' } as const
+    (l.kind === 'note' ? material.notes.find(n => n.id === l.id)?.title : l.kind === 'lecture' ? material.lectures.find(x => x.id === l.id)?.title : l.kind === 'file' ? material.files.find(f => f.id === l.id)?.name : material.decks.find(d => d.id === l.id)?.name) ?? 'Removed item'
+  const kindWord = { note: 'Note', lecture: 'Lecture', deck: 'Deck', file: 'File' } as const
 
   function save() {
     const list = tidy(rows.map(({ key: _key, ...t }) => t))
@@ -48,6 +48,7 @@ export function TopicEditor({ initial, material, fresh, saving, error, onSave, o
             ...material.notes.map(n => ({ kind: 'note' as const, id: n.id, label: n.title })),
             ...material.lectures.map(x => ({ kind: 'lecture' as const, id: x.id, label: x.title })),
             ...material.decks.map(d => ({ kind: 'deck' as const, id: d.id, label: d.name })),
+            ...material.files.map(f => ({ kind: 'file' as const, id: f.id, label: f.name })),
           ].filter(m => !t.links.some(l => l.kind === m.kind && l.id === m.id))
           return (
             <li key={t.key} className="space-y-2 rounded-xl border border-line p-3">
@@ -72,7 +73,7 @@ export function TopicEditor({ initial, material, fresh, saving, error, onSave, o
                     const [kind, id] = v.split(':') as [TopicLink['kind'], string]
                     if (kind && id) apply(l => addLink(l, i, { kind, id }))
                   }}
-                  options={(['note', 'lecture', 'deck'] as const).flatMap(k => free.filter(m => m.kind === k).map(m => ({ value: `${k}:${m.id}`, label: m.label, hint: kindWord[k] })))} />
+                  options={(['note', 'lecture', 'deck', 'file'] as const).flatMap(k => free.filter(m => m.kind === k).map(m => ({ value: `${k}:${m.id}`, label: m.label, hint: kindWord[k] })))} />
                 {rows.length > 1 && (
                   <Dropdown label={`Merge ${name} into`} size="sm" className="w-44" value="" placeholder="Merge into…"
                     onChange={v => {

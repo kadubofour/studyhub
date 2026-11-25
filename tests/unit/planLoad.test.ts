@@ -11,9 +11,10 @@ const plan = (over: Partial<PlanRow> = {}): PlanRow => ({
   id: 'p1', course_id: 'c1', exam_task_id: 'e1', mode: 'balanced', minutes_per_day: 60, days_off: [],
   exam: { id: 'e1', title: 'Midterm', due_at: '2026-10-26T09:00:00Z', done_at: null }, ...over,
 })
-let plans: PlanRow[], days: DayRow[], stats: TopicStat[], links: { topic_id: string; link: { kind: 'note' | 'lecture' | 'deck'; id: string } }[]
+let plans: PlanRow[], days: DayRow[], stats: TopicStat[], links: { topic_id: string; link: { kind: 'note' | 'lecture' | 'deck' | 'file'; id: string } }[]
+let materials: { id: string; body_status: string }[]
 const ensureDay = vi.fn(async (_sb: unknown, planId: string, day: string, sessions: DayRow['sessions']) => ({ id: `d-${day}`, plan_id: planId, day, sessions }))
-const sb = { from: () => ({ select: () => ({ in: async () => ({ data: [{ id: 'n1', updated_at: '2026-10-01T00:00:00Z' }, { id: 'n2', updated_at: '2026-10-05T00:00:00Z' }], error: null }) }) }) }
+const sb = { from: (t: string) => ({ select: () => ({ in: async () => ({ data: t === 'materials' ? materials : [{ id: 'n1', updated_at: '2026-10-01T00:00:00Z' }, { id: 'n2', updated_at: '2026-10-05T00:00:00Z' }], error: null }) }) }) }
 vi.mock('@/lib/plan/service', () => ({
   listPlans: async () => plans, listPlanDays: async () => days, ensureDay: (...a: unknown[]) => ensureDay(...(a as [unknown, string, string, DayRow['sessions']])),
 }))
@@ -21,7 +22,7 @@ vi.mock('@/lib/data/topics', () => ({ listTopicStats: async () => stats, listTop
 import { loadPlans } from '@/lib/plan/load'
 
 beforeEach(() => {
-  plans = [plan()]; days = []; ensureDay.mockClear()
+  plans = [plan()]; days = []; materials = []; ensureDay.mockClear()
   stats = [stat('t1', 'Krebs cycle', { status: 'weak', answers_30d: 10, correct_30d: 3 }), stat('t2', 'Glycolysis')]
   links = [{ topic_id: 't1', link: { kind: 'note', id: 'n1' } }, { topic_id: 't2', link: { kind: 'note', id: 'n1' } }, { topic_id: 't2', link: { kind: 'note', id: 'n2' } }]
 })
@@ -38,6 +39,21 @@ describe('loadPlans', () => {
     expect(v.today[0]).toMatchObject({ topic_id: 't1', kind: 'learn', topicName: 'Krebs cycle', done_at: null, noteId: 'n1' })
     expect(v.today.find(s => s.topic_id === 't2')!.noteId).toBe('n2') // newest of its notes
     expect(v.todayDayId).toBe('d-2026-10-12')
+  })
+  it('gives a topic with no note an uploaded file to practise from, unless the file has no text', async () => {
+    stats = [stat('t1', 'Sets', { notes: 0 }), stat('t2', 'Scans', { notes: 0 })]
+    links = [{ topic_id: 't1', link: { kind: 'file', id: 'f1' } }, { topic_id: 't2', link: { kind: 'file', id: 'f2' } }]
+    materials = [{ id: 'f1', body_status: 'ready' }, { id: 'f2', body_status: 'no_text' }]
+    const [v] = await load()
+    expect(v.today.find(s => s.topic_id === 't1')).toMatchObject({ noteId: null, materialId: 'f1' })
+    expect(v.today.find(s => s.topic_id === 't2')).toMatchObject({ noteId: null, materialId: null })
+    expect(v.today.find(s => s.topic_id === 't1')!.kind).toBe('warmup') // a file is something to make the Warm-up quiz from, as a note is
+  })
+  it('uses a note before a file when a topic has both', async () => {
+    links = [{ topic_id: 't1', link: { kind: 'note', id: 'n1' } }, { topic_id: 't1', link: { kind: 'file', id: 'f1' } }, { topic_id: 't2', link: { kind: 'note', id: 'n2' } }]
+    materials = [{ id: 'f1', body_status: 'ready' }]
+    const [v] = await load()
+    expect(v.today.find(s => s.topic_id === 't1')).toMatchObject({ noteId: 'n1', materialId: null })
   })
   it('uses the saved list when the day was already opened, and does not save again', async () => {
     days = [{ id: 'd1', plan_id: 'p1', day: '2026-10-12', sessions: [{ id: 's1', topic_id: 't2', kind: 'learn', minutes: 25, done_at: null }] }]

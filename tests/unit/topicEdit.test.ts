@@ -46,6 +46,9 @@ describe('building a list', () => {
   it('turns the AI\'s topics into new drafts', () => {
     expect(fromAi([{ name: 'Krebs', notes: ['n1'], lectures: ['l1'] }])).toEqual([{ name: 'Krebs', links: [n('n1'), l('l1')] }])
   })
+  it('turns the AI\'s files into file links', () => {
+    expect(fromAi([{ name: 'Sets', notes: [], lectures: [], files: ['f1'] }])).toEqual([{ name: 'Sets', links: [{ kind: 'file', id: 'f1' }] }])
+  })
   it('an update adds links to existing topics by name and appends new topics, keeping edits', () => {
     const out = applyUpdate(list(), [{ name: ' b ', notes: ['n2'], lectures: [] }, { name: 'Brand new', notes: [], lectures: ['l2'] }])
     expect(out.map(t => t.name)).toEqual(['A', 'B', 'C', 'Brand new'])

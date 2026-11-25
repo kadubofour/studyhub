@@ -40,7 +40,7 @@ export const fileLine = (f: Pick<FileRow, 'name' | 'mime' | 'body_status'>) =>
   `${f.name} (${MATERIAL_LABEL[f.mime] ?? 'File'}${f.body_status === 'no_text' ? ', no text in it' : f.body_status === 'pending' ? ', not read yet' : ''})`
 
 // Takes a file's text out and keeps it, and gives it back. A file that cannot be fetched stays pending, to be tried again; one that cannot be read is marked.
-async function readFile(sb: SupabaseClient, f: FileRow): Promise<{ status: FileRow['body_status']; body: string } | null> {
+export async function readFile(sb: SupabaseClient, f: FileRow): Promise<{ status: FileRow['body_status']; body: string } | null> {
   if (f.mime.startsWith('image/')) return { status: 'no_text', body: '' }
   const { data } = await sb.storage.from('materials').download(f.path)
   if (!data) return null
