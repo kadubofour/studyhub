@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import { newNoteFromNote, noteWithText, signUp, choose, inBiology, noteSaved } from './helpers'
 
-// Two Biology notes, topics drafted and saved, then (unless asked not to) an exam next week: ready for a plan
-async function readyForPlan(page: Page, { exam = true } = {}) {
+// Two Biology notes, topics drafted and saved (unless asked not to), then (unless asked not to) an exam next week: ready for a plan
+async function readyForPlan(page: Page, { exam = true, topics: draft = true } = {}) {
   await signUp(page)
   await noteWithText(page)
   await inBiology(page)
@@ -13,9 +13,11 @@ async function readyForPlan(page: Page, { exam = true } = {}) {
   await page.keyboard.type('Glycolysis splits glucose into two pyruvate molecules in the cytoplasm. '.repeat(4))
   await noteSaved(page)
   await inBiology(page)
-  await page.goto('/progress')
-  const topics = page.getByRole('region', { name: 'Topics' })
-  await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own
+  if (draft) {
+    await page.goto('/progress')
+    const topics = page.getByRole('region', { name: 'Topics' })
+    await expect(topics.getByRole('listitem', { name: 'Krebs cycle' })).toBeVisible({ timeout: 30_000 }) // found and saved on their own
+  }
   await page.goto('/planner')
   if (!exam) return
   await page.getByLabel('Add a task').fill('Midterm next fri')
@@ -101,7 +103,17 @@ test('edit the plan, then delete it', async ({ page }) => {
   await expect(panel.getByRole('button', { name: 'Make a study plan for Biology' })).toBeVisible()
 })
 
-test('a course with no topics is sent to Progress first', async ({ page }) => {
+test('Plan this course in one go: topics are found and checked, then the plan is made', async ({ page }) => {
+  await readyForPlan(page, { topics: false })
+  const panel = page.getByRole('region', { name: 'Study plan' })
+  await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
+  await expect(panel.getByLabel('Topic 1 name')).toBeVisible({ timeout: 30_000 }) // found from the notes, not saved yet
+  await panel.getByRole('button', { name: 'Save topics' }).click()
+  await panel.getByRole('button', { name: 'Save plan' }).click()
+  await expect(panel.getByRole('heading', { name: 'Today' })).toBeVisible()
+})
+
+test('a course with too little to plan from is told what to add', async ({ page }) => {
   await signUp(page)
   await page.goto('/planner')
   await page.getByLabel('Add a task').fill('Midterm next fri')
@@ -110,6 +122,6 @@ test('a course with no topics is sent to Progress first', async ({ page }) => {
   await Promise.all([page.waitForResponse(r => r.url().includes('/rest/v1/tasks') && r.request().method() === 'POST'), page.getByLabel('Add a task').press('Enter')]) // saved, so the plan can work towards it
   const panel = page.getByRole('region', { name: 'Study plan' })
   await panel.getByRole('button', { name: 'Make a study plan for Biology' }).click()
-  await panel.getByRole('button', { name: 'Save plan' }).click()
-  await expect(panel.getByText(/Biology needs a few notes or lectures first/)).toBeVisible()
+  await expect(panel.getByText(/Add at least two notes, lectures or files to Biology/)).toBeVisible()
+  await expect(panel.getByRole('link', { name: 'Open Library' })).toBeVisible()
 })

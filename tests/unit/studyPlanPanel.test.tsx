@@ -8,6 +8,7 @@ const setDone = vi.fn(), reload = vi.fn(), start = vi.fn(), startCards = vi.fn()
 let views: PlanView[] | null
 let failed = false
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
+vi.mock('@/lib/data/topics', () => ({ listTopicStats: async () => [{ topic_id: 't1' }], listCourseMaterial: async () => ({ notes: [], lectures: [], decks: [], files: [] }), saveCourseTopics: async () => {} })) // a course that already has topics goes straight to the plan's settings
 vi.mock('@/components/plan/usePlans', () => ({ usePlans: () => ({ views, failed, reload, setDone }) }))
 vi.mock('@/components/plan/useWarmup', () => ({ useWarmup: () => ({ busy: null, error: null, start }) }))
 vi.mock('@/components/plan/useTopicCards', () => ({ useTopicCards: () => ({ busy: null, error: null, start: startCards }) }))
@@ -51,7 +52,7 @@ describe('Study plan panel', () => {
   })
   it('a course with no exam gets a plan that keeps going', async () => {
     await open([])
-    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Chemistry' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Chemistry' })) })
     expect((screen.getByLabelText('Working towards') as HTMLSelectElement).value).toBe('')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
     expect(savePlan).toHaveBeenCalledWith(expect.anything(), { course_id: 'c2', exam_task_id: null, mode: 'balanced', minutes_per_day: 45, days_off: [] })
@@ -65,7 +66,7 @@ describe('Study plan panel', () => {
     const unsaved = exam({ id: 'temp-1', title: 'Unsaved' })
     const assignment = exam({ id: 'e5', title: 'Essay', type: 'assignment' })
     await open([later, soon, past, undated, unsaved, assignment])
-    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' })) })
     expect(optionsOf('Working towards')).toEqual(['No exam: keep going', 'Soon', 'Later'])
     expect(shown('Working towards')).toBe('Soon')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
@@ -114,7 +115,7 @@ describe('Study plan panel', () => {
   it('no topics sends the student to the Library; an exam too close says so', async () => {
     views = [view({ status: 'no_topics', today: [], upcoming: [], schedule: [] })]
     await open()
-    expect(screen.getByText(/Biology needs a few notes or lectures first/)).toBeTruthy()
+    expect(screen.getByText(/Biology needs a few notes, lectures or files first/)).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open Library' }).getAttribute('href')).toBe('/library')
     cleanup()
     views = [view({ status: 'no_days', today: [], upcoming: [], schedule: [] })]
@@ -136,7 +137,7 @@ describe('Study plan panel', () => {
   it('keeps the form open and says so when saving fails', async () => {
     savePlan.mockRejectedValueOnce(new Error('rls'))
     await open()
-    fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Make a study plan for Biology' })) })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save plan' })) })
     expect(screen.getByRole('alert').textContent).toMatch(/Couldn't save the plan/)
   })
