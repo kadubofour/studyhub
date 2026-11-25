@@ -58,7 +58,7 @@ export function TopicsSection() {
       const ok = await Promise.all(cs.map(async c => {
         try {
           const [stats, material] = await Promise.all([listTopicStats(sb, c.id), listCourseMaterial(sb, c.id)])
-          return stats.length > 0 || material.notes.length + material.lectures.length >= 2
+          return stats.length > 0 || material.notes.length + material.lectures.length + material.files.length >= 2
         } catch { return true } // a failed check shows the load error with Retry, not a vanished section
       }))
       const shown = cs.filter((_, i) => ok[i])
@@ -101,7 +101,7 @@ export function TopicsSection() {
   const tried = useRef(new Set<string>())
   useEffect(() => {
     if (!courseId || !data || busy || editing || data.stats.length > 0 || tried.current.has(courseId)) return
-    if (data.material.notes.length + data.material.lectures.length < 2) return
+    if (data.material.notes.length + data.material.lectures.length + data.material.files.length < 2) return
     tried.current.add(courseId)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void ask('draft')

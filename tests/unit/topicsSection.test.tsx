@@ -78,8 +78,15 @@ describe('Topics section', () => {
     expect(screen.queryByRole('button', { name: 'Save topics' })).toBeNull()
     expect(screen.getByRole('listitem', { name: 'Glycolysis' })).toBeTruthy()
   })
+  it('a course with one note and one uploaded file has enough to find topics in', async () => {
+    material = { notes: [{ id: 'n1', title: 'Krebs notes' }], lectures: [], decks: [], files: [{ id: 'f1', name: 'Sets slides.pdf' }] }
+    postAi.mockResolvedValue({ ok: true, value: { topics: [{ name: 'Sets', notes: [], lectures: [], files: ['f1'] }] } })
+    await open()
+    expect(postAi).toHaveBeenCalledWith('/api/ai/topics', { courseId: 'c1', mode: 'draft' })
+    expect(saveCourseTopics).toHaveBeenCalledWith(expect.anything(), 'c1', [{ name: 'Sets', links: [{ kind: 'file', id: 'f1' }] }])
+  })
   it('shows the AI\'s refusals in plain words, with no editor', async () => {
-    postAi.mockResolvedValue({ ok: false, error: 'too_little', message: 'Add a few more notes or record a lecture in this course first.' })
+    postAi.mockResolvedValue({ ok: false, error: 'too_little', message: 'Add a few more notes, lectures or files to this course first.' })
     await open()
     expect(screen.getByRole('alert').textContent).toMatch(/Add a few more notes/)
     expect(screen.queryByRole('button', { name: 'Save topics' })).toBeNull()

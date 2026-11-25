@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { CalendarPlus } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { PlanForm, type PlanSettings } from '@/components/plan/PlanForm'
+import { PlanCourseFlow } from '@/components/plan/PlanCourseFlow'
 import { KIND_ICON, KIND_LABEL, SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
 import { useWarmup } from '@/components/plan/useWarmup'
@@ -126,7 +127,7 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
                     <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent">{v.plan.exam && v.daysToExam !== null ? `${v.plan.exam.title} in ${plural(v.daysToExam, 'day')}` : 'Ongoing, no exam'}</span>
                   </p>
                 </div>
-                {v.status === 'no_topics' && <p className="text-sm text-muted">{course?.name} needs a few notes or lectures first, so its topics can be found. <Link className="text-accent" href="/library">Open Library</Link></p>}
+                {v.status === 'no_topics' && <p className="text-sm text-muted">{course?.name} needs a few notes, lectures or files first, so its topics can be found. <Link className="text-accent" href="/library">Open Library</Link></p>}
                 {v.status === 'no_days' && <p className="text-sm text-muted">{v.examDay ? 'Your exam is too close for a plan.' : 'There are no study days in the next two weeks.'}</p>}
                 {v.status === 'ok' && (
                   <>
@@ -169,7 +170,7 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
       {offers.map(c => (
         form?.kind === 'new' && form.course.id === c.id
           // works towards the course's next exam when it has one; the student can choose another or none
-          ? <PlanForm key={c.id} title={c.name} exams={examsOf(c.id)} initial={{ examId: examsOf(c.id)[0]?.id ?? null }} saving={saving} error={error} onSave={s => { void save(s) }} onCancel={() => { setForm(null); setError(null) }} />
+          ? <PlanCourseFlow key={c.id} course={c} exams={examsOf(c.id)} initialExamId={examsOf(c.id)[0]?.id ?? null} saving={saving} error={error} onSave={s => { void save(s) }} onCancel={() => { setForm(null); setError(null) }} />
           : <button key={c.id} type="button" aria-label={`Make a study plan for ${c.name}`} className="flex w-full items-center gap-3 rounded-2xl bg-raised p-3.5 text-left active:bg-surface" onClick={() => { setError(null); setForm({ kind: 'new', course: c }) }}>
               <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${c.color} 18%, transparent)`, color: c.color }}><CalendarPlus size={19} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-semibold">{c.name}</span><span className="block text-[13px] text-muted">Make a study plan</span></span>
