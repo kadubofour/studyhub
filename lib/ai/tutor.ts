@@ -1,9 +1,6 @@
 import type OpenAI from 'openai'
 import { AiIncompleteError, AiRefusedError, MODELS, type AiClient } from './openai'
 
-// How hard the model thinks before it answers. Raise it if explanations come out shallow.
-export const TUTOR_EFFORT = 'low' as const
-
 export type TutorEvent = { type: 'delta'; text: string } | { type: 'tool'; name: string; args: string }
 
 // One tutor turn, as the model writes it: words as they come, then each tool call the model finished.
@@ -12,7 +9,6 @@ export async function* streamTutor(client: AiClient, o: {
 }): AsyncGenerator<TutorEvent> {
   const stream = await client.responses.create({
     model: MODELS.strong, instructions: o.instructions, input: o.input, tools: o.tools, stream: true, max_output_tokens: 6000,
-    reasoning: { effort: TUTOR_EFFORT }, // less thinking before the first word; the tutor teaches from the student's own material, so it needs little
   }, { signal: o.signal })
   let gotSomething = false
   let final: OpenAI.Responses.Response | undefined
