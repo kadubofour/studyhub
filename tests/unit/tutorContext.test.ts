@@ -118,6 +118,63 @@ describe('guided mode instructions', () => {
   })
 })
 
+describe('a course\'s whole material', () => {
+  const doc = (id: string, text: string) => m({ kind: 'file', id, title: id, text })
+  const base = { attached: null, matches: [], courses: [], decks: [] }
+  it('gives the model every item whole when it all fits, far past the usual cap', () => {
+    const a = 'a'.repeat(60_000), b = 'b'.repeat(60_000)
+    const { text } = buildContext({ ...base, course: [doc('f1', a), doc('f2', b)], query: 'why?' })
+    expect(text).toContain(a)
+    expect(text).toContain(b)
+  })
+  it('shares the room when there is too much: a short item stays whole and the total stays bounded', () => {
+    const short = 'short item words'
+    const { text } = buildContext({ ...base, course: [doc('s', short), doc('f1', 'a'.repeat(500_000)), doc('f2', 'b'.repeat(500_000))], query: '' })
+    expect(text).toContain(short)
+    expect(text).toContain('a'.repeat(1000))
+    expect(text).toContain('b'.repeat(1000))
+    expect(text.length).toBeLessThan(TUTOR_LIMITS.course + 3000)
+  })
+  it('keeps the passages about the question from a long item, in their order, and marks what was left out', () => {
+    const filler = Array.from({ length: 400 }, (_, i) => `Filler paragraph ${i} ${'z'.repeat(1500)}`)
+    const long = ['Opening paragraph.', ...filler, 'Inferential statistics uses a sample.', 'More about a population.'].join('\n\n')
+    const { text } = buildContext({ ...base, course: [doc('f1', long)], query: 'inferential' })
+    expect(text).toContain('Inferential statistics uses a sample.')
+    expect(text).toContain('[...]')
+    expect(text.indexOf('Opening paragraph.')).toBeLessThan(text.indexOf('Inferential statistics'))
+    expect(text.length).toBeLessThan(TUTOR_LIMITS.course + 3000)
+  })
+  it('gives the file the student named room first, and does not cut it to the attached-note size', () => {
+    const named = 'q'.repeat(150_000)
+    const { text } = buildContext({ ...base, named: [doc('n', named)], course: [doc('other', 'r'.repeat(400_000)), doc('n', named)], query: '' })
+    expect(text.split('q').length - 1).toBeGreaterThan(90_000)
+    expect(text.match(/id="n"/g)).toHaveLength(1)
+    expect(text.indexOf('id="n"')).toBeLessThan(text.indexOf('id="other"'))
+  })
+  it('cites what was asked about or found, not every item it read', () => {
+    const found = { kind: 'file' as const, id: 'f2', title: 'f2', text: 'snippet' }
+    const { text, sources } = buildContext({ ...base, matches: [found], course: [doc('f1', 'first whole text'), doc('f2', 'second whole text')], query: 'x' })
+    expect(sources.map(s => s.id)).toEqual(['f2'])
+    expect(text).toContain('first whole text')
+    expect(text).not.toContain('>\nsnippet\n<') // the whole item is there, so the snippet is not added too
+  })
+  it('leaves a chat with no course on the usual cap', () => {
+    expect(buildContext({ ...base, matches: [doc('f1', 'x'.repeat(100_000))] }).text.length).toBeLessThan(TUTOR_LIMITS.total + 3000)
+  })
+})
+
+describe('what the tutor is told about answers and its own knowledge', () => {
+  const t = tutorInstructions(false)
+  it('answers a student who replies to its question, even in one word', () => {
+    expect(t).toMatch(/replies to a question you asked, even in one word/)
+    expect(t).toMatch(/Always write a reply in words: save_lesson_state never takes the place of one/)
+  })
+  it('reads all of a course\'s material and may add its own knowledge', () => {
+    expect(t).toMatch(/read all of it before you answer/)
+    expect(t).toMatch(/free to add your own knowledge/)
+  })
+})
+
 describe('how the tutor teaches', () => {
   const t = tutorInstructions(true)
   it('builds understanding from the student\'s own material: its notation, its examples, one worked example, a check question only when it tells you something', () => {

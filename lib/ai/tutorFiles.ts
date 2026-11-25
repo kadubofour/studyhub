@@ -8,10 +8,11 @@ import type { Material } from './tutorContext'
 // it is wanted, so every file already kept becomes readable without being uploaded again. Read with the student's own session. The tutor works without any of
 // this, so a failure means fewer files rather than an error.
 
-export type FileRow = { id: string; course_id: string | null; note_id: string | null; name: string; mime: string; path: string; bytes: number; body_status: 'pending' | 'ready' | 'no_text'; created_at: string }
-const COLS = 'id,course_id,note_id,name,mime,path,bytes,body_status,created_at'
+export type FileRow = { id: string; course_id: string | null; notebook_id?: string | null; note_id: string | null; name: string; mime: string; path: string; bytes: number; body_status: 'pending' | 'ready' | 'no_text'; created_at: string }
+const COLS = 'id,course_id,notebook_id,note_id,name,mime,path,bytes,body_status,created_at'
 
 const READS_PER_MESSAGE = 5 // files read for the first time on one message
+const COURSE_READS = 30 // more when they are the chat's course's: the tutor is to have all of it
 const READ_BUDGET_MS = 20_000 // and no more time than this
 const MOST_NAMED = 2
 
@@ -36,7 +37,7 @@ export function filesAsked(message: string, all: FileRow[], inScope: FileRow[]):
 
 /** What the tutor is told about a file it can see: its name, its type, and that it has no text when it has none */
 export const fileLine = (f: Pick<FileRow, 'name' | 'mime' | 'body_status'>) =>
-  `${f.name} (${MATERIAL_LABEL[f.mime] ?? 'File'}${f.body_status === 'no_text' ? ', no text in it' : ''})`
+  `${f.name} (${MATERIAL_LABEL[f.mime] ?? 'File'}${f.body_status === 'no_text' ? ', no text in it' : f.body_status === 'pending' ? ', not read yet' : ''})`
 
 // Takes a file's text out and keeps it, and gives it back. A file that cannot be fetched stays pending, to be tried again; one that cannot be read is marked.
 async function readFile(sb: SupabaseClient, f: FileRow): Promise<{ status: FileRow['body_status']; body: string } | null> {
@@ -49,15 +50,17 @@ async function readFile(sb: SupabaseClient, f: FileRow): Promise<{ status: FileR
   return { status, body }
 }
 
-export async function tutorFiles(sb: SupabaseClient, o: { courseId: string | null; message: string }): Promise<{ list: string[]; named: Material[]; scanned: FileRow[] }> {
+export async function tutorFiles(sb: SupabaseClient, o: { courseId: string | null; message: string; notebookIds?: string[] }): Promise<{ list: string[]; named: Material[]; scanned: FileRow[]; courseScans: FileRow[] }> {
   try {
     const { data } = await sb.from('materials').select(COLS).order('created_at', { ascending: false }).limit(100)
     const rows = (data ?? []) as FileRow[]
-    const inScope = o.courseId ? rows.filter(f => f.course_id === o.courseId) : rows
+    const inScope = o.courseId ? rows.filter(f => f.course_id === o.courseId || (!!f.notebook_id && !!o.notebookIds?.includes(f.notebook_id))) : rows
     const asked = filesAsked(o.message, rows, inScope)
 
     // First reads: the files asked about, then the chat's course, then the rest. A file with a note made from it only when asked about: the note says the same.
-    const waiting = [...new Set([...asked, ...inScope, ...rows])].filter(f => f.body_status === 'pending' && (!f.note_id || asked.includes(f))).slice(0, READS_PER_MESSAGE)
+    const unread = [...new Set([...asked, ...inScope, ...rows])].filter(f => f.body_status === 'pending' && (!f.note_id || asked.includes(f)))
+    const reads = o.courseId ? Math.min(COURSE_READS, Math.max(READS_PER_MESSAGE, unread.filter(f => inScope.includes(f)).length)) : READS_PER_MESSAGE
+    const waiting = unread.slice(0, reads)
     const justRead = new Map<string, string>()
     const started = Date.now()
     for (const f of waiting) {
@@ -76,8 +79,9 @@ export async function tutorFiles(sb: SupabaseClient, o: { courseId: string | nul
     return {
       list: inScope.slice(0, 30).map(fileLine), named,
       scanned: asked.filter(f => f.body_status === 'no_text' && f.mime === 'application/pdf'),
+      courseScans: o.courseId ? inScope.filter(f => f.body_status === 'no_text' && f.mime === 'application/pdf' && !f.note_id && !asked.includes(f)) : [],
     }
   } catch {
-    return { list: [], named: [], scanned: [] }
+    return { list: [], named: [], scanned: [], courseScans: [] }
   }
 }
