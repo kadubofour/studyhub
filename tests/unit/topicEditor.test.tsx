@@ -6,7 +6,7 @@ import type { CourseMaterial, TopicDraft } from '@/lib/topics/types'
 import { choose, optionsOf } from './dropdown'
 
 afterEach(cleanup)
-const material: CourseMaterial = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [{ id: 'l1', title: 'Week 3 lecture' }], decks: [{ id: 'd1', name: 'Cells deck' }] }
+const material: CourseMaterial = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [{ id: 'l1', title: 'Week 3 lecture' }], decks: [{ id: 'd1', name: 'Cells deck' }], files: [{ id: 'f1', name: 'Sets slides.pdf' }] }
 const initial = (): TopicDraft[] => [
   { id: 't1', name: 'Krebs cycle', links: [{ kind: 'note', id: 'n1' }] },
   { id: 't2', name: 'Glycolysis', links: [{ kind: 'note', id: 'n2' }, { kind: 'lecture', id: 'l1' }] },
@@ -25,6 +25,12 @@ describe('TopicEditor', () => {
     // shown as linked chips (the same names are also offered to the other topic in its Add list)
     expect(screen.getByRole('button', { name: 'Remove Krebs notes from Krebs cycle' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Remove Week 3 lecture from Glycolysis' })).toBeTruthy()
+  })
+  it('offers the course\'s files to add to a topic, and saves the link', () => {
+    const { onSave } = open()
+    choose('Add to Krebs cycle', /^Sets slides\.pdf/)
+    fireEvent.click(screen.getByRole('button', { name: 'Save topics' }))
+    expect((saved(onSave)[0] as TopicDraft).links).toContainEqual({ kind: 'file', id: 'f1' })
   })
   it('renames a topic and saves the list with its ids', () => {
     const { onSave } = open()

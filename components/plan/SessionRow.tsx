@@ -8,9 +8,14 @@ export const KIND_LABEL = { warmup: 'Warm-up', learn: 'Learn', revise: 'Revise' 
 export const KIND_ICON: Record<keyof typeof KIND_LABEL, LucideIcon> = { warmup: Zap, learn: BookOpen, revise: RotateCw }
 
 // One planned study session, as a tick-off row: its kind drawn in the course's colour, what to do, how long, and the way in
-export function SessionRow({ s, course, done, onToggle, onWarmup, warmingUp, showCourse = true }: {
-  s: SessionView; course?: Course; showCourse?: boolean; done: boolean; onToggle: () => void; onWarmup?: () => void; warmingUp?: boolean
+// A session is practised from the topic's note, or from an uploaded file when it has no note: a Warm-up or a Revise makes a quiz, a Learn makes flashcards
+export function SessionRow({ s, course, done, onToggle, onWarmup, warmingUp, onCards, makingCards, showCourse = true }: {
+  s: SessionView; course?: Course; showCourse?: boolean; done: boolean; onToggle: () => void
+  onWarmup?: () => void; warmingUp?: boolean; onCards?: () => void; makingCards?: boolean
 }) {
+  const canPractise = !!(s.noteId || s.materialId)
+  const openHref = s.noteId ? `/notes/${s.noteId}` : s.materialId ? `/files/${s.materialId}` : '/progress'
+  const open = <Link className="rounded-full px-3 py-1.5 text-sm font-medium text-accent active:bg-surface" href={openHref}>Open</Link>
   const label = `${KIND_LABEL[s.kind]}: ${s.topicName}`
   const Icon = KIND_ICON[s.kind]
   const color = course?.color ?? 'var(--accent-solid)'
@@ -22,9 +27,13 @@ export function SessionRow({ s, course, done, onToggle, onWarmup, warmingUp, sho
         <div className={`truncate text-[15px] font-medium ${done ? 'text-muted line-through' : ''}`}>{label}</div>
         <div className="text-[13px] text-muted">{showCourse && course && <><span>{course.name}</span> · </>}<span>{s.minutes} min</span></div>
       </div>
-      {s.kind === 'warmup' && s.noteId && onWarmup
+      {s.kind === 'warmup' && canPractise && onWarmup
         ? <button type="button" className="btn !rounded-full !px-3.5 text-sm" disabled={warmingUp} onClick={onWarmup}>{warmingUp ? 'Making quiz…' : 'Start warm-up'}</button>
-        : <Link className="rounded-full px-3 py-1.5 text-sm font-medium text-accent active:bg-surface" href={s.noteId ? `/notes/${s.noteId}` : '/progress'}>Open</Link>}
+        : s.kind === 'revise' && canPractise && onWarmup
+          ? <>{open}<button type="button" className="btn !rounded-full !px-3.5 text-sm" disabled={warmingUp} onClick={onWarmup}>{warmingUp ? 'Making quiz…' : 'Quiz me'}</button></>
+          : s.kind === 'learn' && canPractise && onCards
+            ? <>{open}<button type="button" className="btn !rounded-full !px-3.5 text-sm" disabled={makingCards} onClick={onCards}>{makingCards ? 'Making cards…' : 'Flashcards'}</button></>
+            : open}
     </div>
   )
 }

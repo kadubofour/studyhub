@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { readOwnNote } from '@/lib/ai/routeNote'
+import { namesFile, readOwnFile } from '@/lib/ai/routeFile'
 import { makeQuiz, makeTopicQuiz, MAX_TOPIC_CHARS, QUESTION_TYPES, QUIZ_COUNTS } from '@/lib/ai/quiz'
 import { MIN_WORDS } from '@/lib/ai/summary'
 import { wordCount } from '@/lib/ai/input'
@@ -17,8 +18,9 @@ function quizOpts(body: { count?: unknown; types?: unknown }) {
   return { count: body.count as number, types: types as QuestionType[] }
 }
 
-// POST { noteId, count: 5|10|15, types: QuestionType[] } or { topic, count, types } → the saved Quiz
+// POST { noteId, count: 5|10|15, types: QuestionType[] }, { materialId, count, types } (an uploaded file) or { topic, count, types } → the saved Quiz
 export async function POST(request: Request) {
+  if (await namesFile(request)) return fromFile(request)
   const sent = (await request.clone().json().catch(() => null)) as { topic?: unknown } | null
   if (sent && 'topic' in sent) return fromTopic(request, sent)
 
@@ -55,5 +57,23 @@ async function fromTopic(request: Request, body: { topic?: unknown; count?: unkn
     if (error || !data) throw new Error('save failed')
     return data as Quiz
   }, { userId: user.id, cost: 1, signal: request.signal })
+  return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
+}
+
+async function fromFile(request: Request) {
+  const r = await readOwnFile(request)
+  if ('response' in r) return r.response
+  const opts = quizOpts(r.body)
+  if (!opts) return badRequest()
+  if (wordCount(r.file.content_md) < MIN_WORDS) return NextResponse.json({ error: 'too_short' }, { status: 422 })
+
+  const result = await runAiAction(async client => {
+    const made = await makeQuiz(client, r.file, opts, request.signal)
+    const { data, error } = await r.sb.from('quizzes')
+      .insert({ note_id: null, material_id: r.file.id, title: made.title, questions: made.questions })
+      .select('id,note_id,title,questions,created_at').single()
+    if (error || !data) throw new Error('save failed')
+    return data as Quiz
+  }, { userId: r.userId, cost: 1, signal: request.signal })
   return result.ok ? NextResponse.json(result.value) : aiErrorResponse(result.error)
 }

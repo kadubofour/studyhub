@@ -129,7 +129,7 @@ export function TopicsSection() {
   if (!data) return <section aria-label="Topics" className="card mt-4"><h2 className="mb-2 font-semibold">Topics</h2></section>
 
   const linked = new Set(data.links.map(l => `${l.link.kind}:${l.link.id}`))
-  const unlinked = [...data.material.notes.map(n => `note:${n.id}`), ...data.material.lectures.map(l => `lecture:${l.id}`)].filter(k => !linked.has(k)).length
+  const unlinked = [...data.material.notes.map(n => `note:${n.id}`), ...data.material.lectures.map(l => `lecture:${l.id}`), ...data.material.files.map(f => `file:${f.id}`)].filter(k => !linked.has(k)).length
 
   return (
     <section aria-label="Topics" className="card mt-4 space-y-3">
@@ -150,7 +150,7 @@ export function TopicsSection() {
         <div className="space-y-2">
           <p className="text-sm text-muted">Topics split this course into ideas you can revise one by one. They are being found from your notes and lectures.</p>
           {busy
-            ? <Working kind="write" label="Finding topics" steps={['Reading the notes and lectures', 'Grouping them by idea', 'Naming each topic']} className="rounded-2xl bg-surface py-5" />
+            ? <Working kind="write" label="Finding topics" steps={['Reading the notes, lectures and files', 'Grouping them by idea', 'Naming each topic']} className="rounded-2xl bg-surface py-5" />
             : <button type="button" className="btn-primary" onClick={() => { void ask('draft') }}>Find topics</button>}
           <p className="text-xs text-muted">Uses 1 AI action.</p>
         </div>

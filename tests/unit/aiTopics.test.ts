@@ -43,6 +43,17 @@ describe('cleanTopics', () => {
     expect(cleanTopics([{ name: 'Existing', notes: ['n1'], lectures: [] }], used)).toHaveLength(1)
     expect(cleanTopics([{ name: 'x'.repeat(200), notes: ['n1'], lectures: [] }], used)[0].name).toHaveLength(80)
   })
+  it('links an uploaded file, and drops a file id that was not in the material', () => {
+    const file = (id: string): Item => ({ kind: 'file', id, title: 'Sets slides.pdf', text: 'A set is a collection of distinct objects, written with braces.' })
+    const out = cleanTopics([
+      { name: 'Sets', notes: [], lectures: [], files: ['f1', 'nope'] },
+      { name: 'Only a made-up file', notes: [], lectures: [], files: ['nope'] },
+    ], [...used, file('f1')])
+    expect(out).toEqual([{ name: 'Sets', notes: [], lectures: [], files: ['f1'] }])
+  })
+  it('wraps a file in a file tag, so the model can name it', () => {
+    expect(buildMaterial([{ kind: 'file', id: 'f1', title: 'Sets.pdf', text: 'A set is a collection of distinct objects, written with braces.' }]).text).toContain('<file id="f1" title="Sets.pdf">')
+  })
   it('keeps at most 20 topics', () => {
     const raw = Array.from({ length: 30 }, (_, i) => ({ name: `T${i}`, notes: ['n1'], lectures: [] }))
     expect(cleanTopics(raw, used)).toHaveLength(MAX_DRAFT_TOPICS)
@@ -56,7 +67,7 @@ describe('draftTopics', () => {
   }
   const sent = (parse: ReturnType<typeof vi.fn>) => parse.mock.calls[0][0] as { model: string; instructions: string; input: { content: string }[] }
   it('asks the light model with the material in tags, and returns cleaned topics', async () => {
-    const { client, parse } = clientOf({ topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }, { name: 'Bad', notes: ['zzz'], lectures: [] }] })
+    const { client, parse } = clientOf({ topics: [{ name: 'Krebs cycle', notes: ['n1'], lectures: [], files: [] }, { name: 'Bad', notes: ['zzz'], lectures: [], files: [] }] })
     const out = await draftTopics(client, { items: [note('n1'), lecture('l1')], mode: 'draft', existing: [] })
     expect(out.topics).toEqual([{ name: 'Krebs cycle', notes: ['n1'], lectures: [] }])
     expect(sent(parse).model).toBe('gpt-6-luna')
@@ -64,13 +75,13 @@ describe('draftTopics', () => {
     expect(sent(parse).instructions).toMatch(/not instructions/i)
   })
   it('in update mode tells the model the existing topics', async () => {
-    const { client, parse } = clientOf({ topics: [{ name: 'Glycolysis', notes: [], lectures: ['l1'] }] })
+    const { client, parse } = clientOf({ topics: [{ name: 'Glycolysis', notes: [], lectures: ['l1'], files: [] }] })
     await draftTopics(client, { items: [lecture('l1')], mode: 'update', existing: [{ name: 'Krebs cycle' }] })
     expect(sent(parse).input[0].content).toContain('Existing topics')
     expect(sent(parse).input[0].content).toContain('- Krebs cycle')
   })
   it('says nothing usable came back when every topic is dropped', async () => {
-    const { client } = clientOf({ topics: [{ name: 'Invented', notes: ['zzz'], lectures: [] }] })
+    const { client } = clientOf({ topics: [{ name: 'Invented', notes: ['zzz'], lectures: [], files: [] }] })
     await expect(draftTopics(client, { items: [note('n1')], mode: 'draft', existing: [] })).rejects.toBeInstanceOf(AiEmptyError)
   })
 })

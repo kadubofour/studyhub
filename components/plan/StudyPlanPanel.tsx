@@ -8,6 +8,7 @@ import { PlanForm, type PlanSettings } from '@/components/plan/PlanForm'
 import { KIND_ICON, KIND_LABEL, SessionRow } from '@/components/plan/SessionRow'
 import { usePlans } from '@/components/plan/usePlans'
 import { useWarmup } from '@/components/plan/useWarmup'
+import { useTopicCards } from '@/components/plan/useTopicCards'
 import { useConfirm } from '@/components/providers/ConfirmProvider'
 import { supabase } from '@/lib/supabase/client'
 import { deletePlan, savePlan } from '@/lib/plan/service'
@@ -61,6 +62,7 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
   const confirm = useConfirm()
   const plans = usePlans()
   const warmup = useWarmup()
+  const cards = useTopicCards()
   const [form, setForm] = useState<{ kind: 'new'; course: Course } | { kind: 'edit'; view: PlanView } | null>(null)
   const [full, setFull] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -142,7 +144,8 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
                       {v.today.length > 0 && <div className="divide-y divide-line overflow-hidden rounded-xl bg-surface/60">
                         {v.today.map(x => (
                           <SessionRow key={x.id} s={x} course={course} showCourse={false} done={!!x.done_at} onToggle={() => plans.setDone(v.plan.id, x.id, !x.done_at)}
-                            onWarmup={() => { void warmup.start(x) }} warmingUp={warmup.busy === x.id} />
+                            onWarmup={() => { void warmup.start(x) }} warmingUp={warmup.busy === x.id}
+                            onCards={() => { void cards.start(x, v.courseId) }} makingCards={cards.busy === x.id} />
                         ))}
                       </div>}
                     </div>
@@ -173,6 +176,7 @@ export function StudyPlanPanel({ courses, tasks }: { courses: Course[]; tasks: T
             </button>
       ))}
       {warmup.error && <AiError code={warmup.error.code} message={warmup.error.message} />}
+      {cards.error && <AiError code={cards.error.code} message={cards.error.message} />}
       {!form && error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </section>
   )

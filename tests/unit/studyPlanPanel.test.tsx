@@ -4,12 +4,13 @@ import { render, screen, fireEvent, act, cleanup, within } from '@testing-librar
 import type { PlanView } from '@/lib/plan/load'
 import type { Course, Task } from '@/lib/types'
 
-const setDone = vi.fn(), reload = vi.fn(), start = vi.fn()
+const setDone = vi.fn(), reload = vi.fn(), start = vi.fn(), startCards = vi.fn()
 let views: PlanView[] | null
 let failed = false
 vi.mock('@/lib/supabase/client', () => ({ supabase: () => ({}) }))
 vi.mock('@/components/plan/usePlans', () => ({ usePlans: () => ({ views, failed, reload, setDone }) }))
 vi.mock('@/components/plan/useWarmup', () => ({ useWarmup: () => ({ busy: null, error: null, start }) }))
+vi.mock('@/components/plan/useTopicCards', () => ({ useTopicCards: () => ({ busy: null, error: null, start: startCards }) }))
 const savePlan = vi.fn(async (..._a: unknown[]) => {}), deletePlan = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('@/lib/plan/service', () => ({ savePlan: (...a: unknown[]) => savePlan(...a), deletePlan: (...a: unknown[]) => deletePlan(...a) }))
 import { StudyPlanPanel } from '@/components/plan/StudyPlanPanel'
@@ -91,6 +92,8 @@ describe('Study plan panel', () => {
     expect(within(panel).getByText(/Learn: Glycolysis \(25 min\)/)).toBeTruthy()
     fireEvent.click(within(panel).getByRole('button', { name: 'Start warm-up' }))
     expect(start).toHaveBeenCalledWith(expect.objectContaining({ id: 's2', noteId: 'n2' }))
+    fireEvent.click(within(panel).getByRole('button', { name: 'Flashcards' })) // the Learn session makes flashcards, for this course
+    expect(startCards).toHaveBeenCalledWith(expect.objectContaining({ id: 's1', noteId: 'n1' }), 'c1')
   })
   it('the full schedule shows every day, and hides again', async () => {
     views = [view()]

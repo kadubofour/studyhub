@@ -6,8 +6,9 @@ import { buildPlan } from './schedule'
 import { ensureDay, listPlanDays, listPlans, type PlanRow } from './service'
 import type { PlanSession, StoredSession } from './types'
 
-export type SessionView = StoredSession & { topicName: string; noteId: string | null }
-export type ScheduledView = PlanSession & { topicName: string; noteId: string | null }
+// noteId: the topic's newest note; materialId: an uploaded file to practise from when it has no note (null otherwise)
+export type SessionView = StoredSession & { topicName: string; noteId: string | null; materialId?: string | null }
+export type ScheduledView = PlanSession & { topicName: string; noteId: string | null; materialId?: string | null }
 export type PlanView = {
   // examDay and daysToExam are null for a plan with no exam ahead: it keeps going, planning the next two weeks each day
   plan: PlanRow; courseId: string; examDay: DayKey | null; daysToExam: number | null
@@ -56,11 +57,21 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
       const cur = noteOf.get(l.topic_id)
       if (!cur || (updated.get(l.link.id) ?? '') > (updated.get(cur) ?? '')) noteOf.set(l.topic_id, l.link.id)
     }
+    // For a topic with no note: an uploaded file it covers that has text to make a quiz from (not a scan or a photo)
+    const fileIds = [...new Set(links.filter(l => l.link.kind === 'file').map(l => l.link.id))]
+    const usable = new Set<string>()
+    if (fileIds.length) {
+      const { data } = await sb.from('materials').select('id,body_status').in('id', fileIds)
+      for (const f of (data ?? []) as { id: string; body_status: string }[]) if (f.body_status !== 'no_text') usable.add(f.id)
+    }
+    const fileOf = new Map<string, string>()
+    for (const l of links) if (l.link.kind === 'file' && usable.has(l.link.id) && !noteOf.has(l.topic_id) && !fileOf.has(l.topic_id)) fileOf.set(l.topic_id, l.link.id)
     const names = new Map(stats.map(s => [s.topic_id, s.name]))
-    const dress = (s: PlanSession): ScheduledView | null => (names.has(s.topicId) ? { ...s, topicName: names.get(s.topicId)!, noteId: noteOf.get(s.topicId) ?? null } : null)
+    const dress = (s: PlanSession): ScheduledView | null => (names.has(s.topicId) ? { ...s, topicName: names.get(s.topicId)!, noteId: noteOf.get(s.topicId) ?? null, materialId: fileOf.get(s.topicId) ?? null } : null)
 
     const done: DoneSession[] = saved.flatMap(d => d.sessions.filter(s => s.done_at).map(s => ({ topicId: s.topic_id, kind: s.kind, day: d.day })))
-    const topics = toPlanTopics(stats, new Set(noteOf.keys()), summariseHistory(done))
+    const practisable = new Set([...noteOf.keys(), ...fileOf.keys()]) // a topic with a note or a file to make a quiz from
+    const topics = toPlanTopics(stats, practisable, summariseHistory(done))
     const settings = { examDay: endDay, finalRevision: examDay !== null, mode: plan.mode, minutesPerDay: plan.minutes_per_day, daysOff: plan.days_off }
 
     // Today: the saved list, or plan it now and save it (nothing is saved when there is nothing to do yet)
@@ -71,12 +82,12 @@ export async function loadPlans(sb: SupabaseClient, tz: string, now: Date): Prom
       if (planned.length) todayRow = await ensureDay(sb, plan.id, today, planned.map(s => ({ id: crypto.randomUUID(), topic_id: s.topicId, kind: s.kind, minutes: s.minutes, done_at: null })))
     }
     const todayViews: SessionView[] = (todayRow?.sessions ?? []).flatMap(s =>
-      names.has(s.topic_id) ? [{ ...s, topicName: names.get(s.topic_id)!, noteId: noteOf.get(s.topic_id) ?? null }] : [])
+      names.has(s.topic_id) ? [{ ...s, topicName: names.get(s.topic_id)!, noteId: noteOf.get(s.topic_id) ?? null, materialId: fileOf.get(s.topic_id) ?? null }] : [])
 
     // The days after today, planned from tomorrow with what is known now
     // ...as if everything planned for today gets done (a missed one returns when tomorrow becomes today)
     const planned: DoneSession[] = (todayRow?.sessions ?? []).map(s => ({ topicId: s.topic_id, kind: s.kind, day: today }))
-    const aheadTopics = toPlanTopics(stats, new Set(noteOf.keys()), summariseHistory([...done, ...planned]))
+    const aheadTopics = toPlanTopics(stats, practisable, summariseHistory([...done, ...planned]))
     const future = tomorrow < endDay ? buildPlan({ today: tomorrow, ...settings, topics: aheadTopics }) : null
     const schedule = (future?.days ?? []).map(d => ({ day: d.day, sessions: d.sessions.flatMap(s => dress(s) ?? []) }))
 

@@ -42,4 +42,34 @@ describe('SessionRow', () => {
     row({ kind: 'warmup' }, { onWarmup, warmingUp: true })
     expect(screen.getByRole('button', { name: 'Making quiz…' })).toBeTruthy()
   })
+  describe('a topic with an uploaded file and no note', () => {
+    const file = { noteId: null, materialId: 'f1' }
+    it('opens the file, and a Warm-up can start from it', () => {
+      const onWarmup = vi.fn()
+      row({ kind: 'warmup', ...file }, { onWarmup })
+      fireEvent.click(screen.getByRole('button', { name: 'Start warm-up' }))
+      expect(onWarmup).toHaveBeenCalled()
+      cleanup()
+      row({ ...file })
+      expect(screen.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/files/f1')
+    })
+  })
+  it('a Revise offers a quiz, and a Learn offers flashcards, when there is something to make them from', () => {
+    const onWarmup = vi.fn(), onCards = vi.fn()
+    row({ kind: 'revise' }, { onWarmup })
+    fireEvent.click(screen.getByRole('button', { name: 'Quiz me' }))
+    expect(onWarmup).toHaveBeenCalled()
+    cleanup()
+    row({ kind: 'learn' }, { onCards })
+    fireEvent.click(screen.getByRole('button', { name: 'Flashcards' }))
+    expect(onCards).toHaveBeenCalled()
+    expect(screen.getByRole('link', { name: 'Open' })).toBeTruthy() // Open stays beside it
+  })
+  it('offers neither when the topic has no note or file', () => {
+    row({ kind: 'revise', noteId: null }, { onWarmup: () => {} })
+    expect(screen.queryByRole('button', { name: 'Quiz me' })).toBeNull()
+    cleanup()
+    row({ kind: 'learn', noteId: null }, { onCards: () => {} })
+    expect(screen.queryByRole('button', { name: 'Flashcards' })).toBeNull()
+  })
 })

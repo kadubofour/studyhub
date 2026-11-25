@@ -10,7 +10,7 @@ let courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name
 let stats: TopicStat[] = []
 let loadFails = false
 let links: { topic_id: string; link: { kind: 'note' | 'lecture' | 'deck'; id: string } }[] = []
-let material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] as { id: string; name: string }[] }
+let material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] as { id: string; name: string }[], files: [] as { id: string; name: string }[] }
 const saveCourseTopics = vi.fn(async (..._a: unknown[]) => {})
 const postAi = vi.fn()
 const push = vi.fn()
@@ -29,7 +29,7 @@ import { ToastProvider } from '@/components/providers/ToastProvider'
 const open = async () => { await act(async () => { render(<ToastProvider><TopicsSection /></ToastProvider>) }) }
 beforeEach(() => {
   courses = [{ id: 'c1', name: 'Biology', color: '#1D9E75' }, { id: 'c2', name: 'Chemistry', color: '#BA7517' }]
-  stats = []; links = []; material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [] }
+  stats = []; links = []; material = { notes: [{ id: 'n1', title: 'Krebs notes' }, { id: 'n2', title: 'Glyco notes' }], lectures: [], decks: [], files: [] }
   loadFails = false; push.mockClear(); saveCourseTopics.mockClear(); postAi.mockReset()
   postAi.mockResolvedValue({ ok: false, error: 'too_little', message: 'Not enough to go on yet.' })
 })
@@ -41,7 +41,7 @@ describe('Topics section', () => {
     expect(screen.getByRole('link', { name: 'Open course page' }).getAttribute('href')).toBe('/courses/c1')
   })
   it('shows nothing until some course has real material or topics', async () => {
-    material = { notes: [{ id: 'n1', title: 'Krebs notes' }], lectures: [], decks: [] }
+    material = { notes: [{ id: 'n1', title: 'Krebs notes' }], lectures: [], decks: [], files: [] }
     await open()
     expect(screen.queryByRole('region', { name: 'Topics' })).toBeNull()
     expect(postAi).not.toHaveBeenCalled()

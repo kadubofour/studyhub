@@ -4,7 +4,7 @@ import { listCourseMaterial, listTopicLinks, listTopicStats, saveCourseTopics } 
 const builder = (result: object) => {
   const calls: [string, unknown[]][] = []
   const b: Record<string, unknown> = {}
-  for (const k of ['select', 'eq', 'order']) b[k] = (...a: unknown[]) => { calls.push([k, a]); return b }
+  for (const k of ['select', 'eq', 'is', 'order']) b[k] = (...a: unknown[]) => { calls.push([k, a]); return b }
   b.then = (res: (v: unknown) => unknown) => res(result)
   return { b, calls }
 }
@@ -33,12 +33,14 @@ describe('topic data', () => {
       { topic_id: 't1', link: { kind: 'note', id: 'n1' } }, { topic_id: 't1', link: { kind: 'lecture', id: 'l1' } }, { topic_id: 't2', link: { kind: 'deck', id: 'd1' } },
     ])
   })
-  it('lists the course\'s notes, lectures and decks for the pickers', async () => {
+  it('lists the course\'s notes, lectures, decks and files for the pickers', async () => {
     const { sb, used } = sbWith({
       notes: { data: [{ id: 'n1', title: 'Krebs' }], error: null }, lectures: { data: [{ id: 'l1', title: 'Bio' }], error: null }, decks: { data: [{ id: 'd1', name: 'Cells' }], error: null },
+      materials: { data: [{ id: 'f1', name: 'Sets.pdf' }], error: null },
     })
-    expect(await listCourseMaterial(sb, 'c1')).toEqual({ notes: [{ id: 'n1', title: 'Krebs' }], lectures: [{ id: 'l1', title: 'Bio' }], decks: [{ id: 'd1', name: 'Cells' }] })
+    expect(await listCourseMaterial(sb, 'c1')).toEqual({ notes: [{ id: 'n1', title: 'Krebs' }], lectures: [{ id: 'l1', title: 'Bio' }], decks: [{ id: 'd1', name: 'Cells' }], files: [{ id: 'f1', name: 'Sets.pdf' }] })
     expect(used.notes.calls).toContainEqual(['eq', ['course_id', 'c1']])
+    expect(used.materials.calls).toContainEqual(['is', ['note_id', null]]) // a file with a note made from it is the note's
   })
   it('saves the whole list through the all-or-none function, and throws if it fails', async () => {
     const ok = sbWith({}, { error: null })
