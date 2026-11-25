@@ -51,6 +51,29 @@ describe('streamTutor', () => {
       expect(warn).not.toHaveBeenCalled()
     })
   })
+  describe('a turn that only saves the lesson notes', () => {
+    const state = { type: 'response.output_item.done', item: { type: 'function_call', name: 'save_lesson_state', arguments: '{"state":"x"}' } }
+    const tool = (name: string) => ({ type: 'function', name }) as never
+    it('is asked again without that tool, and the second answer is the reply', async () => {
+      const turns = [[state, { type: 'response.completed' }], [{ type: 'response.output_text.delta', delta: 'Next: unions.' }, { type: 'response.completed' }]]
+      const create = vi.fn(async () => events(turns.shift()!))
+      const out = await collect(streamTutor({ responses: { create } } as never, { instructions: 'i', input: [{ role: 'user', content: 'continue' }], tools: [tool('save_lesson_state'), tool('create_note')] }))
+      expect(out).toEqual([{ type: 'tool', name: 'save_lesson_state', args: '{"state":"x"}' }, { type: 'delta', text: 'Next: unions.' }])
+      expect(create).toHaveBeenCalledTimes(2)
+      const second = (create.mock.calls[1] as unknown as [{ instructions: string; tools: { name: string }[] }])[0]
+      expect(second.tools.map(t => t.name)).toEqual(['create_note'])
+      expect(second.instructions).toContain('in words now')
+    })
+    it('is not asked again when it has words as well', async () => {
+      const { client, create } = clientOf([state, { type: 'response.output_text.delta', delta: 'Hi' }, { type: 'response.completed' }])
+      await collect(run(client))
+      expect(create).toHaveBeenCalledTimes(1)
+    })
+    it('fails when the second try is empty too', async () => {
+      const { client } = clientOf([state, { type: 'response.completed' }])
+      await expect(collect(run(client))).rejects.toThrow('nothing')
+    })
+  })
   it('throws when the model reports a failure', async () => {
     await expect(collect(run(clientOf([{ type: 'response.failed', response: { error: { message: 'boom' } } }]).client))).rejects.toThrow('boom')
   })
