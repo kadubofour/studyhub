@@ -16,6 +16,11 @@ describe('streamTutor', () => {
     await collect(run(client))
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-6.1-sol', stream: true, instructions: 'i', tools: [] }), expect.anything())
   })
+  it('asks the model to think only a little before it answers', async () => {
+    const { client, create } = clientOf([{ type: 'response.output_text.delta', delta: 'Hi' }, { type: 'response.completed' }])
+    await collect(run(client))
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ reasoning: { effort: 'low' } }), expect.anything())
+  })
   it('yields the words as they arrive and each finished tool call', async () => {
     const { client } = clientOf([
       { type: 'response.output_text.delta', delta: 'The Krebs ' }, { type: 'response.output_text.delta', delta: 'cycle.' },
