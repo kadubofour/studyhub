@@ -101,6 +101,7 @@ export function QuizResults({ quiz, attempt, previous, onRetake, onRetryMissed }
                 <div className="space-y-1.5 border-t border-line px-3.5 pb-3.5 pt-3 text-sm">
                   {!ok && <p><span className="text-muted">Your answer: </span>{a ? <MathText>{answerText(q, a.given)}</MathText> : 'No answer'}</p>}
                   <p><span className="text-muted">Answer: </span><span className="font-medium"><MathText>{answerText(q, q.answer)}</MathText></span></p>
+                  {q.type === 'short' && q.fullAnswer && <p><span className="text-muted">In full: </span><MathText>{q.fullAnswer}</MathText></p>}
                   {a?.feedback && <p><MathText>{a.feedback}</MathText></p>}
                   {q.explanation && <p className="text-muted"><MathText>{q.explanation}</MathText></p>}
                 </div>

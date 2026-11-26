@@ -98,6 +98,43 @@ describe('QuizPlayer', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Try again' })) })
     expect(saveAttempt).toHaveBeenLastCalledWith(expect.anything(), 'a1', expect.objectContaining({ q3: { given: 'electrons', correct: true, feedback: 'Yes.' } }), 3)
   })
+  describe('a short answer, shown as a properly worded sentence once it is marked', () => {
+    const withFull: Quiz = { ...quiz, questions: quiz.questions.map(q => (q.id === 'q3' ? { ...q, fullAnswer: 'The main product is NADH, which carries electrons.' } : q)) }
+    const lastOf = (qz: Quiz) => render(<QuizPlayer quiz={qz} attempt={attempt({ q1: { given: 'Matrix', correct: true, feedback: null }, q2: { given: 'false', correct: true, feedback: null } })} onFinished={() => {}} />)
+    it('is shown when the student\'s answer was right', async () => {
+      lastOf(withFull)
+      fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'NADH' } })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check' })) })
+      expect(screen.getByText('Correct.')).toBeTruthy()
+      expect(screen.getByText('In full:')).toBeTruthy()
+      expect(screen.getByText(/The main product is NADH, which carries electrons\./)).toBeTruthy()
+      expect(screen.getByText('NADH carries electrons.')).toBeTruthy() // the explanation is still there
+    })
+    it('is shown when the answer was wrong too', async () => {
+      fetchMock.mockResolvedValue(new Response(JSON.stringify({ correct: false, feedback: 'Not that.' }), { status: 200 }))
+      lastOf(withFull)
+      fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'oxygen' } })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check' })) })
+      expect(screen.getByText(/The main product is NADH, which carries electrons\./)).toBeTruthy()
+    })
+    it('falls back to the short answer for a right answer in a quiz made before this existed', async () => {
+      lastOf(quiz)
+      fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'NADH' } })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check' })) })
+      expect(screen.getByText('Answer:')).toBeTruthy()
+      expect(screen.queryByText('In full:')).toBeNull()
+    })
+    it('is not added to a multiple choice question', async () => {
+      render(<QuizPlayer quiz={withFull} attempt={attempt()} onFinished={() => {}} />)
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Matrix' })) })
+      expect(screen.queryByText('In full:')).toBeNull()
+      expect(screen.queryByText('Answer:')).toBeNull()
+    })
+    it('shows in the results too, under a short answer question', () => {
+      render(<QuizResults quiz={withFull} attempt={{ ...attempt({ q3: { given: 'NADH', correct: true, feedback: null } }), finished_at: 'x', correct: 1, total: 3 }} previous={null} onRetake={() => {}} />)
+      expect(screen.getByText(/The main product is NADH, which carries electrons\./)).toBeTruthy()
+    })
+  })
   it('skipping a question the AI could not mark counts it wrong', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }))
     lastQuestion()

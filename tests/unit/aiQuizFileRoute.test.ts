@@ -20,7 +20,7 @@ vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/
 import { POST } from '@/app/api/ai/quiz/route'
 
 const TEXT = 'A set is a collection of distinct objects, and the union of two sets holds everything in either. '.repeat(6)
-const mcq = (prompt: string) => ({ type: 'mcq', prompt, options: ['a', 'b', 'c', 'd'], answer: 'b', explanation: 'x' })
+const mcq = (prompt: string) => ({ type: 'mcq', prompt, options: ['a', 'b', 'c', 'd'], answer: 'b', explanation: 'x', full_answer: '' })
 const call = (body: object = {}) => POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ materialId: FILE_ID, count: 5, types: ['mcq'], ...body }) }))
 beforeEach(() => {
   file = { id: FILE_ID, course_id: 'c1', note_id: null, name: 'Sets slides.pdf', mime: 'application/pdf', path: 'u1/a.pdf', bytes: 10, body: TEXT, body_status: 'ready', created_at: 'x' }

@@ -179,6 +179,8 @@ export function QuizPlayer({ quiz, attempt, onFinished }: { quiz: Quiz; attempt:
             {done.correct ? 'Correct.' : <span>Not quite. The answer is <MathText>{answerText(q, q.answer)}</MathText>.</span>}
           </p>
           {done.feedback && <p className="mt-2"><MathText>{done.feedback}</MathText></p>}
+          {/* a short answer: the answer as a properly worded sentence, whether or not theirs was right (an older quiz has only the short answer) */}
+          {q.type === 'short' && (q.fullAnswer || done.correct) && <p className="mt-2"><span className="text-muted">{q.fullAnswer ? 'In full: ' : 'Answer: '}</span><span className="font-medium"><MathText>{q.fullAnswer ?? q.answer}</MathText></span></p>}
           {q.explanation && <p className="mt-2 text-muted"><MathText>{q.explanation}</MathText></p>}
           <div className="mt-4 flex items-center justify-end gap-3">
             <span className="hidden text-xs text-muted md:inline">Press Enter</span>

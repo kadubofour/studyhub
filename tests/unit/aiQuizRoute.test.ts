@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: async () => sb }
 vi.mock('@/lib/ai/openai', async orig => ({ ...(await orig<typeof import('@/lib/ai/openai')>()), openai: () => ({ responses: { parse } }) }))
 import { POST } from '@/app/api/ai/quiz/route'
 
-const mcq = (prompt: string) => ({ type: 'mcq', prompt, options: ['a', 'b', 'c', 'd'], answer: 'b', explanation: 'x' })
+const mcq = (prompt: string) => ({ type: 'mcq', prompt, options: ['a', 'b', 'c', 'd'], answer: 'b', explanation: 'x', full_answer: '' })
 const call = (body: object = {}) => POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ noteId: NOTE_ID, count: 5, types: ['mcq'], ...body }) }))
 const fns = () => adminRpc.mock.calls.map(c => c[0])
 beforeEach(() => {
