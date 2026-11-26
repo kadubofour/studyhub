@@ -98,6 +98,16 @@ describe('POST /api/ai/tutor', () => {
     expect(inserted[1][1]).toMatchObject({ status: 'ok', sources: [{ kind: 'note', id: NOTE, title: 'Krebs' }] })
     expect(release).not.toHaveBeenCalled()
   })
+  it('keeps writing the reply when the student leaves the page, and saves it', async () => {
+    const gone = new AbortController()
+    const res = await POST(new Request('http://x', { method: 'POST', signal: gone.signal, body: JSON.stringify({ chatId: CHAT, message: 'Why NADH?' }) }))
+    gone.abort() // the page was closed
+    const given = (modelInput.mock.calls[0][0] as { signal: AbortSignal }).signal
+    expect(given.aborted).toBe(false) // the model is not told to stop
+    await res.text()
+    expect(inserted.map(([, r]) => r.role)).toEqual(['user', 'assistant'])
+    expect(inserted[1][1]).toMatchObject({ content: 'NADH carries electrons.', status: 'ok' })
+  })
   it('gives the model the attached note, the student\'s message and the quiz tool', async () => {
     await (await call()).text()
     const o = modelInput.mock.calls[0][0] as { input: { content: string }[]; tools: { name: string }[] }

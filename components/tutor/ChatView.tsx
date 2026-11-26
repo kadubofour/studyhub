@@ -24,6 +24,7 @@ import { FOLLOW_UPS, starterMessage } from '@/lib/tutor/starters'
 import { dayHeading, nearBottom, questionText, timeOf, transcript } from '@/lib/tutor/conversation'
 import { applyProposal } from '@/lib/tutor/apply'
 import { sendTutorMessage } from '@/lib/tutor/stream'
+import { awaitingReply, REPLY_WAIT_MS, stopTutorReply } from '@/lib/tutor/background'
 import { addPending, readFile, uploadAttachments, type Pending } from '@/lib/tutor/attachClient'
 import type { Attachment } from '@/lib/tutor/attachments'
 import type { Proposal } from '@/lib/ai/tutorTools'
@@ -117,6 +118,21 @@ export function ChatView({ chatId }: { chatId: string }) {
     Promise.all([getChat(sb, chatId), listMessages(sb, chatId), listCourses(sb)]).then(async ([c, m, cs]) => {
       if (!current) return
       setChat(c); latest.current = m; setMessages(m); setCourses(cs)
+      // The reply to the last question is written whether or not this page was open: wait for it, and show it when it is saved
+      if (awaitingReply(m[m.length - 1])) {
+        setLive('')
+        const until = Date.parse(m[m.length - 1].created_at) + REPLY_WAIT_MS
+        const poll = async () => {
+          while (current && Date.now() < until) {
+            await new Promise(r => setTimeout(r, 2000))
+            if (!current) return
+            const fresh = await listMessages(sb, chatId).catch(() => null)
+            if (fresh && fresh[fresh.length - 1]?.role !== 'user') { latest.current = fresh; setMessages(fresh); getChat(sb, chatId).then(x => { if (current) setChat(y => (y ? { ...x, guided: y.guided } : x)) }).catch(() => {}); break }
+          }
+          if (current) setLive(null)
+        }
+        void poll()
+      }
       const table = c.note_id ? 'notes' : c.lecture_id ? 'lectures' : null
       const id = c.note_id ?? c.lecture_id
       if (table && id) {
@@ -523,6 +539,7 @@ export function ChatView({ chatId }: { chatId: string }) {
                 ? <button key="stop" type="button" aria-label="Stop" title="Stop" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" onClick={() => {
                   if (nowMs() - startedAt.current < 600) return // the second tap of a double tap on Send
                   stopped.current = true
+                  stopTutorReply(chatId) // the reply carries on without this page, so it is told to stop
                   abort.current?.abort()
                 }}><Square size={14} className="fill-current" aria-hidden /></button>
                 : <button key="send" aria-label="Send" title="Send" className="btn-primary grid size-10 shrink-0 place-items-center !rounded-full !p-0" disabled={(!text.trim() && !pending.length) || reading > 0 || uploading}>{uploading ? <Loader2 size={18} className="animate-spin" aria-hidden /> : <ArrowUp size={18} aria-hidden />}</button>}

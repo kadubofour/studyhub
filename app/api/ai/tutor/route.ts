@@ -4,6 +4,7 @@ import { aiErrorResponse, classifyAiError } from '@/lib/ai/run'
 import { isAiConfigured, openai } from '@/lib/ai/openai'
 import { releaseTutorMessage, reserveTutorMessage } from '@/lib/ai/tutorLimit'
 import { streamTutor } from '@/lib/ai/tutor'
+import { keepAlive, startRun } from '@/lib/ai/tutorRuns'
 import { LESSON_STATE_MAX, buildContext, buildInput, tutorInstructions, type Material } from '@/lib/ai/tutorContext'
 import { LESSON_STATE_TOOL, lessonStateTool, parseLessonState, parseToolCall, toolDefinitions, type Proposal } from '@/lib/ai/tutorTools'
 import { courseNamed } from '@/lib/ai/courseNamed'
@@ -163,15 +164,19 @@ export async function POST(request: Request) {
   const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
   if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
 
+  // The reply is not tied to this connection: it carries on if the student leaves the page, and only Stop (its own request) ends it
+  const run = startRun(user.id, chat.id)
   const gen = streamTutor(openai(), {
-    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: [...toolDefinitions(), lessonStateTool(LESSON_STATE_MAX)], signal: request.signal,
+    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: [...toolDefinitions(), lessonStateTool(LESSON_STATE_MAX)], signal: run.signal,
     input: buildInput({ history, context: context.text, message, parts: [...attachmentParts(counted, fresh.files), ...scannedParts] }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status
   let first: IteratorResult<{ type: 'delta'; text: string } | { type: 'tool'; name: string; args: string }>
-  try { first = await gen.next() } catch (e) { await releaseTutorMessage(user.id); return aiErrorResponse(classifyAiError(e, request.signal)) }
+  try { first = await gen.next() } catch (e) { run.end(); await releaseTutorMessage(user.id); return aiErrorResponse(classifyAiError(e, run.signal)) }
 
   const enc = new TextEncoder()
+  let finished: () => void = () => {}
+  keepAlive(new Promise<void>(resolve => { finished = resolve })) // the reply is saved even if nobody is reading it any more
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: object) => { try { controller.enqueue(enc.encode(JSON.stringify(o) + '\n')) } catch { /* the reader left */ } }
@@ -204,10 +209,10 @@ export async function POST(request: Request) {
         else await sb.from('tutor_chats').update({ updated_at: new Date().toISOString() }).eq('id', chat.id)
         send({ t: 'done', messageId, proposals })
       } catch (e) {
-        const error = classifyAiError(e, request.signal)
+        const error = classifyAiError(e, run.signal)
         if (reply.trim()) send({ t: 'error', error, messageId: await saveReply(reply, [], 'cut_off') })
         else { await releaseTutorMessage(user.id); send({ t: 'error', error }) }
-      } finally { try { controller.close() } catch { /* already closed */ } }
+      } finally { run.end(); finished(); try { controller.close() } catch { /* already closed */ } }
     },
   })
   return new Response(stream, { headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' } })
