@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { BackNavLink } from '@/components/ui/BackNavLink'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PdfChip } from '@/components/files/PdfChip'
-import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Link2Off, Loader2, Mic, MoreHorizontal, Paperclip, Pencil, RefreshCw, Square, Trash2, X, ChevronLeft } from 'lucide-react'
+import { ArrowDown, ArrowUp, AudioLines, ClipboardCopy, Copy, FileText, Link2Off, Loader2, Mic, MoreHorizontal, Paperclip, Pencil, Play, RefreshCw, Square, Trash2, X, ChevronLeft } from 'lucide-react'
 import { AiError } from '@/components/ai/AiError'
 import { MarkdownView } from '@/components/notes/MarkdownView'
 import { ProposalCard } from '@/components/tutor/ProposalCard'
@@ -205,11 +205,12 @@ export function ChatView({ chatId }: { chatId: string }) {
   }
 
   // From the bar (no override): its text and files. Try again, Regenerate, follow-ups and hints pass their own text, and files already uploaded.
-  async function send(override?: string, again?: Attachment[]) {
-    const fromBar = override === undefined
-    const message = (override ?? text).trim()
+  // continueFrom: the id of a reply that was cut off, which is carried on from where it stopped (no new question is sent).
+  async function send(override?: string, again?: Attachment[], continueFrom?: string) {
+    const fromBar = override === undefined && !continueFrom
+    const message = continueFrom ? '' : (override ?? text).trim()
     const files = fromBar ? pendingRef.current : again ?? []
-    if ((!message && !files.length) || live !== null || uploading || reading) return
+    if ((!message && !files.length && !continueFrom) || live !== null || uploading || reading) return
     let atts: Attachment[] = again ?? []
     if (fromBar && files.length) {
       setUploading(true); setAttachError(null)
@@ -220,20 +221,20 @@ export function ChatView({ chatId }: { chatId: string }) {
     setLastAtts(atts)
     dictOn.current = false; dictation.stop()
     pinned.current = true; setAway(false) // sending a message goes to the newest text
-    setProblem(null); setPartial(null); if (override === undefined) setText(''); setLive('')
+    setProblem(null); setPartial(null); if (fromBar) setText(''); setLive('')
     const control = new AbortController()
-    abort.current = control; stopped.current = false; liveText.current = ''; startedAt.current = nowMs(); setLastSent(message)
-    const shown = [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '', attachments: atts }]
+    abort.current = control; stopped.current = false; liveText.current = ''; startedAt.current = nowMs(); if (!continueFrom) setLastSent(message)
+    const shown = continueFrom ? latest.current : [...latest.current, { id: 'pending', chat_id: chatId, role: 'user' as const, content: message, sources: [], proposals: [], status: 'ok' as const, created_at: '', attachments: atts }]
     latest.current = shown; setMessages(shown)
     let r: Awaited<ReturnType<typeof sendTutorMessage>>
-    try { r = await sendTutorMessage(chatId, message, control.signal, atts.length ? atts : undefined) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
+    try { r = await sendTutorMessage(chatId, message, control.signal, atts.length ? atts : undefined, continueFrom ? { continueFrom } : undefined) } catch { setLive(null); await reload().catch(() => {}); return } // stopped before the reply began
     if (!r.ok) {
       // Refused (limit, speed, offline): keep what was typed so it isn't lost
       setProblem({ code: r.error, message: r.message })
       if (fromBar) { setText(message); if (atts.length && r.error !== 'attachment_missing') setPending(atts.map(asPending)) }
       setLive(null); await reload().catch(() => {}); return
     }
-    const cutOff = { code: 'cut_off', message: 'The reply was cut off. Try again.' }
+    const cutOff = { code: 'cut_off', message: 'The reply was cut off.' }
     let ended = false
     try {
       for await (const l of r.lines) {
@@ -330,6 +331,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const retryText = problem ? lastSent || lastAsked : lastAsked // after a failure: the question that failed, which may not have been saved
   const retryAtts = problem ? lastAtts : lastAskedAtts
   const canRetry = idle && (!!retryText || retryAtts.length > 0) && (problem?.code === 'cut_off' || problem?.code === 'ai_failed' || last?.status === 'cut_off' || last?.role === 'user')
+  const canContinue = idle && last?.role === 'assistant' && last.status === 'cut_off' && last.id !== 'pending'
   const canFollowUp = idle && !chat.guided && !problem && last?.role === 'assistant' && last.status === 'ok'
   const left = plan.billing && !plan.isPremium && !plan.loading ? Math.max(0, FREE_DAILY_TUTOR_MESSAGES - plan.tutorToday) : null
   return (
@@ -443,7 +445,7 @@ export function ChatView({ chatId }: { chatId: string }) {
           : (
             <div className="space-y-2">
               <div className="max-md:rounded-2xl max-md:rounded-bl-md max-md:bg-raised max-md:px-4 max-md:py-3"><MarkdownView source={m.content} /></div>
-              {m.status === 'cut_off' && <p className="text-xs text-muted">Reply was cut off.</p>}
+              {m.status === 'cut_off' && live === null && <p className="text-xs text-muted">Reply was cut off.</p>}
               {m.sources.length > 0 && (
                 <p className="text-xs text-muted">From: {m.sources.map((s, i) => (
                   <span key={s.id}>{i > 0 && ', '}<Link className="text-accent" href={SOURCE_LINK[s.kind](s.id)}>{s.title}</Link></span>
@@ -476,7 +478,10 @@ export function ChatView({ chatId }: { chatId: string }) {
       </div>
 
       {problem && <AiError code={problem.code} message={problem.message} />}
-      {canRetry && <div><button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts) }}><RefreshCw size={14} aria-hidden />Try again</button></div>}
+      {(canContinue || canRetry) && <div className="flex flex-wrap gap-2">
+        {canContinue && <button type="button" className="btn-primary" onClick={() => { void send(undefined, undefined, last.id) }}><Play size={14} aria-hidden />Continue</button>}
+        {canRetry && <button type="button" className="btn" onClick={() => { void send(retryText ?? '', retryAtts) }}><RefreshCw size={14} aria-hidden />{canContinue ? 'Start the reply again' : 'Try again'}</button>}
+      </div>}
       {canFollowUp && (
         <div role="group" aria-label="Follow-up questions" className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 [&>button]:shrink-0 [&>button]:whitespace-nowrap">
           {FOLLOW_UPS.map(f => <button key={f.id} type="button" className="btn !rounded-full !px-3 !py-1 !text-xs pointer-coarse:!py-2" onClick={() => { void send(f.message) }}>{f.label}</button>)}
