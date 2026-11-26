@@ -39,6 +39,28 @@ beforeEach(() => { getChatImpl = null; guided = false; guidedFails = false; setC
 afterEach(cleanup)
 
 describe('ChatView', () => {
+  it('coming back to a question the tutor is still answering shows it thinking, then the reply once it is saved', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      const asked = new Date(Date.now() - 10_000).toISOString()
+      messages = [{ id: 'm1', role: 'user', content: 'Explain the Krebs cycle', sources: [], proposals: [], status: 'ok', created_at: asked }]
+      await open()
+      expect(screen.getByText('Explain the Krebs cycle')).toBeTruthy()
+      expect(screen.getByText(/Thinking/)).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Stop' })).toBeTruthy() // there is a reply being written, which can be stopped
+      messages = [...messages, { id: 'm2', role: 'assistant', content: 'It makes NADH in the matrix.', sources: [], proposals: [], status: 'ok', created_at: new Date().toISOString() }]
+      await act(async () => { await vi.advanceTimersByTimeAsync(2500) })
+      expect(screen.getByText('It makes NADH in the matrix.')).toBeTruthy()
+      expect(screen.queryByText(/Thinking/)).toBeNull()
+      expect(screen.getByRole('button', { name: 'Send' })).toBeTruthy()
+    } finally { vi.useRealTimers() }
+  })
+  it('does not wait for a reply to a question that was asked long ago', async () => {
+    messages = [{ id: 'm1', role: 'user', content: 'Old question', sources: [], proposals: [], status: 'ok', created_at: new Date(Date.now() - 600_000).toISOString() }]
+    await open()
+    expect(screen.queryByText(/Thinking/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeTruthy()
+  })
   it('shows saved messages with their sources and cut-off notice', async () => {
     messages = [
       { id: 'm1', role: 'user', content: 'Why NADH?', sources: [], proposals: [], status: 'ok' },

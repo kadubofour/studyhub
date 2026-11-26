@@ -4,6 +4,7 @@ import { aiErrorResponse, classifyAiError } from '@/lib/ai/run'
 import { isAiConfigured, openai } from '@/lib/ai/openai'
 import { releaseTutorMessage, reserveTutorMessage } from '@/lib/ai/tutorLimit'
 import { streamTutor } from '@/lib/ai/tutor'
+import { keepAlive, startRun } from '@/lib/ai/tutorRuns'
 import { LESSON_STATE_MAX, buildContext, buildInput, tutorInstructions, type Material } from '@/lib/ai/tutorContext'
 import { LESSON_STATE_TOOL, lessonStateTool, parseLessonState, parseToolCall, toolDefinitions, type Proposal } from '@/lib/ai/tutorTools'
 import { courseNamed } from '@/lib/ai/courseNamed'
@@ -22,6 +23,8 @@ export const maxDuration = 120
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_MESSAGE = 4000
 const bad = (status: number, error: string) => NextResponse.json({ error }, { status })
+// What the tutor is told to carry on a reply that was cut off: its own words so far are the last thing in the chat
+const CONTINUE = '(Your last reply was cut off. Carry on from exactly where it stopped: do not repeat anything already written, do not greet or apologise, and continue mid-sentence if it stopped mid-sentence. Finish the reply.)'
 
 // The photos and PDFs among the attachments, fetched with the student's own session (so storage policies apply), base64 by path.
 // A missing file is simply not in the map; a PDF's real page count replaces what the browser said. Fetching stops (over) as soon as
@@ -45,17 +48,19 @@ async function fetchFiles(sb: Awaited<ReturnType<typeof createServerSupabase>>, 
 const withPages = (list: Attachment[], pages: Map<string, number>): Attachment[] => list.map(a => (a.kind === 'pdf' ? { ...a, pages: pages.get(a.path) ?? a.pages } : a))
 const named = (content: string, list: Attachment[]) => (list.length ? `${content}${content ? '\n' : ''}(Attached: ${list.map(a => a.name).join(', ')})` : content)
 
-// POST { chatId, message, attachments? } → NDJSON: sources, then the reply as it is written, then done (with any
+// POST { chatId, message, attachments? } or { chatId, continueFrom } (the id of the chat's last reply, which was cut off, to be carried on) → NDJSON: sources, then the reply as it is written, then done (with any
 // proposals) or an error. Nothing the tutor proposes is saved here: the student approves in the browser.
 export async function POST(request: Request) {
   const sb = await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return bad(401, 'unauthorized')
-  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown; voice?: unknown } | null
+  const body = await request.json().catch(() => null) as { chatId?: unknown; message?: unknown; attachments?: unknown; voice?: unknown; continueFrom?: unknown } | null
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
   if (typeof body?.chatId !== 'string' || !UUID.test(body.chatId) || message.length > MAX_MESSAGE) return bad(400, 'bad_request')
   const attachments = checkAttachments(body.attachments, user.id, body.chatId)
-  if (!attachments || (!message && !attachments.length)) return bad(400, 'bad_request')
+  const continueFrom = typeof body.continueFrom === 'string' && UUID.test(body.continueFrom) ? body.continueFrom : null
+  if (body.continueFrom !== undefined && (!continueFrom || message || (attachments?.length ?? 0) > 0)) return bad(400, 'bad_request')
+  if (!attachments || (!message && !attachments.length && !continueFrom)) return bad(400, 'bad_request')
   if (!isAiConfigured()) return aiErrorResponse('ai_unavailable')
   // Everything below is read with the student's own session: row-level security means only their data
   const { data: chat } = await sb.from('tutor_chats').select('id,title,course_id,note_id,lecture_id,guided').eq('id', body.chatId).maybeSingle()
@@ -99,14 +104,17 @@ export async function POST(request: Request) {
   }
   const [{ kept, notebookIds }, { data: past }, { data: decks }, outline, weak] = await Promise.all([
     readFiles(),
-    sb.from('tutor_messages').select('role,content,attachments').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
+    sb.from('tutor_messages').select('id,role,content,attachments,status,proposals').eq('chat_id', chat.id).order('created_at', { ascending: false }).limit(12),
     sb.from('decks').select('id,name'),
     aboutCourse ? courseOutline(sb, aboutCourse) : Promise.resolve(''),
     readWeak(),
   ])
+  // Carrying on a reply: it must be this chat's newest message, a reply that was cut off
+  const cut = continueFrom ? ((past ?? []) as { id: string; role: string; content: string; status: string; proposals: Proposal[] }[])[0] : null
+  if (continueFrom && (!cut || cut.id !== continueFrom || cut.role !== 'assistant' || cut.status !== 'cut_off')) return refuse(400, 'bad_request')
   // A follow-up such as "why?" says little by itself, so the student's last two questions are searched along with it
   const earlier = ((past ?? []) as { role: string; content: string }[]).filter(h => h.role === 'user').slice(0, 2).map(h => h.content.slice(0, 300))
-  const sought = message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' ')
+  const sought = continueFrom ? '' : message || attachments.map(a => (a.kind === 'document' ? a.text.slice(0, 300) : a.name)).join(' ')
   const query = [sought, ...earlier].join(' ').slice(0, 1000)
   // The course's material is read after the files above, so one read for the first time is in it
   const [{ data: found }, course] = await Promise.all([
@@ -160,18 +168,25 @@ export async function POST(request: Request) {
   }
   await addScans(kept.courseScans) // the rest of the course's scans get the room what the student asked about and sent has left
   const history = past12.map((h, i) => ({ role: h.role, content: named(h.content, h.attachments), parts: resent.get(i) }))
-  const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
-  if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
+  // Carrying on a reply adds no question: the reply it carries on is already the last thing said
+  if (!continueFrom) {
+    const saved = await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'user', content: message, attachments: counted }).select('id').single()
+    if (saved.error) { await releaseTutorMessage(user.id); return aiErrorResponse('ai_failed') }
+  }
 
+  // The reply is not tied to this connection: it carries on if the student leaves the page, and only Stop (its own request) ends it
+  const run = startRun(user.id, chat.id)
   const gen = streamTutor(openai(), {
-    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: [...toolDefinitions(), lessonStateTool(LESSON_STATE_MAX)], signal: request.signal,
-    input: buildInput({ history, context: context.text, message, parts: [...attachmentParts(counted, fresh.files), ...scannedParts] }),
+    instructions: tutorInstructions(!!chat.note_id, !!chat.guided, body.voice === true), tools: [...toolDefinitions(), lessonStateTool(LESSON_STATE_MAX)], signal: run.signal,
+    input: buildInput({ history, context: context.text, message: continueFrom ? CONTINUE : message, parts: [...attachmentParts(counted, fresh.files), ...scannedParts] }),
   })
   // Ask for the first piece now, so a model failure before any text is a proper error status
   let first: IteratorResult<{ type: 'delta'; text: string } | { type: 'tool'; name: string; args: string }>
-  try { first = await gen.next() } catch (e) { await releaseTutorMessage(user.id); return aiErrorResponse(classifyAiError(e, request.signal)) }
+  try { first = await gen.next() } catch (e) { run.end(); await releaseTutorMessage(user.id); return aiErrorResponse(classifyAiError(e, run.signal)) }
 
   const enc = new TextEncoder()
+  let finished: () => void = () => {}
+  keepAlive(new Promise<void>(resolve => { finished = resolve })) // the reply is saved even if nobody is reading it any more
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: object) => { try { controller.enqueue(enc.encode(JSON.stringify(o) + '\n')) } catch { /* the reader left */ } }
@@ -181,7 +196,16 @@ export async function POST(request: Request) {
         if (r.done) return
         if (r.value.type === 'delta') { reply += r.value.text; send({ t: 'delta', text: r.value.text }) } else calls.push(r.value)
       }
-      const saveReply = async (content: string, proposals: Proposal[], status: 'ok' | 'cut_off') =>
+      const saveReply = async (content: string, proposals: Proposal[], status: 'ok' | 'cut_off') => {
+        // Carrying on: the words go on the end of the reply that was cut off, which becomes whole (or is cut off again), not a second reply
+        if (cut) {
+          const whole = (cut.content + content).slice(0, 40_000)
+          await sb.from('tutor_messages').update({ content: whole, proposals: [...(cut.proposals ?? []), ...proposals], status }).eq('id', cut.id)
+          return cut.id
+        }
+        return await insertReply(content, proposals, status)
+      }
+      const insertReply = async (content: string, proposals: Proposal[], status: 'ok' | 'cut_off') =>
         (await sb.from('tutor_messages').insert({ chat_id: chat.id, user_id: user.id, role: 'assistant', content, sources: context.sources, proposals, status }).select('id').single()).data?.id as string | undefined
       send({ t: 'sources', sources: context.sources })
       try {
@@ -204,10 +228,10 @@ export async function POST(request: Request) {
         else await sb.from('tutor_chats').update({ updated_at: new Date().toISOString() }).eq('id', chat.id)
         send({ t: 'done', messageId, proposals })
       } catch (e) {
-        const error = classifyAiError(e, request.signal)
+        const error = classifyAiError(e, run.signal)
         if (reply.trim()) send({ t: 'error', error, messageId: await saveReply(reply, [], 'cut_off') })
         else { await releaseTutorMessage(user.id); send({ t: 'error', error }) }
-      } finally { try { controller.close() } catch { /* already closed */ } }
+      } finally { run.end(); finished(); try { controller.close() } catch { /* already closed */ } }
     },
   })
   return new Response(stream, { headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' } })

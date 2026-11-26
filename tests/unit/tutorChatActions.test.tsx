@@ -20,7 +20,8 @@ vi.mock('@/lib/tutor/apply', () => ({ applyProposal: vi.fn() }))
 let plan = { billing: false, isPremium: false, loading: false, tutorToday: 0 }
 vi.mock('@/components/billing/usePlan', async orig => ({ ...(await orig<object>()), usePlan: () => plan }))
 let send: (chatId: string, message: string, signal?: AbortSignal) => Promise<unknown>
-vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string, s?: AbortSignal) => send(c, m, s) }))
+const sentOptions: unknown[] = []
+vi.mock('@/lib/tutor/stream', () => ({ sendTutorMessage: (c: string, m: string, s?: AbortSignal, _a?: unknown, o?: unknown) => { sentOptions.push(o); return send(c, m, s) } }))
 const router = { push: vi.fn(), replace: vi.fn() }
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams('') }))
 const profileName: string | null = 'Kwadwo'
@@ -102,7 +103,30 @@ describe('trying again', () => {
     cleanup()
     messages = [m('1', 'user', 'Why NADH?'), m('2', 'assistant', 'It carries', 'cut_off')]
     await open()
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start the reply again' })).toBeTruthy() // beside Continue
+  })
+
+  it('a reply that was cut off is carried on from where it stopped, without asking the question again', async () => {
+    messages = [m('1', 'user', 'Why NADH?'), m('2', 'assistant', 'It carries elec', 'cut_off')]
+    sentOptions.length = 0
+    const asked: string[] = []
+    send = async (_c, msg) => {
+      asked.push(msg)
+      messages = [m('1', 'user', 'Why NADH?'), m('2', 'assistant', 'It carries electrons.', 'ok')]
+      return { ok: true, lines: lines([{ t: 'delta', text: 'trons.' }, { t: 'done', messageId: '2', proposals: [] }]) }
+    }
+    await open()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue' })) })
+    expect(sentOptions).toEqual([{ continueFrom: '2' }])
+    expect(asked).toEqual(['']) // no question is sent
+    expect(screen.getByText('It carries electrons.')).toBeTruthy() // the saved reply is now whole
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
+    expect(screen.getAllByText('Why NADH?')).toHaveLength(1) // and the question is not shown twice
+  })
+  it('offers no Continue after a complete reply', async () => {
+    messages = [m('1', 'user', 'Why?'), m('2', 'assistant', 'Because.', 'ok')]
+    await open()
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
   })
 
   it('does not offer it after a complete reply, or when the limit is reached (trying again would only hit it again)', async () => {

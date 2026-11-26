@@ -17,14 +17,16 @@ const RawQuestion = z.object({
   options: z.array(z.string()).nullable(),
   answer: z.string(),
   explanation: z.string(),
+  full_answer: z.string(),
 })
-export type RawQuestion = z.infer<typeof RawQuestion>
+export type RawQuestion = Omit<z.infer<typeof RawQuestion>, 'full_answer'> & { full_answer?: string }
 const Schema = z.object({ title: z.string(), questions: z.array(RawQuestion) })
 
 const RULES = `- multiple choice: exactly 4 distinct options, "answer" is the exact text of the correct option.
 - true/false: "options" is null and "answer" is "true" or "false".
 - short answer: "options" is null and "answer" is the expected answer, as short as possible. Use it only when the answer is a word, a name, a number with its unit, or a short phrase with one natural wording, so that a student can type it and be marked fairly.
 - If the answer is a formula, equation, expression, vector, set, interval, a label on a diagram, or anything that can be written correctly in more than one way, it cannot be typed and marked fairly: write that question as multiple choice instead, whatever types were asked for, with three plausible wrong options (a sign slip, a swapped term, a missed factor).
+- "full_answer": for a short answer question, the answer written as one complete, properly worded sentence a student could copy into their notes, using the question's own subject (for example "The Krebs cycle takes place in the mitochondrial matrix."); an empty string for the other types.
 - "explanation" is one or two plain sentences saying why the answer is right, in everyday words a first-time learner follows, and naming the common mistake when there is an obvious one.
 - Write maths as LaTeX between $...$.`
 
@@ -69,7 +71,8 @@ export function validateQuestions(raw: RawQuestion[], types: QuestionType[], cou
     } else {
       const answer = r.answer.trim()
       if (!answer || isFormulaic(answer)) continue // not one a student could type exactly: the AI is told to make those multiple choice
-      out.push({ id: '', type: 'short', prompt, options: null, answer, explanation })
+      const full = (r.full_answer ?? '').trim().slice(0, 400)
+      out.push({ id: '', type: 'short', prompt, options: null, answer, explanation, ...(full && norm(full) !== norm(answer) ? { fullAnswer: full } : {}) })
     }
   }
   return out.map((q, i) => ({ ...q, id: `q${i + 1}` }))

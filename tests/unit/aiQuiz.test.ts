@@ -3,7 +3,7 @@ import { isFormulaic, validateQuestions, makeQuiz, type RawQuestion } from '@/li
 import { AiEmptyError } from '@/lib/ai/openai'
 
 const all = ['mcq', 'true_false', 'short'] as const
-const raw = (over: object) => ({ type: 'mcq', prompt: 'Where?', options: ['Cytoplasm', 'Matrix', 'Nucleus', 'Ribosome'], answer: 'matrix', explanation: 'Because.', ...over }) as RawQuestion
+const raw = (over: object) => ({ type: 'mcq', prompt: 'Where?', options: ['Cytoplasm', 'Matrix', 'Nucleus', 'Ribosome'], answer: 'matrix', explanation: 'Because.', full_answer: '', ...over }) as RawQuestion
 
 describe('validateQuestions', () => {
   it('keeps good questions, gives them ids, and normalises answers to the option text', () => {
@@ -11,6 +11,18 @@ describe('validateQuestions', () => {
     expect(qs.map(q => q.id)).toEqual(['q1', 'q2', 'q3'])
     expect(qs[0].answer).toBe('Matrix')
     expect(qs[1]).toMatchObject({ answer: 'true', options: null })
+  })
+  it('keeps the properly worded answer of a short answer question, and ignores one that only repeats the answer or is on another type', () => {
+    const qs = validateQuestions([
+      raw({ type: 'short', prompt: 'Where does it run?', options: null, answer: 'Matrix', full_answer: ' The Krebs cycle runs in the mitochondrial matrix. ' }),
+      raw({ type: 'short', prompt: 'Name it', options: null, answer: 'NADH', full_answer: 'nadh' }),
+      raw({ type: 'short', prompt: 'Old style', options: null, answer: 'ATP' }),
+      raw({ full_answer: 'Not for a multiple choice question.' }),
+    ], [...all], 10)
+    expect(qs[0].fullAnswer).toBe('The Krebs cycle runs in the mitochondrial matrix.')
+    expect(qs[1].fullAnswer).toBeUndefined()
+    expect(qs[2].fullAnswer).toBeUndefined()
+    expect(qs[3].type === 'mcq' && 'fullAnswer' in qs[3]).toBe(false)
   })
   it('drops broken questions', () => {
     const qs = validateQuestions([

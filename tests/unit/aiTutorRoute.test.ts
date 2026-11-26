@@ -61,6 +61,7 @@ const sb = {
     if (table === 'materials') return result(kept)
     if (table === 'tutor_messages') return {
       ...result(history),
+      update: (p: Record<string, unknown>) => { updated.push([table, p]); const r: Record<string, unknown> = { eq: () => r, then: (res: (v: unknown) => unknown) => res({ error: null }) }; return r },
       insert: (row: Record<string, unknown>) => {
         inserted.push([table, row])
         return { select: () => ({ single: async () => ({ data: insertError ? null : { id: `m${inserted.length}` }, error: insertError }) }) }
@@ -97,6 +98,16 @@ describe('POST /api/ai/tutor', () => {
     expect(inserted.map(([, r]) => [r.role, r.content])).toEqual([['user', 'Why NADH?'], ['assistant', 'NADH carries electrons.']])
     expect(inserted[1][1]).toMatchObject({ status: 'ok', sources: [{ kind: 'note', id: NOTE, title: 'Krebs' }] })
     expect(release).not.toHaveBeenCalled()
+  })
+  it('keeps writing the reply when the student leaves the page, and saves it', async () => {
+    const gone = new AbortController()
+    const res = await POST(new Request('http://x', { method: 'POST', signal: gone.signal, body: JSON.stringify({ chatId: CHAT, message: 'Why NADH?' }) }))
+    gone.abort() // the page was closed
+    const given = (modelInput.mock.calls[0][0] as { signal: AbortSignal }).signal
+    expect(given.aborted).toBe(false) // the model is not told to stop
+    await res.text()
+    expect(inserted.map(([, r]) => r.role)).toEqual(['user', 'assistant'])
+    expect(inserted[1][1]).toMatchObject({ content: 'NADH carries electrons.', status: 'ok' })
   })
   it('gives the model the attached note, the student\'s message and the quiz tool', async () => {
     await (await call()).text()
@@ -442,5 +453,51 @@ describe('POST /api/ai/tutor with files: after the review', () => {
     history = [{ role: 'assistant', content: 'A cell.', attachments: [] }, { role: 'user', content: '', attachments: [photo(1)] }]
     await (await call({ message: 'And part b?' })).text()
     expect(parts(0)[0].text).toMatch(/q1\.jpg/)
+  })
+
+  describe('carrying on a reply that was cut off', () => {
+    const MSG = '44444444-4444-4444-8444-444444444444'
+    const cutOff = (over: Record<string, unknown> = {}) => ({ id: MSG, role: 'assistant', content: 'NADH carries el', status: 'cut_off', proposals: [], attachments: [], ...over })
+    const carry = (body: object = {}) => POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ chatId: CHAT, continueFrom: MSG, ...body }) }))
+    beforeEach(() => {
+      history = [cutOff(), { id: 'u1', role: 'user', content: 'Why NADH?', status: 'ok', proposals: [], attachments: [] }] // newest first
+      script = [{ type: 'delta', text: 'ectrons ' }, { type: 'delta', text: 'to the chain.' }]
+    })
+    it('gives the model what was written, and asks it to go on, with no new question saved', async () => {
+      const res = await carry()
+      const out = await lines(res)
+      expect(out.at(-1)).toMatchObject({ t: 'done', messageId: MSG })
+      const input = (modelInput.mock.calls[0][0] as { input: { role: string; content: string }[] }).input
+      expect(input.slice(0, 2).map(i => [i.role, i.content])).toEqual([['user', 'Why NADH?'], ['assistant', 'NADH carries el']])
+      expect(input.at(-1)!.content).toContain('cut off')
+      expect(inserted.filter(([, r]) => r.role === 'user')).toHaveLength(0)
+    })
+    it('adds the new words to the end of the same reply, which becomes whole', async () => {
+      await (await carry()).text()
+      expect(inserted.filter(([, r]) => r.role === 'assistant')).toHaveLength(0) // not a second reply
+      expect(updated.find(([t]) => t === 'tutor_messages')![1]).toMatchObject({ content: 'NADH carries electrons to the chain.', status: 'ok' })
+    })
+    it('keeps what is there when it is cut off again, and counts as a message', async () => {
+      script = [{ type: 'delta', text: 'ectrons ' }, new Error('lost')]
+      const out = await lines(await carry())
+      expect(out.at(-1)).toMatchObject({ t: 'error', messageId: MSG })
+      expect(updated.find(([t]) => t === 'tutor_messages')![1]).toMatchObject({ content: 'NADH carries electrons ', status: 'cut_off' })
+    })
+    it('gives the message back when nothing new came', async () => {
+      script = [new Error('lost')]
+      expect((await carry()).status).toBeGreaterThanOrEqual(400)
+      expect(release).toHaveBeenCalled()
+    })
+    it('only carries on the chat\'s newest reply, and only one that was cut off', async () => {
+      history = [{ id: 'later', role: 'user', content: 'More?', status: 'ok', proposals: [], attachments: [] }, cutOff()]
+      expect((await carry()).status).toBe(400)
+      history = [cutOff({ status: 'ok' })]
+      expect((await carry()).status).toBe(400)
+      expect(modelInput).not.toHaveBeenCalled()
+    })
+    it('takes no message or files along with it', async () => {
+      expect((await carry({ message: 'Hello' })).status).toBe(400)
+      expect((await carry({ continueFrom: 'nope' })).status).toBe(400)
+    })
   })
 })
